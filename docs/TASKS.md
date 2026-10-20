@@ -92,13 +92,26 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   if the ack fails with anything other than `ALREADY_ANSWERED`.
 
 ### T4 — Phase 1 integration & e2e test
-- **Status:** in-progress (T4 agent, worktree ../lbq-T4, branch task/T4-e2e)
+- **Status:** done
 - **Depends on:** T1, T2, T3
 - **Scope:** `e2e/**`, Playwright config, root `package.json` script, `README.md`. T6/T7/T8
   edit app code in parallel: **don't refactor app code**. Only a minimal fix if a bug blocks
   the test, noted below; report other bugs below instead of fixing them.
 - **Deliverable:** Playwright test: 1 host + 3 players play the demo quiz to the podium.
   Instructions in README to test on real phones over LAN (`vite --host`).
+- **Summary:** Playwright (`playwright.config.ts`, Chromium) starts its own server :3004 + web
+  :5184 (`E2E_SERVER_PORT` / `E2E_WEB_PORT`). `e2e/full-game.spec.ts`: host `/host/new` + 3
+  phones (separate mobile contexts) join by PIN, answer all 4 demo questions with a fixed plan
+  (answers read from `DEMO_QUIZ`), checks correct/wrong feedback, reveal, leaderboard, podium
+  order (Alice > Bob > Chloé), end screen. Passes in ~20 s, stable over repeated runs, no DB
+  needed. Root scripts: `pnpm test:e2e`; `pnpm typecheck` now also checks `e2e/`. `README.md`:
+  setup, LAN phone testing (LAN IP, firewall, `/health` check), tests. No app code changed,
+  no bug found on the happy path.
+- **Follow-ups:** (1) T9: run `pnpm exec playwright install --with-deps chromium && pnpm
+  test:e2e` in CI (uploads `playwright-report/`). (2) e2e not yet covered: phone reload/rejoin
+  mid-question, kick, host reload (blocked by missing `host:rejoin`, see T2 follow-ups), timer
+  expiry with no answer, DB quizzes (T6/T7). (3) After T7, the demo quiz must keep working
+  without login or this test breaks.
 
 ---
 
@@ -224,3 +237,8 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `node --watch --env-file-if-exists=../../.env --import tsx src/index.ts`. Don't switch back.
   Host screen `/host/new` now times out after 8 s with a "server not reachable" message +
   retry button instead of spinning forever.
+- 2026-10-20, T4 agent: root `package.json` gets devDeps `@playwright/test` and
+  `@lbq/shared` (the e2e test reads `DEMO_QUIZ` for the correct answers), scripts `test:e2e`
+  and `typecheck` (`… && tsc -p e2e`). Behaviour note: the last player's answer triggers
+  REVEAL immediately, so that phone may skip the "Réponse envoyée !" screen — expected, not
+  a bug.
