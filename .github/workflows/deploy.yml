@@ -1,0 +1,23 @@
+name: Deploy (Fly.io)
+
+# Manual for now: Actions → "Deploy (Fly.io)" → Run workflow. Needs the FLY_API_TOKEN repository
+# secret (see DEPLOY.md). To deploy every push to main once CI is green, see DEPLOY.md §6.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-fly
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # Builds the Dockerfile on Fly's remote builder, runs the release command (migrations),
+      # then replaces the machine.
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -236,10 +236,35 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   fallback is best-effort). Host reconnection (`host:rejoin`) is still open (T2 follow-up).
 
 ### T9 — Deployment
-- **Status:** in-progress (T9 agent, worktree ../lbq-T9)
+- **Status:** done
 - **Depends on:** T4, T5
 - **Scope:** `Dockerfile`s, `fly.toml`/equivalent, `.github/workflows/**`, `.env.example`
 - **Deliverable:** CI (lint, typecheck, tests), deploy web + server + Postgres, Sentry.
+- **Summary:** real server build — `pnpm build` bundles the server with esbuild
+  (`apps/server/build.mjs` → `dist/index.js`, `dist/instrument.js`, `dist/seed.js`; inlines
+  `@lbq/shared` + generated Prisma client, npm deps external), `pnpm --filter @lbq/server start`
+  runs it. Production = **one process / one origin**: with `WEB_DIST_DIR` the server also serves
+  `apps/web/dist` (`src/web.ts`, SPA fallback, immutable `assets/`, unit-tested) — required since
+  the session cookie is `SameSite=Lax` and `*.fly.dev` is a public suffix (separate web/API apps
+  would break login). Root multi-stage `Dockerfile` (`pnpm deploy --prod`, openssl for Prisma
+  migrations) + `.dockerignore`; `fly.toml` (Paris, 1 machine because games are in memory, volume
+  `/data` for uploads, `release_command` = `prisma migrate deploy`, `/health` check, auto-stop);
+  Sentry on server (`@sentry/node` 11, `src/instrument.ts` preloaded with `--import`, Fastify 5xx
+  auto-captured) and web (`@sentry/react`, `src/lib/sentry.ts`), both off without a DSN.
+  `.github/workflows/ci.yml`: Prettier check, typecheck, tests with a Postgres 17 service
+  (`TEST_DATABASE_URL`), build, Playwright e2e (report artifact), Docker build;
+  `deploy.yml`: manual `flyctl deploy` (`FLY_API_TOKEN`). `DEPLOY.md`: exact steps (flyctl,
+  app + volume, Managed Postgres, secrets, Sentry, first deploy, GitHub token, custom domain,
+  rollback). Verified locally: image builds, `migrate deploy` + seed + server run in the
+  container against Postgres, HTTPS-style login cookie, socket game (create/join/start), SIGTERM
+  shutdown < 1 s, e2e passes. Nothing deployed, CI not run on GitHub yet.
+- **Follow-ups:** (1) First push: check the CI run on GitHub (action versions, Postgres service).
+  (2) Image is ~1 GB uncompressed, mostly the Prisma CLI kept for migrations — could run
+  migrations from a separate slim stage. (3) Uploads are on a Fly volume; S3 storage still open
+  (old images never deleted, see T6). (4) Rate-limit `/auth/login` (T5 follow-up) not done.
+  (5) Sentry source maps are not uploaded (stack traces in the browser are minified); add
+  `@sentry/vite-plugin` with a `SENTRY_AUTH_TOKEN` if needed. (6) `vite build` warns about a
+  500 kB+ chunk (code-splitting the editor would help).
 
 ---
 
@@ -435,3 +460,15 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   PLAN.md §5/§6/§7 updated. **After merging, run `pnpm --filter @lbq/server db:migrate`** on the
   dev DB. The migration was NOT applied to the shared `lbq` database (it would look like drift to
   the other wave-3 worktrees); T12 tested on `lbq_t12` / `lbq_test_t12`.
+- 2026-10-20, T9 agent (no contract change). Outside the T9 scope: `apps/server/src/index.ts`
+  (`trustProxy` via `TRUST_PROXY`, serves the web build when `WEB_DIST_DIR` is set, SIGINT/SIGTERM
+  shutdown), new `apps/server/src/{web,web.test,instrument}.ts` + `build.mjs`;
+  `apps/server/package.json` (`build`/`start` scripts, `prisma` moved to dependencies for
+  `migrate deploy` in the image, deps `@sentry/node`, `esbuild`); web: new
+  `apps/web/src/lib/serverUrl.ts` used by `api/index.ts` and `lib/socket.ts` (**a production
+  build now defaults to `location.origin`**, dev unchanged), `lib/sentry.ts` imported first in
+  `main.tsx` (one line), dep `@sentry/react`; root `package.json` (`format:check`),
+  `.prettierignore` (`**/src/generated`); ran `pnpm format` on 4 files that failed the new CI
+  check (`README.md`, `.vscode/settings.json`, `e2e/full-game.spec.ts`,
+  `game/persistence.test.ts`) — trivial merge conflicts possible with T19, keep their side and
+  re-run `pnpm format`. PLAN.md §9 (production) added; README + CLAUDE.md commands updated.
