@@ -284,7 +284,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   download button, empty state.
 
 ### T19 — Game robustness (host reconnection, abandoned games)
-- **Status:** todo
+- **Status:** in-progress (T19 agent, worktree ../lbq-T19)
 - **Depends on:** T7, T8
 - **Scope:** `apps/server/src/socket/**`, `apps/server/src/game/**` (except `scoring.ts`),
   `packages/shared/src/events.ts` (`host:rejoin` only), PLAN.md §4,
