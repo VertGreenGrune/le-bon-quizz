@@ -17,7 +17,10 @@ export function Home() {
         <Link to="/join" className="rounded-lg bg-white py-3 text-center font-bold text-brand">
           Rejoindre une partie
         </Link>
-        <Link to="/host/new" className="rounded-lg border-2 border-white py-3 text-center font-bold">
+        <Link
+          to="/host/new"
+          className="rounded-lg border-2 border-white py-3 text-center font-bold"
+        >
           Animer une partie (démo)
         </Link>
       </div>
