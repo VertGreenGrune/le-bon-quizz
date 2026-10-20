@@ -1,0 +1,67 @@
+import { describe, expect, it, vi } from 'vitest';
+import { LoginBody, RegisterBody } from '@lbq/shared';
+import { ApiError, createApiClient } from './client';
+import { validate } from './validation';
+
+const json = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+
+describe('createApiClient', () => {
+  it('sends JSON with credentials to /api', async () => {
+    const fetchFn = vi.fn(async () => json(200, { user: { id: 'u' }, token: 't' }));
+    const api = createApiClient('http://srv:3001', fetchFn);
+    await api.auth.login({ email: 'a@b.c', password: 'x' });
+    expect(fetchFn).toHaveBeenCalledWith('http://srv:3001/api/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ email: 'a@b.c', password: 'x' }),
+      headers: { 'content-type': 'application/json' },
+    });
+  });
+
+  it('turns error bodies into ApiError', async () => {
+    const api = createApiClient('', async () =>
+      json(404, { error: { code: 'NOT_FOUND', message: 'Quiz introuvable' } }),
+    );
+    const err = await api.quizzes.get('x').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({ status: 404, code: 'NOT_FOUND', message: 'Quiz introuvable' });
+  });
+
+  it('maps network failures to NETWORK and 204 to undefined', async () => {
+    const down = createApiClient('', async () => {
+      throw new TypeError('fetch failed');
+    });
+    await expect(down.quizzes.list()).rejects.toMatchObject({ code: 'NETWORK', status: 0 });
+    const ok = createApiClient('', async () => new Response(null, { status: 204 }));
+    await expect(ok.quizzes.remove('x')).resolves.toBeUndefined();
+  });
+
+  it('uploads images as multipart without a JSON content-type', async () => {
+    const fetchFn = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
+      json(201, { url: 'u' }),
+    );
+    const api = createApiClient('', fetchFn);
+    await api.uploads.image(new Blob(['x'], { type: 'image/png' }));
+    const init = fetchFn.mock.calls[0]![1]!;
+    expect(init.body).toBeInstanceOf(FormData);
+    expect(init.headers).toBeUndefined();
+  });
+});
+
+describe('validate (auth forms)', () => {
+  it('normalizes valid input and reports French field errors', () => {
+    expect(validate(LoginBody, { email: ' A@B.fr ', password: 'x' })).toEqual({
+      ok: true,
+      data: { email: 'a@b.fr', password: 'x' },
+    });
+    expect(validate(RegisterBody, { email: 'nope', name: '', password: 'short' })).toEqual({
+      ok: false,
+      errors: {
+        email: 'Adresse e-mail invalide',
+        name: 'Champ obligatoire',
+        password: 'Au moins 8 caractères',
+      },
+    });
+  });
+});

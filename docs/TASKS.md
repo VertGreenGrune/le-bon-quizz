@@ -147,13 +147,29 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   `withCredentials: true` in `apps/web/src/lib/socket.ts`. Quiz `demo` keeps working without login.
 
 ### T6 — Quiz editor UI
-- **Status:** in-progress (T6 agent, worktree ../lbq-T6, branch task/T6-editor)
+- **Status:** done
 - **Depends on:** T0 (mock API OK), T5 for real integration
 - **Scope:** `apps/web/src/editor/**`, `apps/web/src/auth/**`, `apps/web/src/api/**`, the
   `/editor` routes in `main.tsx`, and the `quizId` query param in `host/useHostGame.ts` +
   `host/HostPage.tsx` (only that — T8 also edits `host/`).
 - **Deliverable:** login/register, quiz list, quiz editor (questions, 2–4 choices, correct
   answer, time limit, points, image upload), "Start game" button → `/host/new?quizId=<id>`.
+- **Summary:** `api/` — typed `createApiClient` for every §6 endpoint (`credentials: 'include'`,
+  `ApiError` with API code / `NETWORK`), app instance `api` in `api/index.ts`, `validate()` = shared
+  zod schema → French per-field errors. `auth/` — `AuthProvider` (`/auth/me`), `RequireAuth`
+  (→ `/login?next=`), `/login` + `/register` (`LoginBody`/`RegisterBody`). `editor/` — `/editor`
+  (list, launch, edit, duplicate, delete) and `/editor/new` | `/editor/:quizId` (title,
+  description, cover, question sidebar with error badges, add/duplicate/move/delete, MCQ or
+  true/false, 2–4 choices with shapes, several correct answers in MCQ, time, points, image upload
+  with drag & drop), validated with `QuizInput` on save (empty extra choices dropped), unsaved
+  changes warning, "Lancer la partie" saves then opens `/host/new?quizId=<id>`. Host page passes
+  `quizId` to `host:create` (`createDemoGame` → `createGame(quizId = 'demo')`). Pure editor model
+  `editor/draft.ts` unit-tested (+ client, validation). Smoke-tested against the real server
+  (register → create → upload → update → duplicate → delete → logout); UI not clicked through
+  in a browser (no Playwright yet).
+- **Follow-ups:** T7 — `host:create` with a DB quiz id answers `QUIZ_NOT_FOUND` until T7 lands
+  (the host page shows that error). T12 — `api.games.*` and `exportCsvUrl` are ready for the
+  reports page. Uploaded images that are replaced/removed are never deleted (T9 with S3).
 
 ### T7 — Load games from DB + save results
 - **Status:** done
@@ -240,6 +256,13 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `(io, { games?, persistence? })`); new `apps/server/vitest.config.ts` (`fileParallelism:
   false`) because `api.test.ts` and `game/persistence.test.ts` share and wipe the same
   `TEST_DATABASE_URL` database.
+- 2026-10-20, T6 agent (outside T6 scope, no contract change): **fix** in
+  `apps/server/src/index.ts` — `@fastify/cors` 11 only allows `GET,HEAD,POST` by default, so the
+  browser blocked the editor's `PUT /quizzes/:id` and `DELETE /quizzes/:id` preflights; CORS now
+  lists `methods: GET, HEAD, POST, PUT, DELETE`. Also added an "Espace animateur : mes quiz"
+  link to `/editor` on the landing page (`apps/web/src/Home.tsx`) and the `/login` + `/register`
+  routes in `main.tsx` (PLAN.md §7 updated). Note: the shared dev database `lbq` had no
+  migration applied yet; T6 tested on `lbq_test_t6` only.
 - `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
   merge conflicts there; keep both sides.
 - 2026-10-20, main agent (post-merge fix): `tsx watch` hangs before listening when run under

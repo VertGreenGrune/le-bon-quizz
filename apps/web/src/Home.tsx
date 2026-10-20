@@ -23,6 +23,9 @@ export function Home() {
         >
           Animer une partie (démo)
         </Link>
+        <Link to="/editor" className="py-2 text-center font-semibold underline opacity-90">
+          Espace animateur : mes quiz
+        </Link>
       </div>
     </main>
   );

@@ -13,7 +13,12 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN ?? true; // `true` = reflect origin 
 
 const app = Fastify({ logger: true });
 // credentials: the host session is an httpOnly cookie sent by the web app (other port).
-await app.register(cors, { origin: CORS_ORIGIN, credentials: true });
+// methods: @fastify/cors 11 only allows GET/HEAD/POST by default; the editor needs PUT/DELETE.
+await app.register(cors, {
+  origin: CORS_ORIGIN,
+  credentials: true,
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE'],
+});
 
 const prisma = createPrisma();
 app.addHook('onClose', () => prisma.$disconnect());

@@ -129,7 +129,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/join?pin=123456` → phone join screen (QR code points here)
 - `/play` → phone controller
 - `/host/:pin` → shared screen
-- `/editor`, `/editor/:quizId` → quiz editor (auth required)
+- `/login`, `/register` → host account (`?next=` = page to return to)
+- `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
 - `/reports/:gameId` → game report
 
 ## 8. Roadmap

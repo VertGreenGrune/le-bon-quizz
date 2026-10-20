@@ -26,14 +26,14 @@ const CREATE_TIMEOUT_MS = 8000;
 let pendingCreate: Promise<{ pin: string; hostToken: string }> | null = null;
 
 /**
- * Creates a game with the demo quiz. Memoized so React StrictMode's double effect
- * doesn't create two games. Rejects if the server doesn't answer (e.g. not running).
+ * Creates a game with `quizId` (the demo quiz by default). Memoized so React StrictMode's
+ * double effect doesn't create two games. Rejects if the server doesn't answer (e.g. not running).
  */
-export function createDemoGame(): Promise<{ pin: string; hostToken: string }> {
+export function createGame(quizId = 'demo'): Promise<{ pin: string; hostToken: string }> {
   pendingCreate ??= new Promise((resolve, reject) => {
     getSocket()
       .timeout(CREATE_TIMEOUT_MS)
-      .emit('host:create', { quizId: 'demo' }, (err, res) => {
+      .emit('host:create', { quizId }, (err, res) => {
         pendingCreate = null;
         if (err) {
           reject({
