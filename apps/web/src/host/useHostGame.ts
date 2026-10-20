@@ -57,6 +57,8 @@ export function createGame(quizId = 'demo'): Promise<{ pin: string; hostToken: s
 export function useHostGame(pin: string | undefined, hostToken: string | null) {
   const [state, dispatch] = useReducer(hostReducer, initialHostState);
   const [error, setError] = useState<ErrorPayload | null>(null);
+  /** Set when `host:rejoin` says the game is gone (server restarted, game swept, bad token). */
+  const [lost, setLost] = useState<ErrorPayload | null>(null);
   const [connected, setConnected] = useState(() => getSocket().connected);
 
   useEffect(() => {
@@ -101,6 +103,24 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     };
   }, []);
 
+  // Page reload or socket reconnect: re-attach as host; the server re-sends the current phase.
+  useEffect(() => {
+    if (!pin || !hostToken) return;
+    const socket = getSocket();
+    const rejoin = () =>
+      socket.emit('host:rejoin', { pin, hostToken }, (res) => {
+        if (res.ok) setLost(null);
+        else if (res.error.code === 'GAME_NOT_FOUND' || res.error.code === 'UNAUTHORIZED')
+          setLost(res.error);
+        else setError(res.error);
+      });
+    if (socket.connected) rejoin();
+    socket.on('connect', rejoin);
+    return () => {
+      socket.off('connect', rejoin);
+    };
+  }, [pin, hostToken]);
+
   const handleAck = useCallback((res: Ack) => {
     if (res.ok) setError(null);
     else setError(res.error);
@@ -125,7 +145,17 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     if (a) getSocket().emit('host:kick', { ...a, playerId }, handleAck);
   };
 
-  return { state, error, connected, start, next, end, kick, clearError: () => setError(null) };
+  return {
+    state,
+    error,
+    lost,
+    connected,
+    start,
+    next,
+    end,
+    kick,
+    clearError: () => setError(null),
+  };
 }
 
 /** Re-renders every `intervalMs` while `active`, returning the current time. */

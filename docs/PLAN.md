@@ -65,6 +65,7 @@ Every client → server event takes an ack callback receiving
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
 | `host:end` | `{ pin, hostToken }` | → ENDED |
+| `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED) |
 
 ### Player → server
 | Event | Payload | Notes |
@@ -106,6 +107,10 @@ Live game state is in memory (`Map<pin, Game>`) in phase 1–2; moved to Redis i
 Quiz loading, socket auth and result saving go through `GamePersistence`
 (`apps/server/src/game/persistence.ts`). When a game reaches ENDED, a logged-in host's game
 (if it left the lobby) is saved as `GameSession` + `PlayerResult`s; anonymous demo games are not.
+A game reaches ENDED by `host:end` (any phase), or through the sweep (`GameManager.sweep`, every
+minute) when abandoned: no host screen connected for 10 min, or no activity for 2 h. Players
+kicked after the start are saved too, ranked below the remaining players (who keep the podium
+order); players kicked in the lobby are not.
 
 ## 6. REST API (prefix `/api`)
 

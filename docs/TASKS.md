@@ -295,7 +295,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   download button, empty state.
 
 ### T19 — Game robustness (host reconnection, abandoned games)
-- **Status:** in-progress (T19 agent, worktree ../lbq-T19)
+- **Status:** done
 - **Depends on:** T7, T8
 - **Scope:** `apps/server/src/socket/**`, `apps/server/src/game/**` (except `scoring.ts`),
   `packages/shared/src/events.ts` (`host:rejoin` only), PLAN.md §4,
@@ -304,6 +304,24 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   the hostToken from sessionStorage, full resync of the current phase); games abandoned before
   ENDED (host gone and idle sweep, `host:end` early) are saved if they had started; kicked players
   appear in saved results; tests. Extend T4's e2e with a host reload mid-question.
+- **Summary:** `host:rejoin` `{ pin, hostToken }` (shared contract + PLAN.md §4): `Game.resyncHost`
+  re-sends to that socket `game:state`, `lobby:players` and the phase payloads (`question:show`,
+  `answer:count`, the stored `question:reveal`, `leaderboard`, `podium`). `useHostGame` emits it
+  on every socket (re)connection once it has a pin + hostToken (sessionStorage), so a reload or
+  reconnect resumes the game; an unknown game / bad token shows "Partie introuvable". Abandoned
+  games: `Game` tracks connected host sockets (`hostConnected`/`hostDisconnected`,
+  `hostGoneSince`); `GameManager.sweep` ends (→ `onEnded` → saved if started) games whose host
+  is gone for 10 min (`HOST_GONE_TTL_MS`, then the usual 5 min ENDED grace) or idle for 2 h,
+  instead of silently dropping them; `host:end` early already saved. Players kicked after the
+  start are kept in `standings()` (ranked below the remaining players, so saved ranks match the
+  podium); lobby kicks are forgotten. Tests: host resync per phase, host presence, kicked
+  standings, sweep end/save (server), resync on a fresh reducer (web); e2e reloads the host
+  screen mid-question 3 and checks question + `1 / 3` counter + "Passer" before continuing.
+- **Follow-ups:** (1) A server restart still loses live games (in memory until T18); a graceful
+  `SIGTERM` handler in `src/index.ts` could `end()` every game to save them (outside scope).
+  (2) `PlayerResult` has no "kicked" flag (schema is T5's scope); kicked players are only told
+  apart by their rank. (3) T10: the host resync arrives as separate events, so animations
+  should not replay on a rejoin (e.g. podium reveal).
 
 ### T10 — Animations & sounds (wave 4, run alone)
 - **Status:** todo
@@ -394,3 +412,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `apps/web/src/lib/socket.ts`, called by `AuthProvider` after login/register/logout, so
   `host:create` sees the new session. Verified in a browser: login → "Lancer" on a DB quiz →
   lobby with PIN. Dev database `lbq` migrated + seeded (demo@lebonquizz.local / demo1234).
+- 2026-10-20, T19 agent: **added** client event `host:rejoin` (payload `HostActionPayload`, ack
+  `Ack`) in `packages/shared/src/events.ts`, as decided in the wave 3 coordination; PLAN.md §4
+  (resync contents) and §5 (abandoned games, kicked players in saved results) updated. No other
+  shared type changed; no file outside the T19 scope touched.

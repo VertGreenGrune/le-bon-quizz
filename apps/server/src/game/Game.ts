@@ -7,6 +7,8 @@ import {
   type GamePhase,
   type GameStatePayload,
   type Question,
+  type QuestionRevealPayload,
+  type QuestionShowPayload,
   type Quiz,
   type ServerToClientEvents,
 } from '@lbq/shared';
@@ -31,6 +33,9 @@ export interface GameTransport {
   detachSocket(socketId: string): void;
 }
 
+/** Sends one event to some audience (host room, one socket…). */
+type Send = GameTransport['toAll'];
+
 export interface Player {
   id: string;
   sessionToken: string;
@@ -47,7 +52,7 @@ export interface Player {
   lastResult: { correct: boolean; pointsEarned: number; streakBonus: number } | null;
 }
 
-/** Final standing of one player, as saved in `PlayerResult`. */
+/** Final standing of one player (kicked ones included), as saved in `PlayerResult`. */
 export interface PlayerStanding {
   nickname: string;
   score: number;
@@ -76,7 +81,14 @@ export class Game {
   lastActivityAt = Date.now();
   /** When the first question started; null while in LOBBY. */
   startedAt: Date | null = null;
+  /** Since when no host socket is connected; null while one is. */
+  hostGoneSince: number | null = null;
 
+  /** Players kicked after the start: out of the game, but kept in the saved results. */
+  private readonly kicked: Player[] = [];
+  private readonly hostSockets = new Set<string>();
+  /** Reveal of the current question, re-sent to a host that rejoins. */
+  private reveal: QuestionRevealPayload | null = null;
   private phaseEndsAt: number | null = null;
   private answeringStartedAt = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -144,12 +156,44 @@ export class Game {
     if (!player) return; // idempotent
     this.touch();
     this.players.delete(playerId);
+    if (this.phase !== 'LOBBY') this.kicked.push(player);
     if (player.socketId) {
       this.transport.toSocket(player.socketId, 'player:kicked', {});
       this.transport.detachSocket(player.socketId);
+      player.socketId = null;
     }
     this.sendLobbyPlayers();
     if (this.phase === 'ANSWERING') this.onAnswersChanged();
+  }
+
+  /** A host socket joined the game's rooms (create / rejoin / any host action). */
+  hostConnected(socketId: string): void {
+    this.hostSockets.add(socketId);
+    this.hostGoneSince = null;
+  }
+
+  hostDisconnected(socketId: string): void {
+    if (!this.hostSockets.delete(socketId)) return;
+    if (this.hostSockets.size === 0) this.hostGoneSince = Date.now();
+  }
+
+  /**
+   * Sends everything the host screen needs for the current phase to one host socket
+   * (`host:rejoin`), in the order the host reducer expects: state first.
+   */
+  resyncHost(socketId: string): void {
+    const send: Send = (event, ...args) => this.transport.toSocket(socketId, event, ...args);
+    send('game:state', this.statePayload());
+    this.sendLobbyPlayers(send);
+    const phase = this.phase;
+    if (this.currentQuestion && phase !== 'PODIUM' && phase !== 'ENDED')
+      send('question:show', this.showPayload());
+    if (phase === 'ANSWERING' || phase === 'REVEAL') this.sendAnswerCount(send);
+    if (phase === 'REVEAL' && this.reveal) send('question:reveal', this.reveal);
+    if (phase === 'LEADERBOARD')
+      send('leaderboard', { top: topPlayers(this.players.values(), LEADERBOARD_SIZE) });
+    if (phase === 'PODIUM' || phase === 'ENDED')
+      send('podium', { top: topPlayers(this.players.values(), PODIUM_SIZE) });
   }
 
   // ---------- Player actions ----------
@@ -252,14 +296,23 @@ export class Game {
     return undefined;
   }
 
-  /** Final ranking of the remaining (non-kicked) players. */
+  /**
+   * Final ranking: the remaining players (same order as the podium), then the players kicked
+   * after the start, ranked among themselves below them.
+   */
   standings(): PlayerStanding[] {
-    return rankPlayers(this.players.values()).map(({ player, rank }) => ({
-      nickname: player.nickname,
-      score: player.totalScore,
-      correctCount: player.correctCount,
-      rank,
-    }));
+    const standing =
+      (offset: number) =>
+      ({ player, rank }: { player: Player; rank: number }) => ({
+        nickname: player.nickname,
+        score: player.totalScore,
+        correctCount: player.correctCount,
+        rank: rank + offset,
+      });
+    return [
+      ...rankPlayers(this.players.values()).map(standing(0)),
+      ...rankPlayers(this.kicked).map(standing(this.players.size)),
+    ];
   }
 
   statePayload(): GameStatePayload {
@@ -284,19 +337,14 @@ export class Game {
     if (!question) return this.enterPodium();
     this.startedAt ??= new Date();
     this.questionIndex = index;
+    this.reveal = null;
     for (const p of this.players.values()) {
       p.answer = null;
       p.lastResult = null;
     }
     this.setPhase('QUESTION_INTRO', QUESTION_INTRO_MS);
     this.broadcastState();
-    this.transport.toHost('question:show', {
-      index,
-      text: question.text,
-      ...(question.imageUrl ? { imageUrl: question.imageUrl } : {}),
-      choices: question.choices.map((c) => c.text),
-      timeLimitSec: question.timeLimitSec,
-    });
+    this.transport.toHost('question:show', this.showPayload());
     this.timer = setTimeout(() => this.enterAnswering(), QUESTION_INTRO_MS);
   }
 
@@ -337,10 +385,11 @@ export class Game {
     }
 
     this.broadcastState();
-    this.transport.toHost('question:reveal', {
+    this.reveal = {
       correctIndexes: question.choices.flatMap((c, i) => (c.isCorrect ? [i] : [])),
       distribution,
-    });
+    };
+    this.transport.toHost('question:reveal', this.reveal);
     for (const p of this.players.values()) {
       if (p.socketId) this.transport.toSocket(p.socketId, 'player:result', this.resultPayload(p));
     }
@@ -372,20 +421,31 @@ export class Game {
     return true;
   }
 
-  private sendAnswerCount(): void {
+  private sendAnswerCount(send: Send = this.transport.toHost.bind(this.transport)): void {
     let answered = 0;
     let total = 0;
     for (const p of this.players.values()) {
       if (p.answer) answered++;
       if (p.answer || p.socketId) total++;
     }
-    this.transport.toHost('answer:count', { answered, total });
+    send('answer:count', { answered, total });
   }
 
-  private sendLobbyPlayers(): void {
-    this.transport.toHost('lobby:players', {
+  private sendLobbyPlayers(send: Send = this.transport.toHost.bind(this.transport)): void {
+    send('lobby:players', {
       players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname })),
     });
+  }
+
+  private showPayload(): QuestionShowPayload {
+    const q = this.currentQuestion!;
+    return {
+      index: this.questionIndex,
+      text: q.text,
+      ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
+      choices: q.choices.map((c) => c.text),
+      timeLimitSec: q.timeLimitSec,
+    };
   }
 
   private promptPayload() {

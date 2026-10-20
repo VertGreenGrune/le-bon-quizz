@@ -65,6 +65,11 @@ export interface ClientToServerEvents {
   'host:next': (p: HostActionPayload, ack: (r: Ack) => void) => void;
   'host:kick': (p: HostKickPayload, ack: (r: Ack) => void) => void;
   'host:end': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  /**
+   * Host screen reloaded / reconnected: re-attaches this socket as host, then the server
+   * re-sends everything the host screen needs for the current phase.
+   */
+  'host:rejoin': (p: HostActionPayload, ack: (r: Ack) => void) => void;
 
   'player:join': (
     p: PlayerJoinPayload,

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEMO_QUIZ, QUESTION_INTRO_MS, type Quiz, type ServerToClientEvents } from '@lbq/shared';
 import { Game, type GameTransport } from './Game.js';
 import { GameError } from './errors.js';
-import { GameManager, generatePin } from './GameManager.js';
+import { GameManager, GAME_IDLE_TTL_MS, HOST_GONE_TTL_MS, generatePin } from './GameManager.js';
 
 type Sent = { to: string; event: keyof ServerToClientEvents; payload: unknown };
 
@@ -422,6 +422,105 @@ describe('Game state machine', () => {
       expectGameError(() => game.rejoin('bad-token', 's'), 'SESSION_NOT_FOUND');
     });
   });
+
+  describe('host resync (host:rejoin)', () => {
+    /** Events sent to the rejoining host socket, in order. */
+    const resyncHost = () => {
+      rec.clear();
+      game.resyncHost('host-2');
+      expect(rec.sent.every((s) => s.to === 'host-2')).toBe(true);
+      return rec.sent.map((s) => s.event);
+    };
+
+    it('LOBBY: state + players', () => {
+      joinAll('Alice');
+      expect(resyncHost()).toEqual(['game:state', 'lobby:players']);
+      expect(rec.last('lobby:players')).toEqual({
+        players: [{ id: expect.any(String), nickname: 'Alice' }],
+      });
+    });
+
+    it('ANSWERING: question, remaining time and answer count', () => {
+      const [alice] = joinAll('Alice', 'Bob');
+      game.start();
+      vi.advanceTimersByTime(QUESTION_INTRO_MS + 5_000);
+      game.answer(alice!.id, 0, 1);
+      expect(resyncHost()).toEqual([
+        'game:state',
+        'lobby:players',
+        'question:show',
+        'answer:count',
+      ]);
+      expect(rec.last('game:state')).toMatchObject({ phase: 'ANSWERING', remainingMs: 15_000 });
+      expect(rec.last('question:show')).toMatchObject({
+        index: 0,
+        text: DEMO_QUIZ.questions[0]!.text,
+      });
+      expect(rec.last('answer:count')).toEqual({ answered: 1, total: 2 });
+    });
+
+    it('REVEAL: the same reveal the host got live', () => {
+      const [alice] = joinAll('Alice');
+      game.start();
+      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      game.answer(alice!.id, 0, 1);
+      const live = rec.last('question:reveal', 'host');
+      expect(resyncHost()).toEqual([
+        'game:state',
+        'lobby:players',
+        'question:show',
+        'answer:count',
+        'question:reveal',
+      ]);
+      expect(rec.last('question:reveal')).toEqual(live);
+    });
+
+    it('LEADERBOARD, PODIUM and ENDED', () => {
+      const [alice] = joinAll('Alice');
+      game.start();
+      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      game.answer(alice!.id, 0, 1);
+      game.next();
+      expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'question:show', 'leaderboard']);
+      expect(rec.last('leaderboard')).toEqual({
+        top: [{ nickname: 'Alice', score: alice!.totalScore }],
+      });
+      game.end();
+      expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'podium']);
+    });
+  });
+
+  it('tracks whether a host screen is connected', () => {
+    expect(game.hostGoneSince).toBeNull();
+    game.hostConnected('h1');
+    game.hostConnected('h2');
+    game.hostDisconnected('h1');
+    expect(game.hostGoneSince).toBeNull();
+    game.hostDisconnected('h2');
+    expect(game.hostGoneSince).toBe(Date.now());
+    game.hostDisconnected('unknown');
+    game.hostConnected('h3');
+    expect(game.hostGoneSince).toBeNull();
+  });
+
+  it('keeps players kicked after the start in the standings, below the others', () => {
+    const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé', 'Dan');
+    game.kick(chloe!.id); // in the lobby: forgotten
+    game.start();
+    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    game.answer(alice!.id, 0, 1);
+    game.answer(bob!.id, 0, 1);
+    vi.advanceTimersByTime(20_000);
+    expect(game.phase).toBe('REVEAL');
+    game.kick(alice!.id); // best score, but kicked
+    game.end();
+    expect(game.standings()).toEqual([
+      { nickname: 'Bob', score: bob!.totalScore, correctCount: 1, rank: 1 },
+      { nickname: 'Dan', score: 0, correctCount: 0, rank: 2 },
+      { nickname: 'Alice', score: alice!.totalScore, correctCount: 1, rank: 3 },
+    ]);
+    expect(alice!.totalScore).toBeGreaterThan(0);
+  });
 });
 
 describe('GameManager', () => {
@@ -458,6 +557,36 @@ describe('GameManager', () => {
     games.sweep(game.lastActivityAt + 1000);
     expect(games.size).toBe(1);
     games.sweep(game.lastActivityAt + 10 * 60 * 1000);
+    expect(games.size).toBe(0);
+  });
+
+  it('ends (and so saves) a started game whose host screen is gone', () => {
+    const games = new GameManager();
+    const onEnded = vi.fn();
+    const game = games.create(DEMO_QUIZ, () => noop, { onEnded });
+    game.join('Alice', 's1');
+    game.hostConnected('h1');
+    game.start();
+    game.hostDisconnected('h1');
+    const goneAt = game.hostGoneSince!;
+
+    games.sweep(goneAt + HOST_GONE_TTL_MS - 1000);
+    expect(game.phase).not.toBe('ENDED');
+    games.sweep(goneAt + HOST_GONE_TTL_MS + 1000);
+    expect(game.phase).toBe('ENDED');
+    expect(onEnded).toHaveBeenCalledWith(game);
+    expect(games.size).toBe(1); // kept for the ENDED grace period
+    game.dispose();
+  });
+
+  it('ends an idle game before dropping it', () => {
+    const games = new GameManager();
+    const onEnded = vi.fn();
+    const game = games.create(DEMO_QUIZ, () => noop, { onEnded });
+    game.join('Alice', 's1');
+    game.start();
+    games.sweep(game.lastActivityAt + GAME_IDLE_TTL_MS + 1000);
+    expect(onEnded).toHaveBeenCalledOnce();
     expect(games.size).toBe(0);
   });
 });
