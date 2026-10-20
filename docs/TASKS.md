@@ -273,7 +273,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   first, capped at +500), reset on wrong/no answer; included in score and leaderboard; unit tests.
 
 ### T12 — Game reports page + CSV export
-- **Status:** todo
+- **Status:** in-progress (T12 agent, worktree ../lbq-T12, branch task/T12-reports)
 - **Depends on:** T6, T7
 - **Scope:** `apps/web/src/reports/**`, `/reports` + `/reports/:gameId` routes in `main.tsx`, a
   "Mes parties" link in the editor header (one line in `apps/web/src/editor/**`). Server
