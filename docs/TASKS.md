@@ -359,7 +359,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   should not replay on a rejoin (e.g. podium reveal).
 
 ### T10 — Animations & sounds (wave 4, run alone)
-- **Status:** in-progress (claude T10, worktree ../lbq-T10)
+- **Status:** done
 - **Depends on:** wave 3 merged
 - **Scope:** `apps/web/src/host/**`, `apps/web/src/player/**`, `apps/web/src/components/**`,
   `apps/web/public/sounds/**`, `index.css`. No server or contract changes.
@@ -369,6 +369,30 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   on the host screen only (lobby music, countdown tick, reveal, podium), mute toggle remembered,
   only royalty-free/CC0 files (list sources in `public/sounds/CREDITS.md`). Respect
   `prefers-reduced-motion`. e2e test still passes.
+- **Summary:** host (`host/screens.tsx`, `HostPage.tsx`): fade/slide transition between screens
+  (`AnimatePresence`, one key per screen — ANSWERING → REVEAL animates in place), circular
+  countdown ring that empties and turns red + pulses for the last 5 s, answers flying in one by
+  one, reveal (wrong answers fade, right ones pulse with a white ring), distribution bars growing
+  in sequence with counting numbers, answer counter / lobby player count pop, leaderboard
+  re-ordering (previous standings for 1.2 s, then `layout` re-order with scores counting up —
+  `hostReducer` keeps `previousLeaderboard`, unchanged by a resync), podium 3rd → 2nd → 1st with
+  crown + confetti (`components/motion.tsx`: `Confetti`, `CountUp`). Phones (`PlayPage.tsx`):
+  bouncing shapes while waiting, big question number on "get ready", buttons pop in + `whileTap`
+  press, answered shape pop + ripple, points counting up, 🔥 flickering streak badge, score bump,
+  red countdown ≤ 5 s, staggered podium + confetti for the winner. Sounds (host only,
+  `host/sounds.ts`): lobby music loop, player-join pop, tick on the last 5 s, reveal "ta-da",
+  podium drum roll + fanfare (timed on the podium delays); 🔊/🔇 toggle in the header remembered in
+  `localStorage`; retried on the first click if autoplay is blocked. The first screen after a
+  reload (`host:rejoin`) is shown without entrance animations and without its sound (T19
+  follow-up 3). `prefers-reduced-motion`: `<MotionConfig reducedMotion="user">` on both pages, no
+  confetti / count-ups, CSS animations neutralised in `index.css`. Sound files are synthesized by
+  `apps/web/scripts/generate-sounds.mjs` (deterministic, original work, CC0) — listed in
+  `public/sounds/CREDITS.md`. Tests: sound rules + mute storage, previous leaderboard in the
+  reducer; e2e passes unchanged. Checked in Chromium with screenshots (host 1600×900 + Pixel 7).
+- **Follow-ups:** (1) Not tried on real phones / a real TV (performance of confetti on low-end
+  TVs). (2) WAV files (~650 kB total); could be converted to Opus/MP3 if size matters. (3) No
+  music during ANSWERING (only the last-5-s tick); easy to add with another loop. (4) T13: the new
+  UI strings (`Couper le son`, `Série de`…) need i18n.
 
 ### T13 — i18n FR/EN (wave 5, run alone, last)
 - **Status:** todo
@@ -472,3 +496,6 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   check (`README.md`, `.vscode/settings.json`, `e2e/full-game.spec.ts`,
   `game/persistence.test.ts`) — trivial merge conflicts possible with T19, keep their side and
   re-run `pnpm format`. PLAN.md §9 (production) added; README + CLAUDE.md commands updated.
+- 2026-10-20, T10 agent (no contract change, no server change). Outside the listed T10 scope:
+  new `apps/web/scripts/generate-sounds.mjs` (generator of the CC0 sound files, kept out of
+  `public/` so it isn't shipped). `hostReducer` gained `previousLeaderboard` / `leaderboardFor`.

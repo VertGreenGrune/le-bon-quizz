@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { QUESTION_INTRO_MS, type ErrorPayload } from '@lbq/shared';
+import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } from '@lbq/shared';
 import { currentQuestion, isLastQuestion } from './hostReducer';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -10,6 +11,7 @@ import {
   QuestionIntroScreen,
   QuestionScreen,
 } from './screens';
+import { setMuted, useHostSounds, useMuted } from './sounds';
 
 /**
  * Shared screen (TV/projector). `/host/new?quizId=<id>` creates a game (demo quiz without
@@ -47,6 +49,17 @@ export function HostPage() {
   const timed = state.deadline != null;
   const now = useNow(timed);
   const remainingMs = timed ? Math.max(0, state.deadline! - now) : null;
+  const remainingSec = remainingMs != null ? Math.ceil(remainingMs / 1000) : null;
+
+  useHostSounds({ phase: state.phase, remainingSec, playerCount: state.players.length });
+
+  // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
+  // entrance animations (podium reveal, re-ordering…) instead of replaying them.
+  const screenKey = screenKeyFor(state.phase, state.questionIndex);
+  const view = `${screenKey}/${state.phase}`;
+  const firstView = useRef<string | null>(null);
+  if (state.phase !== null) firstView.current ??= view;
+  const instant = view === firstView.current;
 
   if (createError)
     return (
@@ -102,10 +115,11 @@ export function HostPage() {
       screen = (
         <QuestionScreen
           question={question}
-          remainingSec={remainingMs != null ? Math.ceil(remainingMs / 1000) : null}
+          remainingMs={remainingMs}
           answered={state.answered}
           answerTotal={state.answerTotal}
           reveal={phase === 'REVEAL' ? state.reveal : null}
+          instant={instant}
         />
       );
       primary =
@@ -114,79 +128,137 @@ export function HostPage() {
           : { label: 'Suivant', onClick: game.next };
       break;
     case 'LEADERBOARD':
-      screen = <LeaderboardScreen top={state.leaderboard} />;
+      screen = (
+        <LeaderboardScreen
+          top={state.leaderboard}
+          previous={state.previousLeaderboard}
+          instant={instant}
+        />
+      );
       primary = {
         label: isLastQuestion(state) ? 'Voir le podium' : 'Question suivante',
         onClick: game.next,
       };
       break;
     case 'PODIUM':
-      screen = <PodiumScreen top={state.podium} />;
+      screen = <PodiumScreen top={state.podium} instant={instant} />;
       primary = { label: 'Terminer la partie', onClick: game.end };
       break;
     case 'ENDED':
-      screen = <PodiumScreen top={state.podium} />;
+      screen = <PodiumScreen top={state.podium} instant={instant} />;
       break;
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-brand text-white select-none">
-      <header className="flex items-center gap-4 px-6 py-3 text-lg font-semibold">
-        <Link to="/" className="font-black">
-          Le Bon Quizz
-        </Link>
-        {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
-        {state.questionIndex >= 0 && phase !== 'PODIUM' && phase !== 'ENDED' && (
-          <span className="opacity-80">
-            Question {state.questionIndex + 1} / {state.totalQuestions}
-          </span>
-        )}
-        <span className="flex-1" />
-        {!game.connected && (
-          <span className="rounded bg-answer-red px-3 py-1">Connexion au serveur perdue…</span>
-        )}
-        {phase !== 'ENDED' && phase !== 'PODIUM' && (
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('Terminer la partie maintenant ?')) game.end();
-            }}
-            className="rounded-lg border-2 border-white/60 px-4 py-1 hover:bg-white/10"
-          >
-            Terminer
-          </button>
-        )}
-      </header>
-
-      {screen}
-
-      <footer className="flex min-h-20 items-center justify-end gap-4 px-6 pb-6">
-        {game.error && (
-          <button
-            type="button"
-            onClick={game.clearError}
-            className="mr-auto rounded-lg bg-answer-red px-4 py-2 text-lg font-semibold"
-          >
-            {game.error.message} ✕
-          </button>
-        )}
-        {phase === 'ENDED' && (
-          <Link to="/" className="rounded-xl bg-white px-8 py-4 text-2xl font-black text-brand">
-            Retour à l'accueil
+    <MotionConfig reducedMotion="user">
+      <main className="flex min-h-dvh flex-col bg-brand text-white select-none">
+        <header className="flex items-center gap-4 px-6 py-3 text-lg font-semibold">
+          <Link to="/" className="font-black">
+            Le Bon Quizz
           </Link>
-        )}
-        {primary && (
-          <button
-            type="button"
-            onClick={primary.onClick}
-            disabled={primary.disabled}
-            className="rounded-xl bg-white px-10 py-4 text-2xl font-black text-brand shadow-lg transition hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+          {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
+          {state.questionIndex >= 0 && phase !== 'PODIUM' && phase !== 'ENDED' && (
+            <span className="opacity-80">
+              Question {state.questionIndex + 1} / {state.totalQuestions}
+            </span>
+          )}
+          <span className="flex-1" />
+          {!game.connected && (
+            <span className="rounded bg-answer-red px-3 py-1">Connexion au serveur perdue…</span>
+          )}
+          <MuteButton />
+          {phase !== 'ENDED' && phase !== 'PODIUM' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Terminer la partie maintenant ?')) game.end();
+              }}
+              className="rounded-lg border-2 border-white/60 px-4 py-1 hover:bg-white/10"
+            >
+              Terminer
+            </button>
+          )}
+        </header>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={screenKey}
+            className="flex flex-1 flex-col"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -24 }}
+            transition={{ duration: 0.2 }}
           >
-            {primary.label}
-          </button>
-        )}
-      </footer>
-    </main>
+            {screen}
+          </motion.div>
+        </AnimatePresence>
+
+        <footer className="flex min-h-20 items-center justify-end gap-4 px-6 pb-6">
+          {game.error && (
+            <button
+              type="button"
+              onClick={game.clearError}
+              className="mr-auto rounded-lg bg-answer-red px-4 py-2 text-lg font-semibold"
+            >
+              {game.error.message} ✕
+            </button>
+          )}
+          {phase === 'ENDED' && (
+            <Link to="/" className="rounded-xl bg-white px-8 py-4 text-2xl font-black text-brand">
+              Retour à l'accueil
+            </Link>
+          )}
+          {primary && (
+            <motion.button
+              type="button"
+              onClick={primary.onClick}
+              disabled={primary.disabled}
+              whileHover={primary.disabled ? undefined : { scale: 1.05 }}
+              whileTap={primary.disabled ? undefined : { scale: 0.94 }}
+              className="rounded-xl bg-white px-10 py-4 text-2xl font-black text-brand shadow-lg disabled:opacity-50"
+            >
+              {primary.label}
+            </motion.button>
+          )}
+        </footer>
+      </main>
+    </MotionConfig>
+  );
+}
+
+/** One key per screen: ANSWERING → REVEAL keeps the same screen (the reveal animates in place). */
+function screenKeyFor(phase: HostPhase | null, questionIndex: number): string {
+  switch (phase) {
+    case null:
+    case 'LOBBY':
+      return 'lobby';
+    case 'QUESTION_INTRO':
+      return `intro-${questionIndex}`;
+    case 'ANSWERING':
+    case 'REVEAL':
+      return `question-${questionIndex}`;
+    case 'LEADERBOARD':
+      return `leaderboard-${questionIndex}`;
+    case 'PODIUM':
+    case 'ENDED':
+      return 'podium';
+  }
+}
+
+/** Sound on/off, remembered in localStorage. */
+function MuteButton() {
+  const muted = useMuted();
+  return (
+    <button
+      type="button"
+      onClick={() => setMuted(!muted)}
+      aria-label={muted ? 'Activer le son' : 'Couper le son'}
+      title={muted ? 'Activer le son' : 'Couper le son'}
+      aria-pressed={muted}
+      className="rounded-lg border-2 border-white/60 px-3 py-1 text-xl hover:bg-white/10"
+    >
+      {muted ? '🔇' : '🔊'}
+    </button>
   );
 }
 
