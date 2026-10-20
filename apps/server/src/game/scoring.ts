@@ -12,6 +12,18 @@ export function computePoints(basePoints: number, responseMs: number, timeLimitM
   return Math.round(basePoints * (1 - t / timeLimitMs / 2));
 }
 
+export const STREAK_BONUS_STEP = 100;
+export const STREAK_BONUS_MAX = 500;
+
+/**
+ * Streak bonus (PLAN.md §3) for a correct answer that brings the streak of consecutive correct
+ * answers to `streak` (this one included): +100 per correct answer after the first, capped at
+ * +500 — 1 → 0, 2 → 100, …, 6+ → 500.
+ */
+export function streakBonus(streak: number): number {
+  return Math.min(Math.max(streak - 1, 0) * STREAK_BONUS_STEP, STREAK_BONUS_MAX);
+}
+
 export interface Scored {
   id: string;
   nickname: string;

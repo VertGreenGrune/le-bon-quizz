@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computePoints, rankPlayers, topPlayers } from './scoring.js';
+import { computePoints, rankPlayers, streakBonus, topPlayers } from './scoring.js';
 
 describe('computePoints', () => {
   it('gives full points for an instant answer', () => {
@@ -23,6 +23,14 @@ describe('computePoints', () => {
 
   it('gives 0 for a 0-point question', () => {
     expect(computePoints(0, 1000, 20_000)).toBe(0);
+  });
+});
+
+describe('streakBonus', () => {
+  it('is +100 per correct answer after the first, capped at +500', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 20].map(streakBonus)).toEqual([
+      0, 0, 100, 200, 300, 400, 500, 500, 500,
+    ]);
   });
 });
 

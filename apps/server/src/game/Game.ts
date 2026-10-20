@@ -11,7 +11,7 @@ import {
   type ServerToClientEvents,
 } from '@lbq/shared';
 import { GameError } from './errors.js';
-import { computePoints, rankPlayers, topPlayers } from './scoring.js';
+import { computePoints, rankPlayers, streakBonus, topPlayers } from './scoring.js';
 
 type ServerEvent = keyof ServerToClientEvents;
 type EventArgs<E extends ServerEvent> = Parameters<ServerToClientEvents[E]>;
@@ -39,10 +39,12 @@ export interface Player {
   socketId: string | null;
   totalScore: number;
   correctCount: number;
+  /** Consecutive correct answers up to the last revealed question (0 after a wrong / no answer). */
+  streak: number;
   /** Answer to the current question, if any. Reset at each QUESTION_INTRO. */
   answer: { choiceIndex: number; responseMs: number; correct: boolean; points: number } | null;
   /** Result of the last revealed question, re-sent on rejoin during REVEAL. */
-  lastResult: { correct: boolean; pointsEarned: number } | null;
+  lastResult: { correct: boolean; pointsEarned: number; streakBonus: number } | null;
 }
 
 /** Final standing of one player, as saved in `PlayerResult`. */
@@ -170,6 +172,7 @@ export class Game {
       socketId,
       totalScore: 0,
       correctCount: 0,
+      streak: 0,
       answer: null,
       lastResult: null,
     };
@@ -323,9 +326,14 @@ export class Game {
     for (const p of this.players.values()) {
       const a = p.answer;
       if (a) distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
-      p.totalScore += a?.points ?? 0;
-      if (a?.correct) p.correctCount++;
-      p.lastResult = { correct: a?.correct ?? false, pointsEarned: a?.points ?? 0 };
+      const correct = a?.correct ?? false;
+      p.streak = correct ? p.streak + 1 : 0;
+      // A 0-point question awards nothing, streak bonus included (the streak still counts).
+      const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
+      const pointsEarned = (a?.points ?? 0) + bonus;
+      p.totalScore += pointsEarned;
+      if (correct) p.correctCount++;
+      p.lastResult = { correct, pointsEarned, streakBonus: bonus };
     }
 
     this.broadcastState();
@@ -395,6 +403,8 @@ export class Game {
     return {
       correct: player.lastResult?.correct ?? false,
       pointsEarned: player.lastResult?.pointsEarned ?? 0,
+      streak: player.streak,
+      streakBonus: player.lastResult?.streakBonus ?? 0,
       totalScore: player.totalScore,
       rank,
     };

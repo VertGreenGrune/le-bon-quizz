@@ -121,7 +121,12 @@ export interface QuestionRevealPayload {
 
 export interface PlayerResultPayload {
   correct: boolean;
+  /** Includes `streakBonus`. */
   pointsEarned: number;
+  /** Consecutive correct answers including this one; 0 if wrong / no answer. */
+  streak: number;
+  /** Streak bonus already included in `pointsEarned` (PLAN.md §3). */
+  streakBonus: number;
   totalScore: number;
   rank: number;
 }

@@ -44,7 +44,10 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
 
 - Correct answer: `points = round(basePoints * (1 - (responseMs / timeLimitMs) / 2))`
   (`basePoints` default 1000; 0 / 1000 / 2000 per question setting). Wrong / no answer: 0.
-- Streak bonus (phase 3): +100 per consecutive correct answer, capped at +500.
+- Streak bonus: `streak` = consecutive correct answers including this one (reset to 0 by a
+  wrong or missing answer). A correct answer earns `min(100 * (streak - 1), 500)` extra points
+  (1st → +0, 2nd → +100, …, 6th and later → +500), added to `pointsEarned` and the total score.
+  A 0-point question awards no bonus but still extends the streak.
 - `responseMs` is measured **on the server** from the `ANSWERING` start.
 
 ## 4. Socket protocol (source of truth = `packages/shared/src/events.ts`)
@@ -79,7 +82,7 @@ Every client → server event takes an ack callback receiving
 | `question:prompt` | players | `{ index, choiceCount, timeLimitSec }` (no text, no answer!) |
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ correctIndexes: number[], distribution: number[] }` |
-| `player:result` | each player | `{ correct, pointsEarned, totalScore, rank }` |
+| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) |
 | `leaderboard` | host | `{ top: { nickname, score }[] }` (top 5) |
 | `podium` | all | `{ top: { nickname, score }[] }` (top 3) |
 | `player:kicked` | that player | `{}` |
