@@ -66,7 +66,8 @@ Several Claude agents work on this repo in parallel. To avoid conflicts:
 
 ## Conventions
 
-- Code, identifiers, commits in English; UI text in French first (i18n-ready, EN later).
+- Code, identifiers, commits in English; UI text in **French only** (user
+  decision: no English version, no i18n library — write strings directly in French).
 - Validate every incoming socket payload / HTTP body with the zod schemas from `packages/shared`.
 - Socket event names: `domain:action` (e.g. `player:join`, `game:state`).
 - Tests: Vitest (unit), Playwright (e2e, phone + host flows).

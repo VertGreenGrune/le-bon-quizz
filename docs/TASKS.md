@@ -273,7 +273,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 Order (T10 and T13 touch almost every screen, so they must not run alongside other UI work):
 - **Wave 3 (parallel):** T9, T11, T12, T19
 - **Wave 4 (alone):** T10
-- **Wave 5 (alone, last):** T13
+- ~~Wave 5: T13~~ cancelled (French only)
 
 ### Wave 3 coordination — read before starting
 - Ports: T9 3009/5189 · T11 3011/5191 · T12 3012/5192 · T19 3019/5199. Same rules as wave 2
@@ -394,14 +394,9 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   music during ANSWERING (only the last-5-s tick); easy to add with another loop. (4) T13: the new
   UI strings (`Couper le son`, `Série de`…) need i18n.
 
-### T13 — i18n FR/EN (wave 5, run alone, last)
-- **Status:** todo
-- **Depends on:** T10
-- **Scope:** every UI string in `apps/web/src/**`, new `apps/web/src/i18n/**`. Server error
-  messages stay as codes; the web app translates `ErrorCode`s.
-- **Deliverable:** `react-i18next` (or a tiny typed dictionary), French default, English
-  available, language switch on home/editor (remembered), host screen and phones each use their
-  own browser language. No hardcoded UI text left (add a test or lint check). e2e still passes.
+### T13 — i18n FR/EN
+- **Status:** cancelled (2026-10-20, user decision: the app is **French only**, no translation
+  layer. Write UI text directly in French; ignore earlier "needs i18n" follow-ups.)
 
 ## Phase 4 — Extras (to be detailed later)
 - T14 More question types (type answer, poll, slider)

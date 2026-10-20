@@ -150,7 +150,7 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 |---|---|---|
 | 1. Realtime prototype | Prove the core | hardcoded quiz, PIN join, host + phones, answer, score, leaderboard, all in memory |
 | 2. MVP | Usable for real | DB, host auth, editor, image upload, QR, reconnection, podium, deployment |
-| 3. Polish | Feels like Kahoot | animations, sounds, streaks, mobile UX, reports, i18n FR/EN |
+| 3. Polish | Feels like Kahoot | animations, sounds, streaks, mobile UX, reports (French only, no i18n) |
 | 4. Extras | Growth | new question types, team mode, public library, AI-generated quizzes, Redis scaling |
 
 Advice: test phase 1 early with 3–4 real phones on local Wi-Fi — realtime sync and
