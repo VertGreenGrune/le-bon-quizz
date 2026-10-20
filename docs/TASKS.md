@@ -92,7 +92,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   if the ack fails with anything other than `ALREADY_ANSWERED`.
 
 ### T4 — Phase 1 integration & e2e test
-- **Status:** todo
+- **Status:** in-progress (T4 agent, worktree ../lbq-T4, branch task/T4-e2e)
 - **Depends on:** T1, T2, T3
 - **Scope:** `e2e/**`, Playwright config, root `package.json` script, `README.md`. T6/T7/T8
   edit app code in parallel: **don't refactor app code**. Only a minimal fix if a bug blocks
