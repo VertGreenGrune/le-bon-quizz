@@ -236,7 +236,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   fallback is best-effort). Host reconnection (`host:rejoin`) is still open (T2 follow-up).
 
 ### T9 — Deployment
-- **Status:** todo
+- **Status:** in-progress (T9 agent, worktree ../lbq-T9)
 - **Depends on:** T4, T5
 - **Scope:** `Dockerfile`s, `fly.toml`/equivalent, `.github/workflows/**`, `.env.example`
 - **Deliverable:** CI (lint, typecheck, tests), deploy web + server + Postgres, Sentry.
