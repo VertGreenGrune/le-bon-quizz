@@ -17,3 +17,11 @@ export function getSocket(): GameSocket {
   socket ??= io(SERVER_URL, { autoConnect: true, withCredentials: true });
   return socket;
 }
+
+/**
+ * The server reads the session cookie once per connection, so call this after login/logout
+ * for `host:create` to see the new identity.
+ */
+export function reconnectSocket(): void {
+  socket?.disconnect().connect();
+}

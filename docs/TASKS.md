@@ -310,3 +310,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   and `typecheck` (`… && tsc -p e2e`). Behaviour note: the last player's answer triggers
   REVEAL immediately, so that phone may skip the "Réponse envoyée !" screen — expected, not
   a bug.
+- 2026-10-20, main agent (post-merge, wave 2): fixed T7 follow-up (1) — `reconnectSocket()` in
+  `apps/web/src/lib/socket.ts`, called by `AuthProvider` after login/register/logout, so
+  `host:create` sees the new session. Verified in a browser: login → "Lancer" on a DB quiz →
+  lobby with PIN. Dev database `lbq` migrated + seeded (demo@lebonquizz.local / demo1234).

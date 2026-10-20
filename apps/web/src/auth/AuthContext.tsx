@@ -10,6 +10,7 @@ import {
 import { Navigate, Outlet, useLocation } from 'react-router';
 import type { LoginBody, PublicUser, RegisterBody } from '@lbq/shared';
 import { ApiError, api } from '../api';
+import { reconnectSocket } from '../lib/socket';
 
 interface AuthValue {
   /** `undefined` while `/auth/me` is loading, `null` when logged out. */
@@ -47,13 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (body: LoginBody) => {
     setUser((await api.auth.login(body)).user);
+    reconnectSocket();
   }, []);
   const register = useCallback(async (body: RegisterBody) => {
     setUser((await api.auth.register(body)).user);
+    reconnectSocket();
   }, []);
   const logout = useCallback(async () => {
     await api.auth.logout().catch(() => {});
     setUser(null);
+    reconnectSocket();
   }, []);
   const reload = useCallback(() => {
     setLoadError(null);
