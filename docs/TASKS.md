@@ -74,11 +74,23 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 ## Phase 2 — MVP
 
 ### T5 — Database + REST API + auth
-- **Status:** in-progress (T5 agent, worktree ../lbq-T5)
+- **Status:** done
 - **Depends on:** T0
 - **Scope:** `apps/server/prisma/**`, `apps/server/src/api/**`, `apps/server/src/auth/**`
 - **Deliverable:** Prisma schema (PLAN.md §5), migrations, seed, endpoints of §6, host auth,
   zod validation, docker-compose for Postgres.
+- **Summary:** Prisma 7 (`prisma-client` generator → `src/generated/prisma`, gitignored, built by
+  `postinstall`/`typecheck`; `@prisma/adapter-pg`) + `init` migration + seed (demo host
+  `demo@lebonquizz.local`/`demo1234`, `DEMO_QUIZ` kept with id `demo`); all §6 endpoints with
+  shared zod bodies (`packages/shared/src/api.ts`); scrypt passwords + DB sessions (cookie or
+  Bearer); local-disk image uploads; `docker-compose.yml` (Postgres 17). 10 integration tests
+  run when `TEST_DATABASE_URL` is set (skipped otherwise), plus unit tests.
+- **Follow-ups:** T7 — use `getQuizForOwner` (`src/api/quizzes.service.ts`) and
+  `getUserBySessionToken` (`src/auth`) for `host:create` (`host:create` has no auth field yet:
+  read the `lbq_session` cookie from the socket handshake, or add `authToken` to the payload as
+  a contract change); write `GameSession.quizTitle`. T9 — run `prisma migrate deploy` on
+  deploy, S3 storage for uploads, rate-limit `/auth/login`, Postgres service in CI for
+  `TEST_DATABASE_URL`. T6 — `fetch(..., { credentials: 'include' })`.
 
 ### T6 — Quiz editor UI
 - **Status:** todo
@@ -130,5 +142,13 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   (one event name = one payload type, needed for typed Socket.IO). `game:state` carries
   `remainingMs` instead of `endsAt` (avoids phone clock skew). All acks use
   `Ack<T>` = `{ ok: true, ...T } | { ok: false, error: { code, message } }`. PLAN.md §4 updated.
+- 2026-10-20, T5 agent: **added** (no existing type changed) `packages/shared/src/api.ts`
+  (REST bodies/responses, `ApiErrorBody`), exported from the index. Outside T5 scope:
+  `apps/server/src/index.ts` registers the API (`registerApi`) and CORS (HTTP + Socket.IO)
+  now sends `credentials: true`; new `apps/server/src/db.ts` + `config.ts`;
+  `apps/server/package.json` scripts (`postinstall`/`typecheck` run `prisma generate`,
+  `db:*`); root `pnpm-workspace.yaml` `onlyBuiltDependencies` (prisma, esbuild);
+  `docker-compose.yml`, `.env.example`, CLAUDE.md commands. PLAN.md §5 adds `Session` and
+  `GameSession.quizTitle`/nullable `quizId`; §6 documents auth + error format.
 - `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
   merge conflicts there; keep both sides.

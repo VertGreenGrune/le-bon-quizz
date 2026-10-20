@@ -32,6 +32,9 @@ pnpm install       # once (pnpm 10, Node >= 22)
 pnpm dev           # server :3001 + web :5173 (exposed on LAN for phones)
 pnpm typecheck     # all packages
 pnpm test          # Vitest, all packages
+docker compose up -d            # Postgres (localhost:5432, lbq/lbq)
+pnpm --filter @lbq/server db:migrate   # apply/create migrations (prisma migrate dev)
+pnpm --filter @lbq/server db:seed      # demo host demo@lebonquizz.local / demo1234 + DEMO_QUIZ
 ```
 
 Phones on the same Wi-Fi: open `http://<PC LAN IP>:5173`. The web app connects to
@@ -42,7 +45,6 @@ Phones on the same Wi-Fi: open `http://<PC LAN IP>:5173`. The web app connects t
 Each agent works in its **own git worktree / branch** (`task/T1-game-server`, …) and the user
 merges into `main`. Run `pnpm install` in a new worktree, and `pnpm typecheck && pnpm test`
 before finishing.
-
 
 Several Claude agents work on this repo in parallel. To avoid conflicts:
 
