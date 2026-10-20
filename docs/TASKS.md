@@ -36,12 +36,20 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 - **Follow-up for T9:** server runs via `tsx` (no compile step yet); add a real build.
 
 ### T1 — Game server (in-memory)
-- **Status:** in-progress (claude T1, worktree ../lbq-T1)
+- **Status:** done
 - **Depends on:** T0
 - **Scope:** `apps/server/src/game/**`, `apps/server/src/socket/**`
 - **Deliverable:** PIN generation, rooms, state machine (PLAN.md §2), server timer, scoring
   (§3), all events of §4, one answer per player, late answers ignored, rejoin by
   sessionToken, kick. Vitest unit tests for state machine + scoring.
+- **Summary:** transport-agnostic `Game` class (`game/Game.ts`: state machine, timers, scoring,
+  join/rejoin/kick/answer) + `GameManager` (PIN registry, idle/ENDED sweep) + `loadQuiz`
+  (`game/quizzes.ts`, demo only); `socket/index.ts` validates every payload with the shared zod
+  schemas and maps `GameError` → `Ack` errors. QUESTION_INTRO auto-advances after 3 s;
+  ANSWERING ends on timer / all *connected* players answered; `host:next` can skip both.
+  27 Vitest tests (scoring, ranking, full game, timers, kick, disconnect/rejoin).
+- **Follow-ups:** T7 replaces `loadQuiz` (DB + ownership). No `host:rejoin` event: a host
+  reconnects by sending any host action with its `hostToken` (re-joins the host room).
 
 ### T2 — Shared screen (host view)
 - **Status:** todo
@@ -130,5 +138,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   (one event name = one payload type, needed for typed Socket.IO). `game:state` carries
   `remainingMs` instead of `endsAt` (avoids phone clock skew). All acks use
   `Ack<T>` = `{ ok: true, ...T } | { ok: false, error: { code, message } }`. PLAN.md §4 updated.
+- 2026-10-20, T1 (no contract change), behaviour notes for T2/T3: join is LOBBY-only
+  (`GAME_ALREADY_STARTED` afterwards); nicknames are unique case-insensitively; after
+  `player:rejoin` the server re-sends `game:state`, plus `question:prompt` only if ANSWERING
+  *and* not yet answered, `player:result` if REVEAL, `podium` if PODIUM. `answer:count.total`
+  counts connected players (+ those who already answered). The last `player:answer` can
+  trigger REVEAL events *before* its ack arrives — clients should not rely on that order.
+  Ranks are competition ranks (ties share a rank).
 - `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
   merge conflicts there; keep both sides.
