@@ -165,7 +165,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   `GameSession` + `PlayerResult`; history/report endpoints return real data.
 
 ### T8 — QR code, reconnection hardening, wake-lock
-- **Status:** todo
+- **Status:** in-progress (T8 agent, worktree ../lbq-T8, branch task/T8-qr-rejoin)
 - **Depends on:** T2, T3
 - **Scope:** `apps/web/src/host/**` (QR code in the lobby screen only), `apps/web/src/player/**`
 - **Deliverable:** QR code in lobby → `/join?pin=` (PIN pre-filled; the QR must use the PC's
