@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import './index.css';
 import { Home } from './Home';
+import { AuthLayout, RequireAuth } from './auth/AuthContext';
+import { AuthPage } from './auth/AuthPage';
+import { QuizEditorPage } from './editor/QuizEditorPage';
+import { QuizListPage } from './editor/QuizListPage';
 import { HostPage } from './host/HostPage';
 import { JoinPage } from './player/JoinPage';
 import { PlayPage } from './player/PlayPage';
@@ -16,6 +20,26 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/host/:pin" element={<HostPage />} />
         <Route path="/join" element={<JoinPage />} />
         <Route path="/play" element={<PlayPage />} />
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route
+            path="/editor"
+            element={
+              <RequireAuth>
+                <QuizListPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/editor/:quizId"
+            element={
+              <RequireAuth>
+                <QuizEditorPage />
+              </RequireAuth>
+            }
+          />
+        </Route>
       </Routes>
     </BrowserRouter>
   </StrictMode>,

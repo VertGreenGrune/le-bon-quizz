@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { QUESTION_INTRO_MS, type ErrorPayload } from '@lbq/shared';
 import { currentQuestion, isLastQuestion } from './hostReducer';
-import { createDemoGame, loadHostToken, useHostGame, useNow } from './useHostGame';
+import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
   LeaderboardScreen,
   LobbyScreen,
@@ -12,12 +12,14 @@ import {
 } from './screens';
 
 /**
- * Shared screen (TV/projector). `/host/new` creates a demo game then redirects to
- * `/host/:pin`; the same component instance stays mounted across that redirect.
+ * Shared screen (TV/projector). `/host/new?quizId=<id>` creates a game (demo quiz without
+ * `quizId`) then redirects to `/host/:pin`; the same component instance stays mounted across
+ * that redirect.
  */
 export function HostPage() {
   const { pin: pinParam } = useParams();
   const navigate = useNavigate();
+  const quizId = useSearchParams()[0].get('quizId') ?? undefined;
   const isNew = pinParam === 'new';
   const pin = isNew ? undefined : pinParam;
   const [hostToken, setHostToken] = useState(() => (pin ? loadHostToken(pin) : null));
@@ -29,7 +31,7 @@ export function HostPage() {
   useEffect(() => {
     if (!isNew) return;
     let cancelled = false;
-    createDemoGame().then(
+    createGame(quizId).then(
       (res) => {
         if (cancelled) return;
         setHostToken(res.hostToken);
@@ -40,7 +42,7 @@ export function HostPage() {
     return () => {
       cancelled = true;
     };
-  }, [isNew, navigate]);
+  }, [isNew, quizId, navigate]);
 
   const timed = state.deadline != null;
   const now = useNow(timed);
