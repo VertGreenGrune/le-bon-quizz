@@ -359,7 +359,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   should not replay on a rejoin (e.g. podium reveal).
 
 ### T10 — Animations & sounds (wave 4, run alone)
-- **Status:** todo
+- **Status:** in-progress (claude T10, worktree ../lbq-T10)
 - **Depends on:** wave 3 merged
 - **Scope:** `apps/web/src/host/**`, `apps/web/src/player/**`, `apps/web/src/components/**`,
   `apps/web/public/sounds/**`, `index.css`. No server or contract changes.
