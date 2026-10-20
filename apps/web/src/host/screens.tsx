@@ -1,4 +1,6 @@
+import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   SHAPES,
   type QuestionRevealPayload,
@@ -6,6 +8,7 @@ import {
   type RankedPlayer,
 } from '@lbq/shared';
 import { ShapeIcon, shapeBg } from '../components/shapes';
+import { joinOrigins, joinUrl } from './joinUrl';
 
 // ---------- Lobby ----------
 
@@ -18,14 +21,37 @@ export function LobbyScreen({
   players: { id: string; nickname: string }[];
   onKick: (playerId: string) => void;
 }) {
+  const origins = useMemo(() => joinOrigins(), []);
+  const [originIndex, setOriginIndex] = useState(0);
+  const origin = origins[originIndex] ?? origins[0]!;
+
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
-      <div className="flex flex-col items-center gap-2 rounded-2xl bg-white px-12 py-6 text-brand shadow-xl">
-        <p className="text-2xl font-semibold">
-          Rejoignez sur <span className="font-black">{location.host}/join</span>
-        </p>
-        <p className="text-xl font-semibold">Code PIN du jeu :</p>
-        <p className="text-8xl font-black tracking-[0.15em] tabular-nums">{pin}</p>
+      <div className="flex items-center gap-10 rounded-2xl bg-white px-10 py-6 text-brand shadow-xl">
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-2xl font-semibold">
+            Rejoignez sur{' '}
+            <span className="font-black">{origin.replace(/^https?:\/\//, '')}/join</span>
+          </p>
+          <p className="text-xl font-semibold">Code PIN du jeu :</p>
+          <p className="text-8xl font-black tracking-[0.15em] tabular-nums">{pin}</p>
+          {origins.length > 1 && (
+            // Several network cards on the PC: let the host pick the one the phones are on.
+            <button
+              type="button"
+              onClick={() => setOriginIndex((i) => (i + 1) % origins.length)}
+              className="text-sm font-semibold text-gray-500 underline underline-offset-4 hover:text-brand"
+            >
+              QR code injoignable ? Essayer une autre adresse ({originIndex + 1}/{origins.length})
+            </button>
+          )}
+        </div>
+        <QRCodeSVG
+          value={joinUrl(origin, pin)}
+          size={224}
+          marginSize={2}
+          title="Scanner pour rejoindre la partie"
+        />
       </div>
 
       <div className="flex items-center gap-3 text-3xl font-bold">

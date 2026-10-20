@@ -4,6 +4,7 @@ import { NICKNAME_MAX_LENGTH, Nickname, PIN_LENGTH, Pin } from '@lbq/shared';
 import { errorMessage, normalizePin } from './playerState';
 import { joinGame } from './playerStore';
 import { loadSession } from './session';
+import { primeWakeLock } from './useWakeLock';
 
 /** /join?pin=123456 — phone join screen (the host QR code points here). */
 export function JoinPage() {
@@ -22,6 +23,7 @@ export function JoinPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!pinValid || !nicknameValid || busy) return;
+    primeWakeLock(); // still inside the tap
     setBusy(true);
     setError(null);
     const res = await joinGame(pin, nickname.trim());

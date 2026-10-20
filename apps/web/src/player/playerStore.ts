@@ -14,13 +14,16 @@ import { clearSession, loadSession, saveSession, type PlayerSession } from './se
  * first `player:join`, so no server event is missed between the join ack and /play mounting.
  */
 const ACK_TIMEOUT_MS = 8000;
+/** Liveness probe when the phone wakes up: short, a frozen socket must be replaced fast. */
+const PROBE_TIMEOUT_MS = 3000;
 
 let state: PlayerState = initialPlayerState;
 const listeners = new Set<() => void>();
 let attached = false;
 /** Socket id that did the join / last successful rejoin: no rejoin needed while it lives. */
 let boundSocketId: string | undefined;
-let rejoining = false;
+/** Socket id of the in-flight `player:rejoin`: a reconnect mid-rejoin starts a fresh one. */
+let rejoiningSocketId: string | undefined;
 
 function dispatch(action: PlayerAction) {
   const next = playerReducer(state, action);
@@ -62,7 +65,28 @@ function attach() {
     dispatch({ type: 'kicked' });
   });
 
+  // Phone unlocked / tab back in front / Wi-Fi back. While the phone sleeps the JS is frozen:
+  // the socket may still look connected although the server dropped it long ago, or sit in a
+  // long reconnection back-off. Check it now instead of waiting for the next ping timeout.
+  const onWake = () => {
+    if (document.visibilityState !== 'visible' || !loadSession()) return;
+    // Ended games are swept by the server: a rejoin would turn the end screen into "lost".
+    if (state.phase === 'ENDED' || state.kicked || state.lost) return;
+    if (socket.connected) rejoinIfNeeded({ probe: true });
+    else reconnectNow();
+  };
+  document.addEventListener('visibilitychange', onWake);
+  window.addEventListener('pageshow', onWake); // restored from the back/forward cache
+  window.addEventListener('online', onWake);
+
   dispatch({ type: 'connection', connected: socket.connected });
+}
+
+/** Drops the current (possibly dead) connection and reconnects right away, no back-off. */
+function reconnectNow() {
+  const socket = getSocket();
+  socket.disconnect();
+  socket.connect(); // `connect` handler rejoins
 }
 
 function loseSession(code: ErrorCode) {
@@ -71,22 +95,34 @@ function loseSession(code: ErrorCode) {
   dispatch({ type: 'lost', code });
 }
 
-function rejoinIfNeeded() {
+/**
+ * `player:rejoin` with the stored session if this socket isn't bound to it yet. With `probe`,
+ * rejoins even a bound socket (idempotent on the server, which re-sends the current state):
+ * used as a liveness check after the phone wakes up.
+ */
+function rejoinIfNeeded({ probe = false } = {}) {
   const socket = getSocket();
   const session = loadSession();
-  if (!session || !socket.connected || rejoining) return;
-  if (boundSocketId === socket.id) return;
-  rejoining = true;
+  const sid = socket.id;
+  if (!session || !socket.connected || !sid || rejoiningSocketId === sid) return;
+  if (!probe && boundSocketId === sid) return;
+  rejoiningSocketId = sid;
   socket
-    .timeout(ACK_TIMEOUT_MS)
+    .timeout(probe ? PROBE_TIMEOUT_MS : ACK_TIMEOUT_MS)
     .emit('player:rejoin', { pin: session.pin, sessionToken: session.sessionToken }, (err, res) => {
-      rejoining = false;
-      if (err) return; // timed out: retried on next connect / mount
+      if (rejoiningSocketId === sid) rejoiningSocketId = undefined;
+      // Reconnected meanwhile (that connection rejoins by itself), or joined another game.
+      if (socket.id !== sid || loadSession()?.sessionToken !== session.sessionToken) return;
+      if (err) {
+        // Connected but no answer: half-open socket (Wi-Fi switch, NAT timeout…). Start over.
+        reconnectNow();
+        return;
+      }
       if (!res.ok) {
         loseSession(res.error.code);
         return;
       }
-      boundSocketId = socket.id;
+      boundSocketId = sid;
       dispatch({ type: 'session', nickname: res.nickname, totalScore: res.totalScore });
     });
 }

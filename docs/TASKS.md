@@ -165,12 +165,30 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   `GameSession` + `PlayerResult`; history/report endpoints return real data.
 
 ### T8 — QR code, reconnection hardening, wake-lock
-- **Status:** in-progress (T8 agent, worktree ../lbq-T8, branch task/T8-qr-rejoin)
+- **Status:** done
 - **Depends on:** T2, T3
 - **Scope:** `apps/web/src/host/**` (QR code in the lobby screen only), `apps/web/src/player/**`
 - **Deliverable:** QR code in lobby → `/join?pin=` (PIN pre-filled; the QR must use the PC's
   LAN address, not `localhost`, so phones can open it), robust rejoin after phone lock,
   Wake Lock API.
+- **Summary:** lobby shows a QR code (`qrcode.react`) → `<origin>/join?pin=` (PIN pre-filled).
+  When the host page is on `localhost`, the origin is swapped for the PC's LAN IPv4s
+  (`host/joinUrl.ts`, unit-tested), which `vite.config.ts` detects at dev-server start and
+  injects as `__LAN_HOSTS__` (virtual adapters — WSL, Hyper-V, Docker, VPN — ranked last); a
+  "try another address" link cycles through them if the PC has several. Rejoin hardening in
+  `player/playerStore.ts`: on `visibilitychange`/`pageshow`/`online` the phone reconnects
+  immediately if disconnected (no back-off wait), or sends `player:rejoin` as a 3 s liveness
+  probe if the socket looks connected; any rejoin timeout drops the half-open socket and
+  reconnects; a reconnect during an in-flight rejoin no longer blocks the new rejoin. Wake lock
+  (`player/useWakeLock.ts`): Screen Wake Lock API during a game, re-acquired on return to the
+  tab; without it (plain-HTTP LAN = not a secure context, old browsers) falls back to
+  NoSleep.js's silent video, started by the "Entrer" tap. Verified with Chromium (phone emulated,
+  opened via the LAN URL): join from QR URL, offline→online, wake probe, drop mid-question then
+  answer.
+- **Follow-ups:** T9 — production is HTTPS so the native wake lock is used there; for a deployed
+  build `__LAN_HOSTS__` is the build machine's LAN (only used if the page is on `localhost`, so
+  harmless). Real phones still to be tested (iOS Safari: wake lock needs iOS 16.4+, video
+  fallback is best-effort). Host reconnection (`host:rejoin`) is still open (T2 follow-up).
 
 ### T9 — Deployment
 - **Status:** todo
@@ -224,3 +242,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `node --watch --env-file-if-exists=../../.env --import tsx src/index.ts`. Don't switch back.
   Host screen `/host/new` now times out after 8 s with a "server not reachable" message +
   retry button instead of spinning forever.
+- 2026-10-20, T8 agent (no contract change). Outside T8 scope: `apps/web/vite.config.ts`
+  (`define: { __LAN_HOSTS__ }`, LAN IPv4 detection for the QR code) and `apps/web/package.json`
+  + `pnpm-lock.yaml` (deps `qrcode.react`, `nosleep.js`). In `host/` only `screens.tsx`
+  (`LobbyScreen`) and the new `host/joinUrl.ts` were touched.
