@@ -89,22 +89,36 @@ Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow
 
 ## 5. Data model (Prisma, `apps/server/prisma/schema.prisma`)
 
-- `User` — id, email, name, passwordHash/auth provider, createdAt
+- `User` — id, email (unique, lowercased), name, passwordHash (scrypt), createdAt
+- `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, createdAt, updatedAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE`),
   timeLimitSec (default 20), basePoints (default 1000)
 - `Choice` — id, questionId, order (0–3), text, isCorrect
-- `GameSession` — id, quizId, hostId, pin, startedAt, endedAt
+- `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
+  startedAt, endedAt
 - `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank
 
 Live game state is in memory (`Map<pin, Game>`) in phase 1–2; moved to Redis in phase 4.
 
 ## 6. REST API (prefix `/api`)
 
-- `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
+Contract: `packages/shared/src/api.ts` (zod request bodies + response types). Errors are
+`{ error: { code, message } }` (`ApiErrorBody`). Everything except register/login/logout
+requires a host session: httpOnly cookie `lbq_session` (set by register/login; web uses
+`credentials: 'include'`) **or** `Authorization: Bearer <token>`. Another host's resources
+answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/src/auth`
+(`getUserBySessionToken` is reusable for socket auth).
+
+- `POST /auth/register` `{ email, name, password }` → 201 `AuthResponse { user, token }`;
+  `POST /auth/login` `{ email, password }` → `AuthResponse`; `POST /auth/logout` → 204;
+  `GET /auth/me` → `PublicUser`
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
-- `POST /uploads/image` → `{ url }`
+  (body `QuizInput` = `QuizSchema` without `id`; PUT replaces all questions)
+- `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
+  bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
 - `GET /games` (history), `GET /games/:id` (report), `GET /games/:id/export.csv`
+  (UTF-8 BOM, formula-injection-safe)
 
 ## 7. Web routes (`apps/web`)
 

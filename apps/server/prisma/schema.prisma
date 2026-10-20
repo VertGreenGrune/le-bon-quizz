@@ -1,0 +1,107 @@
+// Data model — see docs/PLAN.md §5. Connection URL lives in prisma.config.ts.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  quizzes      Quiz[]
+  sessions     Session[]
+  gameSessions GameSession[]
+}
+
+/// Host login session. `id` is the SHA-256 of the opaque token given to the client.
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Quiz {
+  id            String        @id @default(cuid())
+  ownerId       String
+  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  coverImageUrl String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  questions     Question[]
+  gameSessions  GameSession[]
+
+  @@index([ownerId])
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  quizId       String
+  quiz         Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order        Int
+  text         String
+  imageUrl     String?
+  type         QuestionType @default(MCQ)
+  timeLimitSec Int          @default(20)
+  basePoints   Int          @default(1000)
+  choices      Choice[]
+
+  @@unique([quizId, order])
+}
+
+model Choice {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  order      Int // 0–3, maps to the shape/color (see SHAPES in @lbq/shared)
+  text       String
+  isCorrect  Boolean
+
+  @@unique([questionId, order])
+}
+
+model GameSession {
+  id        String         @id @default(cuid())
+  /// Null once the quiz is deleted; history is kept thanks to `quizTitle`.
+  quizId    String?
+  quiz      Quiz?          @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  quizTitle String
+  hostId    String
+  host      User           @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  pin       String
+  startedAt DateTime       @default(now())
+  endedAt   DateTime?
+  results   PlayerResult[]
+
+  @@index([hostId, startedAt])
+}
+
+model PlayerResult {
+  id            String      @id @default(cuid())
+  gameSessionId String
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  nickname      String
+  score         Int
+  correctCount  Int
+  rank          Int
+
+  @@index([gameSessionId, rank])
+}
