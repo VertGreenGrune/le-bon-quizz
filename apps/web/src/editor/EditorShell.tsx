@@ -12,6 +12,12 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
         <Link to="/editor" className="text-xl font-black tracking-tight">
           Le Bon Quizz
         </Link>
+        <Link
+          to="/reports"
+          className="rounded-lg px-2 py-1 text-sm font-semibold hover:bg-white/10"
+        >
+          Mes parties
+        </Link>
         <span className="flex-1" />
         {actions}
         {user && (

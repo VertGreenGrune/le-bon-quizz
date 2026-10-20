@@ -3,7 +3,7 @@ import { getQuizForOwner } from '../api/quizzes.service.js';
 import { getUserBySessionToken } from '../auth/session.js';
 import type { PrismaClient } from '../db.js';
 import { GameError } from './errors.js';
-import type { Game, PlayerStanding } from './Game.js';
+import type { Game, PlayerStanding, QuestionStats } from './Game.js';
 
 /** A quiz ready to be played, and the DB row it comes from (null for the built-in demo). */
 export interface LoadedQuiz {
@@ -11,7 +11,7 @@ export interface LoadedQuiz {
   dbQuizId: string | null;
 }
 
-/** What is saved when a game ends (`GameSession` + its `PlayerResult`s). */
+/** What is saved when a game ends (`GameSession` + its `PlayerResult`s / `QuestionResult`s). */
 export interface GameRecord {
   hostId: string;
   quizId: string | null;
@@ -20,6 +20,7 @@ export interface GameRecord {
   startedAt: Date;
   endedAt: Date;
   results: PlayerStanding[];
+  questions: QuestionStats[];
 }
 
 /** Everything the game layer needs from the outside world (DB, auth). */
@@ -74,6 +75,7 @@ export function createPrismaPersistence(prisma: PrismaClient): GamePersistence {
           startedAt: r.startedAt,
           endedAt: r.endedAt,
           results: { create: r.results },
+          questions: { create: r.questions },
         },
       });
     },
@@ -98,5 +100,6 @@ export function gameRecord(
     startedAt: game.startedAt,
     endedAt: new Date(),
     results: game.standings(),
+    questions: game.questionStats,
   };
 }

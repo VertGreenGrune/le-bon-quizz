@@ -60,6 +60,17 @@ export interface PlayerStanding {
   rank: number;
 }
 
+/** How one revealed question went, as saved in `QuestionResult` (for the game report). */
+export interface QuestionStats {
+  index: number;
+  text: string;
+  choices: string[];
+  correctIndexes: number[];
+  distribution: number[];
+  playerCount: number;
+  correctCount: number;
+}
+
 export interface GameHooks {
   /** Called once when the game enters ENDED (e.g. to save the results). */
   onEnded?(game: Game): void;
@@ -83,6 +94,8 @@ export class Game {
   startedAt: Date | null = null;
   /** Since when no host socket is connected; null while one is. */
   hostGoneSince: number | null = null;
+  /** One entry per revealed question, in play order. */
+  readonly questionStats: QuestionStats[] = [];
 
   /** Players kicked after the start: out of the game, but kept in the saved results. */
   private readonly kicked: Player[] = [];
@@ -371,6 +384,7 @@ export class Game {
     this.setPhase('REVEAL', null);
 
     const distribution = question.choices.map(() => 0);
+    let correctCount = 0;
     for (const p of this.players.values()) {
       const a = p.answer;
       if (a) distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
@@ -380,15 +394,25 @@ export class Game {
       const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
       const pointsEarned = (a?.points ?? 0) + bonus;
       p.totalScore += pointsEarned;
-      if (correct) p.correctCount++;
+      if (correct) {
+        p.correctCount++;
+        correctCount++;
+      }
       p.lastResult = { correct, pointsEarned, streakBonus: bonus };
     }
+    const correctIndexes = question.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
+    this.questionStats.push({
+      index: this.questionIndex,
+      text: question.text,
+      choices: question.choices.map((c) => c.text),
+      correctIndexes,
+      distribution,
+      playerCount: this.players.size,
+      correctCount,
+    });
 
     this.broadcastState();
-    this.reveal = {
-      correctIndexes: question.choices.flatMap((c, i) => (c.isCorrect ? [i] : [])),
-      distribution,
-    };
+    this.reveal = { correctIndexes, distribution };
     this.transport.toHost('question:reveal', this.reveal);
     for (const p of this.players.values()) {
       if (p.socketId) this.transport.toSocket(p.socketId, 'player:result', this.resultPayload(p));

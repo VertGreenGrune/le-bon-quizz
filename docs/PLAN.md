@@ -102,12 +102,14 @@ Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
   startedAt, endedAt
 - `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank
+- `QuestionResult` — id, gameSessionId, index, text, choices[], correctIndexes[], distribution[],
+  playerCount, correctCount (snapshot of each revealed question, for the game report)
 
 Live game state is in memory (`Map<pin, Game>`) in phase 1–2; moved to Redis in phase 4.
 Quiz loading, socket auth and result saving go through `GamePersistence`
 (`apps/server/src/game/persistence.ts`). When a game reaches ENDED, a logged-in host's game
-(if it left the lobby) is saved as `GameSession` + `PlayerResult`s; anonymous demo games are not.
-A game reaches ENDED by `host:end` (any phase), or through the sweep (`GameManager.sweep`, every
+(if it left the lobby) is saved as `GameSession` + `PlayerResult`s + `QuestionResult`s; anonymous
+demo games are not. A game reaches ENDED by `host:end` (any phase), or through the sweep (`GameManager.sweep`, every
 minute) when abandoned: no host screen connected for 10 min, or no activity for 2 h. Players
 kicked after the start are saved too, ranked below the remaining players (who keep the podium
 order); players kicked in the lobby are not.
@@ -128,7 +130,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   (body `QuizInput` = `QuizSchema` without `id`; PUT replaces all questions)
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
-- `GET /games` (history), `GET /games/:id` (report), `GET /games/:id/export.csv`
+- `GET /games` (history, `GameSummary` with `winner`), `GET /games/:id` (report: ranking +
+  per-question `questions`, empty for games saved before T12), `GET /games/:id/export.csv`
   (UTF-8 BOM, formula-injection-safe)
 
 ## 7. Web routes (`apps/web`)
@@ -139,7 +142,7 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/host/:pin` → shared screen
 - `/login`, `/register` → host account (`?next=` = page to return to)
 - `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
-- `/reports/:gameId` → game report
+- `/reports` → past games, `/reports/:gameId` → game report (auth required)
 
 ## 8. Roadmap
 

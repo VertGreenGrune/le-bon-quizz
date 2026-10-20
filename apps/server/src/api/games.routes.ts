@@ -7,9 +7,12 @@ import { toCsv } from './csv.js';
 import { notFound } from './errors.js';
 
 type IdParams = { Params: { id: string } };
-type GameRow = Prisma.GameSessionGetPayload<{
-  include: { _count: { select: { results: true } } };
-}>;
+// Results sorted by rank: the first one is the winner.
+const summaryInclude = {
+  _count: { select: { results: true } },
+  results: { orderBy: [{ rank: 'asc' }, { score: 'desc' }] },
+} satisfies Prisma.GameSessionInclude;
+type GameRow = Prisma.GameSessionGetPayload<{ include: typeof summaryInclude }>;
 
 const toSummary = (g: GameRow): GameSummary => ({
   id: g.id,
@@ -19,13 +22,14 @@ const toSummary = (g: GameRow): GameSummary => ({
   startedAt: g.startedAt.toISOString(),
   endedAt: g.endedAt?.toISOString() ?? null,
   playerCount: g._count.results,
+  winner: g.results[0]?.nickname ?? null,
 });
 
 export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
   async function getReport(id: string, hostId: string): Promise<GameReport> {
     const g = await prisma.gameSession.findFirst({
       where: { id, hostId },
-      include: { _count: { select: { results: true } }, results: { orderBy: { rank: 'asc' } } },
+      include: { ...summaryInclude, questions: { orderBy: { index: 'asc' } } },
     });
     if (!g) throw notFound('Partie');
     return {
@@ -36,6 +40,7 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
         score,
         correctCount,
       })),
+      questions: g.questions.map(({ id: _id, gameSessionId: _g, ...q }) => q),
     };
   }
 
@@ -43,7 +48,7 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
     const rows = await prisma.gameSession.findMany({
       where: { hostId: currentUser(request).id },
       orderBy: { startedAt: 'desc' },
-      include: { _count: { select: { results: true } } },
+      include: { ...summaryInclude, results: { ...summaryInclude.results, take: 1 } },
     });
     return rows.map(toSummary);
   });

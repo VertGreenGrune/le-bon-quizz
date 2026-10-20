@@ -90,6 +90,7 @@ model GameSession {
   startedAt DateTime       @default(now())
   endedAt   DateTime?
   results   PlayerResult[]
+  questions QuestionResult[]
 
   @@index([hostId, startedAt])
 }
@@ -104,4 +105,23 @@ model PlayerResult {
   rank          Int
 
   @@index([gameSessionId, rank])
+}
+
+/// Snapshot of one played question (text/choices as they were) and how players answered it.
+model QuestionResult {
+  id             String      @id @default(cuid())
+  gameSessionId  String
+  gameSession    GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  /// Position in the quiz (0-based).
+  index          Int
+  text           String
+  choices        String[]
+  correctIndexes Int[]
+  /// Number of players per choice (same order as `choices`).
+  distribution   Int[]
+  /// Players in the game when the question was revealed (answered or not).
+  playerCount    Int
+  correctCount   Int
+
+  @@unique([gameSessionId, index])
 }
