@@ -22,6 +22,10 @@ export interface HostGameState {
   answerTotal: number;
   reveal: QuestionRevealPayload | null;
   leaderboard: RankedPlayer[];
+  /** Leaderboard before the current one (animates the re-ordering); [] after a reload. */
+  previousLeaderboard: RankedPlayer[];
+  /** `questionIndex` the current `leaderboard` was received for (-1: none yet). */
+  leaderboardFor: number;
   podium: RankedPlayer[];
 }
 
@@ -45,6 +49,8 @@ export const initialHostState: HostGameState = {
   answerTotal: 0,
   reveal: null,
   leaderboard: [],
+  previousLeaderboard: [],
+  leaderboardFor: -1,
   podium: [],
 };
 
@@ -76,7 +82,15 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
     case 'reveal':
       return { ...state, reveal: action.payload };
     case 'leaderboard':
-      return { ...state, leaderboard: action.top };
+      // A host resync re-sends the same question's leaderboard: keep the real previous one.
+      if (state.leaderboardFor === state.questionIndex)
+        return { ...state, leaderboard: action.top };
+      return {
+        ...state,
+        previousLeaderboard: state.leaderboard,
+        leaderboard: action.top,
+        leaderboardFor: state.questionIndex,
+      };
     case 'podium':
       return { ...state, podium: action.top };
   }

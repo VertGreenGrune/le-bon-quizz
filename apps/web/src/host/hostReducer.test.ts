@@ -110,4 +110,25 @@ describe('hostReducer', () => {
     ]);
     expect(isLastQuestion(s)).toBe(true);
   });
+
+  it('keeps the previous leaderboard for the re-ordering animation, not on a resync', () => {
+    const at = (questionIndex: number): HostAction => ({
+      type: 'state',
+      payload: { phase: 'LEADERBOARD', questionIndex, totalQuestions: 3 },
+      now: 0,
+    });
+    const first = [{ nickname: 'A', score: 900 }];
+    const second = [
+      { nickname: 'B', score: 1800 },
+      { nickname: 'A', score: 900 },
+    ];
+    const s1 = run([at(0), { type: 'leaderboard', top: first }]);
+    expect(s1.previousLeaderboard).toEqual([]);
+    const s2 = run([at(1), { type: 'leaderboard', top: second }], s1);
+    expect(s2.previousLeaderboard).toEqual(first);
+    expect(s2.leaderboard).toEqual(second);
+    // host:rejoin re-sends the same question's leaderboard
+    const s3 = hostReducer(s2, { type: 'leaderboard', top: second });
+    expect(s3.previousLeaderboard).toEqual(first);
+  });
 });
