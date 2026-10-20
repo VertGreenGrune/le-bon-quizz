@@ -25,7 +25,24 @@ packages/shared/     Types and zod schemas — THE contract between web and serv
 docs/                PLAN.md (architecture), TASKS.md (task board)
 ```
 
+## Commands
+
+```
+pnpm install       # once (pnpm 10, Node >= 22)
+pnpm dev           # server :3001 + web :5173 (exposed on LAN for phones)
+pnpm typecheck     # all packages
+pnpm test          # Vitest, all packages
+```
+
+Phones on the same Wi-Fi: open `http://<PC LAN IP>:5173`. The web app connects to
+`<same host>:3001` by default (override with `VITE_SERVER_URL`, see `.env.example`).
+
 ## Rules for working on this project (multi-agent)
+
+Each agent works in its **own git worktree / branch** (`task/T1-game-server`, …) and the user
+merges into `main`. Run `pnpm install` in a new worktree, and `pnpm typecheck && pnpm test`
+before finishing.
+
 
 Several Claude agents work on this repo in parallel. To avoid conflicts:
 

@@ -51,10 +51,13 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
 
 Rooms: `game:<PIN>` (everyone), `game:<PIN>:host` (host sockets only).
 
+Every client → server event takes an ack callback receiving
+`{ ok: true, ...data }` or `{ ok: false, error: { code, message } }` (`Ack<T>` in shared).
+
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId }` | ack `{ pin, hostToken }` |
+| `host:create` | `{ quizId }` | ack `{ pin, hostToken }` (`quizId: 'demo'` in phase 1) |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -63,17 +66,17 @@ Rooms: `game:<PIN>` (everyone), `game:<PIN>:host` (host sockets only).
 ### Player → server
 | Event | Payload | Notes |
 |---|---|---|
-| `player:join` | `{ pin, nickname }` | ack `{ playerId, sessionToken }` or `{ error }` |
-| `player:rejoin` | `{ pin, sessionToken }` | after disconnect; restores score |
+| `player:join` | `{ pin, nickname }` | ack `{ playerId, sessionToken }` |
+| `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, totalScore }`, then server re-sends current `game:state` (+ `question:prompt` if ANSWERING) |
 | `player:answer` | `{ pin, questionIndex, choiceIndex }` | accepted once, only during ANSWERING |
 
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, questionIndex, totalQuestions, endsAt? }` |
+| `game:state` | all | `{ phase, questionIndex, totalQuestions, remainingMs? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew) |
 | `lobby:players` | host | `{ players: { id, nickname }[] }` |
 | `question:show` | host | `{ index, text, imageUrl?, choices: string[], timeLimitSec }` |
-| `question:show` | players | `{ index, choiceCount, timeLimitSec }` (no text, no answer!) |
+| `question:prompt` | players | `{ index, choiceCount, timeLimitSec }` (no text, no answer!) |
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ correctIndexes: number[], distribution: number[] }` |
 | `player:result` | each player | `{ correct, pointsEarned, totalScore, rank }` |

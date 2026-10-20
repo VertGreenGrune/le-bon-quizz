@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #46178f;
+  --color-answer-red: #e21b3c;
+  --color-answer-blue: #1368ce;
+  --color-answer-yellow: #d89e00;
+  --color-answer-green: #26890c;
+}
+
+html,
+body {
+  background: var(--color-brand);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}

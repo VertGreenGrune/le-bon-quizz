@@ -2,7 +2,9 @@
 
 How to use (for every agent):
 1. Pick a `todo` task whose **Depends on** tasks are all `done`.
-2. Change its status to `in-progress (<your agent name>)` before writing code.
+2. Change its status to `in-progress (<your agent name>)` **on `main`** and commit it there
+   (`chore: claim T<n>`) before creating your worktree/branch — claims made only inside a
+   worktree are invisible to the other agents.
 3. Stay inside the task's **Scope** (files/folders). Need to touch something else? Note it
    under "Contract changes / cross-task notes" instead of silently editing.
 4. When finished: status `done`, add a one-line summary under the task.
@@ -16,14 +18,22 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 ## Phase 1 — Realtime prototype
 
 ### T0 — Monorepo scaffold + shared contract
-- **Status:** in-progress (main agent)
+- **Status:** done
 - **Depends on:** —
 - **Scope:** root (`package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, lint/format),
   `packages/shared/**`, empty skeletons of `apps/web` (Vite React TS + Tailwind) and
   `apps/server` (Fastify + Socket.IO, `GET /health`)
 - **Deliverable:** `pnpm dev` starts web + server; `packages/shared` exports types + zod
   schemas for every event in PLAN.md §4, `GamePhase`, quiz schema, and a hardcoded demo quiz.
-- **Must be done first — everything depends on it.**
+- **Summary:** pnpm monorepo; `@lbq/shared` (consumed as TS source, no build step) exports
+  `events.ts` (typed `ClientToServerEvents` / `ServerToClientEvents`, zod payload schemas,
+  `Ack<T>`, room helpers), `game.ts` (`GamePhase`, `SHAPES`, constants), `quiz.ts`
+  (`QuizSchema`), `DEMO_QUIZ` (id `demo`). Server: Fastify + typed Socket.IO, `/health`,
+  empty `registerSocketHandlers` in `apps/server/src/socket/index.ts`. Web: Vite + React 19 +
+  React Router + Tailwind v4 (answer colors in `index.css` `@theme`), `ShapeIcon` +
+  `shapeBg` in `apps/web/src/components/shapes.tsx`, typed singleton `getSocket()` in
+  `apps/web/src/lib/socket.ts`. Verified: typecheck, tests, `pnpm dev`, socket connect.
+- **Follow-up for T9:** server runs via `tsx` (no compile step yet); add a real build.
 
 ### T1 — Game server (in-memory)
 - **Status:** todo
@@ -36,8 +46,9 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 ### T2 — Shared screen (host view)
 - **Status:** todo
 - **Depends on:** T0
-- **Scope:** `apps/web/src/host/**`, `apps/web/src/components/shapes/**` (shared with T3 —
-  T2 creates it, T3 reuses)
+- **Scope:** `apps/web/src/host/**`, plus adding the `/host/:pin` route in `apps/web/src/main.tsx`
+  (one line). Reuse `components/shapes.tsx` and `lib/socket.ts` (already exist, from T0).
+  `/host/new` = create a game with `DEMO_QUIZ` then show its PIN.
 - **Deliverable:** `/host/:pin` — lobby (PIN, player names), question + countdown + answer
   counter, reveal with distribution bars, leaderboard, podium, host buttons (start/next/end).
   Uses the demo quiz via `host:create`.
@@ -45,7 +56,8 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 ### T3 — Player controller (phone)
 - **Status:** todo
 - **Depends on:** T0
-- **Scope:** `apps/web/src/player/**`
+- **Scope:** `apps/web/src/player/**`, plus adding the `/join` and `/play` routes in
+  `apps/web/src/main.tsx`. Reuse `components/shapes.tsx` and `lib/socket.ts`.
 - **Deliverable:** `/join` (PIN + nickname), `/play` with 2–4 big shape buttons, waiting
   screens, result feedback (correct/wrong, points, rank), sessionToken stored in
   sessionStorage for rejoin, vibration on tap. Portrait, touch-friendly.
@@ -113,3 +125,10 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 
 ## Contract changes / cross-task notes
 _(Append here: date, agent, what changed in `packages/shared` or outside your scope, why.)_
+
+- 2026-10-20, main agent (T0): players receive `question:prompt` instead of `question:show`
+  (one event name = one payload type, needed for typed Socket.IO). `game:state` carries
+  `remainingMs` instead of `endsAt` (avoids phone clock skew). All acks use
+  `Ack<T>` = `{ ok: true, ...T } | { ok: false, error: { code, message } }`. PLAN.md §4 updated.
+- `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
+  merge conflicts there; keep both sides.

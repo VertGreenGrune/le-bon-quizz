@@ -1,0 +1,21 @@
+{
+  "name": "le-bon-quizz",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @lbq/server --filter @lbq/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "format": "prettier --write ."
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}
