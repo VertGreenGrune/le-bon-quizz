@@ -44,7 +44,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   sessionToken, kick. Vitest unit tests for state machine + scoring.
 
 ### T2 — Shared screen (host view)
-- **Status:** todo
+- **Status:** in-progress (claude-T2, worktree ../lbq-T2, branch task/T2-host-screen)
 - **Depends on:** T0
 - **Scope:** `apps/web/src/host/**`, plus adding the `/host/:pin` route in `apps/web/src/main.tsx`
   (one line). Reuse `components/shapes.tsx` and `lib/socket.ts` (already exist, from T0).
