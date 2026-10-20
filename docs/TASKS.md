@@ -156,7 +156,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   answer, time limit, points, image upload), "Start game" button → `/host/new?quizId=<id>`.
 
 ### T7 — Load games from DB + save results
-- **Status:** todo
+- **Status:** in-progress (T7 agent, worktree ../lbq-T7)
 - **Depends on:** T1, T5
 - **Scope:** `apps/server/src/game/**` (persistence adapter), `apps/server/src/socket/**`
   (handshake auth), `apps/web/src/lib/socket.ts` (`withCredentials` only), game history/report
