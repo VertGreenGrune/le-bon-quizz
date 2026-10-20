@@ -264,7 +264,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 ### T9 — see Phase 2 (deployment). Can run in wave 3.
 
 ### T11 — Streaks & bonus scoring
-- **Status:** todo
+- **Status:** in-progress (T11 agent, worktree ../lbq-T11)
 - **Depends on:** T1
 - **Scope:** `apps/server/src/game/**` (scoring + per-player streak), `packages/shared/src/events.ts`
   (`streak`, `streakBonus` only), PLAN.md §3/§4, `apps/web/src/player/**` (show the streak on the
