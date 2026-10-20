@@ -74,7 +74,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 ## Phase 2 — MVP
 
 ### T5 — Database + REST API + auth
-- **Status:** todo
+- **Status:** in-progress (T5 agent, worktree ../lbq-T5)
 - **Depends on:** T0
 - **Scope:** `apps/server/prisma/**`, `apps/server/src/api/**`, `apps/server/src/auth/**`
 - **Deliverable:** Prisma schema (PLAN.md §5), migrations, seed, endpoints of §6, host auth,
