@@ -36,7 +36,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 - **Follow-up for T9:** server runs via `tsx` (no compile step yet); add a real build.
 
 ### T1 — Game server (in-memory)
-- **Status:** todo
+- **Status:** in-progress (claude T1, worktree ../lbq-T1)
 - **Depends on:** T0
 - **Scope:** `apps/server/src/game/**`, `apps/server/src/socket/**`
 - **Deliverable:** PIN generation, rooms, state machine (PLAN.md §2), server timer, scoring
