@@ -464,7 +464,71 @@ for a question, someone disconnecting mid-question, kicked player, ties); team l
 persistence; extend e2e with a team game (2 teams, 1 vs 2 players) up to the team podium.
 Solo e2e must still pass.
 
-- T14 More question types (type answer, poll, slider)
+### T14 — More question types: réponse libre, sondage, curseur (run alone, after T15)
+- **Status:** todo
+- **Depends on:** T15 merged (builds on its scoring and contract; must work in solo AND team mode)
+- **Ports:** server 3014 / web 5194, test DB `lbq_test_t14`.
+
+**Three new types** (existing `MCQ` and `TRUE_FALSE` unchanged). All UI text in French.
+
+1. **`TYPE_ANSWER` — Réponse libre.** Players type their answer on the phone.
+   - Editor: question text + 1 to 3 accepted answers (e.g. "Léonard de Vinci", "De Vinci") +
+     toggle **"Tolérer les petites fautes"** (default **on**).
+   - Matching (server only): compare after normalizing both sides — trim, lower case, remove
+     accents, punctuation and extra spaces, ignore a leading article (le/la/les/l'/un/une/des).
+     With tolerance on, also accept a typo distance (Levenshtein) of 1 for normalized answers
+     of 5–9 characters and 2 for 10+. Numbers must match exactly ("8" ≠ "9").
+   - Phone: text field (max 40 characters) + "Valider" button; keyboard opens automatically.
+   - Points: same time-based points + streak as MCQ when correct.
+   - Reveal (host): the accepted answer(s) + the answers players typed, grouped after
+     normalization, top 6 with counts, correct ones in green.
+2. **`POLL` — Sondage.** 2–4 choices, **no correct answer**, 0 points.
+   - Phone: the usual shape buttons; after the reveal it shows "Merci pour ton vote !" (no
+     correct/wrong).
+   - Streak: **unchanged** (a poll neither breaks nor extends it). Team mode: the question gives
+     0 to everyone, so team scores don't move.
+   - Reveal (host): distribution bars with percentages, no "correct" highlight.
+3. **`SLIDER` — Curseur.** Players guess a number on a slider.
+   - Editor: min, max, step (default 1), correct value, **tolérance** ± margin (default 0 =
+     exact), optional unit (e.g. "km", "ans"). Validation: min < max, correct value in range and
+     on a step, margin ≥ 0.
+   - Phone: big slider with the current value displayed large + "Valider".
+   - Correct if `|guess − correct| ≤ margin`. Points = time-based points ×
+     (1 − 0.5 × distance / margin) — exact = full points, edge of the margin = half (margin 0:
+     exact guess = full points). Outside the margin = wrong, 0 points, streak broken.
+   - Reveal (host): an axis with each guess as a dot, the correct value and margin band, and
+     "Le plus proche : <pseudo>".
+
+**Contract (packages/shared + PLAN.md §4; additive, existing clients keep working):**
+- `QuestionType` gains `TYPE_ANSWER`, `POLL`, `SLIDER`. `QuestionSchema` becomes a
+  discriminated union on `type` (MCQ/TRUE_FALSE/POLL: `choices`; POLL choices have no
+  `isCorrect`; TYPE_ANSWER: `acceptedAnswers: string[1..3]`, `typoTolerance: boolean`; SLIDER:
+  `slider: { min, max, step, correct, margin, unit? }`).
+- `question:show` (host) and `question:prompt` (phones) gain `type`; prompt carries what the phone
+  needs and **never the answer**: `choiceCount` (choice types), `slider: { min, max, step, unit? }`
+  (no `correct`/`margin`), `maxLength: 40` (TYPE_ANSWER).
+- `player:answer`: `{ pin, questionIndex }` + exactly one of `choiceIndex` | `text` | `value`
+  (zod union; the server rejects the wrong kind for the question with `INVALID_PAYLOAD`).
+- `question:reveal` gains `type` and per type: TYPE_ANSWER `acceptedAnswers`, `topAnswers:
+  { text, count, correct }[]`; SLIDER `correct`, `margin`, `guesses: number[]`, `closest?:
+  { nickname, value }`; POLL `correctIndexes: []`.
+- `PlayerResultPayload` gains optional `poll?: true` (phone shows the thank-you screen) and for
+  SLIDER `yourValue`, `correctValue`.
+
+**DB & reports:** Prisma `QuestionType` enum + new nullable columns or a `config Json` on
+`Question` (agent's choice, migration); `QuestionResult` stores the type-specific stats (JSON).
+Report page: per-type card (typed answers list, slider guesses, poll percentages — polls are
+excluded from "hardest questions" and from % correct). CSV unchanged apart from the type.
+
+**Demo quiz:** add one question of each new type to `DEMO_QUIZ` (and the seed) so they can be
+tried right away, e.g. "En quelle année a eu lieu la prise de la Bastille ?" (slider 1700–1900,
+correct 1789, margin 5), "Quel est le plus grand océan ?" (réponse libre: Pacifique), "Ton
+dessert préféré ?" (sondage).
+
+**Tests:** matching unit tests (accents, case, articles, typos at each length, numbers, tolerance
+off); slider points (exact, inside, edge, outside, margin 0); poll keeps the streak and gives 0;
+team mode averages with each new type; server rejects an answer of the wrong kind; prompt never
+contains the answer. Update the e2e games (solo + teams) for the new demo questions.
 - T16 Public quiz library
 - T17 AI-generated quizzes from a topic
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
