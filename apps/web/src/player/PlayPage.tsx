@@ -5,12 +5,14 @@ import { SHAPES } from '@lbq/shared';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { errorMessage, formatRank, playerScreen, type PlayerState } from './playerState';
 import { leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
+import { useWakeLock } from './useWakeLock';
 
 /** /play — phone controller. Question text is only on the shared screen. */
 export function PlayPage() {
   const [session] = useState(resumeSession);
   const s = usePlayerState();
   const screen = playerScreen(s);
+  useWakeLock(!!session && screen !== 'ended' && screen !== 'kicked' && screen !== 'lost');
 
   if (!session && screen !== 'kicked' && screen !== 'lost') return <Navigate to="/join" replace />;
 
