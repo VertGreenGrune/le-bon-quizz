@@ -38,7 +38,11 @@ function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
   game.start();
   quiz.questions.forEach((q, i) => {
     game.next(); // QUESTION_INTRO → ANSWERING
-    game.answer(alice.id, i, q.choices.findIndex((c) => c.isCorrect));
+    game.answer(
+      alice.id,
+      i,
+      q.choices.findIndex((c) => c.isCorrect),
+    );
     game.next(); // ANSWERING → REVEAL (Bob has not answered)
     game.next(); // → LEADERBOARD
     game.next(); // → next question / PODIUM
@@ -64,6 +68,20 @@ describe('gameRecord', () => {
       ['Alice', 1, DEMO_QUIZ.questions.length],
       ['Bob', 2, 0],
     ]);
+    // One entry per question: only Alice (of 2 players) answered, always right.
+    expect(r.questions).toHaveLength(DEMO_QUIZ.questions.length);
+    DEMO_QUIZ.questions.forEach((q, i) => {
+      const correct = q.choices.findIndex((c) => c.isCorrect);
+      expect(r.questions[i]).toEqual({
+        index: i,
+        text: q.text,
+        choices: q.choices.map((c) => c.text),
+        correctIndexes: q.choices.flatMap((c, j) => (c.isCorrect ? [j] : [])),
+        distribution: q.choices.map((_, j) => (j === correct ? 1 : 0)),
+        playerCount: 2,
+        correctCount: 1,
+      });
+    });
   });
 });
 
@@ -159,6 +177,11 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
       expect.objectContaining({ rank: 1, nickname: 'Alice', correctCount: 4 }),
       { rank: 2, nickname: 'Bob', score: 0, correctCount: 0 },
     ]);
+    expect(list[0]!.winner).toBe('Alice');
+    const questions = res.json<GameReport>().questions;
+    expect(questions.map((q) => [q.index, q.correctCount, q.playerCount])).toEqual(
+      DEMO_QUIZ.questions.map((_, i) => [i, 1, 2]),
+    );
   });
 
   it('keeps the history when the quiz was deleted during the game', async () => {

@@ -273,7 +273,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
   first, capped at +500), reset on wrong/no answer; included in score and leaderboard; unit tests.
 
 ### T12 — Game reports page + CSV export
-- **Status:** in-progress (T12 agent, worktree ../lbq-T12, branch task/T12-reports)
+- **Status:** done
 - **Depends on:** T6, T7
 - **Scope:** `apps/web/src/reports/**`, `/reports` + `/reports/:gameId` routes in `main.tsx`, a
   "Mes parties" link in the editor header (one line in `apps/web/src/editor/**`). Server
@@ -282,6 +282,16 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 - **Deliverable:** list of past games (date, quiz, players, winner), report per game (final
   ranking, per-question % correct and answer distribution, hardest questions first), CSV
   download button, empty state.
+- **Summary:** `apps/web/src/reports/`: `/reports` (`GameListPage`: date, duration, PIN, quiz,
+  player count, winner, empty state) and `/reports/:gameId` (`GameReportPage`: stats tiles,
+  final ranking with medals, per-question cards with % correct, distribution bars per shape with
+  correct answers marked + "Sans réponse", sorted hardest first or quiz order, "Exporter CSV"
+  link, 404 → "Partie introuvable"); pure helpers `reportStats.ts` unit-tested. "Mes parties" link
+  in `EditorShell`. The DB had no per-question data, so (cross-scope, see notes) the server now
+  records and saves it. Verified with Playwright against a real server: demo host logged in,
+  4 phones, list → report → CSV download.
+- **Follow-ups:** CSV still only exports the ranking (per-question export could be added).
+  Games saved before this change show "détail par question indisponible". T13: strings to i18n.
 
 ### T19 — Game robustness (host reconnection, abandoned games)
 - **Status:** todo
@@ -380,3 +390,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `apps/web/src/lib/socket.ts`, called by `AuthProvider` after login/register/logout, so
   `host:create` sees the new session. Verified in a browser: login → "Lancer" on a DB quiz →
   lobby with PIN. Dev database `lbq` migrated + seeded (demo@lebonquizz.local / demo1234).
+- 2026-10-20, T12 agent: the per-question report needed data that was never saved, so outside
+  the T12 scope (all additive): Prisma model `QuestionResult` + migration
+  `20261020200000_question_results`; `Game.questionStats` filled in `enterReveal` (small block in
+  `apps/server/src/game/Game.ts`, T11/T19 may conflict there — keep both); `GameRecord.questions`
+  saved by `persistence.ts`; `games.routes.ts` returns `winner` and `questions`. Shared
+  (`api.ts`, additive): `GameSummary.winner`, `GameQuestionReport`, `GameReport.questions`.
+  PLAN.md §5/§6/§7 updated. **After merging, run `pnpm --filter @lbq/server db:migrate`** on the
+  dev DB. The migration was NOT applied to the shared `lbq` database (it would look like drift to
+  the other wave-3 worktrees); T12 tested on `lbq_t12` / `lbq_test_t12`.

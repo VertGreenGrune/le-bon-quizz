@@ -250,16 +250,52 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
               { nickname: '=cmd', score: 2500, correctCount: 3, rank: 1 },
             ],
           },
+          questions: {
+            create: [
+              {
+                index: 1,
+                text: 'Q2',
+                choices: ['Vrai', 'Faux'],
+                correctIndexes: [1],
+                distribution: [1, 0],
+                playerCount: 2,
+                correctCount: 0,
+              },
+              {
+                index: 0,
+                text: 'Q1',
+                choices: ['A', 'B', 'C'],
+                correctIndexes: [0, 2],
+                distribution: [1, 0, 1],
+                playerCount: 2,
+                correctCount: 2,
+              },
+            ],
+          },
         },
       });
 
       const list = await app.inject({ url: '/api/games', headers });
-      expect(list.json()).toMatchObject([{ id: game.id, playerCount: 2, quizId: null }]);
+      expect(list.json()).toMatchObject([
+        { id: game.id, playerCount: 2, quizId: null, winner: '=cmd' },
+      ]);
 
       const report = await app.inject({ url: `/api/games/${game.id}`, headers });
       expect(report.json().results.map((r: { nickname: string }) => r.nickname)).toEqual([
         '=cmd',
         'Zoé',
+      ]);
+      expect(report.json().questions).toEqual([
+        {
+          index: 0,
+          text: 'Q1',
+          choices: ['A', 'B', 'C'],
+          correctIndexes: [0, 2],
+          distribution: [1, 0, 1],
+          playerCount: 2,
+          correctCount: 2,
+        },
+        expect.objectContaining({ index: 1, correctCount: 0 }),
       ]);
 
       const csv = await app.inject({ url: `/api/games/${game.id}/export.csv`, headers });

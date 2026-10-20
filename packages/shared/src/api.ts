@@ -98,6 +98,8 @@ export interface GameSummary {
   startedAt: string;
   endedAt: string | null;
   playerCount: number;
+  /** Nickname of the rank-1 player (first one if tied), null without players. */
+  winner: string | null;
 }
 
 export interface GameReportRow {
@@ -107,4 +109,22 @@ export interface GameReportRow {
   correctCount: number;
 }
 
-export type GameReport = GameSummary & { results: GameReportRow[] };
+/** How one question went (snapshot of the question as it was played). */
+export interface GameQuestionReport {
+  /** Position in the quiz (0-based). */
+  index: number;
+  text: string;
+  choices: string[];
+  correctIndexes: number[];
+  /** Players per choice, same order as `choices`. */
+  distribution: number[];
+  /** Players in the game at the reveal, answered or not. */
+  playerCount: number;
+  correctCount: number;
+}
+
+/** `questions` is empty for games saved before per-question results existed. */
+export type GameReport = GameSummary & {
+  results: GameReportRow[];
+  questions: GameQuestionReport[];
+};

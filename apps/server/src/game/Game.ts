@@ -53,6 +53,17 @@ export interface PlayerStanding {
   rank: number;
 }
 
+/** How one revealed question went, as saved in `QuestionResult` (for the game report). */
+export interface QuestionStats {
+  index: number;
+  text: string;
+  choices: string[];
+  correctIndexes: number[];
+  distribution: number[];
+  playerCount: number;
+  correctCount: number;
+}
+
 export interface GameHooks {
   /** Called once when the game enters ENDED (e.g. to save the results). */
   onEnded?(game: Game): void;
@@ -74,6 +85,8 @@ export class Game {
   lastActivityAt = Date.now();
   /** When the first question started; null while in LOBBY. */
   startedAt: Date | null = null;
+  /** One entry per revealed question, in play order. */
+  readonly questionStats: QuestionStats[] = [];
 
   private phaseEndsAt: number | null = null;
   private answeringStartedAt = 0;
@@ -320,19 +333,30 @@ export class Game {
     this.setPhase('REVEAL', null);
 
     const distribution = question.choices.map(() => 0);
+    let correctCount = 0;
     for (const p of this.players.values()) {
       const a = p.answer;
       if (a) distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
       p.totalScore += a?.points ?? 0;
-      if (a?.correct) p.correctCount++;
+      if (a?.correct) {
+        p.correctCount++;
+        correctCount++;
+      }
       p.lastResult = { correct: a?.correct ?? false, pointsEarned: a?.points ?? 0 };
     }
+    const correctIndexes = question.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
+    this.questionStats.push({
+      index: this.questionIndex,
+      text: question.text,
+      choices: question.choices.map((c) => c.text),
+      correctIndexes,
+      distribution,
+      playerCount: this.players.size,
+      correctCount,
+    });
 
     this.broadcastState();
-    this.transport.toHost('question:reveal', {
-      correctIndexes: question.choices.flatMap((c, i) => (c.isCorrect ? [i] : [])),
-      distribution,
-    });
+    this.transport.toHost('question:reveal', { correctIndexes, distribution });
     for (const p of this.players.values()) {
       if (p.socketId) this.transport.toSocket(p.socketId, 'player:result', this.resultPayload(p));
     }
