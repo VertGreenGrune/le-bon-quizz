@@ -200,6 +200,24 @@ describe('Game state machine', () => {
     game.next();
     expect(game.phase).toBe('ENDED');
     expect(rec.last('game:state', 'all')).toMatchObject({ phase: 'ENDED' });
+    expect(game.standings()).toEqual([
+      { nickname: 'Alice', score: 5000, correctCount: 4, rank: 1 },
+      { nickname: 'Bob', score: 0, correctCount: 0, rank: 2 },
+    ]);
+  });
+
+  it('records the start time and calls onEnded exactly once', () => {
+    const onEnded = vi.fn();
+    const g = new Game('654321', DEMO_QUIZ, rec.transport, { onEnded });
+    expect(g.startedAt).toBeNull();
+    g.start();
+    expect(g.startedAt).toBeInstanceOf(Date);
+    g.end();
+    g.end();
+    g.next();
+    expect(onEnded).toHaveBeenCalledTimes(1);
+    expect(onEnded).toHaveBeenCalledWith(g);
+    g.dispose();
   });
 
   it('host can skip the intro and the timer with next()', () => {

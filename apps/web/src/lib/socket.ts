@@ -9,8 +9,11 @@ const SERVER_URL =
 
 let socket: GameSocket | undefined;
 
-/** Single shared, typed socket for the whole app. */
+/**
+ * Single shared, typed socket for the whole app. `withCredentials` sends the host's
+ * `lbq_session` cookie with the handshake (the server identifies the host on `host:create`).
+ */
 export function getSocket(): GameSocket {
-  socket ??= io(SERVER_URL, { autoConnect: true });
+  socket ??= io(SERVER_URL, { autoConnect: true, withCredentials: true });
   return socket;
 }

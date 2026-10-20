@@ -57,7 +57,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId }` | ack `{ pin, hostToken }` (`quizId: 'demo'` in phase 1) |
+| `host:create` | `{ quizId }` | ack `{ pin, hostToken }`. Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes only (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -100,6 +100,9 @@ Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow
 - `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank
 
 Live game state is in memory (`Map<pin, Game>`) in phase 1–2; moved to Redis in phase 4.
+Quiz loading, socket auth and result saving go through `GamePersistence`
+(`apps/server/src/game/persistence.ts`). When a game reaches ENDED, a logged-in host's game
+(if it left the lobby) is saved as `GameSession` + `PlayerResult`s; anonymous demo games are not.
 
 ## 6. REST API (prefix `/api`)
 
