@@ -94,7 +94,9 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 ### T4 — Phase 1 integration & e2e test
 - **Status:** todo
 - **Depends on:** T1, T2, T3
-- **Scope:** `e2e/**`, small fixes anywhere (note them below)
+- **Scope:** `e2e/**`, Playwright config, root `package.json` script, `README.md`. T6/T7/T8
+  edit app code in parallel: **don't refactor app code**. Only a minimal fix if a bug blocks
+  the test, noted below; report other bugs below instead of fixing them.
 - **Deliverable:** Playwright test: 1 host + 3 players play the demo quiz to the podium.
   Instructions in README to test on real phones over LAN (`vite --host`).
 
@@ -121,25 +123,54 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   deploy, S3 storage for uploads, rate-limit `/auth/login`, Postgres service in CI for
   `TEST_DATABASE_URL`. T6 — `fetch(..., { credentials: 'include' })`.
 
+### Wave 2 coordination (T4, T6, T7, T8 run in parallel) — read before starting
+
+- **Ports — each agent uses its own** so dev servers / Playwright don't collide:
+  | Task | Server | Web |
+  |---|---|---|
+  | T4 | 3004 | 5184 |
+  | T6 | 3006 | 5186 |
+  | T7 | 3007 | 5187 |
+  | T8 | 3008 | 5188 |
+  Start them separately, never with root `pnpm dev` (it uses 3001/5173, reserved for the user):
+  `PORT=<server> pnpm --filter @lbq/server dev` and
+  `VITE_SERVER_URL=http://localhost:<server> pnpm --filter @lbq/web dev --port <web> --strictPort`.
+  Stop every process you started before finishing.
+- **Postgres is shared**: one container (`docker compose up -d` from any worktree reuses it;
+  compose project name is fixed). **Never run `docker compose down`** — others are using it.
+- **Test database per agent** (API tests wipe it): `TEST_DATABASE_URL=postgresql://lbq:lbq@localhost:5432/lbq_test_<task>`
+  (e.g. `lbq_test_t7`). Dev data: the normal `lbq` database, don't wipe it.
+- **Contract between T6 and T7 for "Start game"**: the editor navigates to
+  `/host/new?quizId=<id>` (no `quizId` = demo quiz). T6 makes the host page pass that `quizId`
+  to `host:create`. T7 makes the server identify the host from the session cookie on the
+  socket handshake and check ownership (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`), and sets
+  `withCredentials: true` in `apps/web/src/lib/socket.ts`. Quiz `demo` keeps working without login.
+
 ### T6 — Quiz editor UI
 - **Status:** todo
 - **Depends on:** T0 (mock API OK), T5 for real integration
-- **Scope:** `apps/web/src/editor/**`, `apps/web/src/auth/**`, `apps/web/src/api/**`
+- **Scope:** `apps/web/src/editor/**`, `apps/web/src/auth/**`, `apps/web/src/api/**`, the
+  `/editor` routes in `main.tsx`, and the `quizId` query param in `host/useHostGame.ts` +
+  `host/HostPage.tsx` (only that — T8 also edits `host/`).
 - **Deliverable:** login/register, quiz list, quiz editor (questions, 2–4 choices, correct
-  answer, time limit, points, image upload), "Start game" button → `/host/:pin`.
+  answer, time limit, points, image upload), "Start game" button → `/host/new?quizId=<id>`.
 
 ### T7 — Load games from DB + save results
 - **Status:** todo
 - **Depends on:** T1, T5
-- **Scope:** `apps/server/src/game/**` (persistence adapter only)
+- **Scope:** `apps/server/src/game/**` (persistence adapter), `apps/server/src/socket/**`
+  (handshake auth), `apps/web/src/lib/socket.ts` (`withCredentials` only), game history/report
+  endpoints in `apps/server/src/api/**`.
 - **Deliverable:** `host:create` loads quiz from DB and checks ownership; on ENDED save
   `GameSession` + `PlayerResult`; history/report endpoints return real data.
 
 ### T8 — QR code, reconnection hardening, wake-lock
 - **Status:** todo
 - **Depends on:** T2, T3
-- **Scope:** `apps/web/src/host/**` (QR only), `apps/web/src/player/**`
-- **Deliverable:** QR code in lobby → `/join?pin=`, robust rejoin after phone lock, Wake Lock API.
+- **Scope:** `apps/web/src/host/**` (QR code in the lobby screen only), `apps/web/src/player/**`
+- **Deliverable:** QR code in lobby → `/join?pin=` (PIN pre-filled; the QR must use the PC's
+  LAN address, not `localhost`, so phones can open it), robust rejoin after phone lock,
+  Wake Lock API.
 
 ### T9 — Deployment
 - **Status:** todo
