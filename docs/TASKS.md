@@ -54,13 +54,23 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   Uses the demo quiz via `host:create`.
 
 ### T3 — Player controller (phone)
-- **Status:** in-progress (T3 agent, worktree ../lbq-T3, branch task/T3-player)
+- **Status:** done
 - **Depends on:** T0
 - **Scope:** `apps/web/src/player/**`, plus adding the `/join` and `/play` routes in
   `apps/web/src/main.tsx`. Reuse `components/shapes.tsx` and `lib/socket.ts`.
 - **Deliverable:** `/join` (PIN + nickname), `/play` with 2–4 big shape buttons, waiting
   screens, result feedback (correct/wrong, points, rank), sessionToken stored in
   sessionStorage for rejoin, vibration on tap. Portrait, touch-friendly.
+- **Summary:** `/join` (PIN prefilled from `?pin=`, nickname, French error messages) and `/play`
+  (lobby / get-ready / 2–4 shape buttons fired on pointer-down / answered / correct-wrong with
+  points + rank / standings / podium / end / kicked screens, countdown from `remainingMs`,
+  "Reconnexion…" banner). Pure reducer `player/playerState.ts` (unit-tested) driven by a
+  module-level store `player/playerStore.ts` bound to the shared socket; session in
+  sessionStorage (`player/session.ts`), auto `player:rejoin` on every new socket connection.
+  Vibration on tap and on result. Not yet tested against the real T1 server.
+- **Follow-ups:** T4: verify rejoin flow with T1 (expects server to re-send `game:state` +
+  `question:prompt`); T8: wake-lock + rejoin on `visibilitychange`. Optimistic answer is reverted
+  if the ack fails with anything other than `ALREADY_ANSWERED`.
 
 ### T4 — Phase 1 integration & e2e test
 - **Status:** todo
