@@ -4,6 +4,7 @@ import type { GameSummary } from '@lbq/shared';
 import { api } from '../api';
 import { EditorShell, btn } from '../editor/EditorShell';
 import { formatDuration } from './reportStats';
+import { ModeBadge } from './ModeBadge';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -50,7 +51,10 @@ export function GameListPage() {
                   className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm hover:ring-2 hover:ring-brand/30 sm:flex-row sm:items-center"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-lg font-bold">{g.quizTitle}</p>
+                    <p className="flex items-center gap-2 text-lg font-bold">
+                      <span className="truncate">{g.quizTitle}</span>
+                      <ModeBadge mode={g.mode} />
+                    </p>
                     <p className="text-sm text-gray-500">
                       {dateFmt.format(new Date(g.startedAt))}
                       {duration && ` · ${duration}`} · PIN {g.pin}

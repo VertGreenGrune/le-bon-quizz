@@ -14,7 +14,7 @@ import {
 const state = (payload: Partial<GameStatePayload> & Pick<GameStatePayload, 'phase'>, now = 0) =>
   ({
     type: 'state',
-    payload: { questionIndex: 0, totalQuestions: 3, ...payload },
+    payload: { mode: 'solo', questionIndex: 0, totalQuestions: 3, ...payload },
     now,
   }) satisfies PlayerAction;
 

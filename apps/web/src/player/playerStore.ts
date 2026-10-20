@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { ErrorCode } from '@lbq/shared';
+import type { ErrorCode, TeamId } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import {
   initialPlayerState,
@@ -58,7 +58,8 @@ function attach() {
     dispatch({ type: 'result', payload });
     vibrate(payload.correct ? [80, 60, 80] : 300);
   });
-  socket.on('podium', ({ top }) => dispatch({ type: 'podium', top }));
+  socket.on('lobby:teams', (payload) => dispatch({ type: 'teams', payload }));
+  socket.on('podium', ({ top, teams }) => dispatch({ type: 'podium', top, teams }));
   socket.on('player:kicked', () => {
     clearSession();
     boundSocketId = undefined;
@@ -123,7 +124,12 @@ function rejoinIfNeeded({ probe = false } = {}) {
         return;
       }
       boundSocketId = sid;
-      dispatch({ type: 'session', nickname: res.nickname, totalScore: res.totalScore });
+      dispatch({
+        type: 'session',
+        playerId: res.playerId,
+        nickname: res.nickname,
+        totalScore: res.totalScore,
+      });
     });
 }
 
@@ -149,7 +155,7 @@ export function joinGame(pin: string, nickname: string): Promise<JoinResult> {
       };
       saveSession(session);
       boundSocketId = socket.id;
-      dispatch({ type: 'session', nickname, totalScore: 0 });
+      dispatch({ type: 'session', playerId: res.playerId, nickname, totalScore: 0 });
       resolve({ ok: true });
     });
   });
@@ -160,7 +166,10 @@ export function resumeSession(): PlayerSession | null {
   attach();
   const session = loadSession();
   if (!session) return null;
-  if (!state.nickname) dispatch({ type: 'session', nickname: session.nickname, totalScore: 0 });
+  if (!state.nickname) {
+    const { playerId, nickname } = session;
+    dispatch({ type: 'session', playerId, nickname, totalScore: 0 });
+  }
   rejoinIfNeeded();
   return session;
 }
@@ -179,6 +188,14 @@ export function sendAnswer(choiceIndex: number) {
         dispatch({ type: 'answerRejected', questionIndex });
       }
     });
+}
+
+/** Team mode, lobby: picks / switches team. The server answers with `lobby:teams`. */
+export function chooseTeam(teamId: TeamId) {
+  const session = loadSession();
+  if (!session) return;
+  vibrate(40);
+  getSocket().emit('player:team', { pin: session.pin, teamId }, () => {});
 }
 
 /** Forget the game (end screen, kicked, "join another game"). */

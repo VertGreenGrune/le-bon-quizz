@@ -1,10 +1,13 @@
 import type {
   ErrorCode,
+  GameMode,
   GamePhase,
   GameStatePayload,
+  LobbyTeamsPayload,
   PlayerResultPayload,
   QuestionPromptPayload,
   RankedPlayer,
+  RankedTeam,
 } from '@lbq/shared';
 
 /** Everything the phone knows about the game. Pure data, driven by server events. */
@@ -12,6 +15,7 @@ export interface PlayerState {
   connected: boolean;
   /** null until the first `game:state` arrives (after join / rejoin). */
   phase: GamePhase | null;
+  mode: GameMode;
   questionIndex: number;
   totalQuestions: number;
   prompt: QuestionPromptPayload | null;
@@ -21,8 +25,13 @@ export interface PlayerState {
   myAnswer: { questionIndex: number; choiceIndex: number } | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
   nickname: string;
+  /** Own player id, to find our team in `teams`. */
+  playerId: string;
   totalScore: number;
+  /** Team mode: teams and their members (`lobby:teams`). */
+  teams: LobbyTeamsPayload['teams'];
   podium: RankedPlayer[] | null;
+  podiumTeams: RankedTeam[];
   kicked: boolean;
   /** Fatal: the session can't be resumed (game gone, unknown token…). */
   lost: ErrorCode | null;
@@ -30,19 +39,21 @@ export interface PlayerState {
 
 export type PlayerAction =
   | { type: 'connection'; connected: boolean }
-  | { type: 'session'; nickname: string; totalScore: number }
+  | { type: 'session'; playerId: string; nickname: string; totalScore: number }
+  | { type: 'teams'; payload: LobbyTeamsPayload }
   | { type: 'state'; payload: GameStatePayload; now: number }
   | { type: 'prompt'; payload: QuestionPromptPayload; now: number }
   | { type: 'answer'; questionIndex: number; choiceIndex: number }
   | { type: 'answerRejected'; questionIndex: number }
   | { type: 'result'; payload: PlayerResultPayload }
-  | { type: 'podium'; top: RankedPlayer[] }
+  | { type: 'podium'; top: RankedPlayer[]; teams?: RankedTeam[] }
   | { type: 'kicked' }
   | { type: 'lost'; code: ErrorCode };
 
 export const initialPlayerState: PlayerState = {
   connected: false,
   phase: null,
+  mode: 'solo',
   questionIndex: -1,
   totalQuestions: 0,
   prompt: null,
@@ -50,8 +61,11 @@ export const initialPlayerState: PlayerState = {
   myAnswer: null,
   result: null,
   nickname: '',
+  playerId: '',
   totalScore: 0,
+  teams: [],
   podium: null,
+  podiumTeams: [],
   kicked: false,
   lost: null,
 };
@@ -62,10 +76,18 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return { ...state, connected: action.connected };
 
     case 'session':
-      return { ...state, nickname: action.nickname, totalScore: action.totalScore };
+      return {
+        ...state,
+        playerId: action.playerId,
+        nickname: action.nickname,
+        totalScore: action.totalScore,
+      };
+
+    case 'teams':
+      return { ...state, teams: action.payload.teams };
 
     case 'state': {
-      const { phase, questionIndex, totalQuestions, remainingMs } = action.payload;
+      const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const sameQuestion = questionIndex === state.questionIndex;
       let answeringEndsAt = sameQuestion ? state.answeringEndsAt : null;
       if (phase === 'ANSWERING' && remainingMs !== undefined) {
@@ -74,6 +96,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return {
         ...state,
         phase,
+        mode,
         questionIndex,
         totalQuestions,
         answeringEndsAt,
@@ -121,7 +144,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       };
 
     case 'podium':
-      return { ...state, podium: action.top };
+      return { ...state, podium: action.top, podiumTeams: action.teams ?? [] };
 
     case 'kicked':
       return { ...state, kicked: true };
@@ -129,6 +152,11 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
     case 'lost':
       return { ...state, lost: action.code };
   }
+}
+
+/** Team mode: the team the player is in, if any. */
+export function myTeam(s: PlayerState): LobbyTeamsPayload['teams'][number] | null {
+  return s.teams.find((t) => t.members.some((m) => m.id === s.playerId)) ?? null;
 }
 
 /** Which screen the phone should show. */
@@ -190,7 +218,7 @@ export function normalizePin(input: string, length: number): string {
   return input.replace(/\D/g, '').slice(0, length);
 }
 
-/** "1er", "2e", "3e"… */
-export function formatRank(rank: number): string {
-  return rank === 1 ? '1er' : `${rank}e`;
+/** "1er", "2e", "3e"… — `feminine` for a team (« l'équipe est 1re »). */
+export function formatRank(rank: number, feminine = false): string {
+  return rank === 1 ? (feminine ? '1re' : '1er') : `${rank}e`;
 }

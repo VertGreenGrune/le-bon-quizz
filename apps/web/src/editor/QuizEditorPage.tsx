@@ -6,7 +6,8 @@ import type { FieldErrors } from '../api/validation';
 import { EditorShell, btn } from './EditorShell';
 import { QuestionEditor } from './QuestionEditor';
 import { ImageField } from './ImageField';
-import { hostUrl } from './hostUrl';
+import { StartGameDialog } from '../components/StartGameDialog';
+import { hostUrl, type GameOptions } from '../lib/gameOptions';
 import {
   addQuestion,
   emptyQuiz,
@@ -33,6 +34,8 @@ export function QuizEditorPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [banner, setBanner] = useState<{ kind: 'error' | 'ok'; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  /** "Lancer la partie" clicked: the Solo / Équipes dialog is open. */
+  const [starting, setStarting] = useState(false);
   const loadedId = useRef<string | null>(quizId);
 
   // Load on mount and when the URL changes to another quiz (not after our own create → navigate).
@@ -111,9 +114,10 @@ export function QuizEditorPage() {
     }
   }
 
-  async function startGame() {
+  async function startGame(options: GameOptions) {
+    setStarting(false);
     const id = dirty || !quizId ? await save() : quizId;
-    if (id) navigate(hostUrl(id));
+    if (id) navigate(hostUrl(id, options));
   }
 
   if (load.status !== 'ready') {
@@ -152,7 +156,12 @@ export function QuizEditorPage() {
           >
             {saving ? 'Enregistrement…' : dirty || !quizId ? 'Enregistrer' : 'Enregistré ✓'}
           </button>
-          <button type="button" className={btn.start} onClick={startGame} disabled={saving}>
+          <button
+            type="button"
+            className={btn.start}
+            onClick={() => setStarting(true)}
+            disabled={saving}
+          >
             ▶ Lancer la partie
           </button>
         </>
@@ -278,6 +287,7 @@ export function QuizEditorPage() {
           />
         </div>
       </main>
+      {starting && <StartGameDialog onStart={startGame} onClose={() => setStarting(false)} />}
     </EditorShell>
   );
 }

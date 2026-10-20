@@ -401,7 +401,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 ## Phase 4 — Extras
 
 ### T15 — Team mode (run alone: touches server, shared, host, phones, editor, DB, reports)
-- **Status:** in-progress (T15 agent, worktree ../lbq-T15)
+- **Status:** done
 - **Depends on:** T10, T11, T12, T19 (all done)
 - **Ports:** server 3015 / web 5195, test DB `lbq_test_t15` (same rules as wave 3).
 
@@ -463,6 +463,41 @@ team column.
 for a question, someone disconnecting mid-question, kicked player, ties); team lobby rules;
 persistence; extend e2e with a team game (2 teams, 1 vs 2 players) up to the team podium.
 Solo e2e must still pass.
+
+- **Summary:** shared contract as decided (+ error code `TEAMS_NOT_READY`, `RankedTeam`,
+  `StandingsPayload`, `TeamId`/`TeamCount`/`GameMode`/`TEAM_NAMES` in `game.ts`;
+  `LEADERBOARD_SIZE` 15, `MAX_PLAYERS_PER_GAME` 30). Server: `Game` takes `GameSettings`
+  (`mode`, `teamCount`); `setTeam` (player choice + host move), `shuffleTeams` (random, sizes
+  differ by ≤ 1), `start()` checks the teams and drops empty ones, `scoreTeams()` at REVEAL adds
+  `teamQuestionPoints` (rounded average of present members, `scoring.ts`) — present = connected
+  at ANSWERING start or answered; `lobby:teams` broadcast on join / team change / kick and in
+  both resyncs; `player:result.team`, `leaderboard.teams`, `podium.teams`; socket handlers
+  `player:team`, `host:moveplayer`, `host:shuffle`. DB: migration `20261020201734_teams`
+  (`GameSession.mode` enum, `PlayerResult.teamId`, `TeamResult`), saved by `persistence.ts`;
+  `/api/games*` return `mode`, `teamId`, `teams`; CSV gets a `team` column for team games only
+  (solo export unchanged). Web: `components/StartGameDialog.tsx` (Solo / Équipes + 2–4 teams)
+  opened by "Animer une partie (démo)", "▶ Lancer" and "▶ Lancer la partie";
+  `lib/gameOptions.ts` (`hostUrl` / `parseGameOptions`, replaces `editor/hostUrl.ts`); host
+  `teamScreens.tsx` (team columns with tap-to-move/exclude menu, "Mélanger", "sans équipe" and
+  "déséquilibrées" hints, "Commencer" gated by `teamLobbyStatus`; team ranking beside the
+  individual one + rule line; team podium + "Meilleur joueur"); the individual leaderboard
+  shrinks its rows for up to 15 players. Phone: team picker in the lobby, header band in the
+  team color, team score + rank on result / standings, team podium (team rank + own rank).
+  Reports: Solo / Équipes badge, team ranking, team column. Tests: `Game.teams.test.ts` (2 vs 5,
+  absent / mid-question drop, kick, ties, lobby rules, shuffle, resyncs, solo has no team
+  data), team persistence + CSV (Postgres), web reducers / lobby status / URL options / ranks;
+  new `e2e/team-game.spec.ts` (home dialog → 2 teams 1 vs 2, host moves a player, team results,
+  team podium); solo e2e unchanged. Checked with screenshots (host 1600×900, Pixel 7).
+- **Deviations / notes:** (1) new error code `TEAMS_NOT_READY` (no existing code fitted).
+  (2) "present" also includes a player who was offline at ANSWERING start but rejoined and
+  answered (otherwise their points would be ignored). (3) "Mélanger" re-deals **every** player,
+  including those who chose; the host can then move individuals. (4) A team emptied by kicks
+  after the start keeps its score (0 players). (5) Team ranks are not in the
+  `leaderboard`/`podium` payloads (as specified): clients derive them from the sorted scores
+  (`web/src/lib/ranks.ts`). (6) `lobby:teams` keeps its name after the lobby (also used for the
+  phone's team band). **After merging, run `pnpm --filter @lbq/server db:migrate`** on the dev DB.
+- **Follow-ups:** not tried on real phones; no team-ranking re-order animation between
+  questions (only the individual ranking animates); reports CSV has no per-team sheet.
 
 - T14 More question types (type answer, poll, slider)
 - T16 Public quiz library
@@ -555,6 +590,13 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   check (`README.md`, `.vscode/settings.json`, `e2e/full-game.spec.ts`,
   `game/persistence.test.ts`) — trivial merge conflicts possible with T19, keep their side and
   re-run `pnpm format`. PLAN.md §9 (production) added; README + CLAUDE.md commands updated.
+- 2026-10-20, T15 agent: team mode contract as decided in the T15 section (PLAN.md §3–§7
+  updated), plus additions: error code `TEAMS_NOT_READY`; types `RankedTeam`, `StandingsPayload`,
+  `LobbyTeamsPayload`, `HostMovePlayerPayload`, `PlayerTeamPayload`; `GameStatePayload.mode` is
+  **required** (test fixtures building a `GameStatePayload` must set it); `LEADERBOARD_SIZE` 5 → 15,
+  `MAX_PLAYERS_PER_GAME` 200 → 30. API (`api.ts`): `GameSummary.mode`, `GameReportRow.teamId`,
+  `GameReport.teams` (`GameTeamReport`). Prisma migration `20261020201734_teams`.
+  `editor/hostUrl.ts` moved to `web/src/lib/gameOptions.ts`.
 - 2026-10-20, T10 agent (no contract change, no server change). Outside the listed T10 scope:
   new `apps/web/scripts/generate-sounds.mjs` (generator of the CC0 sound files, kept out of
   `public/` so it isn't shipped). `hostReducer` gained `previousLeaderboard` / `leaderboardFor`.

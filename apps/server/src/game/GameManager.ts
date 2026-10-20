@@ -1,7 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { PIN_LENGTH, type Quiz } from '@lbq/shared';
 import { GameError } from './errors.js';
-import { Game, type GameHooks, type GameTransport } from './Game.js';
+import { Game, type GameHooks, type GameSettings, type GameTransport } from './Game.js';
 
 /** Games idle for this long (no host/player action) are dropped. */
 export const GAME_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
@@ -22,9 +22,14 @@ export function generatePin(isTaken: (pin: string) => boolean): string {
 export class GameManager {
   private readonly games = new Map<string, Game>();
 
-  create(quiz: Quiz, makeTransport: (pin: string) => GameTransport, hooks?: GameHooks): Game {
+  create(
+    quiz: Quiz,
+    makeTransport: (pin: string) => GameTransport,
+    hooks?: GameHooks,
+    settings?: GameSettings,
+  ): Game {
     const pin = generatePin((p) => this.games.has(p));
-    const game = new Game(pin, quiz, makeTransport(pin), hooks);
+    const game = new Game(pin, quiz, makeTransport(pin), hooks, settings);
     this.games.set(pin, game);
     return game;
   }

@@ -52,6 +52,7 @@ describe('Game state machine', () => {
   it('starts in LOBBY with questionIndex -1', () => {
     expect(game.statePayload()).toEqual({
       phase: 'LOBBY',
+      mode: 'solo',
       questionIndex: -1,
       totalQuestions: DEMO_QUIZ.questions.length,
     });
@@ -205,8 +206,8 @@ describe('Game state machine', () => {
     expect(game.phase).toBe('ENDED');
     expect(rec.last('game:state', 'all')).toMatchObject({ phase: 'ENDED' });
     expect(game.standings()).toEqual([
-      { nickname: 'Alice', score: 5600, correctCount: 4, rank: 1 },
-      { nickname: 'Bob', score: 0, correctCount: 0, rank: 2 },
+      { nickname: 'Alice', score: 5600, correctCount: 4, rank: 1, teamId: null },
+      { nickname: 'Bob', score: 0, correctCount: 0, rank: 2, teamId: null },
     ]);
   });
 
@@ -515,9 +516,9 @@ describe('Game state machine', () => {
     game.kick(alice!.id); // best score, but kicked
     game.end();
     expect(game.standings()).toEqual([
-      { nickname: 'Bob', score: bob!.totalScore, correctCount: 1, rank: 1 },
-      { nickname: 'Dan', score: 0, correctCount: 0, rank: 2 },
-      { nickname: 'Alice', score: alice!.totalScore, correctCount: 1, rank: 3 },
+      { nickname: 'Bob', score: bob!.totalScore, correctCount: 1, rank: 1, teamId: null },
+      { nickname: 'Dan', score: 0, correctCount: 0, rank: 2, teamId: null },
+      { nickname: 'Alice', score: alice!.totalScore, correctCount: 1, rank: 3, teamId: null },
     ]);
     expect(alice!.totalScore).toBeGreaterThan(0);
   });

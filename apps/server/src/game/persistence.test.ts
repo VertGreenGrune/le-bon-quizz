@@ -175,13 +175,59 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const res = await app.inject({ url: `/api/games/${list[0]!.id}`, headers });
     expect(res.json<GameReport>().results).toEqual([
       expect.objectContaining({ rank: 1, nickname: 'Alice', correctCount: 4 }),
-      { rank: 2, nickname: 'Bob', score: 0, correctCount: 0 },
+      { rank: 2, nickname: 'Bob', score: 0, correctCount: 0, teamId: null },
     ]);
     expect(list[0]!.winner).toBe('Alice');
     const questions = res.json<GameReport>().questions;
     expect(questions.map((q) => [q.index, q.correctCount, q.playerCount])).toEqual(
       DEMO_QUIZ.questions.map((_, i) => [i, 1, 2]),
     );
+  });
+
+  it('saves a team game: mode, team of each player, team ranking, CSV team column', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const game = new Game('222222', DEMO_QUIZ, noop, {}, { mode: 'teams', teamCount: 3 });
+    const alice = game.join('Alice', 's1');
+    const bob = game.join('Bob', 's2');
+    const chloe = game.join('Chloé', 's3');
+    game.setTeam(alice.id, 2);
+    game.setTeam(bob.id, 0);
+    game.setTeam(chloe.id, 0);
+    game.start();
+    DEMO_QUIZ.questions.forEach((q, i) => {
+      game.next(); // → ANSWERING
+      game.answer(
+        alice.id,
+        i,
+        q.choices.findIndex((c) => c.isCorrect),
+      );
+      game.next(); // → REVEAL (Bob and Chloé never answer)
+      game.next();
+      game.next();
+    });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, null)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    expect(summary).toMatchObject({ mode: 'teams', winner: 'Alice', playerCount: 3 });
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    // Bleue had no players: dropped at the start.
+    expect(report.teams).toEqual([
+      { teamId: 2, name: 'Équipe Jaune', score: alice.totalScore, playerCount: 1, rank: 1 },
+      { teamId: 0, name: 'Équipe Rouge', score: 0, playerCount: 2, rank: 2 },
+    ]);
+    expect(report.results.map((r) => [r.nickname, r.teamId])).toEqual([
+      ['Alice', 2],
+      ['Bob', 0],
+      ['Chloé', 0],
+    ]);
+    const csv = await app.inject({ url: `/api/games/${summary!.id}/export.csv`, headers });
+    expect(csv.body).toContain('rank,nickname,score,correctCount,team\r\n');
+    expect(csv.body).toContain(`1,Alice,${alice.totalScore},4,Équipe Jaune\r\n`);
   });
 
   it('keeps the history when the quiz was deleted during the game', async () => {

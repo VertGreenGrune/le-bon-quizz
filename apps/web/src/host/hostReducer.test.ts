@@ -23,14 +23,20 @@ describe('hostReducer', () => {
     const s1 = run([
       {
         type: 'state',
-        payload: { phase: 'ANSWERING', questionIndex: 0, totalQuestions: 3, remainingMs: 5000 },
+        payload: {
+          phase: 'ANSWERING',
+          mode: 'solo',
+          questionIndex: 0,
+          totalQuestions: 3,
+          remainingMs: 5000,
+        },
         now: 1000,
       },
     ]);
     expect(s1.deadline).toBe(6000);
     const s2 = hostReducer(s1, {
       type: 'state',
-      payload: { phase: 'REVEAL', questionIndex: 0, totalQuestions: 3 },
+      payload: { phase: 'REVEAL', mode: 'solo', questionIndex: 0, totalQuestions: 3 },
       now: 7000,
     });
     expect(s2.deadline).toBeNull();
@@ -41,19 +47,23 @@ describe('hostReducer', () => {
       { type: 'players', payload: { players: [{ id: 'a', nickname: 'A' }] } },
       {
         type: 'state',
-        payload: { phase: 'ANSWERING', questionIndex: 0, totalQuestions: 2 },
+        payload: { phase: 'ANSWERING', mode: 'solo', questionIndex: 0, totalQuestions: 2 },
         now: 0,
       },
       { type: 'count', answered: 1, total: 1 },
       { type: 'reveal', payload: { correctIndexes: [1], distribution: [0, 1, 0, 0] } },
-      { type: 'state', payload: { phase: 'REVEAL', questionIndex: 0, totalQuestions: 2 }, now: 0 },
+      {
+        type: 'state',
+        payload: { phase: 'REVEAL', mode: 'solo', questionIndex: 0, totalQuestions: 2 },
+        now: 0,
+      },
     ]);
     expect(s.answered).toBe(1);
     expect(s.reveal).not.toBeNull();
 
     const next = hostReducer(s, {
       type: 'state',
-      payload: { phase: 'QUESTION_INTRO', questionIndex: 1, totalQuestions: 2 },
+      payload: { phase: 'QUESTION_INTRO', mode: 'solo', questionIndex: 1, totalQuestions: 2 },
       now: 0,
     });
     expect(next.answered).toBe(0);
@@ -66,7 +76,7 @@ describe('hostReducer', () => {
       { type: 'question', payload: question(1) },
       {
         type: 'state',
-        payload: { phase: 'QUESTION_INTRO', questionIndex: 1, totalQuestions: 2 },
+        payload: { phase: 'QUESTION_INTRO', mode: 'solo', questionIndex: 1, totalQuestions: 2 },
         now: 0,
       },
     ]);
@@ -76,7 +86,7 @@ describe('hostReducer', () => {
       { type: 'question', payload: question(0) },
       {
         type: 'state',
-        payload: { phase: 'QUESTION_INTRO', questionIndex: 1, totalQuestions: 2 },
+        payload: { phase: 'QUESTION_INTRO', mode: 'solo', questionIndex: 1, totalQuestions: 2 },
         now: 0,
       },
     ]);
@@ -87,7 +97,7 @@ describe('hostReducer', () => {
     const s = run([
       {
         type: 'state',
-        payload: { phase: 'REVEAL', questionIndex: 1, totalQuestions: 2 },
+        payload: { phase: 'REVEAL', mode: 'solo', questionIndex: 1, totalQuestions: 2 },
         now: 0,
       },
       { type: 'players', payload: { players: [{ id: 'a', nickname: 'Alice' }] } },
@@ -104,7 +114,7 @@ describe('hostReducer', () => {
     const s = run([
       {
         type: 'state',
-        payload: { phase: 'LEADERBOARD', questionIndex: 1, totalQuestions: 2 },
+        payload: { phase: 'LEADERBOARD', mode: 'solo', questionIndex: 1, totalQuestions: 2 },
         now: 0,
       },
     ]);
@@ -114,7 +124,7 @@ describe('hostReducer', () => {
   it('keeps the previous leaderboard for the re-ordering animation, not on a resync', () => {
     const at = (questionIndex: number): HostAction => ({
       type: 'state',
-      payload: { phase: 'LEADERBOARD', questionIndex, totalQuestions: 3 },
+      payload: { phase: 'LEADERBOARD', mode: 'solo', questionIndex, totalQuestions: 3 },
       now: 0,
     });
     const first = [{ nickname: 'A', score: 900 }];

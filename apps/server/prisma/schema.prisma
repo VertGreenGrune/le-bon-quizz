@@ -87,10 +87,12 @@ model GameSession {
   hostId    String
   host      User           @relation(fields: [hostId], references: [id], onDelete: Cascade)
   pin       String
-  startedAt DateTime       @default(now())
+  mode      GameMode         @default(solo)
+  startedAt DateTime         @default(now())
   endedAt   DateTime?
   results   PlayerResult[]
   questions QuestionResult[]
+  teams     TeamResult[]
 
   @@index([hostId, startedAt])
 }
@@ -103,8 +105,30 @@ model PlayerResult {
   score         Int
   correctCount  Int
   rank          Int
+  /// Team mode: team id (0–3 = shape index, see TEAM_NAMES in @lbq/shared); null in solo games.
+  teamId        Int?
 
   @@index([gameSessionId, rank])
+}
+
+enum GameMode {
+  solo
+  teams
+}
+
+/// Team mode: final standing of one team (score = sum of per-question averages, PLAN.md §3).
+model TeamResult {
+  id            String      @id @default(cuid())
+  gameSessionId String
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  teamId        Int
+  name          String
+  score         Int
+  /// Players in the team at the end of the game.
+  playerCount   Int
+  rank          Int
+
+  @@unique([gameSessionId, teamId])
 }
 
 /// Snapshot of one played question (text/choices as they were) and how players answered it.

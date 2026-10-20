@@ -49,6 +49,15 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   (1st → +0, 2nd → +100, …, 6th and later → +500), added to `pointsEarned` and the total score.
   A 0-point question awards no bonus but still extends the streak.
 - `responseMs` is measured **on the server** from the `ANSWERING` start.
+- **Team mode** (`host:create` with `mode: 'teams'`, 2–4 teams = the first answer colors:
+  Équipe Rouge ▲, Bleue ◆, Jaune ●, Verte ■; players pick their team in the lobby, empty teams
+  are dropped at the start). Each player scores exactly as above. For each question a team earns
+  `round(sum of its present members' points / number of present members)` (0 if nobody is
+  present); team score = sum of these per-question averages, so teams of different sizes stay
+  comparable. "Present" = connected when `ANSWERING` started, or answered anyway: a player who
+  drops mid-question counts with 0, one absent for the whole question is left out. A kicked
+  player stops counting from then on (points already earned by the team stay). Ties share a
+  rank (competition ranks, like players).
 
 ## 4. Socket protocol (source of truth = `packages/shared/src/events.ts`)
 
@@ -60,36 +69,41 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId }` | ack `{ pin, hostToken }`. Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes only (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`); `quizId: 'demo'` works without login |
-| `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams', teamCount?: 2 \| 3 \| 4 }` | default solo / 2 teams; ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes only (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`); `quizId: 'demo'` works without login |
+| `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
+| `host:moveplayer` | `{ pin, hostToken, playerId, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED`) |
+| `host:shuffle` | `{ pin, hostToken }` | team mode, LOBBY only: random balanced teams for every player |
 | `host:end` | `{ pin, hostToken }` | → ENDED |
-| `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED) |
+| `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED) |
 
 ### Player → server
 | Event | Payload | Notes |
 |---|---|---|
 | `player:join` | `{ pin, nickname }` | ack `{ playerId, sessionToken }` |
-| `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, totalScore }`, then server re-sends current `game:state` (+ `question:prompt` if ANSWERING) |
+| `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
+| `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
 | `player:answer` | `{ pin, questionIndex, choiceIndex }` | accepted once, only during ANSWERING |
 
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, questionIndex, totalQuestions, remainingMs? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew) |
-| `lobby:players` | host | `{ players: { id, nickname }[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew) |
+| `lobby:players` | host | `{ players: { id, nickname, teamId? }[] }` |
+| `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
 | `question:show` | host | `{ index, text, imageUrl?, choices: string[], timeLimitSec }` |
 | `question:prompt` | players | `{ index, choiceCount, timeLimitSec }` (no text, no answer!) |
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ correctIndexes: number[], distribution: number[] }` |
-| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) |
-| `leaderboard` | host | `{ top: { nickname, score }[] }` (top 5) |
-| `podium` | all | `{ top: { nickname, score }[] }` (top 3) |
+| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) |
+| `leaderboard` | host | `{ top: { nickname, score }[], teams? }` (everyone, up to 15; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
+| `podium` | all | `{ top: { nickname, score }[], teams? }` (top 3 players; all teams in team mode) |
 | `player:kicked` | that player | `{}` |
 | `error` | sender | `{ code, message }` |
 
 Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow ●`, `3 = green ■`.
+Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 
 ## 5. Data model (Prisma, `apps/server/prisma/schema.prisma`)
 
@@ -100,15 +114,16 @@ Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow
   timeLimitSec (default 20), basePoints (default 1000)
 - `Choice` — id, questionId, order (0–3), text, isCorrect
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
-  startedAt, endedAt
-- `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank
+  mode (`solo` | `teams`), startedAt, endedAt
+- `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank, teamId? (team mode)
+- `TeamResult` — id, gameSessionId, teamId, name, score, playerCount, rank (team mode)
 - `QuestionResult` — id, gameSessionId, index, text, choices[], correctIndexes[], distribution[],
   playerCount, correctCount (snapshot of each revealed question, for the game report)
 
 Live game state stays in memory (`Map<pin, Game>`) in a single server process (small games: ~6 players, 15 max).
 Quiz loading, socket auth and result saving go through `GamePersistence`
 (`apps/server/src/game/persistence.ts`). When a game reaches ENDED, a logged-in host's game
-(if it left the lobby) is saved as `GameSession` + `PlayerResult`s + `QuestionResult`s; anonymous
+(if it left the lobby) is saved as `GameSession` + `PlayerResult`s + `QuestionResult`s (+ `TeamResult`s); anonymous
 demo games are not. A game reaches ENDED by `host:end` (any phase), or through the sweep (`GameManager.sweep`, every
 minute) when abandoned: no host screen connected for 10 min, or no activity for 2 h. Players
 kicked after the start are saved too, ranked below the remaining players (who keep the podium
@@ -130,8 +145,9 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   (body `QuizInput` = `QuizSchema` without `id`; PUT replaces all questions)
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
-- `GET /games` (history, `GameSummary` with `winner`), `GET /games/:id` (report: ranking +
-  per-question `questions`, empty for games saved before T12), `GET /games/:id/export.csv`
+- `GET /games` (history, `GameSummary` with `winner`, `mode`), `GET /games/:id` (report: ranking
+  with `teamId` + per-question `questions`, empty for games saved before T12, + `teams` ranking,
+  empty for solo games), `GET /games/:id/export.csv` (team games get a `team` column)
   (UTF-8 BOM, formula-injection-safe)
 
 ## 7. Web routes (`apps/web`)
@@ -139,7 +155,9 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/` landing → "Join a game" / "Host"
 - `/join?pin=123456` → phone join screen (QR code points here)
 - `/play` → phone controller
-- `/host/:pin` → shared screen
+- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>` creates a game
+  (opened by the Solo / Équipes dialog of the editor and of the home page; no `quizId` = demo,
+  no `mode` = solo)
 - `/login`, `/register` → host account (`?next=` = page to return to)
 - `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
 - `/reports` → past games, `/reports/:gameId` → game report (auth required)
