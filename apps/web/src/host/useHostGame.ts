@@ -21,21 +21,30 @@ export function loadHostToken(pin: string): string | null {
   }
 }
 
+const CREATE_TIMEOUT_MS = 8000;
+
 let pendingCreate: Promise<{ pin: string; hostToken: string }> | null = null;
 
 /**
  * Creates a game with the demo quiz. Memoized so React StrictMode's double effect
- * doesn't create two games.
+ * doesn't create two games. Rejects if the server doesn't answer (e.g. not running).
  */
 export function createDemoGame(): Promise<{ pin: string; hostToken: string }> {
   pendingCreate ??= new Promise((resolve, reject) => {
-    getSocket().emit('host:create', { quizId: 'demo' }, (res) => {
-      pendingCreate = null;
-      if (res.ok) {
-        saveHostToken(res.pin, res.hostToken);
-        resolve({ pin: res.pin, hostToken: res.hostToken });
-      } else reject(res.error);
-    });
+    getSocket()
+      .timeout(CREATE_TIMEOUT_MS)
+      .emit('host:create', { quizId: 'demo' }, (err, res) => {
+        pendingCreate = null;
+        if (err) {
+          reject({
+            code: 'GAME_NOT_FOUND',
+            message: `Le serveur de jeu ne répond pas (${location.hostname}:3001). Vérifie qu'il est lancé avec « pnpm dev ».`,
+          } satisfies ErrorPayload);
+        } else if (res.ok) {
+          saveHostToken(res.pin, res.hostToken);
+          resolve({ pin: res.pin, hostToken: res.hostToken });
+        } else reject(res.error);
+      });
   });
   return pendingCreate;
 }

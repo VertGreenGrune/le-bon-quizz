@@ -188,3 +188,8 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `GameSession.quizTitle`/nullable `quizId`; §6 documents auth + error format.
 - `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
   merge conflicts there; keep both sides.
+- 2026-10-20, main agent (post-merge fix): `tsx watch` hangs before listening when run under
+  `pnpm --parallel` (root `pnpm dev`) on Windows → server `dev` script is now
+  `node --watch --env-file-if-exists=../../.env --import tsx src/index.ts`. Don't switch back.
+  Host screen `/host/new` now times out after 8 s with a "server not reachable" message +
+  retry button instead of spinning forever.

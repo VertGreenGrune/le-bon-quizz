@@ -47,7 +47,13 @@ export function HostPage() {
   const remainingMs = timed ? Math.max(0, state.deadline! - now) : null;
 
   if (createError)
-    return <Message title="Impossible de créer la partie" detail={createError.message} />;
+    return (
+      <Message
+        title="Impossible de créer la partie"
+        detail={createError.message}
+        onRetry={() => location.reload()}
+      />
+    );
   if (isNew || !pin) return <Message title="Création de la partie…" />;
   if (!hostToken) {
     return (
@@ -173,14 +179,33 @@ export function HostPage() {
   );
 }
 
-function Message({ title, detail }: { title: string; detail?: string }) {
+function Message({
+  title,
+  detail,
+  onRetry,
+}: {
+  title: string;
+  detail?: string;
+  onRetry?: () => void;
+}) {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-brand p-8 text-center text-white">
       <h1 className="text-4xl font-black">{title}</h1>
       {detail && <p className="text-xl opacity-80">{detail}</p>}
-      <Link to="/" className="mt-4 rounded-lg bg-white px-6 py-3 font-bold text-brand">
-        Retour à l'accueil
-      </Link>
+      <div className="mt-4 flex gap-3">
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-lg bg-white px-6 py-3 font-bold text-brand"
+          >
+            Réessayer
+          </button>
+        )}
+        <Link to="/" className="rounded-lg border-2 border-white px-6 py-3 font-bold">
+          Retour à l'accueil
+        </Link>
+      </div>
     </main>
   );
 }
