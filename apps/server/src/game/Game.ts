@@ -38,10 +38,24 @@ export interface Player {
   /** `null` while disconnected — the player can come back with `player:rejoin`. */
   socketId: string | null;
   totalScore: number;
+  correctCount: number;
   /** Answer to the current question, if any. Reset at each QUESTION_INTRO. */
   answer: { choiceIndex: number; responseMs: number; correct: boolean; points: number } | null;
   /** Result of the last revealed question, re-sent on rejoin during REVEAL. */
   lastResult: { correct: boolean; pointsEarned: number } | null;
+}
+
+/** Final standing of one player, as saved in `PlayerResult`. */
+export interface PlayerStanding {
+  nickname: string;
+  score: number;
+  correctCount: number;
+  rank: number;
+}
+
+export interface GameHooks {
+  /** Called once when the game enters ENDED (e.g. to save the results). */
+  onEnded?(game: Game): void;
 }
 
 /**
@@ -58,6 +72,8 @@ export class Game {
   phase: GamePhase = 'LOBBY';
   questionIndex = -1;
   lastActivityAt = Date.now();
+  /** When the first question started; null while in LOBBY. */
+  startedAt: Date | null = null;
 
   private phaseEndsAt: number | null = null;
   private answeringStartedAt = 0;
@@ -67,6 +83,7 @@ export class Game {
     readonly pin: string,
     readonly quiz: Quiz,
     private readonly transport: GameTransport,
+    private readonly hooks: GameHooks = {},
   ) {}
 
   get totalQuestions(): number {
@@ -117,6 +134,7 @@ export class Game {
     this.touch();
     this.setPhase('ENDED', null);
     this.broadcastState();
+    this.hooks.onEnded?.(this);
   }
 
   kick(playerId: string): void {
@@ -151,6 +169,7 @@ export class Game {
       nickname: name,
       socketId,
       totalScore: 0,
+      correctCount: 0,
       answer: null,
       lastResult: null,
     };
@@ -230,6 +249,16 @@ export class Game {
     return undefined;
   }
 
+  /** Final ranking of the remaining (non-kicked) players. */
+  standings(): PlayerStanding[] {
+    return rankPlayers(this.players.values()).map(({ player, rank }) => ({
+      nickname: player.nickname,
+      score: player.totalScore,
+      correctCount: player.correctCount,
+      rank,
+    }));
+  }
+
   statePayload(): GameStatePayload {
     const state: GameStatePayload = {
       phase: this.phase,
@@ -250,6 +279,7 @@ export class Game {
   private enterQuestionIntro(index: number): void {
     const question = this.quiz.questions[index];
     if (!question) return this.enterPodium();
+    this.startedAt ??= new Date();
     this.questionIndex = index;
     for (const p of this.players.values()) {
       p.answer = null;
@@ -294,6 +324,7 @@ export class Game {
       const a = p.answer;
       if (a) distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
       p.totalScore += a?.points ?? 0;
+      if (a?.correct) p.correctCount++;
       p.lastResult = { correct: a?.correct ?? false, pointsEarned: a?.points ?? 0 };
     }
 

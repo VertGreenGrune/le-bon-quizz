@@ -156,13 +156,29 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   answer, time limit, points, image upload), "Start game" button → `/host/new?quizId=<id>`.
 
 ### T7 — Load games from DB + save results
-- **Status:** in-progress (T7 agent, worktree ../lbq-T7)
+- **Status:** done
 - **Depends on:** T1, T5
 - **Scope:** `apps/server/src/game/**` (persistence adapter), `apps/server/src/socket/**`
   (handshake auth), `apps/web/src/lib/socket.ts` (`withCredentials` only), game history/report
   endpoints in `apps/server/src/api/**`.
 - **Deliverable:** `host:create` loads quiz from DB and checks ownership; on ENDED save
   `GameSession` + `PlayerResult`; history/report endpoints return real data.
+- **Summary:** `game/persistence.ts`: `GamePersistence` adapter (`authenticate`, `loadQuiz`,
+  `saveGame`) with a Prisma implementation (wired in `src/index.ts`) and `demoOnlyPersistence`
+  (default, no DB). `host:create` reads the host token from the handshake (`lbq_session` cookie,
+  or `auth.token`), loads the host's own quiz (`UNAUTHORIZED` if anonymous, `QUIZ_NOT_FOUND` if
+  not owned); `demo` works without login (a logged-in owner of the seeded `demo` row gets the DB
+  copy). `Game` gained `startedAt`, per-player `correctCount`, `standings()` and an `onEnded`
+  hook: on ENDED, a logged-in host's started game is saved (`GameSession` with quizTitle
+  snapshot + `PlayerResult`s; `quizId` null if the quiz was deleted meanwhile), so the existing
+  `/api/games*` endpoints now return real data. `game/quizzes.ts` removed. Web socket uses
+  `withCredentials: true`. Tests: Game hook/standings, cookie parsing, adapter + history/report
+  against Postgres; verified live with a socket client (cookie auth → game → `/api/games`).
+- **Follow-ups:** (1) The handshake cookie is read once per socket connection: if a host logs
+  in *after* the shared socket connected, `host:create` still sees them as anonymous — T6 should
+  reconnect the socket after login/logout (`getSocket().disconnect().connect()`). (2) Games
+  abandoned without reaching ENDED (idle sweep, server restart) are not saved. (3) Kicked players
+  are not in the saved results.
 
 ### T8 — QR code, reconnection hardening, wake-lock
 - **Status:** todo
@@ -217,6 +233,13 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `db:*`); root `pnpm-workspace.yaml` `onlyBuiltDependencies` (prisma, esbuild);
   `docker-compose.yml`, `.env.example`, CLAUDE.md commands. PLAN.md §5 adds `Session` and
   `GameSession.quizTitle`/nullable `quizId`; §6 documents auth + error format.
+- 2026-10-20, T7 agent (no event payload changed): `host:create` now authenticates the host from
+  the socket handshake (`lbq_session` cookie, or `auth: { token }` for non-browser clients) —
+  PLAN.md §4/§5 updated. Outside the T7 scope: `apps/server/src/index.ts` passes
+  `createPrismaPersistence(prisma)` to `registerSocketHandlers` (signature is now
+  `(io, { games?, persistence? })`); new `apps/server/vitest.config.ts` (`fileParallelism:
+  false`) because `api.test.ts` and `game/persistence.test.ts` share and wipe the same
+  `TEST_DATABASE_URL` database.
 - `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
   merge conflicts there; keep both sides.
 - 2026-10-20, main agent (post-merge fix): `tsx watch` hangs before listening when run under

@@ -16,7 +16,8 @@ import {
 import { GameError } from '../game/errors.js';
 import type { Game, GameTransport } from '../game/Game.js';
 import { GameManager } from '../game/GameManager.js';
-import { loadQuiz } from '../game/quizzes.js';
+import { SESSION_COOKIE } from '../auth/session.js';
+import { demoOnlyPersistence, gameRecord, type GamePersistence } from '../game/persistence.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type IoSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
@@ -82,8 +83,50 @@ function makeTransport(io: IoServer, pin: string): GameTransport {
   };
 }
 
+/** Value of one cookie in a `Cookie` header, or null. */
+export function readCookie(header: string | undefined, name: string): string | null {
+  for (const part of header?.split(';') ?? []) {
+    const eq = part.indexOf('=');
+    if (eq < 0 || part.slice(0, eq).trim() !== name) continue;
+    const value = part.slice(eq + 1).trim();
+    try {
+      return decodeURIComponent(value) || null;
+    } catch {
+      return value || null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Host session token of a socket: the `lbq_session` cookie sent with the handshake (web app,
+ * `withCredentials`), or `auth.token` (non-browser clients, tests).
+ */
+export function handshakeToken(socket: Pick<IoSocket, 'handshake'>): string | null {
+  const auth = socket.handshake.auth as { token?: unknown } | undefined;
+  if (typeof auth?.token === 'string' && auth.token) return auth.token;
+  return readCookie(socket.handshake.headers.cookie, SESSION_COOKIE);
+}
+
+export interface SocketDeps {
+  games?: GameManager;
+  /** Defaults to the demo quiz only, nothing saved (no DB). */
+  persistence?: GamePersistence;
+}
+
 /** Entry point for all socket handlers (T1). Returns the game registry. */
-export function registerSocketHandlers(io: IoServer, games = new GameManager()): GameManager {
+export function registerSocketHandlers(
+  io: IoServer,
+  { games = new GameManager(), persistence = demoOnlyPersistence }: SocketDeps = {},
+): GameManager {
+  const saveOnEnd = (hostId: string | null, dbQuizId: string | null) => (game: Game) => {
+    const record = gameRecord(game, hostId, dbQuizId);
+    if (!record) return;
+    persistence.saveGame(record).catch((err: unknown) => {
+      console.error(`Could not save the results of game ${game.pin}`, err);
+    });
+  };
+
   setInterval(() => games.sweep(), SWEEP_INTERVAL_MS).unref();
 
   io.on('connection', (socket) => {
@@ -121,8 +164,12 @@ export function registerSocketHandlers(io: IoServer, games = new GameManager()):
         socket,
         HostCreatePayload,
         async ({ quizId }) => {
-          const quiz = await loadQuiz(quizId);
-          const game = games.create(quiz, (pin) => makeTransport(io, pin));
+          const token = handshakeToken(socket);
+          const hostId = token ? await persistence.authenticate(token) : null;
+          const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
+          const game = games.create(quiz, (pin) => makeTransport(io, pin), {
+            onEnded: saveOnEnd(hostId, dbQuizId),
+          });
           session = { pin: game.pin, role: 'host' };
           await socket.join([roomAll(game.pin), roomHost(game.pin)]);
           return { pin: game.pin, hostToken: game.hostToken };

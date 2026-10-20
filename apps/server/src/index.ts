@@ -6,6 +6,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from '@lbq/shared';
 import { registerSocketHandlers } from './socket/index.js';
 import { registerApi } from './api/index.js';
 import { createPrisma } from './db.js';
+import { createPrismaPersistence } from './game/persistence.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? true; // `true` = reflect origin (dev / LAN phones)
@@ -27,6 +28,6 @@ app.get('/health', async () => ({ status: 'ok' }));
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(app.server, {
   cors: { origin: CORS_ORIGIN, credentials: true },
 });
-registerSocketHandlers(io);
+registerSocketHandlers(io, { persistence: createPrismaPersistence(prisma) });
 
 await app.listen({ port: PORT, host: '0.0.0.0' });
