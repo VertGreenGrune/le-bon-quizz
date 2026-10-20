@@ -8,6 +8,9 @@ import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
  * - Alice: always right       → ≥ 500 pts per question, ≥ 2500 in total
  * - Bob:   right on Q1 and Q2 → ≤ 2000 in total
  * - Chloé: always wrong       → 0
+ *
+ * The host screen is reloaded in the middle of question RELOAD_AT (after one answer) and must
+ * resume the game (`host:rejoin`).
  */
 const correctIndex = DEMO_QUIZ.questions.map((q) => q.choices.findIndex((c) => c.isCorrect));
 const wrongIndex = DEMO_QUIZ.questions.map((q) => q.choices.findIndex((c) => !c.isCorrect));
@@ -17,6 +20,7 @@ const PLAYERS = [
   { nickname: 'Bob', pick: (q: number) => (q < 2 ? correctIndex[q]! : wrongIndex[q]!) },
   { nickname: 'Chloé', pick: (q: number) => wrongIndex[q]! },
 ];
+const RELOAD_AT = 2; // 20 s question: leaves time for the reload
 
 async function newPhone(browser: Browser): Promise<Page> {
   // Separate context per phone: own sessionStorage + own socket, like a real device.
@@ -68,12 +72,22 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
       await phone.getByRole('button', { name: `Réponse ${SHAPES[choice]!.symbol}` }).click();
       // The last answer triggers the reveal right away, so its "sent" screen may be skipped.
       if (i < phones.length - 1) await expect(phone.getByText('Réponse envoyée !')).toBeVisible();
+
+      if (q === RELOAD_AT && i === 0) {
+        await host.reload();
+        await expect(host.getByRole('heading', { name: question.text })).toBeVisible();
+        await expect(host.getByText('/ 3')).toBeVisible(); // answer counter resynced (1 / 3)
+        await expect(host.getByText('1', { exact: true })).toBeVisible();
+        await expect(host.getByRole('button', { name: 'Passer' })).toBeVisible();
+      }
     }
 
     // Everybody answered → server reveals immediately (no need to wait for the timer).
     for (const [i, phone] of phones.entries()) {
       const correct = PLAYERS[i]!.pick(q) === correctIndex[q];
-      await expect(phone.getByRole('heading', { name: correct ? 'Correct !' : 'Raté !' })).toBeVisible();
+      await expect(
+        phone.getByRole('heading', { name: correct ? 'Correct !' : 'Raté !' }),
+      ).toBeVisible();
     }
     // Host reveal: "Suivant" button and the 3 answers counted.
     await expect(host.getByRole('button', { name: 'Suivant' })).toBeVisible();
@@ -86,7 +100,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     await expect(phones[0]!.getByText("Regarde le classement sur l'écran")).toBeVisible();
 
     const isLast = q === total - 1;
-    await host.getByRole('button', { name: isLast ? 'Voir le podium' : 'Question suivante' }).click();
+    await host
+      .getByRole('button', { name: isLast ? 'Voir le podium' : 'Question suivante' })
+      .click();
   }
 
   // ---- Podium ----

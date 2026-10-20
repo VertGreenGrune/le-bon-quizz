@@ -83,6 +83,23 @@ describe('hostReducer', () => {
     expect(currentQuestion(stale)).toBeNull();
   });
 
+  it('rebuilds a REVEAL screen from a host:rejoin resync on a fresh page', () => {
+    const s = run([
+      {
+        type: 'state',
+        payload: { phase: 'REVEAL', questionIndex: 1, totalQuestions: 2 },
+        now: 0,
+      },
+      { type: 'players', payload: { players: [{ id: 'a', nickname: 'Alice' }] } },
+      { type: 'question', payload: question(1) },
+      { type: 'count', answered: 1, total: 1 },
+      { type: 'reveal', payload: { correctIndexes: [0], distribution: [1, 0] } },
+    ]);
+    expect(currentQuestion(s)?.text).toBe('Q1');
+    expect(s).toMatchObject({ phase: 'REVEAL', answered: 1, answerTotal: 1 });
+    expect(s.reveal?.distribution).toEqual([1, 0]);
+  });
+
   it('detects the last question', () => {
     const s = run([
       {

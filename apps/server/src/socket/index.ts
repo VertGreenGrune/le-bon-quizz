@@ -132,14 +132,26 @@ export function registerSocketHandlers(
   io.on('connection', (socket) => {
     let session: Session | null = null;
 
+    /** Leaves the game this socket was hosting/playing, if any. */
+    const leaveSession = (): void => {
+      if (!session) return;
+      const game = games.find(session.pin);
+      if (session.role === 'host') game?.hostDisconnected(socket.id);
+      else game?.disconnect(socket.id);
+    };
+
+    const attachHost = (game: Game): void => {
+      leaveSession();
+      session = { pin: game.pin, role: 'host' };
+      void socket.join([roomAll(game.pin), roomHost(game.pin)]);
+      game.hostConnected(socket.id);
+    };
+
     /** Checks the host token; (re)attaches this socket as host so a host can reconnect. */
     const asHost = (pin: string, hostToken: string): Game => {
       const game = games.get(pin);
       game.assertHost(hostToken);
-      if (session?.pin !== pin || session.role !== 'host') {
-        session = { pin, role: 'host' };
-        void socket.join([roomAll(pin), roomHost(pin)]);
-      }
+      if (session?.pin !== pin || session.role !== 'host') attachHost(game);
       return game;
     };
 
@@ -170,8 +182,7 @@ export function registerSocketHandlers(
           const game = games.create(quiz, (pin) => makeTransport(io, pin), {
             onEnded: saveOnEnd(hostId, dbQuizId),
           });
-          session = { pin: game.pin, role: 'host' };
-          await socket.join([roomAll(game.pin), roomHost(game.pin)]);
+          attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
         },
         ({ pin }) => {
@@ -205,6 +216,22 @@ export function registerSocketHandlers(
         asHost(pin, hostToken).kick(playerId);
         return {};
       }),
+    );
+
+    socket.on(
+      'host:rejoin',
+      handler(
+        socket,
+        HostActionPayload,
+        ({ pin, hostToken }) => {
+          asHost(pin, hostToken);
+          return {};
+        },
+        // After the ack: re-send the current phase to this socket only.
+        () => {
+          if (session?.role === 'host') games.find(session.pin)?.resyncHost(socket.id);
+        },
+      ),
     );
 
     socket.on(
@@ -256,9 +283,7 @@ export function registerSocketHandlers(
       }),
     );
 
-    socket.on('disconnect', () => {
-      if (session?.role === 'player') games.find(session.pin)?.disconnect(socket.id);
-    });
+    socket.on('disconnect', leaveSession);
   });
 
   return games;

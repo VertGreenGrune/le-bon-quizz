@@ -7,6 +7,8 @@ import { Game, type GameHooks, type GameTransport } from './Game.js';
 export const GAME_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
 /** ENDED games are kept a little so reconnecting clients still see the ENDED state. */
 export const ENDED_GAME_TTL_MS = 5 * 60 * 1000;
+/** A game whose host screen has been gone this long is ended (and saved if it started). */
+export const HOST_GONE_TTL_MS = 10 * 60 * 1000;
 
 export function generatePin(isTaken: (pin: string) => boolean): string {
   for (let i = 0; i < 1000; i++) {
@@ -46,12 +48,22 @@ export class GameManager {
     return this.games.size;
   }
 
-  /** Drops idle games and ENDED games past their grace period. */
+  /**
+   * Ends abandoned games — idle, or host screen gone for HOST_GONE_TTL_MS — which saves them
+   * through `onEnded` if they started and sends ENDED to the players. Drops idle games and
+   * ENDED games past their grace period.
+   */
   sweep(now = Date.now()): void {
     for (const [pin, game] of this.games) {
       const idle = now - game.lastActivityAt;
-      if (idle > GAME_IDLE_TTL_MS || (game.phase === 'ENDED' && idle > ENDED_GAME_TTL_MS)) {
+      const hostGone = game.hostGoneSince !== null && now - game.hostGoneSince > HOST_GONE_TTL_MS;
+      if (idle > GAME_IDLE_TTL_MS) {
+        game.end();
         this.remove(pin);
+      } else if (game.phase === 'ENDED') {
+        if (idle > ENDED_GAME_TTL_MS) this.remove(pin);
+      } else if (hostGone) {
+        game.end(); // kept for the ENDED grace period from now on
       }
     }
   }

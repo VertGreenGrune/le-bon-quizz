@@ -66,6 +66,15 @@ export function HostPage() {
     );
   }
 
+  if (game.lost) {
+    return (
+      <Message
+        title="Partie introuvable"
+        detail="Cette partie est terminée ou le serveur a redémarré."
+      />
+    );
+  }
+
   // The lobby is shown until the first game:state, in case the server doesn't send one on create.
   const phase = state.phase ?? 'LOBBY';
   const question = currentQuestion(state);
