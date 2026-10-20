@@ -401,7 +401,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 ## Phase 4 — Extras
 
 ### T15 — Team mode (run alone: touches server, shared, host, phones, editor, DB, reports)
-- **Status:** todo
+- **Status:** in-progress (T15 agent, worktree ../lbq-T15)
 - **Depends on:** T10, T11, T12, T19 (all done)
 - **Ports:** server 3015 / web 5195, test DB `lbq_test_t15` (same rules as wave 3).
 
