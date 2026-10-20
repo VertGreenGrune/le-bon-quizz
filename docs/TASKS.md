@@ -398,9 +398,73 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 - **Status:** cancelled (2026-10-20, user decision: the app is **French only**, no translation
   layer. Write UI text directly in French; ignore earlier "needs i18n" follow-ups.)
 
-## Phase 4 — Extras (to be detailed later)
+## Phase 4 — Extras
+
+### T15 — Team mode (run alone: touches server, shared, host, phones, editor, DB, reports)
+- **Status:** todo
+- **Depends on:** T10, T11, T12, T19 (all done)
+- **Ports:** server 3015 / web 5195, test DB `lbq_test_t15` (same rules as wave 3).
+
+**User requirements (2026-10-20):** when the host creates a game they choose **"Solo"** or
+**"Équipes"**; in team mode **players choose their own team**; the final team score must be
+**fair when teams have different sizes**.
+
+**Design (decided — follow it, note any deviation below):**
+- **Creating a game:** "Lancer" in the editor and "Animer une partie (démo)" on the home page
+  open a small dialog: _Solo_ / _Équipes_ + number of teams (2, 3 or 4, default 2). It navigates
+  to `/host/new?quizId=<id>&mode=teams&teams=<n>` (`mode` absent = solo; old URLs keep working).
+- **Teams** reuse the 4 answer colors/shapes: Équipe Rouge ▲, Bleue ◆, Jaune ●, Verte ■ (first
+  `n`). No custom names (keeps the phone UI simple).
+- **Lobby, phone:** after the nickname, the phone shows the teams as big colored buttons with
+  their member count/names; the player taps one. They can switch team until the game starts.
+  The phone shows its team color during the whole game (header band).
+- **Lobby, host screen:** players listed in team columns. The host can move a player to another
+  team (tap the player → pick a team) and press **"Mélanger"** (random balanced teams, e.g. for
+  players who didn't choose). "Commencer" is disabled until every player has a team and at least
+  2 teams have players; empty teams are dropped at start. If one team has more than twice as many
+  players as another, show a non-blocking hint ("équipes déséquilibrées — le score reste
+  équitable").
+- **Fair scoring = average per player, per question.** Each player scores exactly as in solo
+  (time-based points + streak bonus, PLAN.md §3). For each question, a team earns
+  `round(sum of its members' points on that question / number of its members present)`, where
+  "present" = connected when ANSWERING started (a player who disconnects mid-question still
+  counts and gets 0; a player absent for the whole question doesn't drag the team down). Team
+  score = sum of those per-question averages. Kicked players stop counting from the next
+  question. Ties share a rank. Why: a plain sum favors big teams; the average makes a team of 2
+  and a team of 5 comparable, and counting "present" players makes it fair if someone's phone
+  drops. Show this rule in one line on the host leaderboard: "Score d'équipe = moyenne des
+  points par joueur".
+- **During the game:** host leaderboard shows the team ranking (score + member count) and
+  below it the individual ranking. Phone result screen shows own points + team score + team rank.
+- **End:** team podium (winning team in its color, confetti) + "Meilleur joueur" (top
+  individual) on the host; phones show their team's rank and their own rank.
+- **Solo mode is unchanged.**
+- **Small-game tweaks (games are ~6 players, 15 max):** `LEADERBOARD_SIZE` → show all players
+  (up to 15); `MAX_PLAYERS_PER_GAME` → 30.
+
+**Contract (packages/shared + PLAN.md §4, decided):**
+- `host:create` `{ quizId, mode?: 'solo' | 'teams', teamCount?: 2 | 3 | 4 }`.
+- New `player:team` `{ pin, teamId }` → `Ack` (LOBBY only, else `GAME_ALREADY_STARTED`).
+- New host events `host:moveplayer` `{ pin, hostToken, playerId, teamId }` and `host:shuffle`
+  `{ pin, hostToken }` → `Ack`.
+- `TeamId` = `0 | 1 | 2 | 3` (= shape index). `GameStatePayload` gains
+  `mode: 'solo' | 'teams'`; new event `lobby:teams` (to all) `{ teams: { id, name, members:
+  { id, nickname }[] }[] }`; `lobby:players` items gain `teamId?`.
+- `PlayerResultPayload` gains optional `team?: { id, score, rank }`.
+- `leaderboard` and `podium` gain optional `teams?: { id, name, score, playerCount }[]`.
+- On `player:rejoin` / `host:rejoin`, the resync includes the team payloads.
+
+**Persistence & reports:** `GameSession.mode`; `PlayerResult.teamId` (nullable); new
+`TeamResult` (gameSessionId, teamId, name, score, playerCount, rank) — migration. Reports page
+shows the team ranking for team games and a "Solo"/"Équipes" badge in the game list; CSV gets a
+team column.
+
+**Tests:** scoring unit tests with unequal teams (e.g. team of 2 vs team of 5, someone absent
+for a question, someone disconnecting mid-question, kicked player, ties); team lobby rules;
+persistence; extend e2e with a team game (2 teams, 1 vs 2 players) up to the team podium.
+Solo e2e must still pass.
+
 - T14 More question types (type answer, poll, slider)
-- T15 Team mode
 - T16 Public quiz library
 - T17 AI-generated quizzes from a topic
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
