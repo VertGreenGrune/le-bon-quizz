@@ -54,7 +54,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   Uses the demo quiz via `host:create`.
 
 ### T3 — Player controller (phone)
-- **Status:** todo
+- **Status:** in-progress (T3 agent, worktree ../lbq-T3, branch task/T3-player)
 - **Depends on:** T0
 - **Scope:** `apps/web/src/player/**`, plus adding the `/join` and `/play` routes in
   `apps/web/src/main.tsx`. Reuse `components/shapes.tsx` and `lib/socket.ts`.
