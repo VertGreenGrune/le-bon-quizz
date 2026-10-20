@@ -179,6 +179,12 @@ function Result({ s }: { s: PlayerState }) {
       <p className="rounded-lg bg-black/25 px-5 py-2 text-2xl font-black">
         {r.correct ? `+ ${r.pointsEarned} pts` : '+ 0 pt'}
       </p>
+      {r.streak >= 2 && (
+        <p className="text-xl font-black">
+          🔥 Série de {r.streak}
+          {r.streakBonus > 0 && ` · bonus + ${r.streakBonus}`}
+        </p>
+      )}
       <p className="text-lg font-bold">Tu es {formatRank(r.rank)}</p>
     </div>
   );

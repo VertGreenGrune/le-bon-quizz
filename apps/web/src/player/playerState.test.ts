@@ -54,7 +54,14 @@ describe('playerScreen', () => {
 
     const result = playerReducer(reveal, {
       type: 'result',
-      payload: { correct: true, pointsEarned: 800, totalScore: 800, rank: 1 },
+      payload: {
+        correct: true,
+        pointsEarned: 800,
+        streak: 1,
+        streakBonus: 0,
+        totalScore: 800,
+        rank: 1,
+      },
     });
     expect(playerScreen(result)).toBe('result');
     expect(result.totalScore).toBe(800);
@@ -106,7 +113,17 @@ describe('playerReducer', () => {
       prompt(0),
       { type: 'answer', questionIndex: 0, choiceIndex: 1 },
       state({ phase: 'REVEAL' }),
-      { type: 'result', payload: { correct: false, pointsEarned: 0, totalScore: 0, rank: 2 } },
+      {
+        type: 'result',
+        payload: {
+          correct: false,
+          pointsEarned: 0,
+          streak: 0,
+          streakBonus: 0,
+          totalScore: 0,
+          rank: 2,
+        },
+      },
       state({ phase: 'QUESTION_INTRO', questionIndex: 1 }),
     );
     expect(s.myAnswer).toBeNull();
@@ -118,7 +135,17 @@ describe('playerReducer', () => {
   it('keeps the last result for the podium', () => {
     const s = run(
       state({ phase: 'REVEAL', questionIndex: 2 }),
-      { type: 'result', payload: { correct: true, pointsEarned: 900, totalScore: 2500, rank: 4 } },
+      {
+        type: 'result',
+        payload: {
+          correct: true,
+          pointsEarned: 900,
+          streak: 3,
+          streakBonus: 200,
+          totalScore: 2500,
+          rank: 4,
+        },
+      },
       state({ phase: 'PODIUM', questionIndex: 2 }),
       { type: 'podium', top: [{ nickname: 'A', score: 3000 }] },
     );

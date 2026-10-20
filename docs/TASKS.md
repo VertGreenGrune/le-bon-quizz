@@ -264,13 +264,24 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 ### T9 — see Phase 2 (deployment). Can run in wave 3.
 
 ### T11 — Streaks & bonus scoring
-- **Status:** in-progress (T11 agent, worktree ../lbq-T11)
+- **Status:** done
 - **Depends on:** T1
 - **Scope:** `apps/server/src/game/**` (scoring + per-player streak), `packages/shared/src/events.ts`
   (`streak`, `streakBonus` only), PLAN.md §3/§4, `apps/web/src/player/**` (show the streak on the
   result screen, minimal styling — T10 polishes it later).
 - **Deliverable:** streak bonus per PLAN.md §3 (+100 per consecutive correct answer after the
   first, capped at +500), reset on wrong/no answer; included in score and leaderboard; unit tests.
+- **Summary:** `streakBonus(streak)` in `game/scoring.ts` (`min(100 * (streak - 1), 500)`);
+  `Player.streak` is updated at REVEAL (wrong / no answer → 0) and the bonus is added to
+  `pointsEarned`, the total score, leaderboard, podium and saved results. A 0-point question gives
+  no bonus but keeps the streak going. `PlayerResultPayload` gains `streak` + `streakBonus`
+  (re-sent on rejoin during REVEAL). Phone result screen shows "🔥 Série de N · bonus + X" from a
+  streak of 2. Tests: `streakBonus` table, 8-question game (growth, cap, reset on wrong and on no
+  answer, 0-point question), streak kept across rejoin; existing totals updated (demo quiz all
+  correct = 5600). typecheck, unit (+ Postgres on `lbq_test_t11`) and e2e pass.
+- **Follow-ups:** T10 — style the streak on the phone (🔥 animation), maybe show streaks on the
+  host leaderboard (would need a contract change). `e2e/full-game.spec.ts` header comment
+  ("Bob ≤ 2000") is now ≤ 2100 with the bonus; the ranking assertion still holds.
 
 ### T12 — Game reports page + CSV export
 - **Status:** todo
@@ -360,6 +371,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   link to `/editor` on the landing page (`apps/web/src/Home.tsx`) and the `/login` + `/register`
   routes in `main.tsx` (PLAN.md §7 updated). Note: the shared dev database `lbq` had no
   migration applied yet; T6 tested on `lbq_test_t6` only.
+- 2026-10-20, T11 agent: as decided in wave 3, `PlayerResultPayload` gains `streak` and
+  `streakBonus` (included in `pointsEarned`); PLAN.md §3 (streak rule) and §4 updated. Any code
+  building a `PlayerResultPayload` (test fixtures) must now set both fields.
 - `apps/web/src/main.tsx` is touched by T2, T3, T6 (one route line each) — expect trivial
   merge conflicts there; keep both sides.
 - 2026-10-20, main agent (post-merge fix): `tsx watch` hangs before listening when run under

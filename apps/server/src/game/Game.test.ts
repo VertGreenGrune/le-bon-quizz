@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEMO_QUIZ, QUESTION_INTRO_MS, type ServerToClientEvents } from '@lbq/shared';
+import { DEMO_QUIZ, QUESTION_INTRO_MS, type Quiz, type ServerToClientEvents } from '@lbq/shared';
 import { Game, type GameTransport } from './Game.js';
 import { GameError } from './errors.js';
 import { GameManager, generatePin } from './GameManager.js';
@@ -133,12 +133,16 @@ describe('Game state machine', () => {
     expect(rec.last('player:result', 'sock-0')).toEqual({
       correct: true,
       pointsEarned: 875,
+      streak: 1,
+      streakBonus: 0,
       totalScore: 875,
       rank: 1,
     });
     expect(rec.last('player:result', 'sock-1')).toEqual({
       correct: false,
       pointsEarned: 0,
+      streak: 0,
+      streakBonus: 0,
       totalScore: 0,
       rank: 2,
     });
@@ -184,16 +188,16 @@ describe('Game state machine', () => {
       game.next();
     }
     expect(game.phase).toBe('PODIUM');
-    // 1000 + 1000 + 2000 + 1000, all answered instantly
+    // 1000 + 1000 + 2000 + 1000, all answered instantly, + streak bonus 0 + 100 + 200 + 300
     expect(rec.last('podium', 'all')).toEqual({
       top: [
-        { nickname: 'Alice', score: 5000 },
+        { nickname: 'Alice', score: 5600 },
         { nickname: 'Bob', score: 0 },
       ],
     });
     expect(rec.last('leaderboard', 'host')).toEqual({
       top: [
-        { nickname: 'Alice', score: 5000 },
+        { nickname: 'Alice', score: 5600 },
         { nickname: 'Bob', score: 0 },
       ],
     });
@@ -201,9 +205,116 @@ describe('Game state machine', () => {
     expect(game.phase).toBe('ENDED');
     expect(rec.last('game:state', 'all')).toMatchObject({ phase: 'ENDED' });
     expect(game.standings()).toEqual([
-      { nickname: 'Alice', score: 5000, correctCount: 4, rank: 1 },
+      { nickname: 'Alice', score: 5600, correctCount: 4, rank: 1 },
       { nickname: 'Bob', score: 0, correctCount: 0, rank: 2 },
     ]);
+  });
+
+  describe('streaks', () => {
+    /** 8 instant-answer questions (2 choices, choice 0 correct); question 6 is worth 0 points. */
+    const streakQuiz: Quiz = {
+      ...DEMO_QUIZ,
+      questions: Array.from({ length: 8 }, (_, i) => ({
+        ...DEMO_QUIZ.questions[1]!,
+        text: `Q${i}`,
+        basePoints: i === 6 ? 0 : 1000,
+        choices: [
+          { text: 'Oui', isCorrect: true },
+          { text: 'Non', isCorrect: false },
+        ],
+      })),
+    };
+
+    /** Plays one question; `picks[i]` is player i's choice, or null to not answer. */
+    function playQuestion(g: Game, ids: string[], q: number, picks: (number | null)[]) {
+      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      picks.forEach((c, i) => c !== null && g.answer(ids[i]!, q, c));
+      if (g.phase === 'ANSWERING') g.next(); // someone didn't answer → skip the timer
+      expect(g.phase).toBe('REVEAL');
+    }
+
+    it('adds +100 per consecutive correct answer, capped at +500, reset on wrong / no answer', () => {
+      game.dispose();
+      game = new Game('123456', streakQuiz, rec.transport);
+      const [alice, bob] = joinAll('Alice', 'Bob');
+      const ids = [alice!.id, bob!.id];
+      game.start();
+      // Alice is always right; Bob: right, right, wrong, right, no answer, right, right, right.
+      const bobPicks = [0, 0, 1, 0, null, 0, 0, 0];
+      const expected = {
+        alice: [
+          [1, 0],
+          [2, 100],
+          [3, 200],
+          [4, 300],
+          [5, 400],
+          [6, 500],
+          [7, 0], // 0-point question: the streak goes on but earns nothing
+          [8, 500], // capped
+        ],
+        bob: [
+          [1, 0],
+          [2, 100],
+          [0, 0],
+          [1, 0],
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 200],
+        ],
+      };
+      let aliceTotal = 0;
+      for (let q = 0; q < 8; q++) {
+        playQuestion(game, ids, q, [0, bobPicks[q]!]);
+        const [aStreak, aBonus] = expected.alice[q]!;
+        const base = q === 6 ? 0 : 1000;
+        aliceTotal += base + aBonus!;
+        expect(rec.last('player:result', 'sock-0')).toMatchObject({
+          correct: true,
+          streak: aStreak,
+          streakBonus: aBonus,
+          pointsEarned: base + aBonus!,
+          totalScore: aliceTotal,
+        });
+        const [bStreak, bBonus] = expected.bob[q]!;
+        expect(rec.last('player:result', 'sock-1')).toMatchObject({
+          correct: bobPicks[q] === 0,
+          streak: bStreak,
+          streakBonus: bBonus,
+        });
+        game.next(); // → LEADERBOARD
+        game.next(); // → next QUESTION_INTRO / PODIUM
+      }
+      expect(game.phase).toBe('PODIUM');
+      // 7 × 1000 + 0 + 100 + 200 + 300 + 400 + 500 + 0 + 500
+      expect(aliceTotal).toBe(9000);
+      expect((rec.last('podium', 'all') as { top: unknown[] }).top[0]).toEqual({
+        nickname: 'Alice',
+        score: 9000,
+      });
+    });
+
+    it('keeps the streak across a disconnect / rejoin and re-sends it during REVEAL', () => {
+      const [alice] = joinAll('Alice');
+      game.start();
+      playQuestion(game, [alice!.id], 0, [1]);
+      game.next();
+      game.next();
+      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      game.answer(
+        alice!.id,
+        1,
+        DEMO_QUIZ.questions[1]!.choices.findIndex((c) => c.isCorrect),
+      );
+      game.disconnect('sock-0');
+      game.resync(game.rejoin(alice!.sessionToken, 'sock-new'));
+      expect(rec.last('player:result', 'sock-new')).toMatchObject({
+        correct: true,
+        streak: 2,
+        streakBonus: 100,
+        pointsEarned: 1100,
+      });
+    });
   });
 
   it('records the start time and calls onEnded exactly once', () => {
