@@ -32,6 +32,8 @@ pnpm install       # once (pnpm 10, Node >= 22)
 pnpm dev           # server :3001 + web :5173 (exposed on LAN for phones)
 pnpm typecheck     # all packages
 pnpm test          # Vitest, all packages
+pnpm format:check  # Prettier (CI fails on unformatted files: run `pnpm format`)
+pnpm build         # production build (server bundled by esbuild into apps/server/dist)
 docker compose up -d            # Postgres (localhost:5432, lbq/lbq)
 pnpm --filter @lbq/server db:migrate   # apply/create migrations (prisma migrate dev)
 pnpm --filter @lbq/server db:seed      # demo host demo@lebonquizz.local / demo1234 + DEMO_QUIZ
@@ -39,6 +41,8 @@ pnpm --filter @lbq/server db:seed      # demo host demo@lebonquizz.local / demo1
 
 Phones on the same Wi-Fi: open `http://<PC LAN IP>:5173`. The web app connects to
 `<same host>:3001` by default (override with `VITE_SERVER_URL`, see `.env.example`).
+Production: one Docker image / Fly.io app serves web + API + sockets on the same origin — see
+`DEPLOY.md`. CI: `.github/workflows/ci.yml`.
 
 ## Rules for working on this project (multi-agent)
 

@@ -73,7 +73,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     // Everybody answered → server reveals immediately (no need to wait for the timer).
     for (const [i, phone] of phones.entries()) {
       const correct = PLAYERS[i]!.pick(q) === correctIndex[q];
-      await expect(phone.getByRole('heading', { name: correct ? 'Correct !' : 'Raté !' })).toBeVisible();
+      await expect(
+        phone.getByRole('heading', { name: correct ? 'Correct !' : 'Raté !' }),
+      ).toBeVisible();
     }
     // Host reveal: "Suivant" button and the 3 answers counted.
     await expect(host.getByRole('button', { name: 'Suivant' })).toBeVisible();
@@ -86,7 +88,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     await expect(phones[0]!.getByText("Regarde le classement sur l'écran")).toBeVisible();
 
     const isLast = q === total - 1;
-    await host.getByRole('button', { name: isLast ? 'Voir le podium' : 'Question suivante' }).click();
+    await host
+      .getByRole('button', { name: isLast ? 'Voir le podium' : 'Question suivante' })
+      .click();
   }
 
   // ---- Podium ----

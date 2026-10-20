@@ -7,8 +7,9 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck && tsc -p e2e",
     "test": "pnpm -r test",
+    "test:e2e": "playwright test",
     "format": "prettier --write .",
-    "test:e2e": "playwright test"
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": ">=22"

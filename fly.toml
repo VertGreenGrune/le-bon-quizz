@@ -1,0 +1,56 @@
+# Fly.io config — see DEPLOY.md. One app = web + REST API + Socket.IO (same origin).
+# `app` must be globally unique on Fly: change it (and CORS_ORIGIN / PUBLIC_URL below) if taken.
+app = 'lebonquizz'
+primary_region = 'cdg' # Paris
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[build.args]
+  # Public browser DSN of the Sentry "web" project (empty = Sentry off in the browser).
+  VITE_SENTRY_DSN = ''
+
+[deploy]
+  # Runs in a temporary machine with the new image before it goes live.
+  release_command = './node_modules/.bin/prisma migrate deploy'
+  # A single machine (games live in its memory): stop the old one, then start the new one.
+  strategy = 'immediate'
+
+[env]
+  NODE_ENV = 'production'
+  PORT = '8080'
+  TRUST_PROXY = 'true'
+  CORS_ORIGIN = 'https://lebonquizz.fly.dev'
+  PUBLIC_URL = 'https://lebonquizz.fly.dev'
+  UPLOAD_DIR = '/data/uploads'
+  # Secrets (fly secrets set): DATABASE_URL (set by `fly mpg attach`), SENTRY_DSN.
+
+# Uploaded images. A volume belongs to one machine, which also keeps the app on exactly one
+# machine — required while live games are kept in memory (Redis = T18).
+[mounts]
+  source = 'lbq_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Stop when nobody is connected (open WebSockets count as connections), restart on demand.
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = 'connections'
+    soft_limit = 800
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    grace_period = '15s'
+    interval = '30s'
+    timeout = '5s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'

@@ -144,3 +144,21 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 
 Advice: test phase 1 early with 3–4 real phones on local Wi-Fi — realtime sync and
 reconnection are the hard parts.
+
+## 9. Production & deployment
+
+- **Build:** `pnpm build` — web: `tsc` + Vite → `apps/web/dist`; server: esbuild
+  (`apps/server/build.mjs`) bundles `src/index.ts` + `@lbq/shared` + the generated Prisma client
+  into `apps/server/dist` (npm deps stay external). Run with
+  `node --import ./dist/instrument.js dist/index.js` (`pnpm --filter @lbq/server start`).
+- **One process, one origin:** with `WEB_DIST_DIR` set, the server also serves the built web app
+  (`apps/server/src/web.ts`, SPA fallback to `index.html`). Needed because the session cookie is
+  `SameSite=Lax` and `*.fly.dev` is a public suffix. A production web build talks to
+  `location.origin` unless `VITE_SERVER_URL` is set (`apps/web/src/lib/serverUrl.ts`).
+- **Image:** root `Dockerfile` (multi-stage, `pnpm deploy --prod`; Prisma CLI kept for
+  `migrate deploy`). **Fly.io:** `fly.toml` — 1 machine (in-memory games), volume `/data` for
+  uploads, `release_command` = `prisma migrate deploy`, Managed Postgres via `DATABASE_URL`.
+- **Sentry:** server `src/instrument.ts` (`SENTRY_DSN`), web `src/lib/sentry.ts`
+  (`VITE_SENTRY_DSN` at build time); both off when unset.
+- **CI:** `.github/workflows/ci.yml` (Prettier, typecheck, tests with a Postgres service, build,
+  Playwright e2e, Docker build); `deploy.yml` (manual `flyctl deploy`). Steps: `DEPLOY.md`.

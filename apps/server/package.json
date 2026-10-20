@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch --env-file-if-exists=../../.env --import tsx src/index.ts",
-    "start": "tsx src/index.ts",
+    "build": "prisma generate && node build.mjs",
+    "start": "node --enable-source-maps --env-file-if-exists=../../.env --import ./dist/instrument.js dist/index.js",
     "postinstall": "prisma generate",
     "typecheck": "prisma generate && tsc -p .",
     "test": "vitest run --passWithNoTests",
@@ -22,12 +23,14 @@
     "@lbq/shared": "workspace:*",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@sentry/node": "^11.8.0",
     "fastify": "^5.12.7",
+    "prisma": "7.10.1",
     "socket.io": "^4.8.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "prisma": "7.10.1",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15"
   }
 }

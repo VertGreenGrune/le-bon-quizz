@@ -38,7 +38,11 @@ function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
   game.start();
   quiz.questions.forEach((q, i) => {
     game.next(); // QUESTION_INTRO → ANSWERING
-    game.answer(alice.id, i, q.choices.findIndex((c) => c.isCorrect));
+    game.answer(
+      alice.id,
+      i,
+      q.choices.findIndex((c) => c.isCorrect),
+    );
     game.next(); // ANSWERING → REVEAL (Bob has not answered)
     game.next(); // → LEADERBOARD
     game.next(); // → next question / PODIUM

@@ -54,7 +54,7 @@ If phones can't load the page or stay on "Connexion…":
 
 - Both devices must be on the same network (no guest Wi-Fi / client isolation).
 - Allow Node.js through the firewall for **private networks** (Windows asks the first time
-  Node listens; otherwise *Windows Defender Firewall → Allow an app*), ports 5173 and 3001.
+  Node listens; otherwise _Windows Defender Firewall → Allow an app_), ports 5173 and 3001.
 - Check the server answers from the phone: `http://192.168.1.42:3001/health` → `{"status":"ok"}`.
 - Some VPNs block LAN traffic; turn them off on the PC.
 
@@ -95,6 +95,16 @@ pnpm exec playwright show-trace test-results/<test>/trace.zip   # after a failur
 
 The demo-quiz test needs no database.
 
+## Production build & deployment
+
+```sh
+pnpm build                                  # web → apps/web/dist, server → apps/server/dist (esbuild)
+docker build -t lebonquizz .                # production image (web + API + Socket.IO, one process)
+```
+
+CI runs on GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Deployment to
+Fly.io (app + Managed Postgres + Sentry), step by step: [DEPLOY.md](DEPLOY.md).
+
 ## Repository layout
 
 ```
@@ -103,4 +113,5 @@ apps/server/       Fastify (REST) + Socket.IO (real-time) + Prisma
 packages/shared/   Types and zod schemas — the contract between web and server
 e2e/               Playwright tests
 docs/              PLAN.md (architecture), TASKS.md (task board)
+Dockerfile, fly.toml, DEPLOY.md   production image and Fly.io deployment
 ```
