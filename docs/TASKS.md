@@ -52,7 +52,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   reconnects by sending any host action with its `hostToken` (re-joins the host room).
 
 ### T2 — Shared screen (host view)
-- **Status:** in-progress (claude-T2, worktree ../lbq-T2, branch task/T2-host-screen)
+- **Status:** done
 - **Depends on:** T0
 - **Scope:** `apps/web/src/host/**`, plus adding the `/host/:pin` route in `apps/web/src/main.tsx`
   (one line). Reuse `components/shapes.tsx` and `lib/socket.ts` (already exist, from T0).
@@ -60,6 +60,17 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 - **Deliverable:** `/host/:pin` — lobby (PIN, player names), question + countdown + answer
   counter, reveal with distribution bars, leaderboard, podium, host buttons (start/next/end).
   Uses the demo quiz via `host:create`.
+- **Summary:** `apps/web/src/host/`: pure `hostReducer` (folds server events, tolerant to
+  `question:show`/`game:state` order, unit-tested), `useHostGame` (typed listeners + host
+  actions, StrictMode-safe `host:create`, hostToken in sessionStorage), `HostPage` + `screens`
+  (lobby with PIN/join URL/click-to-kick, intro bar, countdown + answer counter + 2×2 answers,
+  reveal with distribution bars, top-5 leaderboard, animated podium, Start/Skip/Next/End).
+  Route `/host/:pin` (`/host/new` creates a demo game). Not yet run against a real server (T1).
+- **Follow-ups:** (1) protocol has no host rejoin: reloading `/host/:pin` or a socket
+  reconnect drops the host out of `game:<PIN>:host` — needs a `host:rejoin { pin, hostToken }`
+  (contract change, T1/T8). (2) Assumes the server sends `game:state` + `lobby:players` right
+  after `host:create`; lobby is shown until then. (3) "Passer" during ANSWERING sends
+  `host:next`; T1 should either end ANSWERING early or reject it. (4) QR code = T8, sounds = T10.
 
 ### T3 — Player controller (phone)
 - **Status:** in-progress (T3 agent, worktree ../lbq-T3, branch task/T3-player)
