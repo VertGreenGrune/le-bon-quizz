@@ -529,8 +529,74 @@ dessert préféré ?" (sondage).
 off); slider points (exact, inside, edge, outside, margin 0); poll keeps the streak and gives 0;
 team mode averages with each new type; server rejects an answer of the wrong kind; prompt never
 contains the answer. Update the e2e games (solo + teams) for the new demo questions.
-- T16 Public quiz library
-- T17 AI-generated quizzes from a topic
+**Phase 4 order:** T15 (running) → T14 (alone) → **T16 ‖ T20** in parallel (little overlap:
+T16 = editor/library/quiz API, T20 = join/lobby/rankings; both add an independent migration on
+different models) → T17 later.
+
+### T16 — Public / private quizzes + quiz library (after T14; can run in parallel with T20)
+- **Status:** todo
+- **Depends on:** T14 merged
+- **Ports:** server 3016 / web 5196, test DB `lbq_test_t16`.
+
+**User requirement (2026-10-20):** when creating a quiz, the host chooses **Public** or
+**Privé**. A public quiz can be used by the other hosts of the site to run their own games; a
+private quiz can only be launched by its creator. (Players never pick quizzes — "available to
+play" means other hosts can launch it.)
+
+**Design (decided):**
+- `Quiz.visibility` = `PRIVATE` | `PUBLIC`, **default `PRIVATE`** (existing quizzes stay private).
+  Migration. Shared `QuizInput` / API types gain `visibility`.
+- Editor: a clear "Visibilité : Privé / Public" switch on the quiz form (with one line of help:
+  "Public : les autres animateurs pourront lancer ce quiz. Ils ne pourront pas le modifier.");
+  a 🌐 Public / 🔒 Privé badge in "Mes quiz".
+- **Bibliothèque** page `/library` (link in the editor header, login required): public quizzes of
+  other hosts, cards with title, cover, author's name, number of questions, number of games
+  played; search by title; sort by most played / newest. Actions: **"Lancer"** (opens the Solo/
+  Équipes dialog from T15, then `/host/new?quizId=…`) and **"Copier dans mes quiz"** (creates an
+  editable private copy owned by the current host, title suffixed " (copie)").
+- Server: `host:create` allows a quiz if the host **owns it OR it is `PUBLIC`**; others →
+  `QUIZ_NOT_FOUND` (don't reveal private quizzes exist). REST: `GET /api/library?search=&sort=`
+  (public quizzes, **without** the correct answers in the list), `POST /api/library/:id/copy`.
+  Only the owner can edit/delete a quiz, public or not.
+- If the owner switches a quiz back to private or deletes it, it disappears from the library;
+  games already played keep their report (quiz title snapshot from T7).
+- Reports: each host only sees the games **they** hosted (unchanged). The author of a public quiz
+  sees a "joué N fois" counter, not other hosts' results.
+- Demo quiz: the seeded demo quiz becomes public, so new hosts see one item in the library.
+
+**Tests:** visibility rules for `host:create` (owner/public/private-of-someone-else), library
+listing excludes private quizzes and answers, copy creates a private owned quiz, only the owner
+can edit; e2e: host B launches host A's public quiz.
+
+### T20 — Player avatars (after T14; can run in parallel with T16)
+- **Status:** todo
+- **Depends on:** T14 merged (T15 lobby/teams must be in place)
+- **Ports:** server 3020 / web 5200, test DB `lbq_test_t20`.
+
+**User requirement (2026-10-20):** players choose an **avatar** when joining, shown next to
+their nickname.
+
+**Design (decided):**
+- A fixed set of **24 avatars** bundled in the app (no upload, no external service): fun animal
+  emojis on a colored circle (🦊 🐼 🐸 🦁 🐙 🦄 🐧 🐨 🐯 🐵 🐰 🐻 🐷 🐮 🐔 🦉 🐢 🐬 🦖 🐝 🦋 🐱 🐶 🐳),
+  defined once in `packages/shared` (`AVATARS`: id, emoji, background color) and rendered by one
+  `<Avatar>` component (size variants). Emoji rendering varies by phone; acceptable.
+- Join flow (phone): PIN → nickname + avatar grid on the same screen; a random avatar is
+  preselected; tapping changes it. Two players may pick the same avatar (no uniqueness rule —
+  with ~6 players it rarely matters; avatars already taken in this game are shown dimmed as a
+  hint). The choice is remembered on the phone (`localStorage`) for next games.
+- Shown everywhere a player appears: phone header, host lobby (big, with a little pop when
+  someone joins), team columns (T15), leaderboard, podium, "Meilleur joueur", slider "Le plus
+  proche" (T14), reports ranking.
+- Contract: `player:join` gains `avatar: AvatarId` (zod: one of `AVATARS`; missing → random, so
+  old clients still work); `avatar` added to `lobby:players` / `lobby:teams` members,
+  `RankedPlayer` (leaderboard/podium) and the rejoin ack. Persisted in `PlayerResult.avatar`
+  (nullable, migration). PLAN.md §4/§5 updated.
+
+**Tests:** invalid avatar rejected / missing → random; avatar in lobby, leaderboard, podium
+payloads and saved results; e2e checks the avatar appears in the host lobby.
+
+- T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
 
 ---
