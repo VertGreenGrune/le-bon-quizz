@@ -147,7 +147,7 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
   `withCredentials: true` in `apps/web/src/lib/socket.ts`. Quiz `demo` keeps working without login.
 
 ### T6 — Quiz editor UI
-- **Status:** todo
+- **Status:** in-progress (T6 agent, worktree ../lbq-T6, branch task/T6-editor)
 - **Depends on:** T0 (mock API OK), T5 for real integration
 - **Scope:** `apps/web/src/editor/**`, `apps/web/src/auth/**`, `apps/web/src/api/**`, the
   `/editor` routes in `main.tsx`, and the `quizId` query param in `host/useHostGame.ts` +
