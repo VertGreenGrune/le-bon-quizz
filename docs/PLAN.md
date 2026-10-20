@@ -9,7 +9,7 @@
 └──────────────┘        │  State machine + timer     │        └──────────────┘
                         │  Scoring                   │
 ┌──────────────┐  HTTP  │  REST API (quizzes, auth)  │
-│ Quiz editor  │◄──────►│                            │──► PostgreSQL / Redis / S3
+│ Quiz editor  │◄──────►│                            │──► PostgreSQL / S3        
 └──────────────┘        └───────────────────────────┘
 ```
 
@@ -23,8 +23,8 @@ Parts:
 - **D. Quiz editor (dashboard)** — CRUD quizzes/questions, time limit, points, images,
   start a game, game history + CSV export.
 - **E. API, DB, auth** — Prisma models, REST endpoints, host auth (players are anonymous).
-- **F. Infra** — Docker, CI, deployment, Sentry, load test (Artillery/k6, 200 fake players),
-  Redis adapter + sticky sessions when scaling.
+- **F. Infra** — Docker, CI, deployment, Sentry
+  (no Redis / multi-instance: ~6 players per game, 15 max — one process is enough).
 
 ## 2. Game state machine (server-authoritative)
 
@@ -105,7 +105,7 @@ Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow
 - `QuestionResult` — id, gameSessionId, index, text, choices[], correctIndexes[], distribution[],
   playerCount, correctCount (snapshot of each revealed question, for the game report)
 
-Live game state is in memory (`Map<pin, Game>`) in phase 1–2; moved to Redis in phase 4.
+Live game state stays in memory (`Map<pin, Game>`) in a single server process (small games: ~6 players, 15 max).
 Quiz loading, socket auth and result saving go through `GamePersistence`
 (`apps/server/src/game/persistence.ts`). When a game reaches ENDED, a logged-in host's game
 (if it left the lobby) is saved as `GameSession` + `PlayerResult`s + `QuestionResult`s; anonymous
@@ -151,7 +151,7 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 | 1. Realtime prototype | Prove the core | hardcoded quiz, PIN join, host + phones, answer, score, leaderboard, all in memory |
 | 2. MVP | Usable for real | DB, host auth, editor, image upload, QR, reconnection, podium, deployment |
 | 3. Polish | Feels like Kahoot | animations, sounds, streaks, mobile UX, reports (French only, no i18n) |
-| 4. Extras | Growth | new question types, team mode, public library, AI-generated quizzes, Redis scaling |
+| 4. Extras | Growth | new question types, team mode, public library, AI-generated quizzes |
 
 Advice: test phase 1 early with 3–4 real phones on local Wi-Fi — realtime sync and
 reconnection are the hard parts.

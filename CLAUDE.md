@@ -13,7 +13,9 @@ answer by tapping big colored shapes (red ▲, blue ◆, yellow ●, green ■).
 - `apps/web` — React + Vite, Tailwind CSS, Framer Motion, React Router
 - `apps/server` — Node.js, Fastify (REST) + Socket.IO (real-time) in one process
 - `packages/shared` — shared TS types + zod schemas (socket events, game states, quiz schema)
-- PostgreSQL + Prisma; Redis later (scaling only); S3-compatible storage for images
+- PostgreSQL + Prisma; S3-compatible storage for images (later). No Redis: single server process
+- **Scale:** games usually have ~6 players, 15 at most. Keep it simple — no multi-instance,
+  no load testing, no premature optimization for large audiences.
 - Hosting target: Fly.io / Railway / Render (persistent WebSockets — no serverless for sockets)
 
 ## Repository layout

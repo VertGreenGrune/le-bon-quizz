@@ -403,7 +403,7 @@ Order (T10 and T13 touch almost every screen, so they must not run alongside oth
 - T15 Team mode
 - T16 Public quiz library
 - T17 AI-generated quizzes from a topic
-- T18 Redis state + Socket.IO Redis adapter + load test (200 players)
+- ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
 
 ---
 
