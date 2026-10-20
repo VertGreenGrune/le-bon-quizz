@@ -243,11 +243,77 @@ Tasks that can run **in parallel** once T0 is done: T1, T2, T3 (phase 1); then T
 
 ---
 
-## Phase 3 — Polish (to be detailed later)
-- T10 Animations & sounds (Framer Motion, music, countdown sounds)
-- T11 Streaks & bonus scoring
-- T12 Game reports page + CSV export
-- T13 i18n FR/EN
+## Phase 3 — Polish
+
+Order (T10 and T13 touch almost every screen, so they must not run alongside other UI work):
+- **Wave 3 (parallel):** T9, T11, T12, T19
+- **Wave 4 (alone):** T10
+- **Wave 5 (alone, last):** T13
+
+### Wave 3 coordination — read before starting
+- Ports: T9 3009/5189 · T11 3011/5191 · T12 3012/5192 · T19 3019/5199. Same rules as wave 2
+  (start server/web separately, never root `pnpm dev`, stop your processes when done).
+- Shared Postgres (never `docker compose down`); test DB `lbq_test_<task>` (e.g. `lbq_test_t11`).
+- Contract changes are **decided here** so T11 and T19 don't collide in `packages/shared`:
+  - T11: `PlayerResultPayload` gains `streak: number` (consecutive correct answers including
+    this one, 0 if wrong) and `streakBonus: number` (already included in `pointsEarned`).
+  - T19: new client event `host:rejoin` `{ pin, hostToken }` → ack `Ack`, after which the server
+    re-sends to that socket everything the host screen needs for the current phase.
+- Only T11 edits `apps/server/src/game/scoring.ts`; only T19 edits `useHostGame.ts`.
+
+### T9 — see Phase 2 (deployment). Can run in wave 3.
+
+### T11 — Streaks & bonus scoring
+- **Status:** todo
+- **Depends on:** T1
+- **Scope:** `apps/server/src/game/**` (scoring + per-player streak), `packages/shared/src/events.ts`
+  (`streak`, `streakBonus` only), PLAN.md §3/§4, `apps/web/src/player/**` (show the streak on the
+  result screen, minimal styling — T10 polishes it later).
+- **Deliverable:** streak bonus per PLAN.md §3 (+100 per consecutive correct answer after the
+  first, capped at +500), reset on wrong/no answer; included in score and leaderboard; unit tests.
+
+### T12 — Game reports page + CSV export
+- **Status:** todo
+- **Depends on:** T6, T7
+- **Scope:** `apps/web/src/reports/**`, `/reports` + `/reports/:gameId` routes in `main.tsx`, a
+  "Mes parties" link in the editor header (one line in `apps/web/src/editor/**`). Server
+  endpoints already exist (`/api/games`, `/api/games/:id`, `/api/games/:id/export.csv`); only
+  fix them if broken, noted below.
+- **Deliverable:** list of past games (date, quiz, players, winner), report per game (final
+  ranking, per-question % correct and answer distribution, hardest questions first), CSV
+  download button, empty state.
+
+### T19 — Game robustness (host reconnection, abandoned games)
+- **Status:** todo
+- **Depends on:** T7, T8
+- **Scope:** `apps/server/src/socket/**`, `apps/server/src/game/**` (except `scoring.ts`),
+  `packages/shared/src/events.ts` (`host:rejoin` only), PLAN.md §4,
+  `apps/web/src/host/useHostGame.ts` + `HostPage.tsx`.
+- **Deliverable:** reloading or reconnecting the host screen resumes the game (`host:rejoin` with
+  the hostToken from sessionStorage, full resync of the current phase); games abandoned before
+  ENDED (host gone and idle sweep, `host:end` early) are saved if they had started; kicked players
+  appear in saved results; tests. Extend T4's e2e with a host reload mid-question.
+
+### T10 — Animations & sounds (wave 4, run alone)
+- **Status:** todo
+- **Depends on:** wave 3 merged
+- **Scope:** `apps/web/src/host/**`, `apps/web/src/player/**`, `apps/web/src/components/**`,
+  `apps/web/public/sounds/**`, `index.css`. No server or contract changes.
+- **Deliverable:** Framer Motion transitions between phases, countdown animation, answers
+  revealing one by one, animated distribution bars, leaderboard re-ordering animation, podium
+  reveal (3rd → 2nd → 1st) with confetti, streak "🔥" on phones, button press feedback. Sounds
+  on the host screen only (lobby music, countdown tick, reveal, podium), mute toggle remembered,
+  only royalty-free/CC0 files (list sources in `public/sounds/CREDITS.md`). Respect
+  `prefers-reduced-motion`. e2e test still passes.
+
+### T13 — i18n FR/EN (wave 5, run alone, last)
+- **Status:** todo
+- **Depends on:** T10
+- **Scope:** every UI string in `apps/web/src/**`, new `apps/web/src/i18n/**`. Server error
+  messages stay as codes; the web app translates `ErrorCode`s.
+- **Deliverable:** `react-i18next` (or a tiny typed dictionary), French default, English
+  available, language switch on home/editor (remembered), host screen and phones each use their
+  own browser language. No hardcoded UI text left (add a test or lint check). e2e still passes.
 
 ## Phase 4 — Extras (to be detailed later)
 - T14 More question types (type answer, poll, slider)
