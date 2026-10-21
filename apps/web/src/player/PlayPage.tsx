@@ -9,6 +9,7 @@ import {
   type SliderPrompt,
   type TeamId,
 } from '@lbq/shared';
+import { Avatar } from '../components/Avatar';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue, snapToStep } from '../lib/numbers';
@@ -61,6 +62,16 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           title="Tu es dans la partie !"
           subtitle="Ton pseudo apparaît sur l'écran. On attend les autres…"
         >
+          {s.avatar && (
+            <motion.span
+              initial={{ scale: 0, rotate: -40 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+              className="flex"
+            >
+              <Avatar id={s.avatar} size="xl" className="shadow-xl ring-4 ring-white" />
+            </motion.span>
+          )}
           <BouncingShapes />
         </Message>
       );
@@ -115,6 +126,7 @@ function TopBar({ s }: { s: PlayerState }) {
       }`}
     >
       <span className="flex min-w-0 items-center gap-1.5">
+        {s.avatar && <Avatar id={s.avatar} size="sm" />}
         {shape && <ShapeIcon shape={shape.shape} className="size-4 shrink-0 fill-white" />}
         <span className="truncate">
           {s.nickname}
@@ -478,11 +490,18 @@ function TeamPicker({ s }: { s: PlayerState }) {
                 {t.name}
                 {selected && ' ✓'}
               </span>
-              <span className="truncate text-sm font-semibold opacity-90">
-                {t.members.length === 0
-                  ? 'Personne pour l’instant'
-                  : t.members.map((m) => m.nickname).join(', ')}
-              </span>
+              {t.members.length === 0 ? (
+                <span className="text-sm font-semibold opacity-90">Personne pour l’instant</span>
+              ) : (
+                <span className="flex flex-wrap gap-x-2 gap-y-1 text-sm font-semibold">
+                  {t.members.map((m) => (
+                    <span key={m.id} className="flex min-w-0 items-center gap-1">
+                      <Avatar id={m.avatar} size="xs" />
+                      <span className="max-w-24 truncate">{m.nickname}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
             </span>
             <span className="rounded-lg bg-black/25 px-3 py-1 text-xl font-black tabular-nums">
               {t.members.length}
@@ -557,12 +576,14 @@ function Podium({ s }: { s: PlayerState }) {
               initial={{ x: -40, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 + (all.length - 1 - i) * 0.25 }}
-              className={`flex justify-between rounded-lg px-4 py-2 font-bold ${
+              className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 font-bold ${
                 i === myPlace ? 'bg-white text-brand' : 'bg-white/15'
               }`}
             >
-              <span className="truncate">
-                {medals[i]} {p.nickname}
+              <span className="flex min-w-0 items-center gap-2">
+                {medals[i]}
+                <Avatar id={p.avatar} size="sm" />
+                <span className="truncate">{p.nickname}</span>
               </span>
               <span className="tabular-nums">{p.score}</span>
             </motion.li>

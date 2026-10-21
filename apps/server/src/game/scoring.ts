@@ -1,4 +1,4 @@
-import type { RankedPlayer } from '@lbq/shared';
+import type { AvatarId, RankedPlayer } from '@lbq/shared';
 
 /**
  * Points for a correct answer (PLAN.md §3):
@@ -45,6 +45,7 @@ export function streakBonus(streak: number): number {
 export interface Scored {
   id: string;
   nickname: string;
+  avatar: AvatarId;
   totalScore: number;
 }
 
@@ -68,7 +69,11 @@ export function rankPlayers<T extends Scored>(players: Iterable<T>): { player: T
 export function topPlayers(players: Iterable<Scored>, size: number): RankedPlayer[] {
   return rankPlayers(players)
     .slice(0, size)
-    .map(({ player }) => ({ nickname: player.nickname, score: player.totalScore }));
+    .map(({ player }) => ({
+      nickname: player.nickname,
+      avatar: player.avatar,
+      score: player.totalScore,
+    }));
 }
 
 /**

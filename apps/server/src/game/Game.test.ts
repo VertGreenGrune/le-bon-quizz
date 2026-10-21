@@ -63,8 +63,8 @@ describe('Game state machine', () => {
     const [alice] = joinAll('Alice', 'Bob');
     expect(rec.last('lobby:players', 'host')).toEqual({
       players: [
-        { id: alice!.id, nickname: 'Alice' },
-        { id: expect.any(String), nickname: 'Bob' },
+        { id: alice!.id, nickname: 'Alice', avatar: expect.any(String) },
+        { id: expect.any(String), nickname: 'Bob', avatar: expect.any(String) },
       ],
     });
   });
@@ -200,22 +200,36 @@ describe('Game state machine', () => {
     // 1000 + 1000 + 2000 + 1000, all answered instantly, + streak bonus 0 + 100 + 200 + 300
     expect(rec.last('podium', 'all')).toEqual({
       top: [
-        { nickname: 'Alice', score: 5600 },
-        { nickname: 'Bob', score: 0 },
+        { nickname: 'Alice', avatar: expect.any(String), score: 5600 },
+        { nickname: 'Bob', avatar: expect.any(String), score: 0 },
       ],
     });
     expect(rec.last('leaderboard', 'host')).toEqual({
       top: [
-        { nickname: 'Alice', score: 5600 },
-        { nickname: 'Bob', score: 0 },
+        { nickname: 'Alice', avatar: expect.any(String), score: 5600 },
+        { nickname: 'Bob', avatar: expect.any(String), score: 0 },
       ],
     });
     game.next();
     expect(game.phase).toBe('ENDED');
     expect(rec.last('game:state', 'all')).toMatchObject({ phase: 'ENDED' });
     expect(game.standings()).toEqual([
-      { nickname: 'Alice', score: 5600, correctCount: 4, rank: 1, teamId: null },
-      { nickname: 'Bob', score: 0, correctCount: 0, rank: 2, teamId: null },
+      {
+        nickname: 'Alice',
+        avatar: expect.any(String),
+        score: 5600,
+        correctCount: 4,
+        rank: 1,
+        teamId: null,
+      },
+      {
+        nickname: 'Bob',
+        avatar: expect.any(String),
+        score: 0,
+        correctCount: 0,
+        rank: 2,
+        teamId: null,
+      },
     ]);
   });
 
@@ -299,6 +313,7 @@ describe('Game state machine', () => {
       expect(aliceTotal).toBe(9000);
       expect((rec.last('podium', 'all') as { top: unknown[] }).top[0]).toEqual({
         nickname: 'Alice',
+        avatar: expect.any(String),
         score: 9000,
       });
     });
@@ -367,7 +382,7 @@ describe('Game state machine', () => {
     expect(rec.last('player:kicked', 'sock-0')).toEqual({});
     expect(rec.detached).toEqual(['sock-0']);
     expect(rec.last('lobby:players', 'host')).toEqual({
-      players: [{ id: bob!.id, nickname: 'Bob' }],
+      players: [{ id: bob!.id, nickname: 'Bob', avatar: expect.any(String) }],
     });
   });
 
@@ -446,7 +461,7 @@ describe('Game state machine', () => {
       joinAll('Alice');
       expect(resyncHost()).toEqual(['game:state', 'lobby:players']);
       expect(rec.last('lobby:players')).toEqual({
-        players: [{ id: expect.any(String), nickname: 'Alice' }],
+        players: [{ id: expect.any(String), nickname: 'Alice', avatar: expect.any(String) }],
       });
     });
 
@@ -493,7 +508,7 @@ describe('Game state machine', () => {
       game.next();
       expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'question:show', 'leaderboard']);
       expect(rec.last('leaderboard')).toEqual({
-        top: [{ nickname: 'Alice', score: alice!.totalScore }],
+        top: [{ nickname: 'Alice', avatar: expect.any(String), score: alice!.totalScore }],
       });
       game.end();
       expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'podium']);
@@ -525,9 +540,30 @@ describe('Game state machine', () => {
     game.kick(alice!.id); // best score, but kicked
     game.end();
     expect(game.standings()).toEqual([
-      { nickname: 'Bob', score: bob!.totalScore, correctCount: 1, rank: 1, teamId: null },
-      { nickname: 'Dan', score: 0, correctCount: 0, rank: 2, teamId: null },
-      { nickname: 'Alice', score: alice!.totalScore, correctCount: 1, rank: 3, teamId: null },
+      {
+        nickname: 'Bob',
+        avatar: expect.any(String),
+        score: bob!.totalScore,
+        correctCount: 1,
+        rank: 1,
+        teamId: null,
+      },
+      {
+        nickname: 'Dan',
+        avatar: expect.any(String),
+        score: 0,
+        correctCount: 0,
+        rank: 2,
+        teamId: null,
+      },
+      {
+        nickname: 'Alice',
+        avatar: expect.any(String),
+        score: alice!.totalScore,
+        correctCount: 1,
+        rank: 3,
+        teamId: null,
+      },
     ]);
     expect(alice!.totalScore).toBeGreaterThan(0);
   });

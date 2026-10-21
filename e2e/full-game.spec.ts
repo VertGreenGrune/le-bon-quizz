@@ -1,5 +1,5 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ } from '@lbq/shared';
+import { DEMO_QUIZ, type AvatarId } from '@lbq/shared';
 import { answerOnPhone, expectHostReveal, resultHeading, type Plan } from './answers';
 
 /**
@@ -18,10 +18,10 @@ import { answerOnPhone, expectHostReveal, resultHeading, type Plan } from './ans
 const vote = (q: number, plan: Plan): Plan =>
   DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
 
-const PLAYERS: { nickname: string; plan: (q: number) => Plan }[] = [
-  { nickname: 'Alice', plan: (q) => vote(q, 'right') },
-  { nickname: 'Bob', plan: (q) => vote(q, q < 2 ? 'right' : 'wrong') },
-  { nickname: 'Chloé', plan: (q) => vote(q, 'wrong') },
+const PLAYERS: { nickname: string; avatar: AvatarId; plan: (q: number) => Plan }[] = [
+  { nickname: 'Alice', avatar: 'fox', plan: (q) => vote(q, 'right') },
+  { nickname: 'Bob', avatar: 'panda', plan: (q) => vote(q, q < 2 ? 'right' : 'wrong') },
+  { nickname: 'Chloé', avatar: 'frog', plan: (q) => vote(q, 'wrong') },
 ];
 const RELOAD_AT = 2; // 20 s question: leaves time for the reload
 
@@ -43,15 +43,26 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
 
   // ---- Players join from their phones ----
   const phones: Page[] = [];
-  for (const p of PLAYERS) {
+  for (const [i, p] of PLAYERS.entries()) {
     const phone = await newPhone(browser);
     await phone.goto(`/join?pin=${pin}`);
     await expect(phone.getByPlaceholder('123456')).toHaveValue(pin);
+    // The avatars of the players already in the game are shown as taken.
+    for (const other of PLAYERS.slice(0, i)) {
+      await expect(phone.locator(`[data-avatar-choice="${other.avatar}"]`)).toHaveAttribute(
+        'aria-label',
+        /déjà pris/,
+      );
+    }
     await phone.getByPlaceholder('Ton pseudo').fill(p.nickname);
+    await phone.locator(`[data-avatar-choice="${p.avatar}"]`).click();
     await phone.getByRole('button', { name: 'Entrer' }).click();
     await expect(phone).toHaveURL(/\/play$/);
     await expect(phone.getByText('Tu es dans la partie !')).toBeVisible();
-    await expect(host.getByRole('button', { name: p.nickname })).toBeVisible();
+    // The host lobby shows the player with the chosen avatar.
+    const inLobby = host.getByRole('button', { name: p.nickname });
+    await expect(inLobby).toBeVisible();
+    await expect(inLobby.locator(`[data-avatar="${p.avatar}"]`)).toBeVisible();
     phones.push(phone);
   }
   await expect(host.getByText('3', { exact: true })).toBeVisible();
@@ -106,8 +117,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
 
   // ---- Podium ----
   await expect(host.getByRole('heading', { name: 'Podium' })).toBeVisible();
-  for (const name of ['Alice', 'Bob', 'Chloé']) {
-    await expect(host.getByText(name, { exact: true })).toBeVisible();
+  for (const { nickname, avatar } of PLAYERS) {
+    await expect(host.getByText(nickname, { exact: true })).toBeVisible();
+    await expect(host.locator(`[data-avatar="${avatar}"]`)).toBeVisible();
   }
   await expect(host.getByText('0 pts', { exact: true })).toBeVisible(); // Chloé
   await expect(phones[0]!.getByRole('heading', { name: /tu es 1/i })).toBeVisible();

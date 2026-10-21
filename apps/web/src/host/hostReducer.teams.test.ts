@@ -7,7 +7,7 @@ const run = (actions: HostAction[]) => actions.reduce(hostReducer, initialHostSt
 const team = (id: 0 | 1 | 2 | 3, ...names: string[]): LobbyTeamsPayload['teams'][number] => ({
   id,
   name: `T${id}`,
-  members: names.map((n) => ({ id: n, nickname: n })),
+  members: names.map((n) => ({ id: n, nickname: n, avatar: 'fox' as const })),
 });
 const ranked: RankedTeam[] = [{ id: 1, name: 'Équipe Bleue', score: 600, playerCount: 5 }];
 
@@ -25,8 +25,16 @@ describe('hostReducer (team mode)', () => {
         payload: { phase: 'LEADERBOARD', mode: 'teams', questionIndex: 0, totalQuestions: 3 },
         now: 0,
       },
-      { type: 'leaderboard', top: [{ nickname: 'a', score: 10 }], teams: ranked },
-      { type: 'podium', top: [{ nickname: 'a', score: 10 }], teams: ranked },
+      {
+        type: 'leaderboard',
+        top: [{ nickname: 'a', avatar: 'fox' as const, score: 10 }],
+        teams: ranked,
+      },
+      {
+        type: 'podium',
+        top: [{ nickname: 'a', avatar: 'fox' as const, score: 10 }],
+        teams: ranked,
+      },
     ]);
     expect(s.mode).toBe('teams');
     expect(s.teams).toHaveLength(2);
@@ -47,7 +55,12 @@ describe('hostReducer (team mode)', () => {
 
 describe('teamLobbyStatus', () => {
   const players = (...teamIds: (0 | 1 | undefined)[]) =>
-    teamIds.map((teamId, i) => ({ id: `p${i}`, nickname: `p${i}`, teamId }));
+    teamIds.map((teamId, i) => ({
+      id: `p${i}`,
+      nickname: `p${i}`,
+      avatar: 'fox' as const,
+      teamId,
+    }));
 
   it('is ready once every player has a team and 2 teams have players', () => {
     expect(teamLobbyStatus({ players: [], teams: [team(0), team(1)] }).ready).toBe(false);

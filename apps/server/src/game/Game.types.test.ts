@@ -248,7 +248,7 @@ describe('Game with every question type', () => {
       correct: 50,
       margin: 10,
       guesses: [50, 55, 40, 61], // same response time: join order
-      closest: { nickname: 'Alice', value: 50 },
+      closest: { nickname: 'Alice', avatar: expect.any(String), value: 50 },
     });
     expect(result(alice!)).toMatchObject({
       correct: true,
@@ -272,7 +272,7 @@ describe('Game with every question type', () => {
     expect(result(bob!)).toMatchObject({ correct: false, pointsEarned: 0 });
     expect(result(chloe!)).not.toHaveProperty('yourValue');
     expect(result(chloe!)).toMatchObject({ correctValue: 4 });
-    expect(reveal().closest).toEqual({ nickname: 'Alice', value: 4 });
+    expect(reveal().closest).toEqual({ nickname: 'Alice', avatar: expect.any(String), value: 4 });
   });
 
   it('re-sends the typed result (poll flag, slider values) on rejoin during REVEAL', () => {

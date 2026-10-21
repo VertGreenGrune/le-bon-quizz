@@ -3,6 +3,7 @@
  * Keep in sync with docs/PLAN.md §4. Any change must be noted in docs/TASKS.md.
  */
 import { z } from 'zod';
+import { AvatarId } from './avatars.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import { TYPE_ANSWER_MAX_LENGTH, type QuestionType, type SliderSettings } from './quiz.js';
 
@@ -35,7 +36,15 @@ export type Ack<T extends object = object> =
 
 export interface RankedPlayer {
   nickname: string;
+  avatar: AvatarId;
   score: number;
+}
+
+/** A player as listed in the lobby / team columns. */
+export interface LobbyMember {
+  id: string;
+  nickname: string;
+  avatar: AvatarId;
 }
 
 /** Team mode: one team's standing, best first. `score` = sum of per-question averages. */
@@ -65,7 +74,14 @@ export const HostActionPayload = z.object({ pin: Pin, hostToken: z.string().min(
 export const HostKickPayload = HostActionPayload.extend({ playerId: z.string().min(1) });
 export const HostMovePlayerPayload = HostKickPayload.extend({ teamId: TeamId });
 
-export const PlayerJoinPayload = z.object({ pin: Pin, nickname: Nickname });
+/** `avatar` missing (older clients) → the server picks a random one. */
+export const PlayerJoinPayload = z.object({
+  pin: Pin,
+  nickname: Nickname,
+  avatar: AvatarId.optional(),
+});
+/** Join screen hint: the avatars already taken in this game (before joining). */
+export const PlayerAvatarsPayload = z.object({ pin: Pin });
 export const PlayerRejoinPayload = z.object({ pin: Pin, sessionToken: z.string().min(1) });
 export const PlayerTeamPayload = z.object({ pin: Pin, teamId: TeamId });
 const answerTarget = { pin: Pin, questionIndex: z.number().int().min(0) };
@@ -89,6 +105,7 @@ export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
 export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
 export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
 export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
+export type PlayerAvatarsPayload = z.infer<typeof PlayerAvatarsPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput = { choiceIndex: number } | { text: string } | { value: number };
@@ -114,12 +131,19 @@ export interface ClientToServerEvents {
 
   'player:join': (
     p: PlayerJoinPayload,
-    ack: (r: Ack<{ playerId: string; sessionToken: string }>) => void,
+    ack: (r: Ack<{ playerId: string; sessionToken: string; avatar: AvatarId }>) => void,
   ) => void;
   'player:rejoin': (
     p: PlayerRejoinPayload,
-    ack: (r: Ack<{ playerId: string; nickname: string; totalScore: number }>) => void,
+    ack: (
+      r: Ack<{ playerId: string; nickname: string; avatar: AvatarId; totalScore: number }>,
+    ) => void,
   ) => void;
+  /**
+   * Join screen, before joining: the avatars already taken in that game (shown dimmed, still
+   * selectable). `GAME_NOT_FOUND` for an unknown PIN.
+   */
+  'player:avatars': (p: PlayerAvatarsPayload, ack: (r: Ack<{ taken: AvatarId[] }>) => void) => void;
   /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack) => void) => void;
@@ -139,7 +163,7 @@ export interface GameStatePayload {
 
 export interface LobbyPlayersPayload {
   /** `teamId`: team mode, once the player has a team. */
-  players: { id: string; nickname: string; teamId?: TeamId }[];
+  players: (LobbyMember & { teamId?: TeamId })[];
 }
 
 /**
@@ -147,7 +171,7 @@ export interface LobbyPlayersPayload {
  * listed (empty ones too); from the start on, only the teams in play (those that had players).
  */
 export interface LobbyTeamsPayload {
-  teams: { id: TeamId; name: string; members: { id: string; nickname: string }[] }[];
+  teams: { id: TeamId; name: string; members: LobbyMember[] }[];
 }
 
 /** What a phone needs to draw a slider: never the correct value nor the margin. */
@@ -202,8 +226,11 @@ export interface RevealDetails {
   slider?: SliderSettings;
   /** SLIDER: every guess. */
   guesses?: number[];
-  /** SLIDER: the guess closest to the correct value (fastest one on a tie). */
-  closest?: { nickname: string; value: number };
+  /**
+   * SLIDER: the guess closest to the correct value (fastest one on a tie). `avatar` is absent in
+   * games saved before avatars existed.
+   */
+  closest?: { nickname: string; value: number; avatar?: AvatarId };
 }
 
 export interface QuestionRevealPayload extends RevealDetails {

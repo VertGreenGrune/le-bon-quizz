@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { AnswerInput, ErrorCode, TeamId } from '@lbq/shared';
+import type { AnswerInput, AvatarId, ErrorCode, TeamId } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import {
   initialPlayerState,
@@ -7,6 +7,7 @@ import {
   type PlayerAction,
   type PlayerState,
 } from './playerState';
+import { saveAvatarChoice } from './avatarChoice';
 import { clearSession, loadSession, saveSession, type PlayerSession } from './session';
 
 /**
@@ -128,6 +129,7 @@ function rejoinIfNeeded({ probe = false } = {}) {
         type: 'session',
         playerId: res.playerId,
         nickname: res.nickname,
+        avatar: res.avatar,
         totalScore: res.totalScore,
       });
     });
@@ -135,7 +137,7 @@ function rejoinIfNeeded({ probe = false } = {}) {
 
 export type JoinResult = { ok: true } | { ok: false; code: ErrorCode | 'TIMEOUT' };
 
-export function joinGame(pin: string, nickname: string): Promise<JoinResult> {
+export function joinGame(pin: string, nickname: string, avatar: AvatarId): Promise<JoinResult> {
   attach();
   const socket = getSocket();
   // Fresh state before emitting, so game:state pushed right after the join lands in it.
@@ -144,20 +146,40 @@ export function joinGame(pin: string, nickname: string): Promise<JoinResult> {
   state = { ...initialPlayerState, connected: socket.connected };
   listeners.forEach((l) => l());
   return new Promise((resolve) => {
-    socket.timeout(ACK_TIMEOUT_MS).emit('player:join', { pin, nickname }, (err, res) => {
+    socket.timeout(ACK_TIMEOUT_MS).emit('player:join', { pin, nickname, avatar }, (err, res) => {
       if (err) return resolve({ ok: false, code: 'TIMEOUT' });
       if (!res.ok) return resolve({ ok: false, code: res.error.code });
       const session: PlayerSession = {
         pin,
         nickname,
+        avatar: res.avatar,
         playerId: res.playerId,
         sessionToken: res.sessionToken,
       };
       saveSession(session);
       boundSocketId = socket.id;
-      dispatch({ type: 'session', playerId: res.playerId, nickname, totalScore: 0 });
+      dispatch({
+        type: 'session',
+        playerId: res.playerId,
+        nickname,
+        avatar: res.avatar,
+        totalScore: 0,
+      });
+      saveAvatarChoice(res.avatar);
       resolve({ ok: true });
     });
+  });
+}
+
+/**
+ * Join screen hint: avatars already taken in the game with this PIN (empty if the game is
+ * unknown or the server doesn't answer — it's only a hint).
+ */
+export function fetchTakenAvatars(pin: string): Promise<AvatarId[]> {
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:avatars', { pin }, (err, res) => resolve(!err && res.ok ? res.taken : []));
   });
 }
 
@@ -167,8 +189,8 @@ export function resumeSession(): PlayerSession | null {
   const session = loadSession();
   if (!session) return null;
   if (!state.nickname) {
-    const { playerId, nickname } = session;
-    dispatch({ type: 'session', playerId, nickname, totalScore: 0 });
+    const { playerId, nickname, avatar } = session;
+    dispatch({ type: 'session', playerId, nickname, avatar, totalScore: 0 });
   }
   rejoinIfNeeded();
   return session;

@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   SHAPES,
+  type LobbyMember,
   type LobbyPlayersPayload,
   type LobbyTeamsPayload,
   type RankedPlayer,
   type RankedTeam,
   type TeamId,
 } from '@lbq/shared';
+import { Avatar } from '../components/Avatar';
 import { Confetti } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { competitionRanks } from '../lib/ranks';
@@ -45,7 +47,7 @@ export function TeamLobby({
   const { unassigned, unbalanced } = teamLobbyStatus({ players, teams });
   const loose = players.filter((p) => p.teamId === undefined);
 
-  const member = (p: { id: string; nickname: string }, teamId: TeamId | null) => (
+  const member = (p: LobbyMember, teamId: TeamId | null) => (
     <motion.li
       key={p.id}
       layout
@@ -59,9 +61,17 @@ export function TeamLobby({
         type="button"
         onClick={() => setSelected(selected === p.id ? null : p.id)}
         aria-expanded={selected === p.id}
-        className="w-full truncate rounded-lg bg-black/25 px-3 py-1.5 text-xl font-bold hover:bg-black/40"
+        className="flex w-full items-center gap-2 rounded-full bg-black/25 py-1 pr-3 pl-1 text-xl font-bold hover:bg-black/40"
       >
-        {p.nickname}
+        <motion.span
+          initial={{ scale: 0, rotate: -40 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 10, delay: 0.15 }}
+          className="flex"
+        >
+          <Avatar id={p.avatar} size="md" />
+        </motion.span>
+        <span className="truncate">{p.nickname}</span>
       </button>
       {selected === p.id && (
         <div className="absolute top-full left-0 z-10 mt-1 flex w-56 flex-col gap-1 rounded-xl bg-white p-2 text-base text-gray-900 shadow-2xl">
@@ -248,9 +258,12 @@ export function TeamPodiumScreen({
           initial={instant ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: instant ? 0 : WINNER_DELAY + 0.8 }}
-          className="rounded-2xl bg-white px-8 py-3 text-3xl font-black text-brand shadow-xl"
+          className="flex items-center gap-3 rounded-2xl bg-white px-8 py-3 text-3xl font-black text-brand shadow-xl"
         >
-          ⭐ Meilleur joueur : {best.nickname} — {best.score} pts
+          <Avatar id={best.avatar} size="md" />
+          <span>
+            ⭐ Meilleur joueur : {best.nickname} — {best.score} pts
+          </span>
         </motion.p>
       )}
       {!instant && teams.length > 0 && <Confetti delay={WINNER_DELAY + 0.2} />}

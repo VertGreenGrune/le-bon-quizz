@@ -109,6 +109,8 @@ model PlayerResult {
   gameSessionId String
   gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   nickname      String
+  /// Avatar id (AVATARS in @lbq/shared); null for games saved before avatars.
+  avatar        String?
   score         Int
   correctCount  Int
   rank          Int

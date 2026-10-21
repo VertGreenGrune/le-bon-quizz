@@ -3,11 +3,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   SHAPES,
+  type LobbyMember,
   type QuestionRevealPayload,
   type QuestionShowPayload,
   type RankedPlayer,
   type RankedTeam,
 } from '@lbq/shared';
+import { Avatar, type AvatarSize } from '../components/Avatar';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue } from '../lib/numbers';
@@ -24,7 +26,7 @@ export function LobbyScreen({
   teamLobby,
 }: {
   pin: string;
-  players: { id: string; nickname: string }[];
+  players: LobbyMember[];
   onKick: (playerId: string) => void;
   /** Team mode: team columns, shown instead of the player list. */
   teamLobby?: ReactNode;
@@ -100,8 +102,16 @@ export function LobbyScreen({
                     type="button"
                     onClick={() => onKick(p.id)}
                     title="Cliquer pour exclure"
-                    className="group rounded-lg bg-black/25 px-5 py-2 text-2xl font-bold hover:bg-answer-red hover:line-through"
+                    className="group flex items-center gap-3 rounded-full bg-black/25 py-2 pr-6 pl-2 text-2xl font-bold hover:bg-answer-red hover:line-through"
                   >
+                    <motion.span
+                      initial={{ scale: 0, rotate: -40 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 10, delay: 0.15 }}
+                      className="flex"
+                    >
+                      <Avatar id={p.avatar} size="lg" />
+                    </motion.span>
                     {p.nickname}
                   </button>
                 </motion.li>
@@ -374,9 +384,12 @@ function SliderReveal({ reveal, instant }: { reveal: QuestionRevealPayload; inst
           initial={instant ? false : { scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: instant ? 0 : 0.6 + dots.length * 0.08 }}
-          className="text-center text-4xl font-black"
+          className="flex items-center justify-center gap-3 text-center text-4xl font-black"
         >
-          🎯 Le plus proche : {reveal.closest.nickname} ({formatValue(reveal.closest.value, unit)})
+          {reveal.closest.avatar ? <Avatar id={reveal.closest.avatar} size="md" /> : '🎯'}
+          <span>
+            Le plus proche : {reveal.closest.nickname} ({formatValue(reveal.closest.value, unit)})
+          </span>
         </motion.p>
       )}
     </div>
@@ -543,10 +556,10 @@ function DistributionChart({
 const REORDER_DELAY_MS = 1200;
 
 /** Row size of the individual leaderboard: everyone is listed (up to 15), so it shrinks. */
-function leaderboardRow(count: number, besideTeams: boolean): string {
-  if (besideTeams || count > 10) return 'gap-4 px-5 py-1 text-2xl';
-  if (count > 6) return 'gap-5 px-6 py-2 text-3xl';
-  return 'gap-6 px-8 py-4 text-4xl';
+function leaderboardRow(count: number, besideTeams: boolean): [string, AvatarSize] {
+  if (besideTeams || count > 10) return ['gap-4 px-5 py-1 text-2xl', 'sm'];
+  if (count > 6) return ['gap-5 px-6 py-2 text-3xl', 'md'];
+  return ['gap-6 px-8 py-3 text-4xl', 'lg'];
 }
 
 export function LeaderboardScreen({
@@ -574,7 +587,7 @@ export function LeaderboardScreen({
   // Phase 1: last question's top 5 with their old scores; phase 2: the new order, scores count up.
   const rows = showNew ? top : previous;
   const withTeams = teams.length > 0;
-  const rowSize = leaderboardRow(Math.max(rows.length, top.length), withTeams);
+  const [rowSize, avatarSize] = leaderboardRow(Math.max(rows.length, top.length), withTeams);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
@@ -609,6 +622,7 @@ export function LeaderboardScreen({
                 className={`flex items-center rounded-xl font-bold shadow-lg transition-colors duration-500 ${rowSize} ${i === 0 ? 'bg-white text-brand' : 'bg-black/25'}`}
               >
                 <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
+                <Avatar id={p.avatar} size={avatarSize} />
                 <span className="flex-1 truncate">{p.nickname}</span>
                 <span className="tabular-nums">
                   {showNew && reorder ? (
@@ -664,6 +678,7 @@ export function PodiumScreen({ top, instant }: { top: RankedPlayer[]; instant: b
                   👑
                 </motion.span>
               )}
+              <Avatar id={p.avatar} size="xl" className="shadow-xl ring-4 ring-white" />
               <span className="w-full truncate text-center text-4xl font-black">{p.nickname}</span>
               <span className="text-2xl font-bold tabular-nums">{p.score} pts</span>
               <div

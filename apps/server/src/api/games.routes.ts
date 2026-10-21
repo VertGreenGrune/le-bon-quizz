@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import {
   TEAM_NAMES,
+  isAvatarId,
   type GameReport,
   type GameSummary,
   type RevealDetails,
@@ -48,9 +49,10 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
     if (!g) throw notFound('Partie');
     return {
       ...toSummary(g),
-      results: g.results.map(({ rank, nickname, score, correctCount, teamId }) => ({
+      results: g.results.map(({ rank, nickname, avatar, score, correctCount, teamId }) => ({
         rank,
         nickname,
+        avatar: isAvatarId(avatar) ? avatar : null,
         score,
         correctCount,
         teamId: teamId === null ? null : asTeamId(teamId),
