@@ -635,7 +635,7 @@ listing excludes private quizzes and answers, copy creates a private owned quiz,
 can edit; e2e: host B launches host A's public quiz.
 
 ### T20 — Player avatars (after T14; can run in parallel with T16)
-- **Status:** todo
+- **Status:** in-progress (Claude T20, worktree ../lbq-T20)
 - **Depends on:** T14 merged (T15 lobby/teams must be in place)
 - **Ports:** server 3020 / web 5200, test DB `lbq_test_t20`.
 
