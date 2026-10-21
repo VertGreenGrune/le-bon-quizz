@@ -834,7 +834,7 @@ is closed and a new page takes over with the same nickname.
   paused until they unlock).
 
 ### T22 — Media questions: sound clips (blind test) + picture reveal effects (run alone, after T21)
-- **Status:** todo
+- **Status:** in-progress (claude, worktree ../lbq-T22, branch task/T22-media)
 - **Depends on:** T21 merged (the sound must pause with the game; same host question screen)
 - **Ports:** server 3022 / web 5202, test DB `lbq_test_t22`, e2e DB `lbq_e2e_t22`.
 
