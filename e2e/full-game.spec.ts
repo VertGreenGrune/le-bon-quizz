@@ -1,24 +1,27 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
+import { DEMO_QUIZ } from '@lbq/shared';
+import { answerOnPhone, expectHostReveal, resultHeading, type Plan } from './answers';
 
 /**
- * 1 host (shared screen) + 3 phones play the whole demo quiz up to the podium.
+ * 1 host (shared screen) + 3 phones play the whole demo quiz up to the podium: every question
+ * type (choices, true/false, poll, typed answer, slider).
  *
  * Answer plan (so the final ranking is deterministic whatever the response times):
- * - Alice: always right       → ≥ 500 pts per question, ≥ 2500 in total
- * - Bob:   right on Q1 and Q2 → ≤ 2000 in total
+ * - Alice: always right       → ≥ 500 pts per scored question (6), ≥ 3000 in total
+ * - Bob:   right on Q1 and Q2 → ≤ 2100 in total (streak bonus included)
  * - Chloé: always wrong       → 0
+ * Everybody votes on the poll (no points).
  *
  * The host screen is reloaded in the middle of question RELOAD_AT (after one answer) and must
  * resume the game (`host:rejoin`).
  */
-const correctIndex = DEMO_QUIZ.questions.map((q) => q.choices.findIndex((c) => c.isCorrect));
-const wrongIndex = DEMO_QUIZ.questions.map((q) => q.choices.findIndex((c) => !c.isCorrect));
+const vote = (q: number, plan: Plan): Plan =>
+  DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
 
-const PLAYERS = [
-  { nickname: 'Alice', pick: (q: number) => correctIndex[q]! },
-  { nickname: 'Bob', pick: (q: number) => (q < 2 ? correctIndex[q]! : wrongIndex[q]!) },
-  { nickname: 'Chloé', pick: (q: number) => wrongIndex[q]! },
+const PLAYERS: { nickname: string; plan: (q: number) => Plan }[] = [
+  { nickname: 'Alice', plan: (q) => vote(q, 'right') },
+  { nickname: 'Bob', plan: (q) => vote(q, q < 2 ? 'right' : 'wrong') },
+  { nickname: 'Chloé', plan: (q) => vote(q, 'wrong') },
 ];
 const RELOAD_AT = 2; // 20 s question: leaves time for the reload
 
@@ -64,12 +67,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     await expect(host.getByText(`Question ${q + 1} / ${total}`).first()).toBeVisible();
     await expect(host.getByRole('heading', { name: question.text })).toBeVisible();
 
-    // Answering (after the ~3 s intro): phones show one button per choice.
+    // Answering (after the ~3 s intro): shape buttons, a text field or a slider.
     for (const [i, phone] of phones.entries()) {
-      const buttons = phone.getByRole('button', { name: /^Réponse / });
-      await expect(buttons).toHaveCount(question.choices.length);
-      const choice = PLAYERS[i]!.pick(q);
-      await phone.getByRole('button', { name: `Réponse ${SHAPES[choice]!.symbol}` }).click();
+      await answerOnPhone(phone, question, PLAYERS[i]!.plan(q));
       // The last answer triggers the reveal right away, so its "sent" screen may be skipped.
       if (i < phones.length - 1) await expect(phone.getByText('Réponse envoyée !')).toBeVisible();
 
@@ -84,11 +84,10 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
 
     // Everybody answered → server reveals immediately (no need to wait for the timer).
     for (const [i, phone] of phones.entries()) {
-      const correct = PLAYERS[i]!.pick(q) === correctIndex[q];
-      await expect(
-        phone.getByRole('heading', { name: correct ? 'Correct !' : 'Raté !' }),
-      ).toBeVisible();
+      const heading = resultHeading(question, PLAYERS[i]!.plan(q));
+      await expect(phone.getByRole('heading', { name: heading })).toBeVisible();
     }
+    await expectHostReveal(host, question);
     // Host reveal: "Suivant" button and the 3 answers counted.
     await expect(host.getByRole('button', { name: 'Suivant' })).toBeVisible();
     await expect(host.getByText('/ 3')).toBeVisible();

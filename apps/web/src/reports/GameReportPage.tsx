@@ -10,10 +10,13 @@ import {
 import { ApiError, api } from '../api';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { EditorShell, btn } from '../editor/EditorShell';
+import { QUESTION_TYPES } from '../editor/draft';
+import { formatValue } from '../lib/numbers';
 import {
   averagePercentCorrect,
   formatDuration,
   hardestFirst,
+  isScored,
   noAnswerCount,
   percentCorrect,
 } from './reportStats';
@@ -226,59 +229,185 @@ function Questions({ questions }: { questions: GameQuestionReport[] }) {
   );
 }
 
+const typeLabel = (type: GameQuestionReport['type']) =>
+  QUESTION_TYPES.find((t) => t.type === type)?.label ?? type;
+
 function QuestionCard({ q }: { q: GameQuestionReport }) {
+  const scored = isScored(q);
   const pct = percentCorrect(q);
   const noAnswer = noAnswerCount(q);
-  const max = Math.max(1, ...q.distribution, noAnswer);
   const tone = pct >= 70 ? 'bg-answer-green' : pct >= 40 ? 'bg-answer-yellow' : 'bg-answer-red';
+  const plural = q.playerCount > 1 ? 's' : '';
   return (
     <li className="rounded-2xl bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start gap-3">
         <span className="rounded-lg bg-brand/10 px-2 py-1 text-sm font-bold text-brand">
           Q{q.index + 1}
         </span>
-        <p className="flex-1 font-bold">{q.text}</p>
-        <span className={`rounded-full px-3 py-1 text-sm font-black text-white ${tone}`}>
-          {pct} %
-        </span>
+        <p className="flex-1 font-bold">
+          {q.text}
+          {q.type !== 'MCQ' && q.type !== 'TRUE_FALSE' && (
+            <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-bold whitespace-nowrap text-gray-500">
+              {typeLabel(q.type)}
+            </span>
+          )}
+        </p>
+        {scored && (
+          <span className={`rounded-full px-3 py-1 text-sm font-black text-white ${tone}`}>
+            {pct} %
+          </span>
+        )}
       </div>
       <p className="mb-3 text-sm text-gray-500">
-        {q.correctCount} / {q.playerCount} joueur{q.playerCount > 1 ? 's' : ''} ont bien répondu
+        {scored
+          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont bien répondu`
+          : `${q.answerCount} / ${q.playerCount} joueur${plural} ont voté — pas de bonne réponse`}
+      </p>
+      {q.type === 'TYPE_ANSWER' ? (
+        <TypedAnswers q={q} noAnswer={noAnswer} />
+      ) : q.type === 'SLIDER' ? (
+        <SliderGuesses q={q} noAnswer={noAnswer} />
+      ) : (
+        <ChoiceBars q={q} noAnswer={noAnswer} />
+      )}
+    </li>
+  );
+}
+
+function NoAnswerRow({ count, max }: { count: number; max: number }) {
+  if (count === 0) return null;
+  return (
+    <li className="flex items-center gap-2 text-sm">
+      <span className="size-7 shrink-0" />
+      <span className="w-40 shrink-0 truncate text-gray-500 italic sm:w-56">Sans réponse</span>
+      <Bar value={count} max={max} className="bg-gray-400" faded={false} />
+    </li>
+  );
+}
+
+type CardProps = { q: GameQuestionReport; noAnswer: number };
+
+/** MCQ, true/false, poll: one bar per choice (polls: nothing marked right or faded). */
+function ChoiceBars({ q, noAnswer }: CardProps) {
+  const poll = q.type === 'POLL';
+  const max = Math.max(1, ...q.distribution, noAnswer);
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {q.choices.map((text, i) => {
+        const shape = SHAPES[i]!;
+        const correct = q.correctIndexes.includes(i);
+        const count = q.distribution[i] ?? 0;
+        return (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            <span
+              className={`flex size-7 shrink-0 items-center justify-center rounded ${shapeBg[shape.color]}`}
+            >
+              <ShapeIcon shape={shape.shape} className="size-4 fill-white" />
+            </span>
+            <span
+              className={`w-40 shrink-0 truncate sm:w-56 ${correct ? 'font-bold' : 'text-gray-600'}`}
+              title={text}
+            >
+              {correct && <span className="text-answer-green">✓ </span>}
+              {text}
+            </span>
+            <Bar
+              value={count}
+              max={max}
+              className={shapeBg[shape.color]}
+              faded={!poll && !correct}
+            />
+          </li>
+        );
+      })}
+      <NoAnswerRow count={noAnswer} max={max} />
+    </ul>
+  );
+}
+
+/** Réponse libre: accepted answers, then the most typed answers. */
+function TypedAnswers({ q, noAnswer }: CardProps) {
+  const top = q.details.topAnswers ?? [];
+  const max = Math.max(1, ...top.map((a) => a.count), noAnswer);
+  return (
+    <>
+      <p className="mb-2 text-sm font-semibold">
+        Réponses acceptées :{' '}
+        <span className="text-answer-green">{(q.details.acceptedAnswers ?? []).join(' · ')}</span>
       </p>
       <ul className="flex flex-col gap-1.5">
-        {q.choices.map((text, i) => {
-          const shape = SHAPES[i]!;
-          const correct = q.correctIndexes.includes(i);
-          const count = q.distribution[i] ?? 0;
-          return (
-            <li key={i} className="flex items-center gap-2 text-sm">
-              <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded ${shapeBg[shape.color]}`}
-              >
-                <ShapeIcon shape={shape.shape} className="size-4 fill-white" />
-              </span>
-              <span
-                className={`w-40 shrink-0 truncate sm:w-56 ${correct ? 'font-bold' : 'text-gray-600'}`}
-                title={text}
-              >
-                {correct && <span className="text-answer-green">✓ </span>}
-                {text}
-              </span>
-              <Bar value={count} max={max} className={shapeBg[shape.color]} faded={!correct} />
-            </li>
-          );
-        })}
-        {noAnswer > 0 && (
-          <li className="flex items-center gap-2 text-sm">
-            <span className="size-7 shrink-0" />
-            <span className="w-40 shrink-0 truncate text-gray-500 italic sm:w-56">
-              Sans réponse
+        {top.map((a, i) => (
+          <li key={i} className="flex items-center gap-2 text-sm">
+            <span className="size-7 shrink-0 text-center font-black text-answer-green">
+              {a.correct && '✓'}
             </span>
-            <Bar value={noAnswer} max={max} className="bg-gray-400" faded={false} />
+            <span
+              className={`w-40 shrink-0 truncate sm:w-56 ${a.correct ? 'font-bold' : 'text-gray-600'}`}
+              title={a.text}
+            >
+              {a.text}
+            </span>
+            <Bar
+              value={a.count}
+              max={max}
+              className={a.correct ? 'bg-answer-green' : 'bg-answer-red'}
+              faded={!a.correct}
+            />
           </li>
-        )}
+        ))}
+        <NoAnswerRow count={noAnswer} max={max} />
       </ul>
-    </li>
+    </>
+  );
+}
+
+/** Curseur: the correct value and margin band on an axis, a dot per guess. */
+function SliderGuesses({ q, noAnswer }: CardProps) {
+  const { slider, guesses = [], closest } = q.details;
+  if (!slider) return null;
+  const { min, max, correct, margin, unit } = slider;
+  const pos = (v: number) => `${((Math.min(Math.max(v, min), max) - min) / (max - min)) * 100}%`;
+  const low = Math.max(min, correct - margin);
+  const high = Math.min(max, correct + margin);
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      <p className="font-semibold">
+        Bonne réponse :{' '}
+        <span className="text-answer-green">
+          {formatValue(correct, unit)}
+          {margin > 0 && ` ± ${formatValue(margin)}`}
+        </span>
+        {closest && (
+          <>
+            {' '}
+            · Le plus proche : <b>{closest.nickname}</b> ({formatValue(closest.value, unit)})
+          </>
+        )}
+      </p>
+      <div className="relative mx-3 my-4 h-2 rounded-full bg-gray-200">
+        <span
+          className="absolute -inset-y-1.5 rounded bg-answer-green/40"
+          style={{ left: pos(low), width: `calc(${pos(high)} - ${pos(low)})`, minWidth: 3 }}
+        />
+        <span
+          className="absolute -inset-y-2.5 w-1 -translate-x-1/2 rounded bg-answer-green"
+          style={{ left: pos(correct) }}
+        />
+        {guesses.map((g, i) => (
+          <span
+            key={i}
+            title={formatValue(g, unit)}
+            className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-answer-yellow"
+            style={{ left: pos(g) }}
+          />
+        ))}
+      </div>
+      <p className="flex justify-between text-gray-500 tabular-nums">
+        <span>{formatValue(min, unit)}</span>
+        {noAnswer > 0 && <span className="italic">{noAnswer} sans réponse</span>}
+        <span>{formatValue(max, unit)}</span>
+      </p>
+    </div>
   );
 }
 

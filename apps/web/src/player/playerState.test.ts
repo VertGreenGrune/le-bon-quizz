@@ -39,14 +39,18 @@ describe('playerScreen', () => {
 
     const prompted = playerReducer(answering, {
       type: 'prompt',
-      payload: { index: 0, choiceCount: 4, timeLimitSec: 20 },
+      payload: { index: 0, type: 'MCQ', choiceCount: 4, timeLimitSec: 20 },
       now: 1100,
     });
     expect(playerScreen(prompted)).toBe('answer');
     // remainingMs from game:state wins over the prompt's full time limit
     expect(prompted.answeringEndsAt).toBe(21000);
 
-    const answered = playerReducer(prompted, { type: 'answer', questionIndex: 0, choiceIndex: 2 });
+    const answered = playerReducer(prompted, {
+      type: 'answer',
+      questionIndex: 0,
+      answer: { choiceIndex: 2 },
+    });
     expect(playerScreen(answered)).toBe('answered');
 
     const reveal = playerReducer(answered, state({ phase: 'REVEAL' }));
@@ -82,7 +86,7 @@ describe('playerScreen', () => {
 describe('playerReducer', () => {
   const prompt = (index: number, now = 0): PlayerAction => ({
     type: 'prompt',
-    payload: { index, choiceCount: 4, timeLimitSec: 10 },
+    payload: { index, type: 'MCQ', choiceCount: 4, timeLimitSec: 10 },
     now,
   });
 
@@ -90,17 +94,33 @@ describe('playerReducer', () => {
     const s = run(
       state({ phase: 'ANSWERING' }),
       prompt(0),
-      { type: 'answer', questionIndex: 0, choiceIndex: 1 },
-      { type: 'answer', questionIndex: 0, choiceIndex: 3 },
+      { type: 'answer', questionIndex: 0, answer: { choiceIndex: 1 } },
+      { type: 'answer', questionIndex: 0, answer: { choiceIndex: 3 } },
     );
     expect(s.myAnswer).toEqual({ questionIndex: 0, choiceIndex: 1 });
+  });
+
+  it('keeps a typed text or a slider value as the answer', () => {
+    const typed = run(state({ phase: 'ANSWERING' }), prompt(0), {
+      type: 'answer',
+      questionIndex: 0,
+      answer: { text: 'Pacifique' },
+    });
+    expect(typed.myAnswer).toEqual({ questionIndex: 0, text: 'Pacifique' });
+    expect(playerScreen(typed)).toBe('answered');
+    const slid = run(state({ phase: 'ANSWERING' }), prompt(0), {
+      type: 'answer',
+      questionIndex: 0,
+      answer: { value: 1789 },
+    });
+    expect(slid.myAnswer).toEqual({ questionIndex: 0, value: 1789 });
   });
 
   it('a rejected answer lets the player tap again', () => {
     const s = run(
       state({ phase: 'ANSWERING' }),
       prompt(0),
-      { type: 'answer', questionIndex: 0, choiceIndex: 1 },
+      { type: 'answer', questionIndex: 0, answer: { choiceIndex: 1 } },
       { type: 'answerRejected', questionIndex: 0 },
     );
     expect(s.myAnswer).toBeNull();
@@ -111,7 +131,7 @@ describe('playerReducer', () => {
     const s = run(
       state({ phase: 'ANSWERING' }),
       prompt(0),
-      { type: 'answer', questionIndex: 0, choiceIndex: 1 },
+      { type: 'answer', questionIndex: 0, answer: { choiceIndex: 1 } },
       state({ phase: 'REVEAL' }),
       {
         type: 'result',

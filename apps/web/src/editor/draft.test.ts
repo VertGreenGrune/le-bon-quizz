@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Question } from '@lbq/shared';
+import { DEMO_QUIZ } from '@lbq/shared';
 import {
+  addAcceptedAnswer,
   addChoice,
   addQuestion,
   emptyQuiz,
+  fromDetail,
   moveQuestion,
   newQuestion,
   questionErrorCount,
@@ -11,7 +13,10 @@ import {
   removeQuestion,
   setQuestionType,
   toggleCorrect,
+  updateAcceptedAnswer,
+  updateSlider,
   validateDraft,
+  type DraftQuestion,
   type QuizDraft,
 } from './draft';
 import { checkImageFile } from './imageFile';
@@ -19,8 +24,8 @@ import { checkImageFile } from './imageFile';
 const q = (
   text: string,
   choices: [string, boolean][],
-  extra: Partial<Question> = {},
-): Question => ({
+  extra: Partial<DraftQuestion> = {},
+): DraftQuestion => ({
   ...newQuestion(),
   text,
   choices: choices.map(([t, isCorrect]) => ({ text: t, isCorrect })),
@@ -46,7 +51,8 @@ describe('validateDraft', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     expect(res.data.description).toBeUndefined();
-    expect(res.data.questions[0]!.choices).toEqual([
+    const sent = res.data.questions[0]!;
+    expect(sent.type === 'MCQ' && sent.choices).toEqual([
       { text: 'Paris', isCorrect: true },
       { text: 'Lyon', isCorrect: false },
     ]);
@@ -133,6 +139,86 @@ describe('question helpers', () => {
     d = removeQuestion(removeQuestion(d, 0), 0);
     expect(d.questions).toHaveLength(1);
     expect(d.questions[0]!.text).toBe('');
+  });
+});
+
+describe('new question types', () => {
+  const draftWith = (question: DraftQuestion): QuizDraft => ({
+    ...validDraft(),
+    questions: [question],
+  });
+
+  it('typed answer: sends only its fields, drops empty variants, maps errors back', () => {
+    let typed = setQuestionType(q('Plus grand océan ?', [['x', true]]), 'TYPE_ANSWER');
+    typed = updateAcceptedAnswer(addAcceptedAnswer(addAcceptedAnswer(typed)), 2, 'Pacifique');
+    const ok = validateDraft(draftWith(typed));
+    expect(ok.ok && ok.data.questions[0]).toEqual({
+      text: 'Plus grand océan ?',
+      type: 'TYPE_ANSWER',
+      timeLimitSec: 20,
+      basePoints: 1000,
+      acceptedAnswers: ['Pacifique'],
+      typoTolerance: true,
+    });
+    expect(addAcceptedAnswer(typed)).toBe(typed); // 3 at most
+
+    const tooLong = updateAcceptedAnswer(typed, 2, 'x'.repeat(41));
+    const res = validateDraft(draftWith(tooLong));
+    expect(!res.ok && res.errors).toEqual({
+      'questions.0.acceptedAnswers.2': '40 caractères maximum',
+    });
+    const empty = validateDraft(draftWith(setQuestionType(q('?', []), 'TYPE_ANSWER')));
+    expect(!empty.ok && empty.errors['questions.0.acceptedAnswers.0']).toBe('Champ obligatoire');
+  });
+
+  it('slider: French errors on its fields, unit optional', () => {
+    const slider = setQuestionType(q('Année ?', []), 'SLIDER');
+    const ok = validateDraft(draftWith(updateSlider(slider, { correct: 40, margin: 5 })));
+    expect(ok.ok && ok.data.questions[0]).toMatchObject({
+      type: 'SLIDER',
+      slider: { min: 0, max: 100, step: 1, correct: 40, margin: 5 },
+    });
+    expect(ok.ok && ok.data.questions[0]).not.toHaveProperty('choices');
+    const errors = (patch: Partial<DraftQuestion['slider']>) => {
+      const res = validateDraft(draftWith(updateSlider(slider, patch)));
+      return res.ok ? {} : res.errors;
+    };
+    expect(errors({ min: 100 })['questions.0.slider.max']).toBe(
+      'Le maximum doit être supérieur au minimum',
+    );
+    expect(errors({ correct: 150 })['questions.0.slider.correct']).toBe(
+      'La bonne réponse doit être entre le minimum et le maximum',
+    );
+    expect(errors({ step: 3, correct: 50 })['questions.0.slider.correct']).toBe(
+      'La bonne réponse doit tomber sur un cran du curseur',
+    );
+    expect(errors({ margin: -1 })['questions.0.slider.margin']).toBeDefined();
+    expect(errors({ max: NaN })['questions.0.slider.max']).toBe('Valeur invalide');
+  });
+
+  it('poll: no points, choices without a correct answer; switching back keeps the input', () => {
+    const mcq = q('Dessert ?', [
+      ['Tarte', true],
+      ['Glace', false],
+      ['', false],
+    ]);
+    const poll = setQuestionType(mcq, 'POLL');
+    expect(poll.basePoints).toBe(0);
+    const res = validateDraft(draftWith(poll));
+    expect(res.ok && res.data.questions[0]).toMatchObject({
+      type: 'POLL',
+      basePoints: 0,
+      choices: [{ text: 'Tarte' }, { text: 'Glace' }],
+    });
+    const back = setQuestionType(setQuestionType(poll, 'SLIDER'), 'MCQ');
+    expect(back.choices).toEqual(mcq.choices);
+    expect(back.basePoints).toBe(1000);
+  });
+
+  it('loads every type of a saved quiz into the editor and saves it unchanged', () => {
+    const draft = fromDetail({ ...DEMO_QUIZ, createdAt: '', updatedAt: '' });
+    const res = validateDraft(draft);
+    expect(res.ok && res.data.questions).toEqual(DEMO_QUIZ.questions);
   });
 });
 

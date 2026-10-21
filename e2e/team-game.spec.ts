@@ -1,5 +1,6 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
+import { DEMO_QUIZ } from '@lbq/shared';
+import { answerOnPhone, resultHeading, type Plan } from './answers';
 
 /**
  * Team mode: 1 host + 3 phones, 2 teams of unequal sizes — Rouge (Alice) vs Bleue (Bob, Chloé).
@@ -8,14 +9,14 @@ import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
  * wrong. Team score = average per player: Rouge = Alice's points, Bleue = (Bob's + 0) / 2, so
  * Rouge wins whatever the response times.
  */
-const correctIndex = DEMO_QUIZ.questions.map((q) => q.choices.findIndex((c) => c.isCorrect));
-const wrongIndex = DEMO_QUIZ.questions.map((q) => q.choices.findIndex((c) => !c.isCorrect));
-
-const PLAYERS = [
-  { nickname: 'Alice', team: 'Équipe Rouge', pick: (q: number) => correctIndex[q]! },
-  { nickname: 'Bob', team: 'Équipe Bleue', pick: (q: number) => correctIndex[q]! },
-  { nickname: 'Chloé', team: 'Équipe Bleue', pick: (q: number) => wrongIndex[q]! },
+const PLAYERS: { nickname: string; team: string; plan: Plan }[] = [
+  { nickname: 'Alice', team: 'Équipe Rouge', plan: 'right' },
+  { nickname: 'Bob', team: 'Équipe Bleue', plan: 'right' },
+  { nickname: 'Chloé', team: 'Équipe Bleue', plan: 'wrong' },
 ];
+/** Polls: everybody votes, nobody scores (team scores don't move). */
+const planFor = (q: number, plan: Plan): Plan =>
+  DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
 
 async function newPhone(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ ...devices['Pixel 7'] });
@@ -75,13 +76,13 @@ test('team game: players pick teams, fair team scores, team podium', async ({ br
     const question = DEMO_QUIZ.questions[q]!;
     await expect(host.getByRole('heading', { name: question.text })).toBeVisible();
     for (const [i, phone] of phones.entries()) {
-      const choice = PLAYERS[i]!.pick(q);
-      await phone.getByRole('button', { name: `Réponse ${SHAPES[choice]!.symbol}` }).click();
+      await answerOnPhone(phone, question, planFor(q, PLAYERS[i]!.plan));
     }
-    // Result screen: own points + team score and rank.
-    await expect(phones[0]!.getByRole('heading', { name: 'Correct !' })).toBeVisible();
+    // Result screen: own points (or the poll thank-you) + team score and rank.
+    const heading = (i: number) => resultHeading(question, planFor(q, PLAYERS[i]!.plan));
+    await expect(phones[0]!.getByRole('heading', { name: heading(0) })).toBeVisible();
     await expect(phones[0]!.getByText(/Équipe Rouge : 1re · \d+ pts/)).toBeVisible();
-    await expect(phones[2]!.getByRole('heading', { name: 'Raté !' })).toBeVisible();
+    await expect(phones[2]!.getByRole('heading', { name: heading(2) })).toBeVisible();
     await expect(phones[2]!.getByText(/Équipe Bleue : 2e · \d+ pts/)).toBeVisible();
 
     await host.getByRole('button', { name: 'Suivant' }).click();

@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
+import { TYPE_ANSWER_MAX_LENGTH, type QuestionType, type SliderSettings } from './quiz.js';
 
 // ---------- Common ----------
 
@@ -67,11 +68,19 @@ export const HostMovePlayerPayload = HostKickPayload.extend({ teamId: TeamId });
 export const PlayerJoinPayload = z.object({ pin: Pin, nickname: Nickname });
 export const PlayerRejoinPayload = z.object({ pin: Pin, sessionToken: z.string().min(1) });
 export const PlayerTeamPayload = z.object({ pin: Pin, teamId: TeamId });
-export const PlayerAnswerPayload = z.object({
-  pin: Pin,
-  questionIndex: z.number().int().min(0),
-  choiceIndex: z.number().int().min(0).max(3),
-});
+const answerTarget = { pin: Pin, questionIndex: z.number().int().min(0) };
+/**
+ * Exactly one of `choiceIndex` (MCQ, TRUE_FALSE, POLL), `text` (TYPE_ANSWER) or `value`
+ * (SLIDER). The server answers `INVALID_PAYLOAD` if the kind doesn't match the question.
+ */
+export const PlayerAnswerPayload = z.union([
+  z.strictObject({ ...answerTarget, choiceIndex: z.number().int().min(0).max(3) }),
+  z.strictObject({
+    ...answerTarget,
+    text: z.string().trim().min(1).max(TYPE_ANSWER_MAX_LENGTH),
+  }),
+  z.strictObject({ ...answerTarget, value: z.number() }),
+]);
 
 export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
 export type HostActionPayload = z.infer<typeof HostActionPayload>;
@@ -81,6 +90,8 @@ export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
 export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
 export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
+/** The answer itself, without `pin` / `questionIndex`. */
+export type AnswerInput = { choiceIndex: number } | { text: string } | { value: number };
 
 export interface ClientToServerEvents {
   'host:create': (
@@ -139,20 +150,33 @@ export interface LobbyTeamsPayload {
   teams: { id: TeamId; name: string; members: { id: string; nickname: string }[] }[];
 }
 
-/** To the host only: full question. */
+/** What a phone needs to draw a slider: never the correct value nor the margin. */
+export type SliderPrompt = Pick<SliderSettings, 'min' | 'max' | 'step' | 'unit'>;
+
+/** To the host only: full question (but not the answer, revealed by `question:reveal`). */
 export interface QuestionShowPayload {
   index: number;
+  type: QuestionType;
   text: string;
   imageUrl?: string;
+  /** Choice texts (MCQ, TRUE_FALSE, POLL); empty for TYPE_ANSWER / SLIDER. */
   choices: string[];
   timeLimitSec: number;
+  /** SLIDER: the range shown during the question. */
+  slider?: SliderPrompt;
 }
 
 /** To players only: never contains the question text or the correct answer. */
 export interface QuestionPromptPayload {
   index: number;
-  choiceCount: number;
+  type: QuestionType;
   timeLimitSec: number;
+  /** Choice types (MCQ, TRUE_FALSE, POLL): number of shape buttons. */
+  choiceCount?: number;
+  /** SLIDER: range of the slider. */
+  slider?: SliderPrompt;
+  /** TYPE_ANSWER: max length of the typed answer. */
+  maxLength?: number;
 }
 
 export interface AnswerCountPayload {
@@ -160,10 +184,37 @@ export interface AnswerCountPayload {
   total: number;
 }
 
-export interface QuestionRevealPayload {
+/** TYPE_ANSWER reveal: one group of typed answers (grouped after normalization). */
+export interface TypedAnswerGroup {
+  /** How the first player of the group typed it. */
+  text: string;
+  count: number;
+  correct: boolean;
+}
+
+/** Type-specific part of a reveal, also saved in the game report (`QuestionResult.details`). */
+export interface RevealDetails {
+  /** TYPE_ANSWER: the accepted answers. */
+  acceptedAnswers?: string[];
+  /** TYPE_ANSWER: the most typed answers (top 6), most frequent first. */
+  topAnswers?: TypedAnswerGroup[];
+  /** SLIDER: the settings, correct value and margin included. */
+  slider?: SliderSettings;
+  /** SLIDER: every guess. */
+  guesses?: number[];
+  /** SLIDER: the guess closest to the correct value (fastest one on a tie). */
+  closest?: { nickname: string; value: number };
+}
+
+export interface QuestionRevealPayload extends RevealDetails {
+  type: QuestionType;
+  /** Correct choice indexes (empty for POLL, TYPE_ANSWER and SLIDER). */
   correctIndexes: number[];
-  /** Number of players who picked each choice index. */
+  /** Number of players who picked each choice index (empty for TYPE_ANSWER / SLIDER). */
   distribution: number[];
+  /** SLIDER: same as `slider.correct` / `slider.margin`. */
+  correct?: number;
+  margin?: number;
 }
 
 export interface PlayerResultPayload {
@@ -178,6 +229,11 @@ export interface PlayerResultPayload {
   rank: number;
   /** Team mode: the player's team after this question (score = sum of averages, PLAN.md §3). */
   team?: { id: TeamId; score: number; rank: number };
+  /** POLL: no right or wrong (`correct` false, 0 points, streak unchanged). */
+  poll?: true;
+  /** SLIDER: the player's guess (absent without an answer) and the correct value. */
+  yourValue?: number;
+  correctValue?: number;
 }
 
 export interface ServerToClientEvents {

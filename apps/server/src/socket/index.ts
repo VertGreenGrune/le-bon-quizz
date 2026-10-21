@@ -302,9 +302,9 @@ export function registerSocketHandlers(
 
     socket.on(
       'player:answer',
-      handler(socket, PlayerAnswerPayload, ({ pin, questionIndex, choiceIndex }) => {
+      handler(socket, PlayerAnswerPayload, ({ pin, questionIndex, ...answer }) => {
         const { game, playerId } = asPlayer(pin);
-        game.answer(playerId, questionIndex, choiceIndex);
+        game.answer(playerId, questionIndex, answer);
         return {};
       }),
     );

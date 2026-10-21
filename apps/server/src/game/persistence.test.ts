@@ -4,13 +4,24 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEMO_QUIZ, type GameReport, type GameSummary, type Quiz } from '@lbq/shared';
+import {
+  DEMO_QUIZ,
+  choiceTexts,
+  correctChoiceIndexes,
+  isChoiceQuestion,
+  type GameReport,
+  type GameSummary,
+  type Question,
+  type Quiz,
+  type RevealDetails,
+} from '@lbq/shared';
 import { registerApi } from '../api/index.js';
 import { createQuiz } from '../api/quizzes.service.js';
 import { createSession } from '../auth/session.js';
 import { createPrisma, type PrismaClient } from '../db.js';
 import { GameError } from './errors.js';
 import { Game, type GameTransport } from './Game.js';
+import { rightAnswer } from './testing.js';
 import {
   createPrismaPersistence,
   demoOnlyPersistence,
@@ -25,6 +36,25 @@ const noop: GameTransport = {
   detachSocket: () => {},
 };
 
+/** Questions Alice can get right (every one but the poll). */
+const SCORED = DEMO_QUIZ.questions.filter((q) => q.type !== 'POLL').length;
+
+/** What the reveal of `q` contains when only Alice answered, right. */
+function aliceOnlyDetails(q: Question): RevealDetails {
+  if (q.type === 'TYPE_ANSWER')
+    return {
+      acceptedAnswers: q.acceptedAnswers,
+      topAnswers: [{ text: q.acceptedAnswers[0]!, count: 1, correct: true }],
+    };
+  if (q.type === 'SLIDER')
+    return {
+      slider: q.slider,
+      guesses: [q.slider.correct],
+      closest: { nickname: 'Alice', value: q.slider.correct },
+    };
+  return {};
+}
+
 async function expectCode(p: Promise<unknown>, code: string) {
   await expect(p).rejects.toBeInstanceOf(GameError);
   await expect(p).rejects.toMatchObject({ code });
@@ -38,11 +68,7 @@ function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
   game.start();
   quiz.questions.forEach((q, i) => {
     game.next(); // QUESTION_INTRO → ANSWERING
-    game.answer(
-      alice.id,
-      i,
-      q.choices.findIndex((c) => c.isCorrect),
-    );
+    game.answer(alice.id, i, rightAnswer(q));
     game.next(); // ANSWERING → REVEAL (Bob has not answered)
     game.next(); // → LEADERBOARD
     game.next(); // → next question / PODIUM
@@ -65,21 +91,25 @@ describe('gameRecord', () => {
     expect(r).toMatchObject({ hostId: 'host', quizId: 'demo', quizTitle: DEMO_QUIZ.title });
     expect(r.startedAt.getTime()).toBeLessThanOrEqual(r.endedAt.getTime());
     expect(r.results.map((x) => [x.nickname, x.rank, x.correctCount])).toEqual([
-      ['Alice', 1, DEMO_QUIZ.questions.length],
+      ['Alice', 1, SCORED],
       ['Bob', 2, 0],
     ]);
     // One entry per question: only Alice (of 2 players) answered, always right.
     expect(r.questions).toHaveLength(DEMO_QUIZ.questions.length);
     DEMO_QUIZ.questions.forEach((q, i) => {
-      const correct = q.choices.findIndex((c) => c.isCorrect);
+      const answer = rightAnswer(q);
+      const picked = 'choiceIndex' in answer ? answer.choiceIndex : -1;
       expect(r.questions[i]).toEqual({
         index: i,
+        type: q.type,
         text: q.text,
-        choices: q.choices.map((c) => c.text),
-        correctIndexes: q.choices.flatMap((c, j) => (c.isCorrect ? [j] : [])),
-        distribution: q.choices.map((_, j) => (j === correct ? 1 : 0)),
+        choices: choiceTexts(q),
+        correctIndexes: correctChoiceIndexes(q),
+        distribution: isChoiceQuestion(q) ? q.choices.map((_, j) => (j === picked ? 1 : 0)) : [],
         playerCount: 2,
-        correctCount: 1,
+        correctCount: q.type === 'POLL' ? 0 : 1,
+        answerCount: 1,
+        details: aliceOnlyDetails(q),
       });
     });
   });
@@ -147,7 +177,8 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const loaded = await persistence.loadQuiz(q.id, owner.id);
     expect(loaded.dbQuizId).toBe(q.id);
     expect(loaded.quiz).toMatchObject({ id: q.id, title: 'Mon quiz' });
-    expect(loaded.quiz.questions).toHaveLength(DEMO_QUIZ.questions.length);
+    // Every question type survives the round trip (choices, accepted answers, slider…).
+    expect(loaded.quiz.questions).toEqual(DEMO_QUIZ.questions);
     expect(loaded.quiz).not.toHaveProperty('createdAt');
 
     await expectCode(persistence.loadQuiz(q.id, other.id), 'QUIZ_NOT_FOUND');
@@ -174,13 +205,17 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
 
     const res = await app.inject({ url: `/api/games/${list[0]!.id}`, headers });
     expect(res.json<GameReport>().results).toEqual([
-      expect.objectContaining({ rank: 1, nickname: 'Alice', correctCount: 4 }),
+      expect.objectContaining({ rank: 1, nickname: 'Alice', correctCount: SCORED }),
       { rank: 2, nickname: 'Bob', score: 0, correctCount: 0, teamId: null },
     ]);
     expect(list[0]!.winner).toBe('Alice');
     const questions = res.json<GameReport>().questions;
-    expect(questions.map((q) => [q.index, q.correctCount, q.playerCount])).toEqual(
-      DEMO_QUIZ.questions.map((_, i) => [i, 1, 2]),
+    expect(questions.map((q) => [q.index, q.type, q.correctCount, q.answerCount])).toEqual(
+      DEMO_QUIZ.questions.map((q, i) => [i, q.type, q.type === 'POLL' ? 0 : 1, 1]),
+    );
+    // Type-specific details survive the JSON column.
+    DEMO_QUIZ.questions.forEach((q, i) =>
+      expect(questions[i]!.details).toEqual(aliceOnlyDetails(q)),
     );
   });
 
@@ -197,11 +232,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     game.start();
     DEMO_QUIZ.questions.forEach((q, i) => {
       game.next(); // → ANSWERING
-      game.answer(
-        alice.id,
-        i,
-        q.choices.findIndex((c) => c.isCorrect),
-      );
+      game.answer(alice.id, i, rightAnswer(q));
       game.next(); // → REVEAL (Bob and Chloé never answer)
       game.next();
       game.next();
@@ -227,7 +258,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     ]);
     const csv = await app.inject({ url: `/api/games/${summary!.id}/export.csv`, headers });
     expect(csv.body).toContain('rank,nickname,score,correctCount,team\r\n');
-    expect(csv.body).toContain(`1,Alice,${alice.totalScore},4,Équipe Jaune\r\n`);
+    expect(csv.body).toContain(`1,Alice,${alice.totalScore},${SCORED},Équipe Jaune\r\n`);
   });
 
   it('keeps the history when the quiz was deleted during the game', async () => {

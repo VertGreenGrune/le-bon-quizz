@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEMO_QUIZ, QUESTION_INTRO_MS, type Quiz, type ServerToClientEvents } from '@lbq/shared';
+import { QUESTION_INTRO_MS, type Quiz, type ServerToClientEvents } from '@lbq/shared';
+import { CLASSIC_QUIZ as DEMO_QUIZ } from './testing.js';
 import { Game, type GameTransport } from './Game.js';
 import { GameError } from './errors.js';
 import { GameManager, GAME_IDLE_TTL_MS, HOST_GONE_TTL_MS, generatePin } from './GameManager.js';
@@ -93,6 +94,7 @@ describe('Game state machine', () => {
     expect(show?.to).toBe('host');
     expect(show?.payload).toEqual({
       index: 0,
+      type: 'MCQ',
       text: DEMO_QUIZ.questions[0]!.text,
       choices: ['Lyon', 'Paris', 'Marseille', 'Bordeaux'],
       timeLimitSec: 20,
@@ -109,7 +111,12 @@ describe('Game state machine', () => {
     vi.advanceTimersByTime(QUESTION_INTRO_MS);
     const toPlayer = rec.sent.filter((s) => s.to === 'sock-0');
     expect(toPlayer.map((s) => s.event)).toEqual(['question:prompt']);
-    expect(toPlayer[0]!.payload).toEqual({ index: 0, choiceCount: 4, timeLimitSec: 20 });
+    expect(toPlayer[0]!.payload).toEqual({
+      index: 0,
+      type: 'MCQ',
+      choiceCount: 4,
+      timeLimitSec: 20,
+    });
     const toAll = rec.sent.filter((s) => s.to === 'all').map((s) => s.event);
     expect(toAll.every((e) => e === 'game:state')).toBe(true);
   });
@@ -128,6 +135,7 @@ describe('Game state machine', () => {
     game.answer(bob!.id, 0, 0); // wrong
     expect(game.phase).toBe('REVEAL');
     expect(rec.last('question:reveal', 'host')).toEqual({
+      type: 'MCQ',
       correctIndexes: [1],
       distribution: [1, 1, 0, 0],
     });
@@ -400,6 +408,7 @@ describe('Game state machine', () => {
       });
       expect(rec.last('question:prompt', 'sock-new')).toEqual({
         index: 0,
+        type: 'MCQ',
         choiceCount: 4,
         timeLimitSec: 20,
       });

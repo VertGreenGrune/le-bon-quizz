@@ -50,6 +50,9 @@ model Quiz {
 enum QuestionType {
   MCQ
   TRUE_FALSE
+  TYPE_ANSWER
+  POLL
+  SLIDER
 }
 
 model Question {
@@ -62,7 +65,11 @@ model Question {
   type         QuestionType @default(MCQ)
   timeLimitSec Int          @default(20)
   basePoints   Int          @default(1000)
+  /// MCQ / TRUE_FALSE / POLL (poll choices are all `isCorrect: false`); empty for the others.
   choices      Choice[]
+  /// Type-specific settings: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
+  /// SLIDER `{ slider: { min, max, step, correct, margin, unit? } }`; null otherwise.
+  config       Json?
 
   @@unique([quizId, order])
 }
@@ -138,6 +145,7 @@ model QuestionResult {
   gameSession    GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   /// Position in the quiz (0-based).
   index          Int
+  type           QuestionType @default(MCQ)
   text           String
   choices        String[]
   correctIndexes Int[]
@@ -146,6 +154,10 @@ model QuestionResult {
   /// Players in the game when the question was revealed (answered or not).
   playerCount    Int
   correctCount   Int
+  /// Players who answered; null for games saved before question types (= sum of distribution).
+  answerCount    Int?
+  /// TYPE_ANSWER / SLIDER reveal details (`RevealDetails` in @lbq/shared); null otherwise.
+  details        Json?
 
   @@unique([gameSessionId, index])
 }

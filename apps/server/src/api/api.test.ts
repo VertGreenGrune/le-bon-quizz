@@ -156,7 +156,9 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       expect(quiz.questions).toEqual(quizInput.questions);
 
       const list = await app.inject({ url: '/api/quizzes', headers });
-      expect(list.json()).toMatchObject([{ id: quiz.id, questionCount: 4 }]);
+      expect(list.json()).toMatchObject([
+        { id: quiz.id, questionCount: quizInput.questions.length },
+      ]);
 
       const updated = await app.inject({
         method: 'PUT',
@@ -177,7 +179,7 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       const copied = copy.json<QuizDetail>();
       expect(copied.id).not.toBe(quiz.id);
       expect(copied.title).toBe('Nouveau titre (copie)');
-      expect(copied.questions).toHaveLength(3);
+      expect(copied.questions).toEqual(quizInput.questions.slice(1));
 
       const del = await app.inject({ method: 'DELETE', url: `/api/quizzes/${quiz.id}`, headers });
       expect(del.statusCode).toBe(204);
@@ -285,15 +287,19 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
         '=cmd',
         'Zoé',
       ]);
+      // Rows saved before question types: MCQ, answers counted from the distribution.
       expect(report.json().questions).toEqual([
         {
           index: 0,
+          type: 'MCQ',
           text: 'Q1',
           choices: ['A', 'B', 'C'],
           correctIndexes: [0, 2],
           distribution: [1, 0, 1],
           playerCount: 2,
           correctCount: 2,
+          answerCount: 2,
+          details: {},
         },
         expect.objectContaining({ index: 1, correctCount: 0 }),
       ]);

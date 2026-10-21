@@ -1,5 +1,11 @@
 import type { FastifyInstance } from 'fastify';
-import { TEAM_NAMES, type GameReport, type GameSummary, type TeamId } from '@lbq/shared';
+import {
+  TEAM_NAMES,
+  type GameReport,
+  type GameSummary,
+  type RevealDetails,
+  type TeamId,
+} from '@lbq/shared';
 import { currentUser } from '../auth/index.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ApiDeps } from './index.js';
@@ -49,7 +55,12 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
         correctCount,
         teamId: teamId === null ? null : asTeamId(teamId),
       })),
-      questions: g.questions.map(({ id: _id, gameSessionId: _g, ...q }) => q),
+      questions: g.questions.map(({ id: _id, gameSessionId: _g, answerCount, details, ...q }) => ({
+        ...q,
+        // Games saved before question types: every answer was a choice.
+        answerCount: answerCount ?? q.distribution.reduce((sum, n) => sum + n, 0),
+        details: (details ?? {}) as RevealDetails,
+      })),
       teams: g.teams.map(({ teamId, name, score, playerCount, rank }) => ({
         teamId: asTeamId(teamId),
         name,

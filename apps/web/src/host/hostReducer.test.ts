@@ -13,6 +13,7 @@ const run = (actions: HostAction[], from: HostGameState = initialHostState) =>
 
 const question = (index: number) => ({
   index,
+  type: 'MCQ' as const,
   text: `Q${index}`,
   choices: ['a', 'b', 'c', 'd'],
   timeLimitSec: 20,
@@ -51,7 +52,7 @@ describe('hostReducer', () => {
         now: 0,
       },
       { type: 'count', answered: 1, total: 1 },
-      { type: 'reveal', payload: { correctIndexes: [1], distribution: [0, 1, 0, 0] } },
+      { type: 'reveal', payload: { type: 'MCQ', correctIndexes: [1], distribution: [0, 1, 0, 0] } },
       {
         type: 'state',
         payload: { phase: 'REVEAL', mode: 'solo', questionIndex: 0, totalQuestions: 2 },
@@ -103,7 +104,7 @@ describe('hostReducer', () => {
       { type: 'players', payload: { players: [{ id: 'a', nickname: 'Alice' }] } },
       { type: 'question', payload: question(1) },
       { type: 'count', answered: 1, total: 1 },
-      { type: 'reveal', payload: { correctIndexes: [0], distribution: [1, 0] } },
+      { type: 'reveal', payload: { type: 'MCQ', correctIndexes: [0], distribution: [1, 0] } },
     ]);
     expect(currentQuestion(s)?.text).toBe('Q1');
     expect(s).toMatchObject({ phase: 'REVEAL', answered: 1, answerTotal: 1 });

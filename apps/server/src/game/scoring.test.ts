@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computePoints, rankPlayers, streakBonus, topPlayers } from './scoring.js';
+import { computePoints, rankPlayers, sliderPoints, streakBonus, topPlayers } from './scoring.js';
 
 describe('computePoints', () => {
   it('gives full points for an instant answer', () => {
@@ -57,5 +57,30 @@ describe('ranking', () => {
       { nickname: 'Bob', score: 1500 },
       { nickname: 'Alice', score: 800 },
     ]);
+  });
+});
+
+describe('sliderPoints', () => {
+  it('exact guess: full time-based points', () => {
+    expect(sliderPoints(800, 1789, 1789, 5)).toEqual({ correct: true, points: 800 });
+  });
+
+  it('inside the margin: points decrease linearly to half at the edge', () => {
+    expect(sliderPoints(1000, 1791, 1789, 4)).toEqual({ correct: true, points: 750 });
+    expect(sliderPoints(1000, 1787, 1789, 4)).toEqual({ correct: true, points: 750 });
+    expect(sliderPoints(1000, 1794, 1789, 5)).toEqual({ correct: true, points: 500 });
+  });
+
+  it('outside the margin: wrong, 0 points', () => {
+    expect(sliderPoints(1000, 1795, 1789, 5)).toEqual({ correct: false, points: 0 });
+  });
+
+  it('margin 0: only the exact value, with full points', () => {
+    expect(sliderPoints(1000, 42, 42, 0)).toEqual({ correct: true, points: 1000 });
+    expect(sliderPoints(1000, 43, 42, 0)).toEqual({ correct: false, points: 0 });
+  });
+
+  it('tolerates float steps', () => {
+    expect(sliderPoints(1000, 0.1 + 0.2, 0.3, 0).correct).toBe(true);
   });
 });

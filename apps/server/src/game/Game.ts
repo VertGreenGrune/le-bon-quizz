@@ -6,24 +6,34 @@ import {
   PODIUM_SIZE,
   QUESTION_INTRO_MS,
   TEAM_NAMES,
+  TYPE_ANSWER_MAX_LENGTH,
+  choiceTexts,
+  correctChoiceIndexes,
+  type AnswerInput,
   type GameMode,
   type GamePhase,
   type GameStatePayload,
   type LobbyTeamsPayload,
   type PlayerResultPayload,
   type Question,
+  type QuestionPromptPayload,
   type QuestionRevealPayload,
   type QuestionShowPayload,
+  type RevealDetails,
   type Quiz,
   type RankedTeam,
   type ServerToClientEvents,
+  type SliderPrompt,
+  type SliderSettings,
   type StandingsPayload,
   type TeamCount,
   type TeamId,
 } from '@lbq/shared';
 import { GameError } from './errors.js';
+import { matchesAnswer, normalizeAnswer } from './matching.js';
 import {
   computePoints,
+  sliderPoints,
   rankPlayers,
   rankTeams,
   streakBonus,
@@ -52,6 +62,19 @@ export interface GameTransport {
 /** Sends one event to some audience (host room, one socket…). */
 type Send = GameTransport['toAll'];
 
+/** A player's answer to the current question: one of choice / typed text / slider value. */
+export interface Answer {
+  choiceIndex: number | null;
+  text: string | null;
+  value: number | null;
+  responseMs: number;
+  correct: boolean;
+  points: number;
+}
+
+/** Typed answers shown at the reveal (TYPE_ANSWER). */
+const TOP_ANSWERS = 6;
+
 export interface Player {
   id: string;
   sessionToken: string;
@@ -63,7 +86,7 @@ export interface Player {
   /** Consecutive correct answers up to the last revealed question (0 after a wrong / no answer). */
   streak: number;
   /** Answer to the current question, if any. Reset at each QUESTION_INTRO. */
-  answer: { choiceIndex: number; responseMs: number; correct: boolean; points: number } | null;
+  answer: Answer | null;
   /** Result of the last revealed question, re-sent on rejoin during REVEAL. */
   lastResult: { correct: boolean; pointsEarned: number; streakBonus: number } | null;
   /** Team mode: chosen in the lobby (null until then). Always null in solo mode. */
@@ -91,12 +114,15 @@ export interface TeamStanding {
 /** How one revealed question went, as saved in `QuestionResult` (for the game report). */
 export interface QuestionStats {
   index: number;
+  type: Question['type'];
   text: string;
   choices: string[];
   correctIndexes: number[];
   distribution: number[];
   playerCount: number;
   correctCount: number;
+  answerCount: number;
+  details: RevealDetails;
 }
 
 export interface GameSettings {
@@ -363,22 +389,22 @@ export class Game {
     }
   }
 
-  answer(playerId: string, questionIndex: number, choiceIndex: number): void {
+  /**
+   * `input`: a choice index (shorthand for `{ choiceIndex }`), a typed text or a slider value;
+   * it must match the question type (`INVALID_PAYLOAD` otherwise).
+   */
+  answer(playerId: string, questionIndex: number, input: number | AnswerInput): void {
     const player = this.players.get(playerId);
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
     const question = this.currentQuestion;
     if (this.phase !== 'ANSWERING' || questionIndex !== this.questionIndex || !question)
       throw new GameError('NOT_ANSWERING', 'Trop tard !');
     if (player.answer) throw new GameError('ALREADY_ANSWERED', 'Réponse déjà envoyée');
-    const choice = question.choices[choiceIndex];
-    if (!choice) throw new GameError('INVALID_PAYLOAD', 'Choix invalide');
 
     const responseMs = Date.now() - this.answeringStartedAt;
-    const correct = choice.isCorrect;
-    const points = correct
-      ? computePoints(question.basePoints, responseMs, question.timeLimitSec * 1000)
-      : 0;
-    player.answer = { choiceIndex, responseMs, correct, points };
+    const timePoints = computePoints(question.basePoints, responseMs, question.timeLimitSec * 1000);
+    const given = typeof input === 'number' ? { choiceIndex: input } : input;
+    player.answer = { ...judgeAnswer(question, given, timePoints), responseMs };
     this.touch();
     this.onAnswersChanged();
   }
@@ -479,13 +505,19 @@ export class Game {
     if (this.phase !== 'ANSWERING' || !question) return;
     this.setPhase('REVEAL', null);
 
-    const distribution = question.choices.map(() => 0);
+    const choices = choiceTexts(question);
+    const distribution = choices.map(() => 0);
+    // A poll has no right answer: 0 points, and the streak neither breaks nor grows.
+    const poll = question.type === 'POLL';
     let correctCount = 0;
+    let answerCount = 0;
     for (const p of this.players.values()) {
       const a = p.answer;
-      if (a) distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
+      if (a) answerCount++;
+      if (a?.choiceIndex != null)
+        distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
       const correct = a?.correct ?? false;
-      p.streak = correct ? p.streak + 1 : 0;
+      if (!poll) p.streak = correct ? p.streak + 1 : 0;
       // A 0-point question awards nothing, streak bonus included (the streak still counts).
       const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
       const pointsEarned = (a?.points ?? 0) + bonus;
@@ -497,23 +529,66 @@ export class Game {
       p.lastResult = { correct, pointsEarned, streakBonus: bonus };
     }
     if (this.mode === 'teams') this.scoreTeams();
-    const correctIndexes = question.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
+    const correctIndexes = correctChoiceIndexes(question);
+    const details = this.revealDetails(question);
     this.questionStats.push({
       index: this.questionIndex,
+      type: question.type,
       text: question.text,
-      choices: question.choices.map((c) => c.text),
+      choices,
       correctIndexes,
       distribution,
       playerCount: this.players.size,
       correctCount,
+      answerCount,
+      details,
     });
 
     this.broadcastState();
-    this.reveal = { correctIndexes, distribution };
+    this.reveal = {
+      type: question.type,
+      correctIndexes,
+      distribution,
+      ...details,
+      ...(details.slider && { correct: details.slider.correct, margin: details.slider.margin }),
+    };
     this.transport.toHost('question:reveal', this.reveal);
     for (const p of this.players.values()) {
       if (p.socketId) this.transport.toSocket(p.socketId, 'player:result', this.resultPayload(p));
     }
+  }
+
+  /** TYPE_ANSWER: accepted + most typed answers; SLIDER: settings, guesses, closest guess. */
+  private revealDetails(question: Question): RevealDetails {
+    // Earliest answers first: the first typing names a group, the fastest wins a tie.
+    const answers = [...this.players.values()]
+      .flatMap((player) => (player.answer ? [{ player, answer: player.answer }] : []))
+      .sort((a, b) => a.answer.responseMs - b.answer.responseMs);
+    if (question.type === 'TYPE_ANSWER') {
+      const groups = new Map<string, { text: string; count: number; correct: boolean }>();
+      for (const { answer } of answers) {
+        if (answer.text === null) continue;
+        const key = normalizeAnswer(answer.text);
+        const group = groups.get(key);
+        if (group) group.count++;
+        else groups.set(key, { text: answer.text, count: 1, correct: answer.correct });
+      }
+      return {
+        acceptedAnswers: question.acceptedAnswers,
+        topAnswers: [...groups.values()].sort((a, b) => b.count - a.count).slice(0, TOP_ANSWERS),
+      };
+    }
+    if (question.type === 'SLIDER') {
+      const { slider } = question;
+      const guesses = answers.flatMap(({ player, answer }) =>
+        answer.value === null ? [] : [{ nickname: player.nickname, value: answer.value }],
+      );
+      const distance = (g: { value: number }) => Math.abs(g.value - slider.correct);
+      let closest: (typeof guesses)[number] | undefined;
+      for (const g of guesses) if (!closest || distance(g) < distance(closest)) closest = g;
+      return { slider, guesses: guesses.map((g) => g.value), ...(closest && { closest }) };
+    }
+    return {};
   }
 
   private enterLeaderboard(): void {
@@ -636,23 +711,31 @@ export class Game {
     const q = this.currentQuestion!;
     return {
       index: this.questionIndex,
+      type: q.type,
       text: q.text,
       ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
-      choices: q.choices.map((c) => c.text),
+      choices: choiceTexts(q),
       timeLimitSec: q.timeLimitSec,
+      ...(q.type === 'SLIDER' && { slider: sliderPrompt(q.slider) }),
     };
   }
 
-  private promptPayload() {
+  /** What the phones need to answer — never the question text nor the answer. */
+  private promptPayload(): QuestionPromptPayload {
     const q = this.currentQuestion!;
-    return {
+    const prompt: QuestionPromptPayload = {
       index: this.questionIndex,
-      choiceCount: q.choices.length,
+      type: q.type,
       timeLimitSec: q.timeLimitSec,
     };
+    if (q.type === 'SLIDER') prompt.slider = sliderPrompt(q.slider);
+    else if (q.type === 'TYPE_ANSWER') prompt.maxLength = TYPE_ANSWER_MAX_LENGTH;
+    else prompt.choiceCount = q.choices.length;
+    return prompt;
   }
 
   private resultPayload(player: Player): PlayerResultPayload {
+    const q = this.currentQuestion;
     const ranked = rankPlayers(this.players.values());
     const rank = ranked.find((r) => r.player === player)?.rank ?? ranked.length;
     const team =
@@ -667,6 +750,11 @@ export class Game {
       totalScore: player.totalScore,
       rank,
       ...(team && { team: { id: team.team.id, score: team.team.score, rank: team.rank } }),
+      ...(q?.type === 'POLL' && { poll: true as const }),
+      ...(q?.type === 'SLIDER' && {
+        correctValue: q.slider.correct,
+        ...(player.answer?.value != null && { yourValue: player.answer.value }),
+      }),
     };
   }
 
@@ -687,5 +775,49 @@ export class Game {
 
   private touch(): void {
     this.lastActivityAt = Date.now();
+  }
+}
+
+const sliderPrompt = ({ min, max, step, unit }: SliderSettings): SliderPrompt => ({
+  min,
+  max,
+  step,
+  ...(unit && { unit }),
+});
+
+/** Checks the answer kind matches the question, then whether it is right and its points. */
+function judgeAnswer(
+  q: Question,
+  given: AnswerInput,
+  timePoints: number,
+): Omit<Answer, 'responseMs'> {
+  const none = { choiceIndex: null, text: null, value: null };
+  const invalid = (message: string) => new GameError('INVALID_PAYLOAD', message);
+  switch (q.type) {
+    case 'MCQ':
+    case 'TRUE_FALSE':
+    case 'POLL': {
+      if (!('choiceIndex' in given)) throw invalid('Cette question attend un choix');
+      const i = given.choiceIndex;
+      if (!q.choices[i]) throw invalid('Choix invalide');
+      const correct = q.type !== 'POLL' && q.choices[i]!.isCorrect;
+      return { ...none, choiceIndex: i, correct, points: correct ? timePoints : 0 };
+    }
+    case 'TYPE_ANSWER': {
+      if (!('text' in given)) throw invalid('Cette question attend une réponse écrite');
+      const text = given.text.trim().slice(0, TYPE_ANSWER_MAX_LENGTH);
+      const correct = matchesAnswer(text, q.acceptedAnswers, q.typoTolerance);
+      return { ...none, text, correct, points: correct ? timePoints : 0 };
+    }
+    case 'SLIDER': {
+      if (!('value' in given)) throw invalid('Cette question attend un nombre');
+      const { min, max, correct, margin } = q.slider;
+      if (given.value < min || given.value > max) throw invalid('Valeur hors limites');
+      return {
+        ...none,
+        value: given.value,
+        ...sliderPoints(timePoints, given.value, correct, margin),
+      };
+    }
   }
 }

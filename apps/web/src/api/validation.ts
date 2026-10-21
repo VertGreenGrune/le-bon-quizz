@@ -28,6 +28,10 @@ export type Validation<T> = { ok: true; data: T } | { ok: false; errors: FieldEr
 const customMessages: Record<string, string> = {
   'At least one choice must be correct': 'Coche au moins une bonne réponse',
   'True/false questions have exactly 2 choices': 'Une question vrai/faux a exactement 2 réponses',
+  'Min must be below max': 'Le maximum doit être supérieur au minimum',
+  'Too many steps': 'Pas trop petit pour cet intervalle',
+  'Correct value out of range': 'La bonne réponse doit être entre le minimum et le maximum',
+  'Correct value not on a step': 'La bonne réponse doit tomber sur un cran du curseur',
 };
 
 export function issueMessage(issue: Issue): string {
