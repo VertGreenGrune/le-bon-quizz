@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
+  RESUME_COUNTDOWN_MS,
   type LobbyTeamsPayload,
   type PlayerResultPayload,
   type Quiz,
@@ -256,21 +258,31 @@ describe('Game in team mode', () => {
       const [r1, r2] = joinTeam(0, 'R1', 'R2');
       const [b1, b2] = joinTeam(1, 'B1', 'B2');
       game.start();
-      game.disconnect(r2!.socketId!); // gone before ANSWERING starts
+      game.disconnect(r2!.socketId!); // gone before ANSWERING starts…
+      vi.advanceTimersByTime(PAUSE_GRACE_MS);
+      expect(game.paused).toBe(true);
+      game.resume(); // …and the host continues without them
+      vi.advanceTimersByTime(RESUME_COUNTDOWN_MS);
       toAnswering();
       answer(r1!, RIGHT);
       answer(b1!, RIGHT);
-      game.disconnect(b2!.socketId!); // drops mid-question → last connected one answered
+      game.disconnect(b2!.socketId!); // drops mid-question → the game waits for B2…
+      vi.advanceTimersByTime(PAUSE_GRACE_MS);
+      expect(game.paused).toBe(true);
+      game.next(); // …until the host skips the question: B2 was present, so counts as 0
       expect(game.phase).toBe('REVEAL');
 
       // Red: only R1 present → 1000. Blue: (1000 + 0) / 2 = 500.
       expect(result(r1!).team).toEqual({ id: 0, score: 1000, rank: 1 });
       expect(result(b1!).team).toEqual({ id: 1, score: 500, rank: 2 });
 
-      // R2 comes back for Q2 and counts again.
+      // R2 comes back for Q2 and counts again; B2 is still gone (the host continues without).
       const back = game.rejoin(r2!.sessionToken, 'sock-R2-bis');
       game.next();
       game.next();
+      expect(game.paused).toBe(true);
+      game.resume();
+      vi.advanceTimersByTime(RESUME_COUNTDOWN_MS);
       toAnswering();
       answer(back, WRONG);
       answer(r1!, WRONG);

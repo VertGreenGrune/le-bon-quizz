@@ -22,6 +22,8 @@ export const ErrorCode = z.enum([
   'SESSION_NOT_FOUND',
   /** Team mode: a player has no team, or fewer than 2 teams have players. */
   'TEAMS_NOT_READY',
+  /** Answer sent while the game is paused (a player or the host screen lost the connection). */
+  'GAME_PAUSED',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -110,6 +112,16 @@ export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput = { choiceIndex: number } | { text: string } | { value: number };
 
+export interface PlayerJoinAck {
+  playerId: string;
+  sessionToken: string;
+  avatar: AvatarId;
+  /** Took the place of a disconnected player (started game): the fields below are theirs. */
+  reclaimed?: true;
+  nickname?: string;
+  totalScore?: number;
+}
+
 export interface ClientToServerEvents {
   'host:create': (
     p: HostCreatePayload,
@@ -128,11 +140,18 @@ export interface ClientToServerEvents {
    * re-sends everything the host screen needs for the current phase.
    */
   'host:rejoin': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  /**
+   * « Continuer sans… »: while paused, the missing players become absent for the current
+   * question and the game resumes (after the usual 3-2-1 countdown). No-op when not paused.
+   */
+  'host:resume': (p: HostActionPayload, ack: (r: Ack) => void) => void;
 
-  'player:join': (
-    p: PlayerJoinPayload,
-    ack: (r: Ack<{ playerId: string; sessionToken: string; avatar: AvatarId }>) => void,
-  ) => void;
+  /**
+   * In LOBBY: joins. In a started game: takes the place of the disconnected player with that
+   * nickname (`reclaimed: true`, their score / team / avatar / streak; the old session token is
+   * revoked), `NICKNAME_TAKEN` if that player is connected, `GAME_ALREADY_STARTED` otherwise.
+   */
+  'player:join': (p: PlayerJoinPayload, ack: (r: Ack<PlayerJoinAck>) => void) => void;
   'player:rejoin': (
     p: PlayerRejoinPayload,
     ack: (
@@ -143,7 +162,10 @@ export interface ClientToServerEvents {
    * Join screen, before joining: the avatars already taken in that game (shown dimmed, still
    * selectable). `GAME_NOT_FOUND` for an unknown PIN.
    */
-  'player:avatars': (p: PlayerAvatarsPayload, ack: (r: Ack<{ taken: AvatarId[] }>) => void) => void;
+  'player:avatars': (
+    p: PlayerAvatarsPayload,
+    ack: (r: Ack<{ taken: AvatarId[]; started: boolean }>) => void,
+  ) => void;
   /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack) => void) => void;
@@ -157,13 +179,35 @@ export interface GameStatePayload {
   /** -1 in LOBBY. */
   questionIndex: number;
   totalQuestions: number;
-  /** Time left in the current timed phase (QUESTION_INTRO / ANSWERING), in ms. Avoids clock skew. */
+  /**
+   * Time left in the current timed phase (QUESTION_INTRO / ANSWERING), in ms. Avoids clock skew.
+   * While paused: the frozen value.
+   */
   remainingMs?: number;
+  /** QUESTION_INTRO / ANSWERING only: the game is paused, the timer frozen (PLAN.md §2). */
+  paused?: GamePause;
+}
+
+export interface GamePause {
+  /** Players who still have to answer and are offline (empty while resuming). */
+  waitingFor: LobbyMember[];
+  /** The host screen lost its connection. */
+  hostMissing: boolean;
+  /** How long the game has been paused, in ms. */
+  sinceMs: number;
+}
+
+/** Everyone is back (or the host continued without them): resumes in `inMs` (3-2-1). */
+export interface GameResumingPayload {
+  inMs: number;
 }
 
 export interface LobbyPlayersPayload {
-  /** `teamId`: team mode, once the player has a team. */
-  players: (LobbyMember & { teamId?: TeamId })[];
+  /**
+   * `teamId`: team mode, once the player has a team. `offline`: the player's phone lost the
+   * connection (re-sent when it drops / comes back).
+   */
+  players: (LobbyMember & { teamId?: TeamId; offline?: true })[];
 }
 
 /**
@@ -265,6 +309,7 @@ export interface PlayerResultPayload {
 
 export interface ServerToClientEvents {
   'game:state': (p: GameStatePayload) => void; // all
+  'game:resuming': (p: GameResumingPayload) => void; // all
   'lobby:players': (p: LobbyPlayersPayload) => void; // host
   'lobby:teams': (p: LobbyTeamsPayload) => void; // all (team mode)
   'question:show': (p: QuestionShowPayload) => void; // host

@@ -14,6 +14,7 @@ import {
   type Ack,
   type ClientToServerEvents,
   type ErrorPayload,
+  type PlayerJoinAck,
   type ServerToClientEvents,
 } from '@lbq/shared';
 import { GameError } from '../game/errors.js';
@@ -253,6 +254,14 @@ export function registerSocketHandlers(
     );
 
     socket.on(
+      'host:resume',
+      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
+        asHost(pin, hostToken).resume();
+        return {};
+      }),
+    );
+
+    socket.on(
       'host:end',
       handler(socket, HostActionPayload, ({ pin, hostToken }) => {
         asHost(pin, hostToken).end();
@@ -267,15 +276,29 @@ export function registerSocketHandlers(
       handler(
         socket,
         PlayerJoinPayload,
-        async ({ pin, nickname, avatar }) => {
-          const player = games.get(pin).join(nickname, socket.id, avatar);
+        async ({ pin, nickname, avatar }): Promise<PlayerJoinAck> => {
+          const game = games.get(pin);
+          // Started game: only takes the place of a disconnected player with that nickname.
+          const reclaimed = game.phase !== 'LOBBY';
+          const player = reclaimed
+            ? game.reclaim(nickname, socket.id)
+            : game.join(nickname, socket.id, avatar);
+          leaveSession();
           session = { pin, role: 'player', playerId: player.id };
           await socket.join(roomAll(pin));
-          return {
+          const ack = {
             playerId: player.id,
             sessionToken: player.sessionToken,
             avatar: player.avatar,
           };
+          return reclaimed
+            ? {
+                ...ack,
+                reclaimed: true,
+                nickname: player.nickname,
+                totalScore: player.totalScore,
+              }
+            : ack;
         },
         ({ playerId }) => resyncPlayer(playerId),
       ),
@@ -303,9 +326,10 @@ export function registerSocketHandlers(
 
     socket.on(
       'player:avatars',
-      handler(socket, PlayerAvatarsPayload, ({ pin }) => ({
-        taken: games.get(pin).takenAvatars(),
-      })),
+      handler(socket, PlayerAvatarsPayload, ({ pin }) => {
+        const game = games.get(pin);
+        return { taken: game.takenAvatars(), started: game.phase !== 'LOBBY' };
+      }),
     );
 
     socket.on(

@@ -39,6 +39,18 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
 - `ANSWERING`: server starts timer (`timeLimitSec`); ends when timer expires or all answered.
 - `REVEAL`: correct answer + distribution sent to host; per-player result sent to each phone.
 - Host drives transitions with `host:next` (except the automatic end of `ANSWERING`).
+- **Pause** (`Game.ts`): during `QUESTION_INTRO` / `ANSWERING`, a player who still has to answer
+  (no answer yet, not excused) or the host screen offline for more than `PAUSE_GRACE_MS` (2 s)
+  pauses the game; a question entered while someone is offline starts paused. The timer freezes
+  at its value when the first one dropped (grace given back; a timer running out during the
+  grace pauses instead of ending the phase); `responseMs` excludes the paused time; answers →
+  `GAME_PAUSED`. `game:state.paused` lists who it waits for. Once everyone is back — or the host
+  sends `host:resume` (« Continuer sans… »: missing players are excused = absent for this
+  question only, not awaited, not "present" for team averages) or kicks them — `game:resuming
+  { inMs: 3000 }` then the timer goes on (a new drop during the countdown cancels it). `host:next`
+  / `host:end` during a pause skip it. REVEAL / LEADERBOARD / PODIUM never pause (offline players
+  are flagged in `lobby:players`). Socket.IO heartbeat is 5 s + 5 s so silent drops are seen
+  within ~10 s.
 
 ## 3. Scoring
 
@@ -91,13 +103,14 @@ Every client → server event takes an ack callback receiving
 | `host:moveplayer` | `{ pin, hostToken, playerId, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED`) |
 | `host:shuffle` | `{ pin, hostToken }` | team mode, LOBBY only: random balanced teams for every player |
 | `host:end` | `{ pin, hostToken }` | → ENDED |
+| `host:resume` | `{ pin, hostToken }` | « Continuer sans… » while paused: the missing players become absent for the current question, then `game:resuming` (no-op when not paused) |
 | `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED) |
 
 ### Player → server
 | Event | Payload | Notes |
 |---|---|---|
-| `player:join` | `{ pin, nickname, avatar? }` | `avatar` = an `AvatarId` (`AVATARS` in `packages/shared/src/avatars.ts`, 20 Batman: The Animated Series portraits, images in `apps/web/public/avatars/<id>.jpg`; unknown id → `INVALID_PAYLOAD`, missing → random, preferably not taken); several players may share one. Ack `{ playerId, sessionToken, avatar }` |
-| `player:avatars` | `{ pin }` | join screen, before joining: ack `{ taken: AvatarId[] }` (avatars already in that game, shown dimmed as a hint); `GAME_NOT_FOUND` |
+| `player:join` | `{ pin, nickname, avatar? }` | `avatar` = an `AvatarId` (`AVATARS` in `packages/shared/src/avatars.ts`, 20 Batman: The Animated Series portraits, images in `apps/web/public/avatars/<id>.jpg`; unknown id → `INVALID_PAYLOAD`, missing → random, preferably not taken); several players may share one. Ack `{ playerId, sessionToken, avatar }`. **Started game:** takes the place of the *disconnected* player with that nickname (case-insensitive) → ack `{ playerId, sessionToken, avatar, reclaimed: true, nickname, totalScore }` + the usual resync; the old session token is revoked. Connected player → `NICKNAME_TAKEN`, unknown nickname / ENDED → `GAME_ALREADY_STARTED` |
+| `player:avatars` | `{ pin }` | join screen, before joining: ack `{ taken: AvatarId[], started: boolean }` (avatars already in that game, shown dimmed as a hint; `started` → the join screen offers to take a disconnected player's place); `GAME_NOT_FOUND` |
 | `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, avatar, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
 | `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `text` \| `value` | accepted once, only during ANSWERING; `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER, `value` (in [min, max]) for SLIDER — another kind → `INVALID_PAYLOAD` |
@@ -105,8 +118,9 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew) |
-| `lobby:players` | host | `{ players: { id, nickname, avatar, teamId? }[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs }`, `waitingFor` empty during the resume countdown) |
+| `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
+| `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
 | `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer) |
 | `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) — no text, no answer! |

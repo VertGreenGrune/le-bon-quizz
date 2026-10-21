@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { QUESTION_INTRO_MS, type Quiz, type ServerToClientEvents } from '@lbq/shared';
+import {
+  QUESTION_INTRO_MS,
+  RESUME_COUNTDOWN_MS,
+  type Quiz,
+  type ServerToClientEvents,
+} from '@lbq/shared';
 import { CLASSIC_QUIZ as DEMO_QUIZ } from './testing.js';
 import { Game, type GameTransport } from './Game.js';
 import { GameError } from './errors.js';
@@ -396,22 +401,22 @@ describe('Game state machine', () => {
   });
 
   describe('disconnect / rejoin', () => {
-    it('does not wait for disconnected players', () => {
+    it('keeps waiting for a disconnected player who still has to answer', () => {
       const [alice] = joinAll('Alice', 'Bob');
       game.start();
       vi.advanceTimersByTime(QUESTION_INTRO_MS);
       game.disconnect('sock-1');
-      expect(rec.last('answer:count', 'host')).toEqual({ answered: 0, total: 1 });
+      expect(rec.last('answer:count', 'host')).toEqual({ answered: 0, total: 2 });
       game.answer(alice!.id, 0, 1);
-      expect(game.phase).toBe('REVEAL');
+      expect(game.phase).toBe('ANSWERING'); // paused after the grace period (Game.pause.test.ts)
     });
 
     it('rejoin with the session token restores the player and re-sends the prompt', () => {
       const [alice] = joinAll('Alice', 'Bob');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(QUESTION_INTRO_MS + 1_000);
       game.disconnect('sock-0');
-      vi.advanceTimersByTime(4_000);
+      vi.advanceTimersByTime(4_000); // paused after 2 s, timer frozen at the drop
 
       const p = game.rejoin(alice!.sessionToken, 'sock-new');
       expect(p.id).toBe(alice!.id);
@@ -419,16 +424,19 @@ describe('Game state machine', () => {
       expect(rec.last('game:state', 'sock-new')).toMatchObject({
         phase: 'ANSWERING',
         questionIndex: 0,
-        remainingMs: 16_000,
+        remainingMs: 19_000,
       });
+      expect(rec.last('game:resuming', 'sock-new')).toEqual({ inMs: RESUME_COUNTDOWN_MS });
       expect(rec.last('question:prompt', 'sock-new')).toEqual({
         index: 0,
         type: 'MCQ',
         choiceCount: 4,
         timeLimitSec: 20,
       });
+      vi.advanceTimersByTime(RESUME_COUNTDOWN_MS);
+      expect(game.paused).toBe(false);
       game.answer(p.id, 0, 1);
-      expect(p.answer?.responseMs).toBe(4_000);
+      expect(p.answer?.responseMs).toBe(1_000); // the pause is not counted
     });
 
     it('re-sends the player result when rejoining during REVEAL', () => {

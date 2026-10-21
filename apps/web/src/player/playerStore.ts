@@ -51,7 +51,15 @@ function attach() {
     rejoinIfNeeded();
   });
   socket.on('disconnect', () => dispatch({ type: 'connection', connected: false }));
-  socket.on('game:state', (payload) => dispatch({ type: 'state', payload, now: Date.now() }));
+  socket.on('game:state', (payload) => {
+    dispatch({ type: 'state', payload, now: Date.now() });
+    // Game over: nothing to resume any more (the end screen stays displayed).
+    if (payload.phase === 'ENDED') clearSession();
+  });
+  socket.on('game:resuming', ({ inMs }) => {
+    dispatch({ type: 'resuming', inMs, now: Date.now() });
+    vibrate(60);
+  });
   socket.on('question:prompt', (payload) => {
     dispatch({ type: 'prompt', payload, now: Date.now() });
   });
@@ -91,8 +99,8 @@ function reconnectNow() {
   socket.connect(); // `connect` handler rejoins
 }
 
-function loseSession(code: ErrorCode) {
-  clearSession();
+function loseSession(code: ErrorCode, pin: string) {
+  clearSession(pin);
   boundSocketId = undefined;
   dispatch({ type: 'lost', code });
 }
@@ -121,7 +129,7 @@ function rejoinIfNeeded({ probe = false } = {}) {
         return;
       }
       if (!res.ok) {
-        loseSession(res.error.code);
+        loseSession(res.error.code, session.pin);
         return;
       }
       boundSocketId = sid;
@@ -137,11 +145,15 @@ function rejoinIfNeeded({ probe = false } = {}) {
 
 export type JoinResult = { ok: true } | { ok: false; code: ErrorCode | 'TIMEOUT' };
 
+/**
+ * Joins the game, or — once it has started — takes the place of the disconnected player with
+ * this nickname (session lost: other phone, browser data cleared…).
+ */
 export function joinGame(pin: string, nickname: string, avatar: AvatarId): Promise<JoinResult> {
   attach();
   const socket = getSocket();
   // Fresh state before emitting, so game:state pushed right after the join lands in it.
-  clearSession();
+  clearSession(pin);
   boundSocketId = undefined;
   state = { ...initialPlayerState, connected: socket.connected };
   listeners.forEach((l) => l());
@@ -151,7 +163,7 @@ export function joinGame(pin: string, nickname: string, avatar: AvatarId): Promi
       if (!res.ok) return resolve({ ok: false, code: res.error.code });
       const session: PlayerSession = {
         pin,
-        nickname,
+        nickname: res.nickname ?? nickname,
         avatar: res.avatar,
         playerId: res.playerId,
         sessionToken: res.sessionToken,
@@ -161,27 +173,38 @@ export function joinGame(pin: string, nickname: string, avatar: AvatarId): Promi
       dispatch({
         type: 'session',
         playerId: res.playerId,
-        nickname,
+        nickname: session.nickname,
         avatar: res.avatar,
-        totalScore: 0,
+        totalScore: res.totalScore ?? 0,
       });
-      saveAvatarChoice(res.avatar);
+      if (!res.reclaimed) saveAvatarChoice(res.avatar);
       resolve({ ok: true });
     });
   });
 }
 
+export interface JoinInfo {
+  /** Avatars already taken in the game (a hint, shown dimmed). */
+  taken: AvatarId[];
+  /** The game has started: only a disconnected player's place can be taken back. */
+  started: boolean;
+}
+
 /**
- * Join screen hint: avatars already taken in the game with this PIN (empty if the game is
- * unknown or the server doesn't answer — it's only a hint).
+ * Join screen hints for the game with this PIN (nothing taken, not started if the game is
+ * unknown or the server doesn't answer — they are only hints).
  */
-export function fetchTakenAvatars(pin: string): Promise<AvatarId[]> {
+export function fetchJoinInfo(pin: string): Promise<JoinInfo> {
   return new Promise((resolve) => {
     getSocket()
       .timeout(ACK_TIMEOUT_MS)
-      .emit('player:avatars', { pin }, (err, res) => resolve(!err && res.ok ? res.taken : []));
+      .emit('player:avatars', { pin }, (err, res) =>
+        resolve(!err && res.ok ? { taken: res.taken, started: !!res.started } : NO_JOIN_INFO),
+      );
   });
 }
+
+const NO_JOIN_INFO: JoinInfo = { taken: [], started: false };
 
 /** Called by /play on mount: resumes the stored session (reload, phone lock, new tab…). */
 export function resumeSession(): PlayerSession | null {

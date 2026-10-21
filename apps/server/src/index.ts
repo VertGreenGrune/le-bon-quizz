@@ -35,8 +35,12 @@ app.get('/health', async () => ({ status: 'ok' }));
 // Production image: this process also serves the built web app (same origin, see web.ts).
 if (process.env.WEB_DIST_DIR) await registerWeb(app, path.resolve(process.env.WEB_DIST_DIR));
 
+// Short heartbeat (default 25 s + 20 s): a phone that silently loses the network (Wi-Fi gone,
+// no TCP close) is seen offline within ~10 s, so the game pauses for it (PLAN.md §2).
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(app.server, {
   cors: { origin: CORS_ORIGIN, credentials: true },
+  pingInterval: 5_000,
+  pingTimeout: 5_000,
 });
 registerSocketHandlers(io, { persistence: createPrismaPersistence(prisma) });
 

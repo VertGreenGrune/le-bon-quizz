@@ -1,6 +1,8 @@
 import type {
   GameMode,
+  GamePause,
   GamePhase,
+  LobbyMember,
   GameStatePayload,
   LobbyPlayersPayload,
   LobbyTeamsPayload,
@@ -20,6 +22,15 @@ export interface HostGameState {
   totalQuestions: number;
   /** Local timestamp (ms) when the current timed phase ends, derived from `remainingMs`. */
   deadline: number | null;
+  /** The game is paused (a player / the host screen lost the connection): timer frozen. */
+  paused: GamePause | null;
+  /** While paused: the frozen time left and the local time the pause started at. */
+  frozenMs: number | null;
+  pausedSince: number | null;
+  /** Local end of the 3-2-1 countdown before resuming (`game:resuming`). */
+  resumeAt: number | null;
+  /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
+  comebacks: (LobbyMember & { at: number })[];
   players: LobbyPlayersPayload['players'];
   /** Team mode: teams and their members (`lobby:teams`). */
   teams: LobbyTeamsPayload['teams'];
@@ -41,7 +52,8 @@ export interface HostGameState {
 
 export type HostAction =
   | { type: 'state'; payload: GameStatePayload; now: number }
-  | { type: 'players'; payload: LobbyPlayersPayload }
+  | { type: 'players'; payload: LobbyPlayersPayload; now: number }
+  | { type: 'resuming'; inMs: number; now: number }
   | { type: 'teams'; payload: LobbyTeamsPayload }
   | { type: 'question'; payload: QuestionShowPayload }
   | { type: 'count'; answered: number; total: number }
@@ -55,6 +67,11 @@ export const initialHostState: HostGameState = {
   questionIndex: -1,
   totalQuestions: 0,
   deadline: null,
+  paused: null,
+  frozenMs: null,
+  pausedSince: null,
+  resumeAt: null,
+  comebacks: [],
   players: [],
   teams: [],
   question: null,
@@ -74,13 +91,19 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
     case 'state': {
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const newQuestion = questionIndex !== state.questionIndex;
+      const paused = action.payload.paused ?? null;
+      const waiting = paused && (paused.waitingFor.length > 0 || paused.hostMissing);
       return {
         ...state,
         phase,
         mode,
         questionIndex,
         totalQuestions,
-        deadline: remainingMs != null ? action.now + remainingMs : null,
+        deadline: remainingMs != null && !paused ? action.now + remainingMs : null,
+        paused,
+        frozenMs: paused ? (remainingMs ?? null) : null,
+        pausedSince: paused ? action.now - paused.sinceMs : null,
+        resumeAt: paused && !waiting ? state.resumeAt : null,
         // Per-question data from the previous question must not leak into the next one.
         ...(newQuestion && {
           answered: 0,
@@ -89,8 +112,19 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         }),
       };
     }
-    case 'players':
-      return { ...state, players: action.payload.players };
+    case 'players': {
+      const players = action.payload.players;
+      const wasOffline = new Set(state.players.filter((p) => p.offline).map((p) => p.id));
+      const back = players
+        .filter((p) => !p.offline && wasOffline.has(p.id))
+        .map(({ id, nickname, avatar }) => ({ id, nickname, avatar, at: action.now }));
+      const recent = state.comebacks.filter(
+        (c) => action.now - c.at < COMEBACK_MS && !back.some((b) => b.id === c.id),
+      );
+      return { ...state, players, comebacks: [...recent, ...back] };
+    }
+    case 'resuming':
+      return state.paused ? { ...state, resumeAt: action.now + action.inMs } : state;
     case 'teams':
       return { ...state, teams: action.payload.teams };
     case 'question':
@@ -113,6 +147,20 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
     case 'podium':
       return { ...state, podium: action.top, podiumTeams: action.teams ?? [] };
   }
+}
+
+/** How long « <pseudo> est de retour ! » stays on the host screen. */
+export const COMEBACK_MS = 4000;
+
+/** Players offline right now (shown on the host screen outside of a pause too). */
+export function offlinePlayers(state: Pick<HostGameState, 'players'>): LobbyMember[] {
+  return state.players.filter((p) => p.offline);
+}
+
+/** Time left in the current timed phase: frozen while paused. */
+export function remainingMsAt(state: HostGameState, now: number): number | null {
+  if (state.paused) return state.frozenMs;
+  return state.deadline != null ? Math.max(0, state.deadline - now) : null;
 }
 
 /** The question for the current index, or null if `question:show` hasn't arrived yet. */

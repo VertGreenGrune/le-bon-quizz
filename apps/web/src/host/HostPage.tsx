@@ -3,7 +3,14 @@ import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } from '@lbq/shared';
 import { parseGameOptions } from '../lib/gameOptions';
-import { currentQuestion, isLastQuestion, teamLobbyStatus } from './hostReducer';
+import {
+  currentQuestion,
+  isLastQuestion,
+  offlinePlayers,
+  remainingMsAt,
+  teamLobbyStatus,
+} from './hostReducer';
+import { ComebackToasts, PauseOverlay, nicknameList } from './pauseScreens';
 import { TeamLobby, TeamPodiumScreen } from './teamScreens';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -53,11 +60,20 @@ export function HostPage() {
   }, [isNew, quizId, mode, teams, navigate]);
 
   const timed = state.deadline != null;
-  const now = useNow(timed);
-  const remainingMs = timed ? Math.max(0, state.deadline! - now) : null;
+  const now = useNow(timed || state.paused !== null || state.comebacks.length > 0);
+  const remainingMs = remainingMsAt(state, now);
   const remainingSec = remainingMs != null ? Math.ceil(remainingMs / 1000) : null;
+  const resumeCount =
+    state.resumeAt !== null ? Math.max(0, Math.ceil((state.resumeAt - now) / 1000)) : null;
+  const offline = offlinePlayers(state);
 
-  useHostSounds({ phase: state.phase, remainingSec, playerCount: state.players.length });
+  useHostSounds({
+    phase: state.phase,
+    // Paused: the clock doesn't tick, the 3-2-1 countdown does.
+    remainingSec: state.paused ? null : remainingSec,
+    resumeCount,
+    playerCount: state.players.length,
+  });
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
   // entrance animations (podium reveal, re-ordering…) instead of replaying them.
@@ -198,6 +214,11 @@ export function HostPage() {
           {!game.connected && (
             <span className="rounded bg-answer-red px-3 py-1">Connexion au serveur perdue…</span>
           )}
+          {game.connected && !state.paused && offline.length > 0 && phase !== 'ENDED' && (
+            <span className="rounded bg-black/30 px-3 py-1" data-testid="offline-players">
+              📵 {nicknameList(offline)} {offline.length > 1 ? 'sont' : 'est'} hors ligne
+            </span>
+          )}
           <MuteButton />
           {phase !== 'ENDED' && phase !== 'PODIUM' && (
             <button
@@ -224,6 +245,13 @@ export function HostPage() {
             {screen}
           </motion.div>
         </AnimatePresence>
+
+        <AnimatePresence>
+          {state.paused && (
+            <PauseOverlay state={state} now={now} onResume={game.resume} onKick={game.kick} />
+          )}
+        </AnimatePresence>
+        <ComebackToasts state={state} now={now} />
 
         <footer className="flex min-h-20 items-center justify-end gap-4 px-6 pb-6">
           {game.error && (

@@ -725,7 +725,7 @@ payloads and saved results; e2e checks the avatar appears in the host lobby.
   a random preselection.
 
 ### T21 — Auto-pause when a player loses the connection + easy reconnection (run alone)
-- **Status:** in-progress (claude-T21, worktree ../lbq-T21)
+- **Status:** done
 - **Depends on:** T14, T15, T16, T20 (all done)
 - **Ports:** server 3021 / web 5201, test DB `lbq_test_t21`, e2e DB `lbq_e2e_t21`.
 
@@ -790,6 +790,48 @@ takeover only for disconnected players, localStorage session survives a "tab clo
 test). e2e: a phone goes offline mid-question (Playwright `context.setOffline`) → host shows the
 pause → phone back online → countdown → game continues and finishes; second e2e: player's page
 is closed and a new page takes over with the same nickname.
+
+- **Summary:** shared: `GamePause`, `GameStatePayload.paused?`, `game:resuming { inMs }`,
+  `host:resume`, error `GAME_PAUSED`, `PlayerJoinAck` (`reclaimed?`, `nickname?`, `totalScore?`),
+  constants `PAUSE_GRACE_MS` / `RESUME_COUNTDOWN_MS` / `PAUSE_HINT_MS`. Server (`Game.ts`):
+  `Player.offlineSince`; `checkPause()` re-evaluated on every drop / return / kick / host
+  (dis)connection / phase entry — pauses after the grace of the earliest drop (immediately when a
+  question starts with someone offline), freezes the timer at the drop (`Pause.frozenAt`,
+  `remainingMs`), a phase timer expiring during the grace pauses instead; `endPause()` after the
+  3-2-1 shifts `answeringStartedAt` by the paused time (identical points) and marks everyone
+  connected as present; `resume()` (« Continuer sans ») excuses the missing players for the
+  current question (absent, not awaited, not present for team averages); ANSWERING now ends when
+  every non-excused player answered (a dropped player no longer ends it early: the game waits);
+  `reclaim(nickname)` for a started game (disconnected players only, session token rotated);
+  `lobby:players` items carry `offline`. Socket: `host:resume`, `player:join` → reclaim when
+  started, `player:avatars` ack `started`. Web: phone session in localStorage keyed by PIN
+  (`player/session.ts`, 12 h TTL, cleared at ENDED / kick / refused), `/join` goes straight to
+  `/play` when a session is stored; started game → nickname field only, « Reprendre ma place » →
+  « Reprendre la partie en tant que <pseudo> ? »; phone pause overlay (who it waits for, frozen
+  timer, 3-2-1). Host: pause overlay (`host/pauseScreens.tsx`: waiting time, one line per missing
+  player with « Exclure », « Continuer sans … » highlighted after 60 s, 3-2-1), « <pseudo> est de
+  retour ! » toasts, « 📵 … hors ligne » header outside pauses, no tick while paused (tick on the
+  3-2-1). Tests: `Game.pause.test.ts` (18: grace, already answered, timer expiring in the grace,
+  host drop, frozen timer, auto-resume + countdown, drop during countdown, same points with /
+  without pause, every question type, team mode, `resume`, kick, next question paused, skip,
+  takeover rules), 3 existing tests updated to the new "wait" rule; web: session (tab close),
+  phone / host reducers. e2e `e2e/pause.spec.ts`: offline → pause → online → countdown → game
+  finishes; closed tab → same phone resumes by itself, then another phone takes over « bob ».
+  Checked with screenshots (host 1600×900, Pixel 7).
+- **Deviations / notes:** (1) **Outside scope:** `apps/server/src/index.ts` Socket.IO
+  `pingInterval`/`pingTimeout` 5 s (defaults 25 s + 20 s): a phone that loses Wi-Fi without
+  closing the socket (Playwright `setOffline` too) was only seen offline after ~45 s; now ≤ 10 s.
+  The timer still runs during that detection delay (the server only knows the drop from then).
+  (2) Additions: `lobby:players[].offline` (host shows who is offline outside pauses + the
+  « de retour » flash), `player:avatars` ack `started` (join screen knows to offer the takeover
+  before sending), join ack `nickname`. (3) « Continuer sans » excuses **all** missing players at
+  once (the contract has no player id) and also uses the 3-2-1; a player still missing at the
+  next question pauses it again (per spec). (4) Answers given by others *during* the 2 s grace
+  keep their real response time (at most 2 s slower than the restored clock).
+  (5) Takeover only in a started game (in the lobby the nickname stays `NICKNAME_TAKEN`).
+- **Follow-ups:** not tried on real phones (iOS lock → socket closed → pause after ~2–10 s, which
+  is wanted, but a player locking the phone during the reveal makes the next question start
+  paused until they unlock).
 
 - T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
@@ -912,3 +954,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `avatar` and `GameReportRow.avatar` (`AvatarId | null`) are **required** (test fixtures must set
   them). `Scored` in `game/scoring.ts` gained `avatar`. Prisma migration `20261021190534_avatars`.
   Nothing touched in the editor or the quiz API (T16).
+- 2026-10-21, T21 agent: pause contract (PLAN.md §2/§4): `GameStatePayload.paused?` (`GamePause`),
+  new events `host:resume` and `game:resuming`, error `GAME_PAUSED`, `player:join` ack is now
+  `PlayerJoinAck` (+ `reclaimed?`, `nickname?`, `totalScore?`), `player:avatars` ack gains
+  `started` (**required**), `lobby:players` items gain `offline?`. Behaviour change: ANSWERING no
+  longer ends early when the last awaited player drops — the game pauses for them. Outside the
+  T21 scope: Socket.IO heartbeat 5 s + 5 s in `apps/server/src/index.ts`. Phone sessions moved
+  from sessionStorage to localStorage (`lbq:player-sessions`).
