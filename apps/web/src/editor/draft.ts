@@ -3,7 +3,9 @@ import {
   QuizInput,
   SHAPES,
   type Choice,
+  type ImageEffect,
   type Question,
+  type QuestionAudio,
   type QuestionType,
   type QuizDetail,
 } from '@lbq/shared';
@@ -26,6 +28,11 @@ export interface DraftQuestion {
   typoTolerance: boolean;
   /** SLIDER. A number field being edited may be NaN (empty input). */
   slider: { min: number; max: number; step: number; correct: number; margin: number; unit: string };
+  /** Sound clip (any type), played on the host screen. */
+  audio?: QuestionAudio;
+  audioOnReveal: boolean;
+  /** Picture reveal effect; only sent with an image. */
+  imageEffect: ImageEffect;
 }
 
 /**
@@ -63,6 +70,8 @@ export function newQuestion(): DraftQuestion {
     acceptedAnswers: [''],
     typoTolerance: true,
     slider: { min: 0, max: 100, step: 1, correct: 50, margin: 0, unit: '' },
+    audioOnReveal: false,
+    imageEffect: 'none',
   };
 }
 
@@ -76,6 +85,9 @@ export function toDraftQuestion(q: Question): DraftQuestion {
   if (q.imageUrl) draft.imageUrl = q.imageUrl;
   draft.timeLimitSec = q.timeLimitSec;
   draft.basePoints = q.basePoints;
+  if (q.audio) draft.audio = q.audio;
+  draft.audioOnReveal = q.audioOnReveal ?? false;
+  draft.imageEffect = q.imageEffect ?? 'none';
   switch (q.type) {
     case 'TYPE_ANSWER':
       return { ...draft, acceptedAnswers: q.acceptedAnswers, typoTolerance: q.typoTolerance };
@@ -121,6 +133,10 @@ function questionBody(q: DraftQuestion, choices: number[], answers: number[]): u
     type: q.type,
     timeLimitSec: q.timeLimitSec,
     basePoints: q.basePoints,
+    audio: q.audio,
+    audioOnReveal: q.audio && q.audioOnReveal ? true : undefined,
+    // An effect without a picture (removed after choosing it) is dropped.
+    imageEffect: q.imageUrl && q.imageEffect !== 'none' ? q.imageEffect : undefined,
   };
   switch (q.type) {
     case 'TYPE_ANSWER':
@@ -165,6 +181,11 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
     errors[original] = message;
   }
   return { ok: false, errors };
+}
+
+/** The quiz shares uploaded pictures or sounds (copyright warning when it is made public). */
+export function hasMedia(draft: QuizDraft): boolean {
+  return !!draft.coverImageUrl || draft.questions.some((q) => q.imageUrl || q.audio);
 }
 
 /** Number of errors of question `index` (for the sidebar badges). */

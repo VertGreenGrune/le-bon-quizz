@@ -61,6 +61,14 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   (1st → +0, 2nd → +100, …, 6th and later → +500), added to `pointsEarned` and the total score.
   A 0-point question awards no bonus but still extends the streak.
 - `responseMs` is measured **on the server** from the `ANSWERING` start.
+- **Media** (any question type, optional, host screen only — phones never get them):
+  `audio: { url, startSec ≥ 0, durationSec 5–30 (default 15) }` — the excerpt plays from the start
+  of `ANSWERING`, looped, stops at `REVEAL`, pauses with the game and resumes after the 3-2-1
+  (`audioOnReveal: true` = plays once at `REVEAL` instead); follows the host mute toggle, the other
+  host sounds are ducked meanwhile (`apps/web/src/host/clipPlayer.ts`). `imageEffect` (`blur` 30 px
+  → 0, `zoom` ×6 on a point → ×1, `pixelate` 8 blocks → full; only with `imageUrl`): the picture
+  clears up over the answering time (frozen while paused), fully clear at `REVEAL`
+  (`apps/web/src/components/RevealImage.tsx`). Scoring is unchanged (faster = more points).
 - **Question types** (`Question.type`): `MCQ` and `TRUE_FALSE` (shape buttons, ≥ 1 correct
   choice), plus:
   - `TYPE_ANSWER` (réponse libre): players type ≤ 40 characters; correct if it matches one of the
@@ -122,8 +130,8 @@ Every client → server event takes an ack callback receiving
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
-| `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer) |
-| `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) — no text, no answer! |
+| `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider?, audio?, audioOnReveal?, imageEffect? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer; media of §3 "Media": `audio` = `{ url, startSec, durationSec }`, `audioOnReveal: true`, `imageEffect` = `blur` \| `zoom` \| `pixelate`, absent = none) |
+| `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) — no text, no answer, no picture, no sound! |
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars) (`RevealDetails`) |
 | `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL: `correct` false, 0 points) + SLIDER `yourValue?` (absent without an answer), `correctValue` |
@@ -143,7 +151,9 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), createdAt, updatedAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
   `POLL` | `SLIDER`), timeLimitSec (default 20), basePoints (default 1000), config? (JSON:
-  TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`, SLIDER `{ slider }`)
+  TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`, SLIDER `{ slider }`), audioUrl?, audioStartSec?,
+  audioDurationSec?, audioOnReveal? (null = false), imageEffect? (`none` | `blur` | `zoom` |
+  `pixelate`, null = none)
 - `Choice` — id, questionId, order (0–3), text, isCorrect (MCQ / TRUE_FALSE / POLL; always false
   for a poll)
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
@@ -186,7 +196,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   `playCount` — no questions, so never the answers. `POST /library/:id/copy` → 201
   `QuizDetail`: private copy owned by the current host (404 if the quiz is not public)
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
-  bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
+  bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later).
+  `POST /uploads/audio`: same, MP3/OGG/M4A/AAC/WAV ≤ 10 MB (`AUDIO_UPLOAD_MAX_BYTES`)
 - `GET /games` (history, `GameSummary` with `winner`, `mode`), `GET /games/:id` (report: ranking
   with `teamId`, `avatar` (null before T20) + per-question `questions` with `type`, `answerCount`, `details`, empty for games
   saved before T12, + `teams` ranking,

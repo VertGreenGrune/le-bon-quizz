@@ -5,7 +5,13 @@
 import { z } from 'zod';
 import { AvatarId } from './avatars.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
-import { TYPE_ANSWER_MAX_LENGTH, type QuestionType, type SliderSettings } from './quiz.js';
+import {
+  TYPE_ANSWER_MAX_LENGTH,
+  type ImageEffect,
+  type QuestionAudio,
+  type QuestionType,
+  type SliderSettings,
+} from './quiz.js';
 
 // ---------- Common ----------
 
@@ -232,6 +238,12 @@ export interface QuestionShowPayload {
   timeLimitSec: number;
   /** SLIDER: the range shown during the question. */
   slider?: SliderPrompt;
+  /** Sound clip played by the host screen (never sent to the phones). */
+  audio?: QuestionAudio;
+  /** Play `audio` at REVEAL instead of during ANSWERING. */
+  audioOnReveal?: true;
+  /** Picture reveal effect (only with `imageUrl`; absent = none). */
+  imageEffect?: Exclude<ImageEffect, 'none'>;
 }
 
 /** To players only: never contains the question text or the correct answer. */

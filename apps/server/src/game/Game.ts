@@ -958,6 +958,11 @@ export class Game {
       choices: choiceTexts(q),
       timeLimitSec: q.timeLimitSec,
       ...(q.type === 'SLIDER' && { slider: sliderPrompt(q.slider) }),
+      // Media are for the shared screen only: the prompt below never carries them.
+      ...(q.audio && { audio: q.audio, ...(q.audioOnReveal && { audioOnReveal: true as const }) }),
+      ...(q.imageUrl &&
+        q.imageEffect &&
+        q.imageEffect !== 'none' && { imageEffect: q.imageEffect }),
     };
   }
 

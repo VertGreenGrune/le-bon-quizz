@@ -131,6 +131,12 @@ export interface UploadImageResponse {
   url: string;
 }
 
+/**
+ * `POST /uploads/audio` (same form, field `file`): MP3, OGG, M4A/AAC or WAV, checked by magic
+ * bytes. Response: `UploadImageResponse`.
+ */
+export const AUDIO_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+
 // ---------- Games (history / reports) ----------
 
 export interface GameSummary {

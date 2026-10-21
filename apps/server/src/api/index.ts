@@ -3,7 +3,6 @@ import type { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
-import { UPLOAD_MAX_BYTES } from '@lbq/shared';
 import { requireAuth } from '../auth/index.js';
 import type { PrismaClient } from '../db.js';
 import { authRoutes } from './auth.routes.js';
@@ -15,7 +14,7 @@ import { uploadRoutes } from './uploads.routes.js';
 
 export interface ApiDeps {
   prisma: PrismaClient;
-  /** Absolute directory where uploaded images are written (served at `/uploads/`). */
+  /** Absolute directory where uploaded images / sounds are written (served at `/uploads/`). */
   uploadDir: string;
   /** Public base URL of this server for upload URLs; defaults to the request's host. */
   publicUrl?: string;
@@ -25,7 +24,8 @@ export interface ApiDeps {
 export async function registerApi(app: FastifyInstance, deps: ApiDeps): Promise<void> {
   mkdirSync(deps.uploadDir, { recursive: true });
   await app.register(cookie);
-  await app.register(multipart, { limits: { fileSize: UPLOAD_MAX_BYTES, files: 1 } });
+  // Size limits are set per upload route (images / audio).
+  await app.register(multipart, { limits: { files: 1 } });
   await app.register(fastifyStatic, {
     root: deps.uploadDir,
     prefix: '/uploads/',

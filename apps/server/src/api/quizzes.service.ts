@@ -1,4 +1,5 @@
 import {
+  AUDIO_DEFAULT_DURATION_SEC,
   LIBRARY_LIMIT,
   type LibraryQuery,
   type LibraryQuiz,
@@ -33,6 +34,15 @@ function toQuestion(qu: QuestionRow): Question {
     imageUrl: qu.imageUrl ?? undefined,
     timeLimitSec: qu.timeLimitSec,
     basePoints: qu.basePoints as BasePoints,
+    ...(qu.audioUrl && {
+      audio: {
+        url: qu.audioUrl,
+        startSec: qu.audioStartSec ?? 0,
+        durationSec: qu.audioDurationSec ?? AUDIO_DEFAULT_DURATION_SEC,
+      },
+      ...(qu.audioOnReveal && { audioOnReveal: true }),
+    }),
+    ...(qu.imageEffect && qu.imageEffect !== 'none' && { imageEffect: qu.imageEffect }),
   };
   const config = (qu.config ?? {}) as Partial<QuestionConfig>;
   switch (qu.type) {
@@ -89,6 +99,11 @@ const questionsCreate = (input: QuizInput) =>
       order,
       text: qu.text,
       imageUrl: qu.imageUrl ?? null,
+      audioUrl: qu.audio?.url ?? null,
+      audioStartSec: qu.audio?.startSec ?? null,
+      audioDurationSec: qu.audio?.durationSec ?? null,
+      audioOnReveal: qu.audio && qu.audioOnReveal ? true : null,
+      imageEffect: qu.imageUrl && qu.imageEffect !== 'none' ? (qu.imageEffect ?? null) : null,
       type: qu.type,
       timeLimitSec: qu.timeLimitSec,
       basePoints: qu.basePoints,

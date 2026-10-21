@@ -194,6 +194,44 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       expect(gone.statusCode).toBe(404);
     });
 
+    it('saves and returns the sound clip and the picture effect of each question', async () => {
+      const { headers } = await register();
+      const questions: QuizInput['questions'] = [
+        {
+          ...quizInput.questions[0]!,
+          imageUrl: 'http://cdn.test/uploads/a.png',
+          imageEffect: 'pixelate',
+          audio: { url: 'http://cdn.test/uploads/b.mp3', startSec: 42.5, durationSec: 20 },
+          audioOnReveal: true,
+        },
+        {
+          ...quizInput.questions[1]!,
+          audio: { url: 'http://cdn.test/uploads/c.ogg', startSec: 0, durationSec: 15 },
+        },
+        {
+          ...quizInput.questions[2]!,
+          imageUrl: 'http://cdn.test/uploads/a.png',
+          imageEffect: 'zoom',
+        },
+      ];
+      const created = await app.inject({
+        method: 'POST',
+        url: '/api/quizzes',
+        headers,
+        payload: { ...quizInput, questions },
+      });
+      expect(created.statusCode).toBe(201);
+      expect(created.json<QuizDetail>().questions).toEqual(questions);
+
+      const noImage = await app.inject({
+        method: 'POST',
+        url: '/api/quizzes',
+        headers,
+        payload: { ...quizInput, questions: [{ ...quizInput.questions[0]!, imageEffect: 'blur' }] },
+      });
+      expect(noImage.statusCode).toBe(400);
+    });
+
     it('validates the body with the shared schema', async () => {
       const { headers } = await register();
       const res = await app.inject({
@@ -505,6 +543,48 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       expect(served.statusCode).toBe(200);
       expect(served.headers['x-content-type-options']).toBe('nosniff');
       expect(served.rawPayload.equals(png)).toBe(true);
+    });
+
+    it('stores a sound up to 10 MB, rejects non-audio and bigger files', async () => {
+      const { headers } = await register();
+      const post = (content: Buffer, filename: string) => {
+        const body = multipart(content, filename);
+        return app.inject({
+          method: 'POST',
+          url: '/api/uploads/audio',
+          payload: body.payload,
+          headers: { ...headers, ...body.headers },
+        });
+      };
+      // 6 MB: above the image limit, below the audio one.
+      const mp3 = Buffer.concat([Buffer.from('494433040000', 'hex'), Buffer.alloc(6e6)]);
+      const ok = await post(mp3, 'clip.mp3');
+      expect(ok.statusCode).toBe(201);
+      const { url } = ok.json<{ url: string }>();
+      expect(url).toMatch(/^http:\/\/cdn\.test\/uploads\/[\w-]+\.mp3$/);
+      const served = await app.inject({ url: new URL(url).pathname });
+      expect(served.statusCode).toBe(200);
+      expect(served.rawPayload.length).toBe(mp3.length);
+
+      const png = await post(Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'), 'a.mp3');
+      expect(png.statusCode).toBe(415);
+      const big = await post(
+        Buffer.concat([Buffer.from('OggS', 'latin1'), Buffer.alloc(11 * 1024 * 1024)]),
+        'big.ogg',
+      );
+      expect(big.statusCode).toBe(413);
+      // The image route keeps its 5 MB limit.
+      const bigImage = multipart(
+        Buffer.concat([Buffer.from('89504e470d0a1a0a', 'hex'), Buffer.alloc(6e6)]),
+        'big.png',
+      );
+      const img = await app.inject({
+        method: 'POST',
+        url: '/api/uploads/image',
+        payload: bigImage.payload,
+        headers: { ...headers, ...bigImage.headers },
+      });
+      expect(img.statusCode).toBe(413);
     });
 
     it('rejects non-images even if they claim to be PNG', async () => {

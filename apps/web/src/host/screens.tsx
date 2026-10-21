@@ -11,10 +11,11 @@ import {
 } from '@lbq/shared';
 import { Avatar, type AvatarSize } from '../components/Avatar';
 import { Confetti, CountUp } from '../components/motion';
+import { RevealImage } from '../components/RevealImage';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue } from '../lib/numbers';
 import { joinOrigins, joinUrl } from './joinUrl';
-import { TICK_FROM_SEC } from './sounds';
+import { TICK_FROM_SEC, useMuted } from './sounds';
 import { TeamRanking } from './teamScreens';
 
 // ---------- Lobby ----------
@@ -176,6 +177,7 @@ export function QuestionScreen({
   answerTotal,
   reveal,
   instant,
+  onReplay,
 }: {
   question: QuestionShowPayload | null;
   remainingMs: number | null;
@@ -184,10 +186,32 @@ export function QuestionScreen({
   reveal: QuestionRevealPayload | null;
   /** Screen restored by a reload (host:rejoin): don't replay entrance animations. */
   instant: boolean;
+  /** « Rejouer » the question's sound clip. */
+  onReplay: () => void;
 }) {
   if (!question) {
     return <p className="m-auto animate-pulse text-3xl">Chargement de la question…</p>;
   }
+  const totalMs = question.timeLimitSec * 1000;
+  // Picture effect: unrecognisable at the start of ANSWERING, clear at the end (frozen with the
+  // clock while paused).
+  const progress = reveal ? 1 : remainingMs != null ? 1 - remainingMs / totalMs : 0;
+  const picture = question.imageUrl && (
+    <RevealImage
+      src={question.imageUrl}
+      effect={question.imageEffect}
+      progress={progress}
+      seed={`${question.imageUrl}#${question.index}`}
+      className="max-h-[40vh] min-h-0 rounded-xl shadow-lg"
+    />
+  );
+  const listen = question.audio && !!question.audioOnReveal === (reveal != null) && (
+    <ListenBadge
+      compact={!!picture || reveal != null}
+      atReveal={reveal != null}
+      onReplay={onReplay}
+    />
+  );
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <h2 className="rounded-2xl bg-white px-8 py-5 text-center text-4xl font-black text-black shadow-lg">
@@ -195,11 +219,15 @@ export function QuestionScreen({
       </h2>
 
       <div className="flex min-h-0 flex-1 items-center justify-between gap-6">
-        <Countdown
-          remainingMs={remainingMs}
-          totalMs={question.timeLimitSec * 1000}
-          done={reveal != null}
-        />
+        <Countdown remainingMs={remainingMs} totalMs={totalMs} done={reveal != null} />
+
+        {reveal && (question.imageEffect || listen) && (
+          // The picture was hidden by its effect: show it clear next to the results.
+          <div className="flex max-w-[35%] min-w-0 shrink-0 flex-col items-center gap-4">
+            {question.imageEffect && picture}
+            {listen}
+          </div>
+        )}
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 self-stretch">
           {reveal ? (
@@ -218,15 +246,16 @@ export function QuestionScreen({
             )
           ) : (
             <>
-              {question.imageUrl && (
-                <motion.img
-                  src={question.imageUrl}
-                  alt=""
+              {picture && (
+                <motion.div
                   initial={instant ? false : { scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="max-h-[40vh] max-w-full min-h-0 rounded-xl object-contain shadow-lg"
-                />
+                  className="flex min-h-0 max-w-full justify-center"
+                >
+                  {picture}
+                </motion.div>
               )}
+              {listen}
               <AnswerHint question={question} />
             </>
           )}
@@ -258,6 +287,46 @@ export function QuestionScreen({
         />
       )}
     </div>
+  );
+}
+
+/** A sound clip plays on the TV: « Écoutez bien ! » + « Rejouer ». */
+function ListenBadge({
+  compact,
+  atReveal,
+  onReplay,
+}: {
+  /** Smaller, next to a picture / the reveal. */
+  compact: boolean;
+  atReveal: boolean;
+  onReplay: () => void;
+}) {
+  const muted = useMuted();
+  return (
+    <motion.div
+      initial={{ scale: 0.7, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      data-testid="listen-badge"
+      className={`flex items-center rounded-2xl bg-black/25 font-black ${compact ? 'gap-3 px-5 py-3 text-2xl' : 'flex-col gap-3 px-10 py-6 text-4xl'}`}
+    >
+      <motion.span
+        aria-hidden="true"
+        animate={muted ? undefined : { rotate: [-10, 10, -10], scale: [1, 1.15, 1] }}
+        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+        className={compact ? 'text-4xl' : 'text-8xl'}
+      >
+        🎵
+      </motion.span>
+      <span>{atReveal ? 'Écoutez la réponse !' : 'Écoutez bien !'}</span>
+      {muted && <span className="text-lg font-semibold opacity-80">(son coupé)</span>}
+      <button
+        type="button"
+        onClick={onReplay}
+        className="rounded-lg border-2 border-white/60 px-4 py-1 text-lg font-bold hover:bg-white/10"
+      >
+        ↻ Rejouer
+      </button>
+    </motion.div>
   );
 }
 

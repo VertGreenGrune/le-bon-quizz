@@ -96,6 +96,11 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
         form.append('file', file);
         return request<UploadImageResponse>('POST', '/uploads/image', form);
       },
+      audio: (file: Blob) => {
+        const form = new FormData();
+        form.append('file', file);
+        return request<UploadImageResponse>('POST', '/uploads/audio', form);
+      },
     },
     games: {
       list: () => request<GameSummary[]>('GET', '/games'),

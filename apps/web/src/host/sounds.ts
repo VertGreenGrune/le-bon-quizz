@@ -12,6 +12,9 @@ const VOLUME: Record<SoundName, number> = {
   podium: 0.9,
 };
 
+/** Volume factor of the game sounds while a question's sound clip plays. */
+export const DUCK_FACTOR = 0.3;
+
 const MUTE_KEY = 'lbq:host:muted';
 
 /** Reads the remembered mute choice; storage may be missing or throw (private mode…). */
@@ -49,13 +52,24 @@ const elements = new Map<SoundName, HTMLAudioElement>();
 /** The looping sound that should be playing (even while muted / blocked by autoplay). */
 let wantedLoop: SoundName | null = null;
 let unlockPending = false;
+/** A question's sound clip is playing (`clipPlayer.ts`): the game sounds are quieter. */
+let ducked = false;
+
+function applyVolume(name: SoundName, el: HTMLAudioElement) {
+  el.volume = VOLUME[name] * (ducked ? DUCK_FACTOR : 1);
+}
+
+export function setDucked(value: boolean) {
+  ducked = value;
+  for (const [name, el] of elements) applyVolume(name, el);
+}
 
 function element(name: SoundName): HTMLAudioElement {
   let el = elements.get(name);
   if (!el) {
     el = new Audio(`${import.meta.env.BASE_URL}sounds/${name}.wav`);
     el.preload = 'auto';
-    el.volume = VOLUME[name];
+    applyVolume(name, el);
     elements.set(name, el);
   }
   return el;
