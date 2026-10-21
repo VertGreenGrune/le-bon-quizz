@@ -3,8 +3,10 @@ import {
   DEFAULT_TEAM_COUNT,
   LEADERBOARD_SIZE,
   MAX_PLAYERS_PER_GAME,
+  PAUSE_GRACE_MS,
   PODIUM_SIZE,
   QUESTION_INTRO_MS,
+  RESUME_COUNTDOWN_MS,
   TEAM_NAMES,
   TYPE_ANSWER_MAX_LENGTH,
   choiceTexts,
@@ -13,8 +15,10 @@ import {
   type AnswerInput,
   type AvatarId,
   type GameMode,
+  type GamePause,
   type GamePhase,
   type GameStatePayload,
+  type LobbyMember,
   type LobbyTeamsPayload,
   type PlayerResultPayload,
   type Question,
@@ -84,6 +88,8 @@ export interface Player {
   avatar: AvatarId;
   /** `null` while disconnected — the player can come back with `player:rejoin`. */
   socketId: string | null;
+  /** When the player lost the connection (null while connected): starts the pause grace. */
+  offlineSince: number | null;
   totalScore: number;
   correctCount: number;
   /** Consecutive correct answers up to the last revealed question (0 after a wrong / no answer). */
@@ -129,6 +135,18 @@ export interface QuestionStats {
   details: RevealDetails;
 }
 
+/** A paused timed phase (QUESTION_INTRO / ANSWERING). */
+interface Pause {
+  /** When the pause started. */
+  since: number;
+  /** Moment the timer was frozen at: the first drop (the grace period is given back). */
+  frozenAt: number;
+  /** Time left in the phase at `frozenAt`. */
+  remainingMs: number;
+  /** Set during the 3-2-1 countdown before resuming. */
+  resumeAt: number | null;
+}
+
 export interface GameSettings {
   mode: GameMode;
   /** Team mode: number of teams offered in the lobby (default 2). */
@@ -146,7 +164,11 @@ export interface GameHooks {
  * LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD → (next question | PODIUM) → ENDED
  *
  * QUESTION_INTRO ends by itself after QUESTION_INTRO_MS and ANSWERING when the timer expires or
- * every connected player has answered; the host may also skip both with `next()`.
+ * every player has answered; the host may also skip both with `next()`.
+ *
+ * Pause: during QUESTION_INTRO / ANSWERING, a player who still has to answer (or the host screen)
+ * offline for more than PAUSE_GRACE_MS freezes the timer at its value when they dropped. Once
+ * everyone is back (or the host continues without them), a 3-2-1 countdown resumes it.
  *
  * Team mode: players pick a team in the lobby; each player scores as in solo, and a team earns
  * per question the average of its present members' points (PLAN.md §3).
@@ -170,8 +192,16 @@ export class Game {
   /** Reveal of the current question, re-sent to a host that rejoins. */
   private reveal: QuestionRevealPayload | null = null;
   private phaseEndsAt: number | null = null;
+  private phaseStartedAt = 0;
+  /** ANSWERING start, pushed forward by the paused time: `responseMs` excludes the pauses. */
   private answeringStartedAt = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private pause: Pause | null = null;
+  /** Fires when the earliest offline awaited player's grace period ends. */
+  private graceTimer: ReturnType<typeof setTimeout> | null = null;
+  private resumeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Players the host continued without, for the current question only (absent, not awaited). */
+  private readonly excused = new Set<string>();
 
   readonly mode: GameMode;
   /** Team mode: the teams offered in the lobby, then (from the start) the ones that have players. */
@@ -201,6 +231,10 @@ export class Game {
 
   get currentQuestion(): Question | undefined {
     return this.quiz.questions[this.questionIndex];
+  }
+
+  get paused(): boolean {
+    return this.pause !== null;
   }
 
   // ---------- Host actions ----------
@@ -253,6 +287,7 @@ export class Game {
     this.touch();
     this.players.delete(playerId);
     if (this.phase !== 'LOBBY') this.kicked.push(player);
+    this.excused.delete(playerId);
     if (player.socketId) {
       this.transport.toSocket(player.socketId, 'player:kicked', {});
       this.transport.detachSocket(player.socketId);
@@ -260,7 +295,24 @@ export class Game {
     }
     this.sendLobbyPlayers();
     this.sendTeams();
-    if (this.phase === 'ANSWERING') this.onAnswersChanged();
+    this.checkPause();
+    if (this.phase === 'ANSWERING' && !this.pause) this.onAnswersChanged();
+  }
+
+  /**
+   * « Continuer sans… »: the offline players the game waits for become absent for the current
+   * question (they don't block it and, in team mode, don't count as present), then the game
+   * resumes after the countdown. No-op when not paused.
+   */
+  resume(): void {
+    if (!this.pause) return;
+    this.touch();
+    for (const p of this.awaitedOffline()) {
+      this.excused.add(p.id);
+      this.presentIds.delete(p.id);
+    }
+    if (this.phase === 'ANSWERING') this.sendAnswerCount();
+    this.checkPause();
   }
 
   /** Team mode, LOBBY only: puts a player in a team (their own choice or the host's). */
@@ -294,11 +346,13 @@ export class Game {
   hostConnected(socketId: string): void {
     this.hostSockets.add(socketId);
     this.hostGoneSince = null;
+    this.checkPause();
   }
 
   hostDisconnected(socketId: string): void {
     if (!this.hostSockets.delete(socketId)) return;
     if (this.hostSockets.size === 0) this.hostGoneSince = Date.now();
+    this.checkPause();
   }
 
   /**
@@ -308,6 +362,7 @@ export class Game {
   resyncHost(socketId: string): void {
     const send: Send = (event, ...args) => this.transport.toSocket(socketId, event, ...args);
     send('game:state', this.statePayload());
+    this.sendResuming(send);
     this.sendLobbyPlayers(send);
     this.sendTeams(send);
     const phase = this.phase;
@@ -339,6 +394,7 @@ export class Game {
       nickname: name,
       avatar: avatar ?? randomAvatarId(this.takenAvatars()),
       socketId,
+      offlineSince: null,
       totalScore: 0,
       correctCount: 0,
       streak: 0,
@@ -360,11 +416,36 @@ export class Game {
   rejoin(sessionToken: string, socketId: string): Player {
     const player = this.findBySession(sessionToken);
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Session introuvable');
+    return this.reattach(player, socketId);
+  }
+
+  /**
+   * Started game, from another phone / a fresh browser: takes the place of the *disconnected*
+   * player with this nickname (score, team, avatar, streak kept). Their old session token is
+   * revoked, so the lost phone can't come back as a duplicate. Like `rejoin`, the caller sends
+   * the ack then calls `resync()`.
+   */
+  reclaim(nickname: string, socketId: string): Player {
+    const key = nickname.trim().toLocaleLowerCase();
+    const player = [...this.players.values()].find((p) => p.nickname.toLocaleLowerCase() === key);
+    if (this.phase === 'LOBBY' || this.phase === 'ENDED' || !player)
+      throw new GameError('GAME_ALREADY_STARTED', 'La partie a déjà commencé');
+    if (player.socketId)
+      throw new GameError('NICKNAME_TAKEN', 'Ce joueur est encore connecté à la partie');
+    player.sessionToken = randomUUID();
+    return this.reattach(player, socketId);
+  }
+
+  private reattach(player: Player, socketId: string): Player {
     if (player.socketId && player.socketId !== socketId)
       this.transport.detachSocket(player.socketId);
+    const wasOffline = player.socketId === null;
     player.socketId = socketId;
+    player.offlineSince = null;
     this.touch();
+    if (wasOffline) this.sendLobbyPlayers();
     if (this.phase === 'ANSWERING') this.sendAnswerCount();
+    this.checkPause();
     return player;
   }
 
@@ -376,8 +457,10 @@ export class Game {
   resync(player: Player): void {
     if (!player.socketId) return;
     const sid = player.socketId;
-    this.transport.toSocket(sid, 'game:state', this.statePayload());
-    this.sendTeams((event, ...args) => this.transport.toSocket(sid, event, ...args));
+    const send: Send = (event, ...args) => this.transport.toSocket(sid, event, ...args);
+    send('game:state', this.statePayload());
+    this.sendResuming(send);
+    this.sendTeams(send);
     if (this.phase === 'ANSWERING' && !player.answer) {
       this.transport.toSocket(sid, 'question:prompt', this.promptPayload());
     } else if (this.phase === 'REVEAL' && player.lastResult) {
@@ -391,7 +474,10 @@ export class Game {
     for (const player of this.players.values()) {
       if (player.socketId !== socketId) continue;
       player.socketId = null;
-      if (this.phase === 'ANSWERING') this.onAnswersChanged();
+      player.offlineSince = Date.now();
+      this.sendLobbyPlayers();
+      if (this.phase === 'ANSWERING') this.sendAnswerCount();
+      this.checkPause();
     }
   }
 
@@ -406,6 +492,7 @@ export class Game {
     if (this.phase !== 'ANSWERING' || questionIndex !== this.questionIndex || !question)
       throw new GameError('NOT_ANSWERING', 'Trop tard !');
     if (player.answer) throw new GameError('ALREADY_ANSWERED', 'Réponse déjà envoyée');
+    if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
 
     const responseMs = Date.now() - this.answeringStartedAt;
     const timePoints = computePoints(question.basePoints, responseMs, question.timeLimitSec * 1000);
@@ -466,13 +553,19 @@ export class Game {
       questionIndex: this.questionIndex,
       totalQuestions: this.totalQuestions,
     };
-    if (this.phaseEndsAt !== null) state.remainingMs = Math.max(0, this.phaseEndsAt - Date.now());
+    if (this.pause) {
+      state.remainingMs = this.pause.remainingMs;
+      state.paused = this.pausePayload(this.pause);
+    } else if (this.phaseEndsAt !== null) {
+      state.remainingMs = Math.max(0, this.phaseEndsAt - Date.now());
+    }
     return state;
   }
 
   /** Clears pending timers. Call before dropping the game. */
   dispose(): void {
     this.clearTimer();
+    this.clearPause();
   }
 
   // ---------- Transitions ----------
@@ -483,6 +576,7 @@ export class Game {
     this.startedAt ??= new Date();
     this.questionIndex = index;
     this.reveal = null;
+    this.excused.clear();
     for (const p of this.players.values()) {
       p.answer = null;
       p.lastResult = null;
@@ -490,7 +584,8 @@ export class Game {
     this.setPhase('QUESTION_INTRO', QUESTION_INTRO_MS);
     this.broadcastState();
     this.transport.toHost('question:show', this.showPayload());
-    this.timer = setTimeout(() => this.enterAnswering(), QUESTION_INTRO_MS);
+    // Someone still offline from the previous phases: the question starts paused.
+    this.checkPause({ immediate: true });
   }
 
   private enterAnswering(): void {
@@ -507,9 +602,9 @@ export class Game {
       if (p.socketId) this.transport.toSocket(p.socketId, 'question:prompt', prompt);
     }
     this.sendAnswerCount();
-    this.timer = setTimeout(() => this.enterReveal(), limitMs);
-    // Nobody connected to wait for → don't block on the timer.
-    if (this.allConnectedAnswered()) this.enterReveal();
+    this.checkPause();
+    // Nobody to wait for → don't block on the timer.
+    if (!this.pause && this.allAnswered()) this.enterReveal();
   }
 
   private enterReveal(): void {
@@ -683,11 +778,7 @@ export class Game {
       teams: this.teamIds.map((id) => ({
         id,
         name: TEAM_NAMES[id],
-        members: this.teamMembers(id).map((p) => ({
-          id: p.id,
-          nickname: p.nickname,
-          avatar: p.avatar,
-        })),
+        members: this.teamMembers(id).map(lobbyMember),
       })),
     };
     send('lobby:teams', payload);
@@ -697,20 +788,152 @@ export class Game {
 
   private onAnswersChanged(): void {
     this.sendAnswerCount();
-    if (this.allConnectedAnswered()) this.enterReveal();
+    if (this.allAnswered()) this.enterReveal();
   }
 
-  private allConnectedAnswered(): boolean {
-    for (const p of this.players.values()) if (p.socketId && !p.answer) return false;
+  /** Is the current question still waiting for this player? */
+  private isAwaited(p: Player): boolean {
+    if (this.phase === 'ANSWERING' && p.answer) return false;
+    // Excused players (« Continuer sans ») are awaited again only once they are back.
+    return p.socketId !== null || !this.excused.has(p.id);
+  }
+
+  /** Everyone answered, except the players the host continued without. */
+  private allAnswered(): boolean {
+    for (const p of this.players.values()) if (this.isAwaited(p)) return false;
     return true;
   }
+
+  // ---------- Pause ----------
+
+  private isTimedPhase(): boolean {
+    return this.phase === 'QUESTION_INTRO' || this.phase === 'ANSWERING';
+  }
+
+  /** Offline players the current timed phase is waiting for. */
+  private awaitedOffline(): Player[] {
+    return [...this.players.values()].filter((p) => p.socketId === null && this.isAwaited(p));
+  }
+
+  private hostMissing(): boolean {
+    return this.hostGoneSince !== null;
+  }
+
+  /**
+   * Re-evaluates the pause after anything that changes who is connected or awaited: pauses
+   * (once the grace period of the earliest drop is over, or right away with `immediate`),
+   * updates the waiting list, starts / cancels the resume countdown.
+   */
+  private checkPause({ immediate = false } = {}): void {
+    this.clearGraceTimer();
+    if (!this.isTimedPhase()) return;
+    const missing = this.awaitedOffline();
+    const someoneMissing = missing.length > 0 || this.hostMissing();
+    const pause = this.pause;
+    if (pause) {
+      if (someoneMissing && pause.resumeAt !== null) {
+        this.clearResumeTimer();
+        pause.resumeAt = null;
+      }
+      this.broadcastState(); // new waiting list
+      if (!someoneMissing && pause.resumeAt === null) this.startResumeCountdown(pause);
+      return;
+    }
+    if (!someoneMissing) return;
+    const since = Math.min(
+      ...missing.map((p) => p.offlineSince ?? Date.now()),
+      this.hostGoneSince ?? Infinity,
+    );
+    const graceLeft = since + PAUSE_GRACE_MS - Date.now();
+    if (immediate || graceLeft <= 0) this.enterPause(since);
+    else this.graceTimer = setTimeout(() => this.checkPause(), graceLeft);
+  }
+
+  /** Freezes the timer at its value at `since` (the grace period is given back). */
+  private enterPause(since: number): void {
+    const now = Date.now();
+    const frozenAt = Math.min(now, Math.max(since, this.phaseStartedAt));
+    this.clearTimer();
+    this.pause = {
+      since: now,
+      frozenAt,
+      remainingMs: Math.max(0, (this.phaseEndsAt ?? now) - frozenAt),
+      resumeAt: null,
+    };
+    this.broadcastState();
+  }
+
+  private startResumeCountdown(pause: Pause): void {
+    pause.resumeAt = Date.now() + RESUME_COUNTDOWN_MS;
+    this.sendResuming();
+    this.resumeTimer = setTimeout(() => this.endPause(), RESUME_COUNTDOWN_MS);
+  }
+
+  /** The countdown is over: the timer goes on from its frozen value. */
+  private endPause(): void {
+    const pause = this.pause;
+    if (!pause) return;
+    this.clearPause();
+    const now = Date.now();
+    if (this.phase === 'ANSWERING') {
+      this.answeringStartedAt += now - pause.frozenAt;
+      // The game waited for them: everyone connected now had the whole question (team averages).
+      for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
+    }
+    this.phaseEndsAt = now + pause.remainingMs;
+    this.timer = setTimeout(() => this.onPhaseTimeout(), pause.remainingMs);
+    this.broadcastState();
+    if (this.phase === 'ANSWERING' && this.allAnswered()) this.enterReveal();
+  }
+
+  private sendResuming(send: Send = this.transport.toAll.bind(this.transport)): void {
+    const resumeAt = this.pause?.resumeAt;
+    if (resumeAt != null) send('game:resuming', { inMs: Math.max(0, resumeAt - Date.now()) });
+  }
+
+  private pausePayload(pause: Pause): GamePause {
+    return {
+      waitingFor: this.awaitedOffline().map(lobbyMember),
+      hostMissing: this.hostMissing(),
+      sinceMs: Date.now() - pause.since,
+    };
+  }
+
+  /** End of the QUESTION_INTRO / ANSWERING timer — unless someone dropped during the grace. */
+  private onPhaseTimeout(): void {
+    this.timer = null;
+    if (this.awaitedOffline().length > 0 || this.hostMissing()) {
+      this.checkPause({ immediate: true });
+      if (this.pause) return;
+    }
+    if (this.phase === 'QUESTION_INTRO') this.enterAnswering();
+    else if (this.phase === 'ANSWERING') this.enterReveal();
+  }
+
+  private clearPause(): void {
+    this.clearGraceTimer();
+    this.clearResumeTimer();
+    this.pause = null;
+  }
+
+  private clearGraceTimer(): void {
+    if (this.graceTimer) clearTimeout(this.graceTimer);
+    this.graceTimer = null;
+  }
+
+  private clearResumeTimer(): void {
+    if (this.resumeTimer) clearTimeout(this.resumeTimer);
+    this.resumeTimer = null;
+  }
+
+  // ---------- Payloads ----------
 
   private sendAnswerCount(send: Send = this.transport.toHost.bind(this.transport)): void {
     let answered = 0;
     let total = 0;
     for (const p of this.players.values()) {
       if (p.answer) answered++;
-      if (p.answer || p.socketId) total++;
+      if (p.answer || this.isAwaited(p)) total++;
     }
     send('answer:count', { answered, total });
   }
@@ -718,10 +941,9 @@ export class Game {
   private sendLobbyPlayers(send: Send = this.transport.toHost.bind(this.transport)): void {
     send('lobby:players', {
       players: [...this.players.values()].map((p) => ({
-        id: p.id,
-        nickname: p.nickname,
-        avatar: p.avatar,
+        ...lobbyMember(p),
         ...(p.teamId !== null && { teamId: p.teamId }),
+        ...(p.socketId === null && { offline: true as const }),
       })),
     });
   }
@@ -781,10 +1003,14 @@ export class Game {
     this.transport.toAll('game:state', this.statePayload());
   }
 
+  /** Also ends any pause (`next()` / `end()` during a pause skip it). */
   private setPhase(phase: GamePhase, durationMs: number | null): void {
     this.clearTimer();
+    this.clearPause();
     this.phase = phase;
+    this.phaseStartedAt = Date.now();
     this.phaseEndsAt = durationMs === null ? null : Date.now() + durationMs;
+    if (durationMs !== null) this.timer = setTimeout(() => this.onPhaseTimeout(), durationMs);
   }
 
   private clearTimer(): void {
@@ -796,6 +1022,8 @@ export class Game {
     this.lastActivityAt = Date.now();
   }
 }
+
+const lobbyMember = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
 
 const sliderPrompt = ({ min, max, step, unit }: SliderSettings): SliderPrompt => ({
   min,

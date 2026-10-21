@@ -14,7 +14,14 @@ import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue, snapToStep } from '../lib/numbers';
 import { competitionRanks } from '../lib/ranks';
-import { errorMessage, formatRank, myTeam, playerScreen, type PlayerState } from './playerState';
+import {
+  errorMessage,
+  formatRank,
+  myTeam,
+  pauseWaitingText,
+  playerScreen,
+  type PlayerState,
+} from './playerState';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 
@@ -46,6 +53,7 @@ export function PlayPage() {
         {!s.connected && screen !== 'kicked' && screen !== 'lost' && (
           <div className="bg-black/70 py-2 text-center text-sm font-bold">Reconnexion…</div>
         )}
+        <AnimatePresence>{s.paused && s.connected && <PauseOverlay s={s} />}</AnimatePresence>
       </main>
     </MotionConfig>
   );
@@ -139,7 +147,9 @@ function TopBar({ s }: { s: PlayerState }) {
             {s.questionIndex + 1}/{s.totalQuestions}
           </span>
         )}
-        {s.phase === 'ANSWERING' && <Countdown endsAt={s.answeringEndsAt} />}
+        {s.phase === 'ANSWERING' && (
+          <Countdown endsAt={s.answeringEndsAt} frozenMs={s.paused ? s.frozenMs : null} />
+        )}
         <motion.span
           key={s.totalScore}
           initial={s.totalScore > 0 ? { scale: 1.5 } : false}
@@ -154,14 +164,16 @@ function TopBar({ s }: { s: PlayerState }) {
   );
 }
 
-function Countdown({ endsAt }: { endsAt: number | null }) {
+/** `frozenMs`: paused game, the timer doesn't move. */
+function Countdown({ endsAt, frozenMs }: { endsAt: number | null; frozenMs: number | null }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, []);
-  if (endsAt === null) return null;
-  const sec = Math.max(0, Math.ceil((endsAt - now) / 1000));
+  const left = frozenMs ?? (endsAt === null ? null : endsAt - now);
+  if (left === null) return null;
+  const sec = Math.max(0, Math.ceil(left / 1000));
   return (
     <motion.span
       key={sec}
@@ -173,6 +185,59 @@ function Countdown({ endsAt }: { endsAt: number | null }) {
     >
       {sec}
     </motion.span>
+  );
+}
+
+/**
+ * Over the current screen while the game is paused: who it waits for, then the 3-2-1 countdown
+ * once everyone is back.
+ */
+function PauseOverlay({ s }: { s: PlayerState }) {
+  const [now, setNow] = useState(Date.now);
+  const counting = s.resumeAt !== null;
+  useEffect(() => {
+    if (!counting) return;
+    const id = setInterval(() => setNow(Date.now()), 100);
+    return () => clearInterval(id);
+  }, [counting]);
+  const count = s.resumeAt !== null ? Math.max(1, Math.ceil((s.resumeAt - now) / 1000)) : null;
+  return (
+    <motion.div
+      role="status"
+      data-testid="pause-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-gray-900/90 p-6 text-center"
+    >
+      {count !== null ? (
+        <>
+          <p className="text-2xl font-black">Ça reprend !</p>
+          <motion.p
+            key={count}
+            initial={{ scale: 2, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-9xl font-black tabular-nums"
+          >
+            {count}
+          </motion.p>
+        </>
+      ) : (
+        <>
+          <p className="text-6xl" aria-hidden="true">
+            ⏸
+          </p>
+          <h2 className="text-3xl font-black">Partie en pause</h2>
+          <p className="text-xl font-semibold opacity-90">{pauseWaitingText(s.paused!)}</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {s.paused!.waitingFor.map((p) => (
+              <Avatar key={p.id} id={p.avatar} size="lg" className="opacity-70 grayscale" />
+            ))}
+          </div>
+          <p className="text-sm opacity-70">Le chrono est arrêté, personne ne perd de points.</p>
+        </>
+      )}
+    </motion.div>
   );
 }
 

@@ -3,6 +3,7 @@ import type {
   AvatarId,
   ErrorCode,
   GameMode,
+  GamePause,
   GamePhase,
   GameStatePayload,
   LobbyTeamsPayload,
@@ -23,6 +24,12 @@ export interface PlayerState {
   prompt: QuestionPromptPayload | null;
   /** Local-clock deadline of the ANSWERING phase (derived from `remainingMs`, no clock skew). */
   answeringEndsAt: number | null;
+  /** The game is paused (someone lost the connection): timer frozen. */
+  paused: GamePause | null;
+  /** While paused: the frozen time left in the phase. */
+  frozenMs: number | null;
+  /** Local-clock end of the 3-2-1 countdown before resuming (`game:resuming`). */
+  resumeAt: number | null;
   /** What the player answered (choice, text or slider value), for `questionIndex` only. */
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
@@ -52,6 +59,7 @@ export type PlayerAction =
     }
   | { type: 'teams'; payload: LobbyTeamsPayload }
   | { type: 'state'; payload: GameStatePayload; now: number }
+  | { type: 'resuming'; inMs: number; now: number }
   | { type: 'prompt'; payload: QuestionPromptPayload; now: number }
   | { type: 'answer'; questionIndex: number; answer: AnswerInput }
   | { type: 'answerRejected'; questionIndex: number }
@@ -68,6 +76,9 @@ export const initialPlayerState: PlayerState = {
   totalQuestions: 0,
   prompt: null,
   answeringEndsAt: null,
+  paused: null,
+  frozenMs: null,
+  resumeAt: null,
   myAnswer: null,
   result: null,
   nickname: '',
@@ -100,13 +111,19 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
 
     case 'state': {
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
+      const paused = action.payload.paused ?? null;
       const sameQuestion = questionIndex === state.questionIndex;
       let answeringEndsAt = sameQuestion ? state.answeringEndsAt : null;
-      if (phase === 'ANSWERING' && remainingMs !== undefined) {
+      if (phase === 'ANSWERING' && remainingMs !== undefined && !paused) {
         answeringEndsAt = action.now + remainingMs;
       }
+      // Someone (still / again) missing: no countdown. Everyone back: keep the countdown.
+      const waiting = paused && (paused.waitingFor.length > 0 || paused.hostMissing);
       return {
         ...state,
+        paused,
+        frozenMs: paused ? (remainingMs ?? null) : null,
+        resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
         mode,
         questionIndex,
@@ -119,6 +136,9 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       };
     }
 
+    case 'resuming':
+      return state.paused ? { ...state, resumeAt: action.now + action.inMs } : state;
+
     case 'prompt': {
       const p = action.payload;
       const isCurrent = p.index === state.questionIndex;
@@ -128,7 +148,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         questionIndex: p.index,
         // `game:state` remainingMs is more accurate; fall back to the full time limit.
         answeringEndsAt:
-          isCurrent && state.answeringEndsAt !== null
+          isCurrent && (state.answeringEndsAt !== null || state.paused)
             ? state.answeringEndsAt
             : action.now + p.timeLimitSec * 1000,
         myAnswer: state.myAnswer?.questionIndex === p.index ? state.myAnswer : null,
@@ -217,7 +237,26 @@ const errorMessages: Partial<Record<ErrorCode, string>> = {
   NICKNAME_TAKEN: 'Ce pseudo est déjà pris, choisis-en un autre.',
   INVALID_PAYLOAD: 'Code PIN ou pseudo invalide.',
   SESSION_NOT_FOUND: 'Ta session a expiré.',
+  GAME_PAUSED: 'Partie en pause : attends la reprise.',
 };
+
+/** Join screen, game already started: only a disconnected player's place can be taken. */
+export function reclaimErrorMessage(code: ErrorCode | 'TIMEOUT'): string {
+  if (code === 'GAME_ALREADY_STARTED')
+    return 'Aucun joueur déconnecté ne porte ce pseudo dans cette partie. Vérifie l’orthographe.';
+  if (code === 'NICKNAME_TAKEN') return 'Ce joueur est encore connecté à la partie.';
+  return errorMessage(code);
+}
+
+/** Pause screen text: who the game is waiting for. */
+export function pauseWaitingText(paused: GamePause): string {
+  const names = paused.waitingFor.map((p) => p.nickname);
+  if (paused.hostMissing) names.push("l'écran de l'animateur");
+  if (names.length === 0) return 'Tout le monde est là !';
+  const list =
+    names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} et ${names.at(-1)}`;
+  return `On attend ${list}…`;
+}
 
 /** French UI message for a server error code. */
 export function errorMessage(code: ErrorCode | 'TIMEOUT'): string {

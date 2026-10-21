@@ -78,8 +78,10 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const onDisconnect = () => setConnected(false);
     const onState: ServerToClientEvents['game:state'] = (p) =>
       dispatch({ type: 'state', payload: p, now: Date.now() });
+    const onResuming: ServerToClientEvents['game:resuming'] = ({ inMs }) =>
+      dispatch({ type: 'resuming', inMs, now: Date.now() });
     const onPlayers: ServerToClientEvents['lobby:players'] = (p) =>
-      dispatch({ type: 'players', payload: p });
+      dispatch({ type: 'players', payload: p, now: Date.now() });
     const onTeams: ServerToClientEvents['lobby:teams'] = (p) =>
       dispatch({ type: 'teams', payload: p });
     const onQuestion: ServerToClientEvents['question:show'] = (p) =>
@@ -94,6 +96,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('game:state', onState);
+    socket.on('game:resuming', onResuming);
     socket.on('lobby:players', onPlayers);
     socket.on('lobby:teams', onTeams);
     socket.on('question:show', onQuestion);
@@ -106,6 +109,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('game:state', onState);
+      socket.off('game:resuming', onResuming);
       socket.off('lobby:players', onPlayers);
       socket.off('lobby:teams', onTeams);
       socket.off('question:show', onQuestion);
@@ -166,6 +170,11 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const a = auth();
     if (a) getSocket().emit('host:shuffle', a, handleAck);
   };
+  /** « Continuer sans… » during a pause. */
+  const resume = () => {
+    const a = auth();
+    if (a) getSocket().emit('host:resume', a, handleAck);
+  };
 
   return {
     state,
@@ -178,6 +187,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     kick,
     movePlayer,
     shuffle,
+    resume,
     clearError: () => setError(null),
   };
 }

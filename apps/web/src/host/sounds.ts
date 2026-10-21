@@ -150,10 +150,14 @@ export function shouldTick(phase: GamePhase | null, remainingSec: number | null)
 export function useHostSounds({
   phase,
   remainingSec,
+  resumeCount = null,
   playerCount,
 }: {
   phase: GamePhase | null;
+  /** null while paused: the frozen clock doesn't tick. */
   remainingSec: number | null;
+  /** 3-2-1 countdown before a paused game resumes. */
+  resumeCount?: number | null;
   playerCount: number;
 }) {
   const prevPhase = useRef<GamePhase | null>(null);
@@ -176,6 +180,10 @@ export function useHostSounds({
   useEffect(() => {
     if (shouldTick(phase, remainingSec)) playSound('tick');
   }, [phase, remainingSec]);
+
+  useEffect(() => {
+    if (resumeCount != null && resumeCount >= 1) playSound('tick');
+  }, [resumeCount]);
 
   useEffect(() => stopAllSounds, []);
 }

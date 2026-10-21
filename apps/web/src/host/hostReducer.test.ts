@@ -48,6 +48,7 @@ describe('hostReducer', () => {
       {
         type: 'players',
         payload: { players: [{ id: 'a', nickname: 'A', avatar: 'batman' as const }] },
+        now: 0,
       },
       {
         type: 'state',
@@ -107,6 +108,7 @@ describe('hostReducer', () => {
       {
         type: 'players',
         payload: { players: [{ id: 'a', nickname: 'Alice', avatar: 'batman' as const }] },
+        now: 0,
       },
       { type: 'question', payload: question(1) },
       { type: 'count', answered: 1, total: 1 },

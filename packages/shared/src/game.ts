@@ -27,6 +27,15 @@ export const QUESTION_INTRO_MS = 3000;
 /** Games are small (~6 players, 15 at most): the leaderboard shows everyone up to this. */
 export const LEADERBOARD_SIZE = 15;
 export const PODIUM_SIZE = 3;
+/**
+ * A player who still has to answer (or the host screen) offline this long during a timed phase
+ * pauses the game (PLAN.md §2). Shorter drops (Wi-Fi blip) don't freeze the game.
+ */
+export const PAUSE_GRACE_MS = 2000;
+/** 3-2-1 countdown before a paused game resumes (`game:resuming`). */
+export const RESUME_COUNTDOWN_MS = 3000;
+/** After this long in pause, the host screen highlights « Continuer sans ». */
+export const PAUSE_HINT_MS = 60_000;
 
 export const Pin = z.string().regex(new RegExp(`^\\d{${PIN_LENGTH}}$`), 'Invalid PIN');
 export const Nickname = z.string().trim().min(1).max(NICKNAME_MAX_LENGTH);
