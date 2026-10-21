@@ -724,6 +724,73 @@ payloads and saved results; e2e checks the avatar appears in the host lobby.
   phones. Old dev rows / remembered emoji ids from before the switch read as "no avatar" /
   a random preselection.
 
+### T21 — Auto-pause when a player loses the connection + easy reconnection (run alone)
+- **Status:** todo
+- **Depends on:** T14, T15, T16, T20 (all done)
+- **Ports:** server 3021 / web 5201, test DB `lbq_test_t21`, e2e DB `lbq_e2e_t21`.
+
+**User requirement (2026-10-21):** when a player loses the connection during a game, the game
+**pauses**, and the player can **reconnect** and continue.
+
+Already there: a phone that drops reconnects by itself (`player:rejoin`, T3/T8) and keeps its
+score. Missing: the pause, and a way back when the session is lost (tab closed, phone restarted,
+other phone).
+
+**Design (decided — note any deviation below):**
+- **When it pauses** (server-authoritative, `Game.ts`): the game pauses if, during
+  `QUESTION_INTRO` or `ANSWERING`, a player who **still has to answer** is disconnected for more
+  than **2 s** (grace period, so a 1-second Wi-Fi blip doesn't freeze the game). A player who
+  already answered the current question doesn't pause it. If someone is disconnected when the host
+  presses "Suivant" towards the next question, the game enters the next question already paused
+  (in `QUESTION_INTRO`). REVEAL / LEADERBOARD / PODIUM don't pause (the host drives them), but the
+  host screen shows who is disconnected. The **host screen** losing its connection during a timed
+  phase also pauses the game (nobody can see the question).
+- **Fair timing:** the timer freezes during the pause. When the pause starts, the remaining time
+  is restored to its value at the moment of the disconnection (the 2 s grace is given back), and
+  `responseMs` excludes paused time, so nobody loses speed points because of the pause. Answers
+  are refused while paused (`GAME_PAUSED`).
+- **Resume:** automatic as soon as every awaited player (and the host screen) is back, after a
+  **3-2-1** countdown on the host screen and the phones. The host can also press **"Continuer
+  sans <pseudo>"** (the missing player is then simply absent for this question — existing rule:
+  absent players don't block the end of ANSWERING and, in team mode, don't count as "present")
+  or **"Exclure"**. No automatic give-up: the host decides (after 60 s the "Continuer sans"
+  button is highlighted).
+- **Host screen:** an overlay "⏸ Partie en pause — en attente de <avatar> <pseudo>…" with the
+  waiting time, one line per missing player, the buttons above, and a "<pseudo> est de retour !"
+  flash when someone reconnects. Host sounds pause too.
+- **Other phones:** "Partie en pause — on attend <pseudo>…" (timer frozen). The reconnected phone
+  goes straight back to the current screen (already handled by the resync).
+- **Reconnecting after the session is lost:**
+  1. The phone session (pin + sessionToken) moves from `sessionStorage` to **`localStorage`**
+     (keyed by PIN, removed when the game ends), so closing the tab or the browser and reopening
+     `/join` or `/play` resumes the game automatically.
+  2. **From another phone or a fresh browser:** on `/join`, entering the PIN and the **same
+     nickname as a currently disconnected player** of a started game takes that player's place
+     (same score, team, avatar, streak) after a confirmation screen "Reprendre la partie en tant
+     que <pseudo> ?". Only disconnected players can be taken over (a connected player's nickname
+     still gets `NICKNAME_TAKEN`); other new players still get `GAME_ALREADY_STARTED`. Fine for a
+     game between friends; the host sees "<pseudo> est de retour !" like any reconnection.
+- **Team mode / question types:** unchanged rules; the pause just delays the question.
+
+**Contract (packages/shared + PLAN.md §2/§4, decided):**
+- `GameStatePayload` gains optional `paused?: { waitingFor: { id, nickname, avatar }[],
+  hostMissing: boolean, sinceMs: number }`; while paused, `remainingMs` is the frozen value.
+- New host event `host:resume` `{ pin, hostToken }` → `Ack` ("Continuer sans…": resumes now,
+  missing players become absent for the current question).
+- `player:join` in a started game with the nickname of a disconnected player → ack
+  `{ playerId, sessionToken, avatar, reclaimed: true, totalScore }`, followed by the normal
+  resync; new error code `GAME_PAUSED` for answers sent during a pause.
+- New server → client event `game:resuming` `{ inMs: 3000 }` (to all) for the 3-2-1 countdown.
+
+**Tests:** pause after the 2 s grace (not before), no pause if the disconnected player already
+answered, host disconnect pauses, timer frozen and grace time given back, `responseMs` excludes the
+pause (points identical to an unpaused game), answers refused while paused, auto-resume with
+countdown, `host:resume` and kick during a pause, entering the next question paused, nickname
+takeover only for disconnected players, localStorage session survives a "tab close" (web unit
+test). e2e: a phone goes offline mid-question (Playwright `context.setOffline`) → host shows the
+pause → phone back online → countdown → game continues and finishes; second e2e: player's page
+is closed and a new page takes over with the same nickname.
+
 - T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
 
