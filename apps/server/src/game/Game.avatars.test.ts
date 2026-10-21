@@ -43,18 +43,18 @@ describe('Game avatars', () => {
   });
 
   it('keeps the chosen avatar, picks a free random one when missing', () => {
-    const alice = game.join('Alice', 's1', 'fox');
-    expect(alice.avatar).toBe('fox');
+    const alice = game.join('Alice', 's1', 'batman');
+    expect(alice.avatar).toBe('batman');
     // Two players may share an avatar.
-    expect(game.join('Bob', 's2', 'fox').avatar).toBe('fox');
-    expect(game.takenAvatars()).toEqual(['fox']);
+    expect(game.join('Bob', 's2', 'batman').avatar).toBe('batman');
+    expect(game.takenAvatars()).toEqual(['batman']);
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 16; i++) {
       const p = game.join(`P${i}`, `sp${i}`);
       expect(isAvatarId(p.avatar)).toBe(true);
     }
-    // Random picks avoid the avatars already taken while some are free (24 avatars, 22 players).
-    expect(new Set(game.takenAvatars()).size).toBe(21);
+    // Random picks avoid the avatars already taken while some are free (20 avatars, 18 players).
+    expect(new Set(game.takenAvatars()).size).toBe(17);
   });
 
   it('falls back to any avatar once all are taken', () => {
@@ -63,11 +63,11 @@ describe('Game avatars', () => {
   });
 
   it('sends the avatar in the lobby, the leaderboard, the podium and the standings', () => {
-    const alice = game.join('Alice', 's1', 'unicorn');
-    game.join('Bob', 's2', 'trex');
+    const alice = game.join('Alice', 's1', 'joker');
+    game.join('Bob', 's2', 'bane');
     expect(rec.last<LobbyPlayersPayload>('lobby:players').players).toEqual([
-      { id: alice.id, nickname: 'Alice', avatar: 'unicorn' },
-      { id: expect.any(String), nickname: 'Bob', avatar: 'trex' },
+      { id: alice.id, nickname: 'Alice', avatar: 'joker' },
+      { id: expect.any(String), nickname: 'Bob', avatar: 'bane' },
     ]);
 
     game.start();
@@ -77,20 +77,20 @@ describe('Game avatars', () => {
     game.next(); // → LEADERBOARD
     const board = rec.last<StandingsPayload>('leaderboard');
     expect(board.top.map((p) => [p.nickname, p.avatar])).toEqual([
-      ['Alice', 'unicorn'],
-      ['Bob', 'trex'],
+      ['Alice', 'joker'],
+      ['Bob', 'bane'],
     ]);
 
     game.end();
     expect(game.standings().map((s) => [s.nickname, s.avatar])).toEqual([
-      ['Alice', 'unicorn'],
-      ['Bob', 'trex'],
+      ['Alice', 'joker'],
+      ['Bob', 'bane'],
     ]);
   });
 
   it('podium: avatars of the top players', () => {
-    const alice = game.join('Alice', 's1', 'owl');
-    game.join('Bob', 's2', 'dog'); // never answers
+    const alice = game.join('Alice', 's1', 'penguin');
+    game.join('Bob', 's2', 'alfred'); // never answers
     game.start();
     DEMO_QUIZ.questions.forEach((q, i) => {
       game.next(); // → ANSWERING
@@ -101,8 +101,8 @@ describe('Game avatars', () => {
     });
     expect(game.phase).toBe('PODIUM');
     expect(rec.last<StandingsPayload>('podium').top).toEqual([
-      { nickname: 'Alice', avatar: 'owl', score: alice.totalScore },
-      { nickname: 'Bob', avatar: 'dog', score: 0 },
+      { nickname: 'Alice', avatar: 'penguin', score: alice.totalScore },
+      { nickname: 'Bob', avatar: 'alfred', score: 0 },
     ]);
   });
 
@@ -111,24 +111,24 @@ describe('Game avatars', () => {
     const quiz = { ...DEMO_QUIZ, questions: [DEMO_QUIZ.questions[sliderIndex]!] };
     game.dispose();
     game = new Game('123456', quiz, rec.transport);
-    const alice = game.join('Alice', 's1', 'bee');
+    const alice = game.join('Alice', 's1', 'freeze');
     game.start();
     game.next();
     game.answer(alice.id, 0, rightAnswer(quiz.questions[0]!));
     expect(rec.last<QuestionRevealPayload>('question:reveal').closest).toMatchObject({
       nickname: 'Alice',
-      avatar: 'bee',
+      avatar: 'freeze',
     });
   });
 
   it('team mode: members carry their avatar', () => {
     game.dispose();
     game = new Game('123456', DEMO_QUIZ, rec.transport, {}, { mode: 'teams' });
-    const alice = game.join('Alice', 's1', 'cat');
+    const alice = game.join('Alice', 's1', 'catwoman');
     game.setTeam(alice.id, 1);
     const teams = rec.last<LobbyTeamsPayload>('lobby:teams').teams;
     expect(teams.find((t) => t.id === 1)!.members).toEqual([
-      { id: alice.id, nickname: 'Alice', avatar: 'cat' },
+      { id: alice.id, nickname: 'Alice', avatar: 'catwoman' },
     ]);
   });
 });

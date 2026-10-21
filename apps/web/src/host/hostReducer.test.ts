@@ -47,7 +47,7 @@ describe('hostReducer', () => {
     const s = run([
       {
         type: 'players',
-        payload: { players: [{ id: 'a', nickname: 'A', avatar: 'fox' as const }] },
+        payload: { players: [{ id: 'a', nickname: 'A', avatar: 'batman' as const }] },
       },
       {
         type: 'state',
@@ -106,7 +106,7 @@ describe('hostReducer', () => {
       },
       {
         type: 'players',
-        payload: { players: [{ id: 'a', nickname: 'Alice', avatar: 'fox' as const }] },
+        payload: { players: [{ id: 'a', nickname: 'Alice', avatar: 'batman' as const }] },
       },
       { type: 'question', payload: question(1) },
       { type: 'count', answered: 1, total: 1 },
@@ -134,10 +134,10 @@ describe('hostReducer', () => {
       payload: { phase: 'LEADERBOARD', mode: 'solo', questionIndex, totalQuestions: 3 },
       now: 0,
     });
-    const first = [{ nickname: 'A', avatar: 'fox' as const, score: 900 }];
+    const first = [{ nickname: 'A', avatar: 'batman' as const, score: 900 }];
     const second = [
-      { nickname: 'B', avatar: 'fox' as const, score: 1800 },
-      { nickname: 'A', avatar: 'fox' as const, score: 900 },
+      { nickname: 'B', avatar: 'batman' as const, score: 1800 },
+      { nickname: 'A', avatar: 'batman' as const, score: 900 },
     ];
     const s1 = run([at(0), { type: 'leaderboard', top: first }]);
     expect(s1.previousLeaderboard).toEqual([]);

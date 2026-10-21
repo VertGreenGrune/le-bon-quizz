@@ -109,7 +109,7 @@ export function JoinPage() {
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-sm font-bold text-gray-600">Ton avatar</legend>
-          <div className="grid grid-cols-6 justify-items-center gap-2">
+          <div className="grid grid-cols-5 justify-items-center gap-2">
             {AVATARS.map((a) => {
               const selected = a.id === avatar;
               return (
@@ -118,9 +118,10 @@ export function JoinPage() {
                   type="button"
                   onClick={() => setAvatar(a.id)}
                   aria-pressed={selected}
-                  aria-label={`Avatar ${a.emoji}${taken.includes(a.id) ? ' (déjà pris)' : ''}`}
+                  aria-label={`${a.name}${taken.includes(a.id) ? ' (déjà pris)' : ''}`}
+                  title={a.name}
                   data-avatar-choice={a.id}
-                  className={`touch-manipulation rounded-full transition active:scale-90 ${
+                  className={`touch-manipulation rounded-xl transition active:scale-90 ${
                     selected
                       ? 'scale-110 ring-4 ring-gray-900 ring-offset-2'
                       : taken.includes(a.id)
@@ -128,7 +129,7 @@ export function JoinPage() {
                         : ''
                   }`}
                 >
-                  <Avatar id={a.id} size="md" />
+                  <Avatar id={a.id} size="md" className="!size-14" />
                 </button>
               );
             })}

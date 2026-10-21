@@ -96,7 +96,7 @@ Every client → server event takes an ack callback receiving
 ### Player → server
 | Event | Payload | Notes |
 |---|---|---|
-| `player:join` | `{ pin, nickname, avatar? }` | `avatar` = an `AvatarId` (`AVATARS` in `packages/shared/src/avatars.ts`, 24 animal emojis on a colored circle; unknown id → `INVALID_PAYLOAD`, missing → random, preferably not taken); several players may share one. Ack `{ playerId, sessionToken, avatar }` |
+| `player:join` | `{ pin, nickname, avatar? }` | `avatar` = an `AvatarId` (`AVATARS` in `packages/shared/src/avatars.ts`, 20 Batman: The Animated Series portraits, images in `apps/web/public/avatars/<id>.jpg`; unknown id → `INVALID_PAYLOAD`, missing → random, preferably not taken); several players may share one. Ack `{ playerId, sessionToken, avatar }` |
 | `player:avatars` | `{ pin }` | join screen, before joining: ack `{ taken: AvatarId[] }` (avatars already in that game, shown dimmed as a hint); `GAME_NOT_FOUND` |
 | `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, avatar, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |

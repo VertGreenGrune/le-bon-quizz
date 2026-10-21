@@ -7,7 +7,7 @@ const run = (actions: HostAction[]) => actions.reduce(hostReducer, initialHostSt
 const team = (id: 0 | 1 | 2 | 3, ...names: string[]): LobbyTeamsPayload['teams'][number] => ({
   id,
   name: `T${id}`,
-  members: names.map((n) => ({ id: n, nickname: n, avatar: 'fox' as const })),
+  members: names.map((n) => ({ id: n, nickname: n, avatar: 'batman' as const })),
 });
 const ranked: RankedTeam[] = [{ id: 1, name: 'Équipe Bleue', score: 600, playerCount: 5 }];
 
@@ -27,12 +27,12 @@ describe('hostReducer (team mode)', () => {
       },
       {
         type: 'leaderboard',
-        top: [{ nickname: 'a', avatar: 'fox' as const, score: 10 }],
+        top: [{ nickname: 'a', avatar: 'batman' as const, score: 10 }],
         teams: ranked,
       },
       {
         type: 'podium',
-        top: [{ nickname: 'a', avatar: 'fox' as const, score: 10 }],
+        top: [{ nickname: 'a', avatar: 'batman' as const, score: 10 }],
         teams: ranked,
       },
     ]);
@@ -58,7 +58,7 @@ describe('teamLobbyStatus', () => {
     teamIds.map((teamId, i) => ({
       id: `p${i}`,
       nickname: `p${i}`,
-      avatar: 'fox' as const,
+      avatar: 'batman' as const,
       teamId,
     }));
 

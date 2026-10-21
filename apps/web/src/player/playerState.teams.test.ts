@@ -15,7 +15,7 @@ const teams = {
     {
       id: 0 as const,
       name: 'Équipe Rouge',
-      members: [{ id: 'me', nickname: 'Moi', avatar: 'fox' as const }],
+      members: [{ id: 'me', nickname: 'Moi', avatar: 'batman' as const }],
     },
     { id: 1 as const, name: 'Équipe Bleue', members: [] },
   ],

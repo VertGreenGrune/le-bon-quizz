@@ -647,6 +647,10 @@ their nickname.
   emojis on a colored circle (🦊 🐼 🐸 🦁 🐙 🦄 🐧 🐨 🐯 🐵 🐰 🐻 🐷 🐮 🐔 🦉 🐢 🐬 🦖 🐝 🦋 🐱 🐶 🐳),
   defined once in `packages/shared` (`AVATARS`: id, emoji, background color) and rendered by one
   `<Avatar>` component (size variants). Emoji rendering varies by phone; acceptable.
+- **Changed (2026-10-21, user decision):** the emojis are replaced by **20 Batman: The Animated
+  Series portraits** cut from a picture supplied by the user (`apps/web/public/avatars/<id>.jpg`,
+  192 px JPEG; `AVATARS` = id + French name). DC / Warner Bros characters: fine for private
+  games, to reconsider before a public deployment.
 - Join flow (phone): PIN → nickname + avatar grid on the same screen; a random avatar is
   preselected; tapping changes it. Two players may pick the same avatar (no uniqueness rule —
   with ~6 players it rarely matters; avatars already taken in this game are shown dimmed as a
@@ -662,7 +666,7 @@ their nickname.
 **Tests:** invalid avatar rejected / missing → random; avatar in lobby, leaderboard, podium
 payloads and saved results; e2e checks the avatar appears in the host lobby.
 
-- **Summary:** shared `avatars.ts`: `AVATARS` (24 × id / emoji / color), zod `AvatarId`,
+- **Summary:** shared `avatars.ts`: `AVATARS` (20 × id / name, images in `public/avatars/`), zod `AvatarId`,
   `findAvatar`, `isAvatarId`, `randomAvatarId(avoid)`. Contract as decided (`player:join.avatar?`,
   avatar in join/rejoin acks, `LobbyMember` for `lobby:players` / `lobby:teams`,
   `RankedPlayer.avatar`) + `closest.avatar?` in the slider reveal and a new
@@ -670,8 +674,8 @@ payloads and saved results; e2e checks the avatar appears in the host lobby.
   Server: `Player.avatar` (missing → random among the free ones), `Game.takenAvatars()`, avatar in
   every lobby / standings / closest payload and in `standings()`; migration
   `20261021190534_avatars` (`PlayerResult.avatar` nullable), report rows return `avatar` (null
-  for old / unknown values). Web: `components/Avatar.tsx` (xs–xl, neutral "?" for unknown);
-  join screen = nickname + big preview + 6×4 grid, preselects the remembered avatar
+  for old / unknown values). Web: `components/Avatar.tsx` (portrait image, xs–xl, neutral "?" for unknown);
+  join screen = nickname + big preview + 5×4 grid, preselects the remembered avatar
   (`player/avatarChoice.ts`, localStorage `lbq:avatar`, saved on a successful join) or a random
   one, taken ones dimmed (polled every 4 s); phone header, lobby (big avatar pop), team picker
   members, podium; host lobby (avatar pops in), team columns, leaderboard (size follows the row
@@ -683,7 +687,8 @@ payloads and saved results; e2e checks the avatar appears in the host lobby.
   Checked with screenshots (Pixel 7 join + team lobby, host 1600×900).
 - **Notes:** CSV export unchanged (no avatar column). Game list (`GameSummary.winner`) has no
   avatar. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real
-  phones (emoji rendering varies, as accepted in the spec).
+  phones. Old dev rows / remembered emoji ids from before the switch read as "no avatar" /
+  a random preselection.
 
 - T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.

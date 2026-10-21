@@ -19,9 +19,9 @@ const vote = (q: number, plan: Plan): Plan =>
   DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
 
 const PLAYERS: { nickname: string; avatar: AvatarId; plan: (q: number) => Plan }[] = [
-  { nickname: 'Alice', avatar: 'fox', plan: (q) => vote(q, 'right') },
-  { nickname: 'Bob', avatar: 'panda', plan: (q) => vote(q, q < 2 ? 'right' : 'wrong') },
-  { nickname: 'Chloé', avatar: 'frog', plan: (q) => vote(q, 'wrong') },
+  { nickname: 'Alice', avatar: 'batman', plan: (q) => vote(q, 'right') },
+  { nickname: 'Bob', avatar: 'robin', plan: (q) => vote(q, q < 2 ? 'right' : 'wrong') },
+  { nickname: 'Chloé', avatar: 'batgirl', plan: (q) => vote(q, 'wrong') },
 ];
 const RELOAD_AT = 2; // 20 s question: leaves time for the reload
 

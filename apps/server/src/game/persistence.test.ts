@@ -50,7 +50,7 @@ function aliceOnlyDetails(q: Question): RevealDetails {
     return {
       slider: q.slider,
       guesses: [q.slider.correct],
-      closest: { nickname: 'Alice', value: q.slider.correct, avatar: 'fox' },
+      closest: { nickname: 'Alice', value: q.slider.correct, avatar: 'batman' },
     };
   return {};
 }
@@ -63,8 +63,8 @@ async function expectCode(p: Promise<unknown>, code: string) {
 /** A finished game: Alice answers everything right, Bob never answers. */
 function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
   const game = new Game('123456', quiz, noop);
-  const alice = game.join('Alice', 's1', 'fox');
-  game.join('Bob', 's2', 'panda');
+  const alice = game.join('Alice', 's1', 'batman');
+  game.join('Bob', 's2', 'robin');
   game.start();
   quiz.questions.forEach((q, i) => {
     game.next(); // QUESTION_INTRO → ANSWERING
@@ -91,8 +91,8 @@ describe('gameRecord', () => {
     expect(r).toMatchObject({ hostId: 'host', quizId: 'demo', quizTitle: DEMO_QUIZ.title });
     expect(r.startedAt.getTime()).toBeLessThanOrEqual(r.endedAt.getTime());
     expect(r.results.map((x) => [x.nickname, x.avatar, x.rank, x.correctCount])).toEqual([
-      ['Alice', 'fox', 1, SCORED],
-      ['Bob', 'panda', 2, 0],
+      ['Alice', 'batman', 1, SCORED],
+      ['Bob', 'robin', 2, 0],
     ]);
     // One entry per question: only Alice (of 2 players) answered, always right.
     expect(r.questions).toHaveLength(DEMO_QUIZ.questions.length);
@@ -205,8 +205,13 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
 
     const res = await app.inject({ url: `/api/games/${list[0]!.id}`, headers });
     expect(res.json<GameReport>().results).toEqual([
-      expect.objectContaining({ rank: 1, nickname: 'Alice', avatar: 'fox', correctCount: SCORED }),
-      { rank: 2, nickname: 'Bob', avatar: 'panda', score: 0, correctCount: 0, teamId: null },
+      expect.objectContaining({
+        rank: 1,
+        nickname: 'Alice',
+        avatar: 'batman',
+        correctCount: SCORED,
+      }),
+      { rank: 2, nickname: 'Bob', avatar: 'robin', score: 0, correctCount: 0, teamId: null },
     ]);
     expect(list[0]!.winner).toBe('Alice');
     // Games saved before avatars (null) or with an unknown id: no avatar in the report.

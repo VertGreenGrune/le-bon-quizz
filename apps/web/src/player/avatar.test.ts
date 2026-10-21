@@ -18,9 +18,9 @@ describe('avatar choice (localStorage)', () => {
   it('remembers the chosen avatar for the next games', () => {
     vi.stubGlobal('localStorage', memoryStorage());
     expect(loadAvatarChoice()).toBeNull();
-    saveAvatarChoice('octopus');
-    expect(loadAvatarChoice()).toBe('octopus');
-    expect(initialAvatar()).toBe('octopus');
+    saveAvatarChoice('riddler');
+    expect(loadAvatarChoice()).toBe('riddler');
+    expect(initialAvatar()).toBe('riddler');
   });
 
   it('ignores unknown ids and falls back to a random avatar', () => {
@@ -40,7 +40,7 @@ describe('avatar choice (localStorage)', () => {
         throw new Error('denied');
       },
     });
-    expect(() => saveAvatarChoice('fox')).not.toThrow();
+    expect(() => saveAvatarChoice('batman')).not.toThrow();
     expect(isAvatarId(initialAvatar())).toBe(true);
   });
 });
@@ -51,16 +51,16 @@ describe('player state avatar', () => {
       type: 'session',
       playerId: 'p',
       nickname: 'Moi',
-      avatar: 'lion',
+      avatar: 'gordon',
       totalScore: 0,
     });
-    expect(joined.avatar).toBe('lion');
+    expect(joined.avatar).toBe('gordon');
     const resumed = playerReducer(joined, {
       type: 'session',
       playerId: 'p',
       nickname: 'Moi',
       totalScore: 10,
     });
-    expect(resumed.avatar).toBe('lion');
+    expect(resumed.avatar).toBe('gordon');
   });
 });

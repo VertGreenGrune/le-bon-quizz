@@ -1,34 +1,31 @@
 import { z } from 'zod';
 
 /**
- * Player avatars: a fixed set of animal emojis on a colored circle, bundled in the app (no
- * upload). Picked on the phone join screen, shown next to the nickname everywhere.
+ * Player avatars: a fixed set of Batman: The Animated Series portraits bundled in the web app
+ * (`apps/web/public/avatars/<id>.jpg`, no upload). Picked on the phone join screen, shown next to
+ * the nickname everywhere.
  */
 export const AVATARS = [
-  { id: 'fox', emoji: '🦊', color: '#fb923c' },
-  { id: 'panda', emoji: '🐼', color: '#a3e635' },
-  { id: 'frog', emoji: '🐸', color: '#38bdf8' },
-  { id: 'lion', emoji: '🦁', color: '#facc15' },
-  { id: 'octopus', emoji: '🐙', color: '#2dd4bf' },
-  { id: 'unicorn', emoji: '🦄', color: '#c084fc' },
-  { id: 'penguin', emoji: '🐧', color: '#60a5fa' },
-  { id: 'koala', emoji: '🐨', color: '#f9a8d4' },
-  { id: 'tiger', emoji: '🐯', color: '#4ade80' },
-  { id: 'monkey', emoji: '🐵', color: '#fcd34d' },
-  { id: 'rabbit', emoji: '🐰', color: '#f472b6' },
-  { id: 'bear', emoji: '🐻', color: '#7dd3fc' },
-  { id: 'pig', emoji: '🐷', color: '#86efac' },
-  { id: 'cow', emoji: '🐮', color: '#fda4af' },
-  { id: 'chicken', emoji: '🐔', color: '#93c5fd' },
-  { id: 'owl', emoji: '🦉', color: '#fdba74' },
-  { id: 'turtle', emoji: '🐢', color: '#fde047' },
-  { id: 'dolphin', emoji: '🐬', color: '#fca5a5' },
-  { id: 'trex', emoji: '🦖', color: '#a78bfa' },
-  { id: 'bee', emoji: '🐝', color: '#22d3ee' },
-  { id: 'butterfly', emoji: '🦋', color: '#fde68a' },
-  { id: 'cat', emoji: '🐱', color: '#818cf8' },
-  { id: 'dog', emoji: '🐶', color: '#34d399' },
-  { id: 'whale', emoji: '🐳', color: '#f87171' },
+  { id: 'batman', name: 'Batman' },
+  { id: 'robin', name: 'Robin' },
+  { id: 'batgirl', name: 'Batgirl' },
+  { id: 'alfred', name: 'Alfred' },
+  { id: 'gordon', name: 'Commissaire Gordon' },
+  { id: 'bullock', name: 'Harvey Bullock' },
+  { id: 'montoya', name: 'Renee Montoya' },
+  { id: 'hill', name: 'Maire Hill' },
+  { id: 'joker', name: 'Le Joker' },
+  { id: 'harley', name: 'Harley Quinn' },
+  { id: 'twoface', name: 'Double-Face' },
+  { id: 'ivy', name: 'Poison Ivy' },
+  { id: 'catwoman', name: 'Catwoman' },
+  { id: 'riddler', name: "L'Homme-Mystère" },
+  { id: 'scarecrow', name: "L'Épouvantail" },
+  { id: 'penguin', name: 'Le Pingouin' },
+  { id: 'freeze', name: 'Mr. Freeze' },
+  { id: 'bane', name: 'Bane' },
+  { id: 'manbat', name: 'Man-Bat' },
+  { id: 'talia', name: 'Talia al Ghul' },
 ] as const;
 
 export type Avatar = (typeof AVATARS)[number];

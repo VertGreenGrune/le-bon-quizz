@@ -36,10 +36,10 @@ describe('streakBonus', () => {
 
 describe('ranking', () => {
   const players = [
-    { id: 'a', nickname: 'Alice', avatar: 'fox' as const, totalScore: 800 },
-    { id: 'b', nickname: 'Bob', avatar: 'panda' as const, totalScore: 1500 },
-    { id: 'c', nickname: 'Chloé', avatar: 'fox' as const, totalScore: 800 },
-    { id: 'd', nickname: 'Dan', avatar: 'frog' as const, totalScore: 0 },
+    { id: 'a', nickname: 'Alice', avatar: 'batman' as const, totalScore: 800 },
+    { id: 'b', nickname: 'Bob', avatar: 'robin' as const, totalScore: 1500 },
+    { id: 'c', nickname: 'Chloé', avatar: 'batman' as const, totalScore: 800 },
+    { id: 'd', nickname: 'Dan', avatar: 'batgirl' as const, totalScore: 0 },
   ];
 
   it('sorts by score and shares ranks on ties', () => {
@@ -54,8 +54,8 @@ describe('ranking', () => {
 
   it('returns the top N as { nickname, avatar, score }', () => {
     expect(topPlayers(players, 2)).toEqual([
-      { nickname: 'Bob', avatar: 'panda', score: 1500 },
-      { nickname: 'Alice', avatar: 'fox', score: 800 },
+      { nickname: 'Bob', avatar: 'robin', score: 1500 },
+      { nickname: 'Alice', avatar: 'batman', score: 800 },
     ]);
   });
 });

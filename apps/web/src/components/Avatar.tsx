@@ -1,19 +1,19 @@
 import { findAvatar } from '@lbq/shared';
 
-/** Box + emoji size of each variant. */
+/** Box size (and corner radius) of each variant. */
 const sizes = {
-  xs: 'size-6 text-sm',
-  sm: 'size-8 text-lg',
-  md: 'size-11 text-2xl',
-  lg: 'size-16 text-4xl',
-  xl: 'size-24 text-6xl',
+  xs: 'size-6 rounded-md',
+  sm: 'size-8 rounded-lg',
+  md: 'size-11 rounded-xl',
+  lg: 'size-16 rounded-2xl',
+  xl: 'size-24 rounded-3xl',
 } as const;
 
 export type AvatarSize = keyof typeof sizes;
 
 /**
- * A player's avatar: an animal emoji on a colored circle (`AVATARS` in @lbq/shared). Unknown /
- * missing ids (games saved before avatars) render a neutral circle with a question mark.
+ * A player's avatar: a portrait from `public/avatars/<id>.jpg` (`AVATARS` in @lbq/shared).
+ * Unknown / missing ids (games saved before avatars) render a neutral tile with a question mark.
  */
 export function Avatar({
   id,
@@ -25,14 +25,24 @@ export function Avatar({
   className?: string;
 }) {
   const avatar = findAvatar(id);
+  const box = `inline-flex shrink-0 select-none overflow-hidden ${sizes[size]} ${className}`;
+  if (!avatar)
+    return (
+      <span
+        aria-hidden="true"
+        className={`${box} items-center justify-center bg-gray-300 font-bold text-gray-500`}
+      >
+        ?
+      </span>
+    );
   return (
-    <span
+    <img
+      src={`/avatars/${avatar.id}.jpg`}
+      alt=""
       aria-hidden="true"
-      data-avatar={avatar?.id}
-      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full leading-none ${sizes[size]} ${avatar ? '' : 'bg-gray-300 text-gray-500'} ${className}`}
-      style={avatar ? { backgroundColor: avatar.color } : undefined}
-    >
-      {avatar ? avatar.emoji : '?'}
-    </span>
+      draggable={false}
+      data-avatar={avatar.id}
+      className={`${box} bg-[#3d8fc9] object-cover`}
+    />
   );
 }
