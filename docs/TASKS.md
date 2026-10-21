@@ -725,7 +725,7 @@ payloads and saved results; e2e checks the avatar appears in the host lobby.
   a random preselection.
 
 ### T21 — Auto-pause when a player loses the connection + easy reconnection (run alone)
-- **Status:** todo
+- **Status:** in-progress (claude-T21, worktree ../lbq-T21)
 - **Depends on:** T14, T15, T16, T20 (all done)
 - **Ports:** server 3021 / web 5201, test DB `lbq_test_t21`, e2e DB `lbq_e2e_t21`.
 
