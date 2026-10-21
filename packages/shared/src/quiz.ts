@@ -149,6 +149,13 @@ export function correctChoiceIndexes(q: Question): number[] {
   return q.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
 }
 
+/**
+ * `PRIVATE`: only its owner can launch it. `PUBLIC`: listed in the library, any logged-in host
+ * can launch or copy it (only the owner can edit it).
+ */
+export const QuizVisibility = z.enum(['PRIVATE', 'PUBLIC']);
+export type QuizVisibility = z.infer<typeof QuizVisibility>;
+
 export const QuizSchema = z.object({
   id: z.string(),
   title: z.string().trim().min(1).max(95),

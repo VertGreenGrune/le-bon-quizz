@@ -13,6 +13,12 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
           Le Bon Quizz
         </Link>
         <Link
+          to="/library"
+          className="rounded-lg px-2 py-1 text-sm font-semibold hover:bg-white/10"
+        >
+          Bibliothèque
+        </Link>
+        <Link
           to="/reports"
           className="rounded-lg px-2 py-1 text-sm font-semibold hover:bg-white/10"
         >

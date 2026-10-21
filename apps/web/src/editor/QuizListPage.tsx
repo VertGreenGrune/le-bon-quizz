@@ -5,6 +5,8 @@ import { api } from '../api';
 import { EditorShell, btn } from './EditorShell';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl } from '../lib/gameOptions';
+import { VisibilityBadge } from './visibility';
+import { playedLabel } from '../library/format';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -79,15 +81,18 @@ export function QuizListPage() {
                 <div className="hidden h-16 w-24 shrink-0 rounded-lg bg-brand/10 sm:block" />
               )}
               <div className="min-w-0 flex-1">
-                <Link
-                  to={`/editor/${q.id}`}
-                  className="block truncate text-lg font-bold hover:underline"
-                >
-                  {q.title}
-                </Link>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Link
+                    to={`/editor/${q.id}`}
+                    className="block truncate text-lg font-bold hover:underline"
+                  >
+                    {q.title}
+                  </Link>
+                  <VisibilityBadge visibility={q.visibility} />
+                </div>
                 <p className="text-sm text-gray-500">
-                  {q.questionCount} question{q.questionCount > 1 ? 's' : ''} · modifié le{' '}
-                  {dateFmt.format(new Date(q.updatedAt))}
+                  {q.questionCount} question{q.questionCount > 1 ? 's' : ''} ·{' '}
+                  {playedLabel(q.playCount)} · modifié le {dateFmt.format(new Date(q.updatedAt))}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1">

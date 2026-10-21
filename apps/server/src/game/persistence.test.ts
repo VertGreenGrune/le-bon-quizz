@@ -191,6 +191,28 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect((await persistence.loadQuiz('demo', owner.id)).dbQuizId).toBe('demo');
   });
 
+  it("launches the host's own quizzes and public ones, not another host's private one", async () => {
+    const owner = await user('owner@test.fr');
+    const other = await user('other@test.fr');
+    const pub = await createQuiz(prisma, owner.id, { ...demoInput, visibility: 'PUBLIC' });
+    const priv = await createQuiz(prisma, owner.id, { ...demoInput, visibility: 'PRIVATE' });
+
+    expect((await persistence.loadQuiz(pub.id, owner.id)).dbQuizId).toBe(pub.id);
+    expect((await persistence.loadQuiz(priv.id, owner.id)).dbQuizId).toBe(priv.id);
+    const loaded = await persistence.loadQuiz(pub.id, other.id);
+    expect(loaded.dbQuizId).toBe(pub.id);
+    expect(loaded.quiz.questions).toEqual(DEMO_QUIZ.questions);
+    expect(loaded.quiz).not.toHaveProperty('visibility');
+    await expectCode(persistence.loadQuiz(priv.id, other.id), 'QUIZ_NOT_FOUND');
+    // Public quizzes still need a logged-in host.
+    await expectCode(persistence.loadQuiz(pub.id, null), 'UNAUTHORIZED');
+
+    // The seeded public `demo` row is played (and counted) for every logged-in host.
+    await createQuiz(prisma, owner.id, { ...demoInput, visibility: 'PUBLIC' }, 'demo');
+    expect((await persistence.loadQuiz('demo', other.id)).dbQuizId).toBe('demo');
+    expect(await persistence.loadQuiz('demo', null)).toEqual({ quiz: DEMO_QUIZ, dbQuizId: null });
+  });
+
   it('saves a finished game, returned by the history/report endpoints', async () => {
     const host = await user('host@test.fr');
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };

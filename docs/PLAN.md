@@ -84,7 +84,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams', teamCount?: 2 \| 3 \| 4 }` | default solo / 2 teams; ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes only (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams', teamCount?: 2 \| 3 \| 4 }` | default solo / 2 teams; ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -124,7 +124,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 
 - `User` — id, email (unique, lowercased), name, passwordHash (scrypt), createdAt
 - `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
-- `Quiz` — id, ownerId → User, title, description, coverImageUrl, createdAt, updatedAt
+- `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
+  `PUBLIC`, default `PRIVATE`: public quizzes are in the library), createdAt, updatedAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
   `POLL` | `SLIDER`), timeLimitSec (default 20), basePoints (default 1000), config? (JSON:
   TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`, SLIDER `{ slider }`)
@@ -161,7 +162,14 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   `POST /auth/login` `{ email, password }` → `AuthResponse`; `POST /auth/logout` → 204;
   `GET /auth/me` → `PublicUser`
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
-  (body `QuizInput` = `QuizSchema` without `id`; PUT replaces all questions)
+  (body `QuizInput` = `QuizSchema` without `id` + optional `visibility` — absent = `PRIVATE` on
+  creation, unchanged on update; PUT replaces all questions). Owner only, public or not.
+  `QuizSummary` has `visibility` and `playCount` (games played with it by any host); copies
+  (duplicate, library copy) are always `PRIVATE`, title + " (copie)"
+- `GET /library?search=&sort=popular|newest` → `LibraryQuiz[]`: `PUBLIC` quizzes of the **other**
+  hosts (title search, case-insensitive; max 100), with `authorName`, `questionCount`,
+  `playCount` — no questions, so never the answers. `POST /library/:id/copy` → 201
+  `QuizDetail`: private copy owned by the current host (404 if the quiz is not public)
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
 - `GET /games` (history, `GameSummary` with `winner`, `mode`), `GET /games/:id` (report: ranking
@@ -181,6 +189,7 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/login`, `/register` → host account (`?next=` = page to return to)
 - `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
 - `/reports` → past games, `/reports/:gameId` → game report (auth required)
+- `/library` → public quizzes of the other hosts: search, sort, launch, copy (auth required)
 
 ## 8. Roadmap
 

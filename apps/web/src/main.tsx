@@ -9,12 +9,13 @@ import { AuthPage } from './auth/AuthPage';
 import { QuizEditorPage } from './editor/QuizEditorPage';
 import { QuizListPage } from './editor/QuizListPage';
 import { HostPage } from './host/HostPage';
+import { LibraryPage } from './library/LibraryPage';
 import { GameListPage } from './reports/GameListPage';
 import { GameReportPage } from './reports/GameReportPage';
 import { JoinPage } from './player/JoinPage';
 import { PlayPage } from './player/PlayPage';
 
-// Routes are added by their owning tasks: /host/:pin (T2), /join + /play (T3), /editor (T6), /reports (T12).
+// Routes are added by their owning tasks: /host/:pin (T2), /join + /play (T3), /editor (T6), /reports (T12), /library (T16).
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -39,6 +40,14 @@ createRoot(document.getElementById('root')!).render(
             element={
               <RequireAuth>
                 <QuizEditorPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/library"
+            element={
+              <RequireAuth>
+                <LibraryPage />
               </RequireAuth>
             }
           />

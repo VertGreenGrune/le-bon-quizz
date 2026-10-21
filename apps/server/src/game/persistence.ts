@@ -1,5 +1,5 @@
 import { DEMO_QUIZ, type GameMode, type Quiz } from '@lbq/shared';
-import { getQuizForOwner } from '../api/quizzes.service.js';
+import { getPlayableQuiz } from '../api/quizzes.service.js';
 import { getUserBySessionToken } from '../auth/session.js';
 import type { PrismaClient } from '../db.js';
 import type { Prisma } from '../generated/prisma/client.js';
@@ -32,8 +32,9 @@ export interface GamePersistence {
   /** Host user id for a session token (`lbq_session` cookie), or null. */
   authenticate(token: string): Promise<string | null>;
   /**
-   * Quiz for `host:create`. Logged-in hosts get their own quizzes; quiz `demo` also works
-   * without login (built-in `DEMO_QUIZ`). Throws `UNAUTHORIZED` / `QUIZ_NOT_FOUND`.
+   * Quiz for `host:create`. Logged-in hosts get their own quizzes and the public ones of other
+   * hosts; quiz `demo` also works without login (built-in `DEMO_QUIZ`). Throws `UNAUTHORIZED` /
+   * `QUIZ_NOT_FOUND` (also for someone else's private quiz, so its existence is not disclosed).
    */
   loadQuiz(quizId: string, hostId: string | null): Promise<LoadedQuiz>;
   saveGame(record: GameRecord): Promise<void>;
@@ -59,10 +60,10 @@ export function createPrismaPersistence(prisma: PrismaClient): GamePersistence {
     },
 
     async loadQuiz(quizId, hostId) {
-      // A logged-in host playing `demo` gets their own (seeded, maybe edited) copy if they own it.
-      const owned = hostId ? await getQuizForOwner(prisma, quizId, hostId) : null;
-      if (!owned) return demoOr(quizId, hostId);
-      const { createdAt: _c, updatedAt: _u, ...quiz } = owned;
+      // A logged-in host playing `demo` gets the seeded row if they own it or it is public.
+      const playable = hostId ? await getPlayableQuiz(prisma, quizId, hostId) : null;
+      if (!playable) return demoOr(quizId, hostId);
+      const { createdAt: _c, updatedAt: _u, visibility: _v, ...quiz } = playable;
       return { quiz: { ...quiz, id: quizId }, dbQuizId: quizId };
     },
 

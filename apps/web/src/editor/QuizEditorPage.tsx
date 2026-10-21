@@ -5,6 +5,7 @@ import type { FieldErrors } from '../api/validation';
 import { EditorShell, btn } from './EditorShell';
 import { QuestionEditor } from './QuestionEditor';
 import { ImageField } from './ImageField';
+import { VisibilityField } from './visibility';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl, type GameOptions } from '../lib/gameOptions';
 import {
@@ -218,6 +219,10 @@ export function QuizEditorPage() {
                 <span className="text-sm font-semibold text-answer-red">{errors.description}</span>
               )}
             </label>
+            <VisibilityField
+              value={draft.visibility ?? 'PRIVATE'}
+              onChange={(visibility) => setDraft((d) => ({ ...d, visibility }))}
+            />
           </div>
           <ImageField
             label="Image de couverture"

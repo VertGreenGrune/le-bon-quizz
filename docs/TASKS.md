@@ -600,7 +600,7 @@ T16 = editor/library/quiz API, T20 = join/lobby/rankings; both add an independen
 different models) → T17 later.
 
 ### T16 — Public / private quizzes + quiz library (after T14; can run in parallel with T20)
-- **Status:** in-progress (T16 agent, worktree ../lbq-T16)
+- **Status:** done
 - **Depends on:** T14 merged
 - **Ports:** server 3016 / web 5196, test DB `lbq_test_t16`.
 
@@ -633,6 +633,40 @@ play" means other hosts can launch it.)
 **Tests:** visibility rules for `host:create` (owner/public/private-of-someone-else), library
 listing excludes private quizzes and answers, copy creates a private owned quiz, only the owner
 can edit; e2e: host B launches host A's public quiz.
+
+- **Summary:** shared: `QuizVisibility` (`quiz.ts`), `QuizInput.visibility` optional (absent =
+  `PRIVATE` on creation, unchanged on update, so older clients can't flip it by accident),
+  `QuizDetail.visibility`, `QuizSummary.visibility` + `playCount`, `LibraryQuery` (`search`,
+  `sort` = `popular` | `newest`), `LibraryQuiz`, `LIBRARY_LIMIT` (100). DB: migration
+  `20261021190357_quiz_visibility` (`Quiz.visibility` enum, default `PRIVATE`). Server
+  (`quizzes.service.ts`): `getPlayableQuiz` (own OR public) used by `GamePersistence.loadQuiz`,
+  so `host:create` accepts other hosts' public quizzes and answers `QUIZ_NOT_FOUND` for their
+  private ones; `listLibrary` (public quizzes of the *other* hosts, title search, most played =
+  count of `GameSession`s, then newest) and `copyPublicQuiz`; new `api/library.routes.ts`
+  (`GET /api/library`, `POST /api/library/:id/copy`); copies (duplicate too) are always private.
+  Edit/delete/get stay owner-only. Seed: the demo quiz is public. Web: "Visibilité 🔒 Privé /
+  🌐 Public" switch with its help line in the quiz form (`editor/visibility.tsx`), badge +
+  "joué N fois / jamais joué" in "Mes quiz", "Bibliothèque" link in the editor header,
+  `/library` (`library/LibraryPage.tsx`: search with 300 ms debounce, sort, cards with cover,
+  author, questions, games played, "▶ Lancer" → Solo/Équipes dialog → `/host/new?quizId=…`,
+  "Copier dans mes quiz" → banner with a link to edit the copy). Tests: shared schemas, API
+  (default private, PUT keeps visibility, library filters/search/sort/no answers/playCount,
+  back to private → gone, copy is private + owned + editable, private copy → 404, non-owner
+  can't get/put/delete/duplicate a public quiz), persistence (`loadQuiz` owner / public /
+  private-of-another / anonymous / public demo row), web client + draft + label; new
+  `e2e/library.spec.ts` (A makes a quiz public in the editor, B searches the library, copies,
+  launches A's quiz, plays it with a phone to the end, A sees "joué 1 fois"). Checked with
+  screenshots (1600×900).
+- **Notes:** (1) The library excludes the current host's own public quizzes (they are in "Mes
+  quiz"); `POST /library/:id/copy` accepts any public quiz. (2) Launching a public quiz still
+  requires a logged-in host (anonymous hosts only get the demo). (3) Since the seeded `demo` row
+  is public, a logged-in host launching `demo` now plays (and counts a game on) that row instead
+  of the built-in copy. (4) `e2e/library.spec.ts` needs `E2E_DATABASE_URL` (skipped without it);
+  outside the scope: `playwright.config.ts` migrates that DB and passes it to the server, and the
+  CI e2e job got a Postgres service. **After merging, run `pnpm --filter @lbq/server db:migrate`**
+  and re-seed so the demo quiz becomes public.
+- **Follow-ups:** no preview of a public quiz's questions before launching it; no pagination
+  beyond 100 results; a host can't see who launched their public quiz (by design).
 
 ### T20 — Player avatars (after T14; can run in parallel with T16)
 - **Status:** todo
@@ -768,3 +802,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `answerCount` / `details` are **required** (test fixtures must set them); `choiceCount` is now
   optional. `PlayerAnswerPayload` is a union (`choiceIndex` | `text` | `value`). Prisma migration
   `20261021173853_question_types`. `DEMO_QUIZ` has 7 questions (3 new types).
+- 2026-10-21, T16 agent (REST only, no socket event changed): `QuizInput.visibility?`,
+  `QuizDetail.visibility`, `QuizSummary.visibility` + `playCount` are **required** in responses
+  (fixtures building a `QuizDetail` / `QuizSummary` must set them); new `LibraryQuery`,
+  `LibraryQuiz`, `QuizVisibility`. `host:create` now also accepts other hosts' public quizzes
+  (PLAN.md §4–§7 updated). Prisma migration `20261021190357_quiz_visibility`. Outside the T16
+  scope: `playwright.config.ts` (`E2E_DATABASE_URL` → migrate + server `DATABASE_URL`),
+  `.github/workflows/ci.yml` (Postgres service for the e2e job), README e2e paragraph; one link
+  in `EditorShell.tsx` and one route in `main.tsx`.
