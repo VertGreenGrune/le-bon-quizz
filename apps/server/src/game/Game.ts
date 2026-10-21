@@ -1,19 +1,35 @@
 import { randomUUID } from 'node:crypto';
 import {
+  DEFAULT_TEAM_COUNT,
   LEADERBOARD_SIZE,
   MAX_PLAYERS_PER_GAME,
   PODIUM_SIZE,
   QUESTION_INTRO_MS,
+  TEAM_NAMES,
+  type GameMode,
   type GamePhase,
   type GameStatePayload,
+  type LobbyTeamsPayload,
+  type PlayerResultPayload,
   type Question,
   type QuestionRevealPayload,
   type QuestionShowPayload,
   type Quiz,
+  type RankedTeam,
   type ServerToClientEvents,
+  type StandingsPayload,
+  type TeamCount,
+  type TeamId,
 } from '@lbq/shared';
 import { GameError } from './errors.js';
-import { computePoints, rankPlayers, streakBonus, topPlayers } from './scoring.js';
+import {
+  computePoints,
+  rankPlayers,
+  rankTeams,
+  streakBonus,
+  teamQuestionPoints,
+  topPlayers,
+} from './scoring.js';
 
 type ServerEvent = keyof ServerToClientEvents;
 type EventArgs<E extends ServerEvent> = Parameters<ServerToClientEvents[E]>;
@@ -50,6 +66,8 @@ export interface Player {
   answer: { choiceIndex: number; responseMs: number; correct: boolean; points: number } | null;
   /** Result of the last revealed question, re-sent on rejoin during REVEAL. */
   lastResult: { correct: boolean; pointsEarned: number; streakBonus: number } | null;
+  /** Team mode: chosen in the lobby (null until then). Always null in solo mode. */
+  teamId: TeamId | null;
 }
 
 /** Final standing of one player (kicked ones included), as saved in `PlayerResult`. */
@@ -57,6 +75,16 @@ export interface PlayerStanding {
   nickname: string;
   score: number;
   correctCount: number;
+  rank: number;
+  teamId: TeamId | null;
+}
+
+/** Final standing of one team, as saved in `TeamResult`. */
+export interface TeamStanding {
+  teamId: TeamId;
+  name: string;
+  score: number;
+  playerCount: number;
   rank: number;
 }
 
@@ -71,6 +99,12 @@ export interface QuestionStats {
   correctCount: number;
 }
 
+export interface GameSettings {
+  mode: GameMode;
+  /** Team mode: number of teams offered in the lobby (default 2). */
+  teamCount?: TeamCount;
+}
+
 export interface GameHooks {
   /** Called once when the game enters ENDED (e.g. to save the results). */
   onEnded?(game: Game): void;
@@ -83,6 +117,9 @@ export interface GameHooks {
  *
  * QUESTION_INTRO ends by itself after QUESTION_INTRO_MS and ANSWERING when the timer expires or
  * every connected player has answered; the host may also skip both with `next()`.
+ *
+ * Team mode: players pick a team in the lobby; each player scores as in solo, and a team earns
+ * per question the average of its present members' points (PLAN.md §3).
  */
 export class Game {
   readonly hostToken = randomUUID();
@@ -106,12 +143,27 @@ export class Game {
   private answeringStartedAt = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
+  readonly mode: GameMode;
+  /** Team mode: the teams offered in the lobby, then (from the start) the ones that have players. */
+  private teamIds: TeamId[] = [];
+  private readonly teamScores = new Map<TeamId, number>();
+  /** Players connected when the current ANSWERING phase started (team averages). */
+  private readonly presentIds = new Set<string>();
+
   constructor(
     readonly pin: string,
     readonly quiz: Quiz,
     private readonly transport: GameTransport,
     private readonly hooks: GameHooks = {},
-  ) {}
+    settings: GameSettings = { mode: 'solo' },
+  ) {
+    this.mode = settings.mode;
+    if (this.mode === 'teams') {
+      const count = settings.teamCount ?? DEFAULT_TEAM_COUNT;
+      this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
+      for (const id of this.teamIds) this.teamScores.set(id, 0);
+    }
+  }
 
   get totalQuestions(): number {
     return this.quiz.questions.length;
@@ -129,6 +181,7 @@ export class Game {
 
   start(): void {
     if (this.phase !== 'LOBBY') throw new GameError('GAME_ALREADY_STARTED', 'Game already started');
+    if (this.mode === 'teams') this.startTeams();
     this.touch();
     this.enterQuestionIntro(0);
   }
@@ -138,7 +191,7 @@ export class Game {
     this.touch();
     switch (this.phase) {
       case 'LOBBY':
-        return this.enterQuestionIntro(0);
+        return this.start();
       case 'QUESTION_INTRO':
         return this.enterAnswering();
       case 'ANSWERING':
@@ -176,7 +229,35 @@ export class Game {
       player.socketId = null;
     }
     this.sendLobbyPlayers();
+    this.sendTeams();
     if (this.phase === 'ANSWERING') this.onAnswersChanged();
+  }
+
+  /** Team mode, LOBBY only: puts a player in a team (their own choice or the host's). */
+  setTeam(playerId: string, teamId: TeamId): void {
+    this.assertTeamLobby();
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    if (!this.teamIds.includes(teamId)) throw new GameError('INVALID_PAYLOAD', 'Équipe invalide');
+    this.touch();
+    if (player.teamId === teamId) return;
+    player.teamId = teamId;
+    this.sendLobbyPlayers();
+    this.sendTeams();
+  }
+
+  /** Team mode, LOBBY only: random balanced teams (sizes differ by at most one). */
+  shuffleTeams(random: () => number = Math.random): void {
+    this.assertTeamLobby();
+    const players = [...this.players.values()];
+    for (let i = players.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [players[i], players[j]] = [players[j]!, players[i]!];
+    }
+    players.forEach((p, i) => (p.teamId = this.teamIds[i % this.teamIds.length]!));
+    this.touch();
+    this.sendLobbyPlayers();
+    this.sendTeams();
   }
 
   /** A host socket joined the game's rooms (create / rejoin / any host action). */
@@ -198,15 +279,14 @@ export class Game {
     const send: Send = (event, ...args) => this.transport.toSocket(socketId, event, ...args);
     send('game:state', this.statePayload());
     this.sendLobbyPlayers(send);
+    this.sendTeams(send);
     const phase = this.phase;
     if (this.currentQuestion && phase !== 'PODIUM' && phase !== 'ENDED')
       send('question:show', this.showPayload());
     if (phase === 'ANSWERING' || phase === 'REVEAL') this.sendAnswerCount(send);
     if (phase === 'REVEAL' && this.reveal) send('question:reveal', this.reveal);
-    if (phase === 'LEADERBOARD')
-      send('leaderboard', { top: topPlayers(this.players.values(), LEADERBOARD_SIZE) });
-    if (phase === 'PODIUM' || phase === 'ENDED')
-      send('podium', { top: topPlayers(this.players.values(), PODIUM_SIZE) });
+    if (phase === 'LEADERBOARD') send('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
+    if (phase === 'PODIUM' || phase === 'ENDED') send('podium', this.standingsPayload(PODIUM_SIZE));
   }
 
   // ---------- Player actions ----------
@@ -232,10 +312,12 @@ export class Game {
       streak: 0,
       answer: null,
       lastResult: null,
+      teamId: null,
     };
     this.touch();
     this.players.set(player.id, player);
     this.sendLobbyPlayers();
+    this.sendTeams();
     return player;
   }
 
@@ -263,14 +345,13 @@ export class Game {
     if (!player.socketId) return;
     const sid = player.socketId;
     this.transport.toSocket(sid, 'game:state', this.statePayload());
+    this.sendTeams((event, ...args) => this.transport.toSocket(sid, event, ...args));
     if (this.phase === 'ANSWERING' && !player.answer) {
       this.transport.toSocket(sid, 'question:prompt', this.promptPayload());
     } else if (this.phase === 'REVEAL' && player.lastResult) {
       this.transport.toSocket(sid, 'player:result', this.resultPayload(player));
     } else if (this.phase === 'PODIUM') {
-      this.transport.toSocket(sid, 'podium', {
-        top: topPlayers(this.players.values(), PODIUM_SIZE),
-      });
+      this.transport.toSocket(sid, 'podium', this.standingsPayload(PODIUM_SIZE));
     }
   }
 
@@ -321,6 +402,7 @@ export class Game {
         score: player.totalScore,
         correctCount: player.correctCount,
         rank: rank + offset,
+        teamId: player.teamId,
       });
     return [
       ...rankPlayers(this.players.values()).map(standing(0)),
@@ -328,9 +410,21 @@ export class Game {
     ];
   }
 
+  /** Team mode: the teams in play, best first (empty in solo mode). */
+  teamStandings(): TeamStanding[] {
+    return rankTeams(this.rankedTeams()).map(({ team, rank }) => ({
+      teamId: team.id,
+      name: team.name,
+      score: team.score,
+      playerCount: team.playerCount,
+      rank,
+    }));
+  }
+
   statePayload(): GameStatePayload {
     const state: GameStatePayload = {
       phase: this.phase,
+      mode: this.mode,
       questionIndex: this.questionIndex,
       totalQuestions: this.totalQuestions,
     };
@@ -367,6 +461,8 @@ export class Game {
     const limitMs = question.timeLimitSec * 1000;
     this.setPhase('ANSWERING', limitMs);
     this.answeringStartedAt = Date.now();
+    this.presentIds.clear();
+    for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
     this.broadcastState();
     const prompt = this.promptPayload();
     for (const p of this.players.values()) {
@@ -400,6 +496,7 @@ export class Game {
       }
       p.lastResult = { correct, pointsEarned, streakBonus: bonus };
     }
+    if (this.mode === 'teams') this.scoreTeams();
     const correctIndexes = question.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
     this.questionStats.push({
       index: this.questionIndex,
@@ -422,15 +519,85 @@ export class Game {
   private enterLeaderboard(): void {
     this.setPhase('LEADERBOARD', null);
     this.broadcastState();
-    this.transport.toHost('leaderboard', {
-      top: topPlayers(this.players.values(), LEADERBOARD_SIZE),
-    });
+    this.transport.toHost('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
   }
 
   private enterPodium(): void {
     this.setPhase('PODIUM', null);
     this.broadcastState();
-    this.transport.toAll('podium', { top: topPlayers(this.players.values(), PODIUM_SIZE) });
+    this.transport.toAll('podium', this.standingsPayload(PODIUM_SIZE));
+  }
+
+  // ---------- Teams ----------
+
+  private assertTeamLobby(): void {
+    if (this.mode !== 'teams')
+      throw new GameError('INVALID_PAYLOAD', 'Cette partie ne se joue pas en équipes');
+    if (this.phase !== 'LOBBY')
+      throw new GameError('GAME_ALREADY_STARTED', 'La partie a déjà commencé');
+  }
+
+  /** Checks the teams are ready, then keeps only the teams that have players. */
+  private startTeams(): void {
+    const players = [...this.players.values()];
+    if (players.some((p) => p.teamId === null))
+      throw new GameError('TEAMS_NOT_READY', 'Chaque joueur doit avoir une équipe');
+    const used = this.teamIds.filter((id) => players.some((p) => p.teamId === id));
+    if (used.length < 2)
+      throw new GameError('TEAMS_NOT_READY', 'Il faut des joueurs dans au moins 2 équipes');
+    this.teamIds = used;
+    for (const id of this.teamScores.keys()) if (!used.includes(id)) this.teamScores.delete(id);
+    this.sendTeams();
+  }
+
+  /**
+   * Adds this question's points to each team: the average over its members who were connected
+   * when ANSWERING started (or answered anyway). A player who drops mid-question still counts
+   * (0 points); one absent for the whole question doesn't drag the team down.
+   */
+  private scoreTeams(): void {
+    for (const id of this.teamIds) {
+      const points: number[] = [];
+      for (const p of this.players.values()) {
+        if (p.teamId !== id || (!this.presentIds.has(p.id) && !p.answer)) continue;
+        points.push(p.lastResult?.pointsEarned ?? 0);
+      }
+      this.teamScores.set(id, (this.teamScores.get(id) ?? 0) + teamQuestionPoints(points));
+    }
+  }
+
+  private teamMembers(id: TeamId): Player[] {
+    return [...this.players.values()].filter((p) => p.teamId === id);
+  }
+
+  /** The teams in play, best first. */
+  private rankedTeams(): RankedTeam[] {
+    return rankTeams(
+      this.teamIds.map((id) => ({
+        id,
+        name: TEAM_NAMES[id],
+        score: this.teamScores.get(id) ?? 0,
+        playerCount: this.teamMembers(id).length,
+      })),
+    ).map(({ team }) => team);
+  }
+
+  private standingsPayload(size: number): StandingsPayload {
+    const top = topPlayers(this.players.values(), size);
+    return this.mode === 'teams' ? { top, teams: this.rankedTeams() } : { top };
+  }
+
+  /** Team mode only: teams + members, to everyone by default. */
+  private sendTeams(send: Send = this.transport.toAll.bind(this.transport)): void {
+    if (this.mode !== 'teams') return;
+    const payload: LobbyTeamsPayload = {
+      teams: this.teamIds.map((id) => ({
+        id,
+        name: TEAM_NAMES[id],
+        members: this.teamMembers(id).map((p) => ({ id: p.id, nickname: p.nickname })),
+      })),
+    };
+    send('lobby:teams', payload);
   }
 
   // ---------- Helpers ----------
@@ -457,7 +624,11 @@ export class Game {
 
   private sendLobbyPlayers(send: Send = this.transport.toHost.bind(this.transport)): void {
     send('lobby:players', {
-      players: [...this.players.values()].map((p) => ({ id: p.id, nickname: p.nickname })),
+      players: [...this.players.values()].map((p) => ({
+        id: p.id,
+        nickname: p.nickname,
+        ...(p.teamId !== null && { teamId: p.teamId }),
+      })),
     });
   }
 
@@ -481,9 +652,13 @@ export class Game {
     };
   }
 
-  private resultPayload(player: Player) {
+  private resultPayload(player: Player): PlayerResultPayload {
     const ranked = rankPlayers(this.players.values());
     const rank = ranked.find((r) => r.player === player)?.rank ?? ranked.length;
+    const team =
+      player.teamId === null
+        ? undefined
+        : rankTeams(this.rankedTeams()).find((t) => t.team.id === player.teamId);
     return {
       correct: player.lastResult?.correct ?? false,
       pointsEarned: player.lastResult?.pointsEarned ?? 0,
@@ -491,6 +666,7 @@ export class Game {
       streakBonus: player.lastResult?.streakBonus ?? 0,
       totalScore: player.totalScore,
       rank,
+      ...(team && { team: { id: team.team.id, score: team.team.score, rank: team.rank } }),
     };
   }
 

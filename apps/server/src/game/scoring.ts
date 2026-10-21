@@ -52,3 +52,26 @@ export function topPlayers(players: Iterable<Scored>, size: number): RankedPlaye
     .slice(0, size)
     .map(({ player }) => ({ nickname: player.nickname, score: player.totalScore }));
 }
+
+/**
+ * Points a team earns on one question (PLAN.md §3): the average of the points earned by its
+ * members present for that question, rounded. Averaging (instead of summing) keeps teams of
+ * different sizes comparable; a team with nobody present earns 0.
+ */
+export function teamQuestionPoints(memberPoints: readonly number[]): number {
+  if (memberPoints.length === 0) return 0;
+  return Math.round(memberPoints.reduce((sum, p) => sum + p, 0) / memberPoints.length);
+}
+
+/** Same competition ranks as `rankPlayers` (ties share a rank), stable order by team id. */
+export function rankTeams<T extends { id: number; score: number }>(
+  teams: Iterable<T>,
+): { team: T; rank: number }[] {
+  const sorted = [...teams].sort((a, b) => b.score - a.score || a.id - b.id);
+  const ranked: { team: T; rank: number }[] = [];
+  sorted.forEach((team, i) => {
+    const prev = ranked[i - 1];
+    ranked.push({ team, rank: prev && prev.team.score === team.score ? prev.rank : i + 1 });
+  });
+  return ranked;
+}

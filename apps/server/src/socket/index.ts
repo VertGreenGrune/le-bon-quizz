@@ -3,9 +3,11 @@ import {
   HostActionPayload,
   HostCreatePayload,
   HostKickPayload,
+  HostMovePlayerPayload,
   PlayerAnswerPayload,
   PlayerJoinPayload,
   PlayerRejoinPayload,
+  PlayerTeamPayload,
   roomAll,
   roomHost,
   type Ack,
@@ -175,22 +177,21 @@ export function registerSocketHandlers(
       handler(
         socket,
         HostCreatePayload,
-        async ({ quizId }) => {
+        async ({ quizId, mode = 'solo', teamCount }) => {
           const token = handshakeToken(socket);
           const hostId = token ? await persistence.authenticate(token) : null;
           const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
-          const game = games.create(quiz, (pin) => makeTransport(io, pin), {
-            onEnded: saveOnEnd(hostId, dbQuizId),
-          });
+          const game = games.create(
+            quiz,
+            (pin) => makeTransport(io, pin),
+            { onEnded: saveOnEnd(hostId, dbQuizId) },
+            { mode, teamCount },
+          );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
         },
-        ({ pin }) => {
-          const game = games.find(pin);
-          if (!game) return;
-          socket.emit('game:state', game.statePayload());
-          socket.emit('lobby:players', { players: [] });
-        },
+        // game:state + empty lobby (+ the empty teams in team mode).
+        ({ pin }) => games.find(pin)?.resyncHost(socket.id),
       ),
     );
 
@@ -214,6 +215,22 @@ export function registerSocketHandlers(
       'host:kick',
       handler(socket, HostKickPayload, ({ pin, hostToken, playerId }) => {
         asHost(pin, hostToken).kick(playerId);
+        return {};
+      }),
+    );
+
+    socket.on(
+      'host:moveplayer',
+      handler(socket, HostMovePlayerPayload, ({ pin, hostToken, playerId, teamId }) => {
+        asHost(pin, hostToken).setTeam(playerId, teamId);
+        return {};
+      }),
+    );
+
+    socket.on(
+      'host:shuffle',
+      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
+        asHost(pin, hostToken).shuffleTeams();
         return {};
       }),
     );
@@ -272,6 +289,15 @@ export function registerSocketHandlers(
         },
         ({ playerId }) => resyncPlayer(playerId),
       ),
+    );
+
+    socket.on(
+      'player:team',
+      handler(socket, PlayerTeamPayload, ({ pin, teamId }) => {
+        const { game, playerId } = asPlayer(pin);
+        game.setTeam(playerId, teamId);
+        return {};
+      }),
     );
 
     socket.on(

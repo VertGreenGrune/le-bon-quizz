@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
-import { SHAPES } from '@lbq/shared';
+import { SHAPES, TEAM_NAMES, type TeamId } from '@lbq/shared';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
-import { errorMessage, formatRank, playerScreen, type PlayerState } from './playerState';
-import { leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
+import { competitionRanks } from '../lib/ranks';
+import { errorMessage, formatRank, myTeam, playerScreen, type PlayerState } from './playerState';
+import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 
 /** /play — phone controller. Question text is only on the shared screen. */
@@ -46,6 +47,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
     case 'connecting':
       return <Message title="Connexion…" />;
     case 'lobby':
+      if (s.mode === 'teams') return <TeamPicker s={s} />;
       return (
         <Message
           title="Tu es dans la partie !"
@@ -95,9 +97,22 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
 
 function TopBar({ s }: { s: PlayerState }) {
   const inQuestion = s.questionIndex >= 0 && s.phase !== 'PODIUM' && s.phase !== 'ENDED';
+  // Team mode: the header band takes the team color for the whole game.
+  const team = myTeam(s);
+  const shape = team ? SHAPES[team.id] : null;
   return (
-    <header className="flex items-center justify-between gap-2 bg-black/20 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-sm font-bold">
-      <span className="truncate">{s.nickname}</span>
+    <header
+      className={`flex items-center justify-between gap-2 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-sm font-bold ${
+        shape ? shapeBg[shape.color] : 'bg-black/20'
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-1.5">
+        {shape && <ShapeIcon shape={shape.shape} className="size-4 shrink-0 fill-white" />}
+        <span className="truncate">
+          {s.nickname}
+          {team && <span className="opacity-85"> · {team.name}</span>}
+        </span>
+      </span>
       <span className="flex items-center gap-3">
         {inQuestion && s.totalQuestions > 0 && (
           <span className="opacity-80">
@@ -244,6 +259,72 @@ function Result({ s }: { s: PlayerState }) {
       >
         Tu es {formatRank(r.rank)}
       </motion.p>
+      {r.team && <TeamLine {...r.team} />}
+    </div>
+  );
+}
+
+/** Team mode: the team's score and rank (score = average of its players). */
+function TeamLine({ id, score, rank }: { id: TeamId; score: number; rank: number }) {
+  const shape = SHAPES[id];
+  return (
+    <motion.p
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.6 }}
+      className={`flex items-center gap-2 rounded-full px-4 py-2 font-black shadow ${shapeBg[shape.color]}`}
+    >
+      <ShapeIcon shape={shape.shape} className="size-5 fill-white" />
+      {TEAM_NAMES[id]} : {formatRank(rank, true)} · {score} pts
+    </motion.p>
+  );
+}
+
+/** Team mode, lobby: big team buttons with their members; tap to join / switch. */
+function TeamPicker({ s }: { s: PlayerState }) {
+  const mine = myTeam(s);
+  return (
+    <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <h2 className="text-center text-2xl font-black">
+        {mine ? `Tu es dans l'${mine.name.replace('Équipe', 'équipe')} !` : 'Choisis ton équipe'}
+      </h2>
+      <p className="text-center text-sm font-semibold opacity-85">
+        {mine
+          ? 'Tu peux changer jusqu’au début de la partie.'
+          : 'Touche une équipe pour la rejoindre.'}
+      </p>
+      {s.teams.map((t) => {
+        const shape = SHAPES[t.id];
+        const selected = mine?.id === t.id;
+        return (
+          <motion.button
+            key={t.id}
+            type="button"
+            whileTap={{ scale: 0.95 }}
+            onClick={() => chooseTeam(t.id)}
+            aria-pressed={selected}
+            className={`flex min-h-20 flex-1 touch-manipulation items-center gap-4 rounded-2xl px-5 py-3 text-left shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] ${shapeBg[shape.color]} ${
+              selected ? 'ring-4 ring-white' : mine ? 'opacity-70' : ''
+            }`}
+          >
+            <ShapeIcon shape={shape.shape} className="size-12 shrink-0 fill-white drop-shadow" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-xl font-black">
+                {t.name}
+                {selected && ' ✓'}
+              </span>
+              <span className="truncate text-sm font-semibold opacity-90">
+                {t.members.length === 0
+                  ? 'Personne pour l’instant'
+                  : t.members.map((m) => m.nickname).join(', ')}
+              </span>
+            </span>
+            <span className="rounded-lg bg-black/25 px-3 py-1 text-xl font-black tabular-nums">
+              {t.members.length}
+            </span>
+          </motion.button>
+        );
+      })}
     </div>
   );
 }
@@ -284,6 +365,7 @@ function Standings({ s }: { s: PlayerState }) {
       >
         {s.totalScore} pts
       </motion.p>
+      {s.result?.team && <TeamLine {...s.result.team} />}
     </Message>
   );
 }
@@ -291,6 +373,7 @@ function Standings({ s }: { s: PlayerState }) {
 const medals = ['🥇', '🥈', '🥉'];
 
 function Podium({ s }: { s: PlayerState }) {
+  if (s.podiumTeams.length > 0) return <TeamPodium s={s} />;
   const myPlace = s.podium?.findIndex((p) => p.nickname === s.nickname) ?? -1;
   const title =
     myPlace >= 0
@@ -321,6 +404,47 @@ function Podium({ s }: { s: PlayerState }) {
           ))}
         </ol>
       )}
+    </Message>
+  );
+}
+
+/** Team mode: the team ranking, ours highlighted, + our own rank. */
+function TeamPodium({ s }: { s: PlayerState }) {
+  const teams = s.podiumTeams;
+  const ranks = competitionRanks(teams.map((t) => t.score));
+  const mine = myTeam(s);
+  const index = teams.findIndex((t) => t.id === mine?.id);
+  const teamRank = index >= 0 ? ranks[index]! : null;
+  const title =
+    teamRank === 1
+      ? '🏆 Ton équipe gagne !'
+      : teamRank
+        ? `Ton équipe termine ${formatRank(teamRank, true)}`
+        : 'Podium des équipes';
+  const subtitle = s.result
+    ? `Tu termines ${formatRank(s.result.rank)} · ${s.totalScore} pts`
+    : `${s.totalScore} pts`;
+  return (
+    <Message title={title} subtitle={subtitle}>
+      {teamRank === 1 && <Confetti count={60} />}
+      <ol className="flex w-full max-w-xs flex-col gap-2">
+        {teams.map((t, i) => (
+          <motion.li
+            key={t.id}
+            initial={{ x: -40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2 + (teams.length - 1 - i) * 0.25 }}
+            className={`flex items-center justify-between gap-2 rounded-lg px-4 py-2 font-bold ${shapeBg[SHAPES[t.id].color]} ${
+              t.id === mine?.id ? 'ring-4 ring-white' : ''
+            }`}
+          >
+            <span className="truncate">
+              {formatRank(ranks[i]!, true)} · {t.name}
+            </span>
+            <span className="tabular-nums">{t.score}</span>
+          </motion.li>
+        ))}
+      </ol>
     </Message>
   );
 }

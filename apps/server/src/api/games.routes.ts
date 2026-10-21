@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { GameReport, GameSummary } from '@lbq/shared';
+import { TEAM_NAMES, type GameReport, type GameSummary, type TeamId } from '@lbq/shared';
 import { currentUser } from '../auth/index.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ApiDeps } from './index.js';
@@ -23,24 +23,40 @@ const toSummary = (g: GameRow): GameSummary => ({
   endedAt: g.endedAt?.toISOString() ?? null,
   playerCount: g._count.results,
   winner: g.results[0]?.nickname ?? null,
+  mode: g.mode,
 });
+
+/** Team ids are written by the game server (0–3) only. */
+const asTeamId = (id: number) => id as TeamId;
 
 export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
   async function getReport(id: string, hostId: string): Promise<GameReport> {
     const g = await prisma.gameSession.findFirst({
       where: { id, hostId },
-      include: { ...summaryInclude, questions: { orderBy: { index: 'asc' } } },
+      include: {
+        ...summaryInclude,
+        questions: { orderBy: { index: 'asc' } },
+        teams: { orderBy: [{ rank: 'asc' }, { teamId: 'asc' }] },
+      },
     });
     if (!g) throw notFound('Partie');
     return {
       ...toSummary(g),
-      results: g.results.map(({ rank, nickname, score, correctCount }) => ({
+      results: g.results.map(({ rank, nickname, score, correctCount, teamId }) => ({
         rank,
         nickname,
         score,
         correctCount,
+        teamId: teamId === null ? null : asTeamId(teamId),
       })),
       questions: g.questions.map(({ id: _id, gameSessionId: _g, ...q }) => q),
+      teams: g.teams.map(({ teamId, name, score, playerCount, rank }) => ({
+        teamId: asTeamId(teamId),
+        name,
+        score,
+        playerCount,
+        rank,
+      })),
     };
   }
 
@@ -59,9 +75,18 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
 
   app.get<IdParams>('/games/:id/export.csv', async (request, reply) => {
     const report = await getReport(request.params.id, currentUser(request).id);
+    // Team games get a `team` column (team name); solo exports are unchanged.
+    const teams = report.mode === 'teams';
+    const teamCell = (id: TeamId | null) => (teams ? [id === null ? '' : TEAM_NAMES[id]] : []);
     const csv = toCsv([
-      ['rank', 'nickname', 'score', 'correctCount'],
-      ...report.results.map((r) => [r.rank, r.nickname, r.score, r.correctCount]),
+      ['rank', 'nickname', 'score', 'correctCount', ...(teams ? ['team'] : [])],
+      ...report.results.map((r) => [
+        r.rank,
+        r.nickname,
+        r.score,
+        r.correctCount,
+        ...teamCell(r.teamId),
+      ]),
     ]);
     const filename = `lebonquizz-${report.startedAt.slice(0, 10)}-${report.pin}.csv`;
     return reply

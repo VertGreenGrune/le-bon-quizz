@@ -1,9 +1,9 @@
-import { DEMO_QUIZ, type Quiz } from '@lbq/shared';
+import { DEMO_QUIZ, type GameMode, type Quiz } from '@lbq/shared';
 import { getQuizForOwner } from '../api/quizzes.service.js';
 import { getUserBySessionToken } from '../auth/session.js';
 import type { PrismaClient } from '../db.js';
 import { GameError } from './errors.js';
-import type { Game, PlayerStanding, QuestionStats } from './Game.js';
+import type { Game, PlayerStanding, QuestionStats, TeamStanding } from './Game.js';
 
 /** A quiz ready to be played, and the DB row it comes from (null for the built-in demo). */
 export interface LoadedQuiz {
@@ -17,10 +17,13 @@ export interface GameRecord {
   quizId: string | null;
   quizTitle: string;
   pin: string;
+  mode: GameMode;
   startedAt: Date;
   endedAt: Date;
   results: PlayerStanding[];
   questions: QuestionStats[];
+  /** Team ranking (empty in solo mode). */
+  teams: TeamStanding[];
 }
 
 /** Everything the game layer needs from the outside world (DB, auth). */
@@ -72,10 +75,12 @@ export function createPrismaPersistence(prisma: PrismaClient): GamePersistence {
           quizId: quizExists ? r.quizId : null,
           quizTitle: r.quizTitle,
           pin: r.pin,
+          mode: r.mode,
           startedAt: r.startedAt,
           endedAt: r.endedAt,
           results: { create: r.results },
           questions: { create: r.questions },
+          teams: { create: r.teams },
         },
       });
     },
@@ -97,9 +102,11 @@ export function gameRecord(
     quizId: dbQuizId,
     quizTitle: game.quiz.title,
     pin: game.pin,
+    mode: game.mode,
     startedAt: game.startedAt,
     endedAt: new Date(),
     results: game.standings(),
     questions: game.questionStats,
+    teams: game.teamStandings(),
   };
 }

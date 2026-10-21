@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -6,11 +6,13 @@ import {
   type QuestionRevealPayload,
   type QuestionShowPayload,
   type RankedPlayer,
+  type RankedTeam,
 } from '@lbq/shared';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { joinOrigins, joinUrl } from './joinUrl';
 import { TICK_FROM_SEC } from './sounds';
+import { TeamRanking } from './teamScreens';
 
 // ---------- Lobby ----------
 
@@ -18,10 +20,13 @@ export function LobbyScreen({
   pin,
   players,
   onKick,
+  teamLobby,
 }: {
   pin: string;
   players: { id: string; nickname: string }[];
   onKick: (playerId: string) => void;
+  /** Team mode: team columns, shown instead of the player list. */
+  teamLobby?: ReactNode;
 }) {
   const origins = useMemo(() => joinOrigins(), []);
   const [originIndex, setOriginIndex] = useState(0);
@@ -74,33 +79,35 @@ export function LobbyScreen({
         {players.length > 1 ? 'joueurs' : 'joueur'}
       </div>
 
-      {players.length === 0 ? (
+      {players.length === 0 && (
         <p className="animate-pulse text-2xl opacity-80">En attente des joueurs…</p>
-      ) : (
-        <ul className="flex max-w-6xl flex-wrap justify-center gap-3">
-          <AnimatePresence>
-            {players.map((p) => (
-              <motion.li
-                key={p.id}
-                layout
-                initial={{ scale: 0, opacity: 0, rotate: -8 }}
-                animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                exit={{ scale: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-              >
-                <button
-                  type="button"
-                  onClick={() => onKick(p.id)}
-                  title="Cliquer pour exclure"
-                  className="group rounded-lg bg-black/25 px-5 py-2 text-2xl font-bold hover:bg-answer-red hover:line-through"
-                >
-                  {p.nickname}
-                </button>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </ul>
       )}
+      {teamLobby ??
+        (players.length > 0 && (
+          <ul className="flex max-w-6xl flex-wrap justify-center gap-3">
+            <AnimatePresence>
+              {players.map((p) => (
+                <motion.li
+                  key={p.id}
+                  layout
+                  initial={{ scale: 0, opacity: 0, rotate: -8 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onKick(p.id)}
+                    title="Cliquer pour exclure"
+                    className="group rounded-lg bg-black/25 px-5 py-2 text-2xl font-bold hover:bg-answer-red hover:line-through"
+                  >
+                    {p.nickname}
+                  </button>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
+        ))}
     </div>
   );
 }
@@ -378,15 +385,25 @@ function DistributionChart({
 /** How long the previous standings stay on screen before re-ordering. */
 const REORDER_DELAY_MS = 1200;
 
+/** Row size of the individual leaderboard: everyone is listed (up to 15), so it shrinks. */
+function leaderboardRow(count: number, besideTeams: boolean): string {
+  if (besideTeams || count > 10) return 'gap-4 px-5 py-1 text-2xl';
+  if (count > 6) return 'gap-5 px-6 py-2 text-3xl';
+  return 'gap-6 px-8 py-4 text-4xl';
+}
+
 export function LeaderboardScreen({
   top,
   previous,
   instant,
+  teams = [],
 }: {
   top: RankedPlayer[];
   /** Standings after the previous question ([] for the first one or after a reload). */
   previous: RankedPlayer[];
   instant: boolean;
+  /** Team mode: team ranking, shown first; the individual ranking goes beside it. */
+  teams?: RankedTeam[];
 }) {
   const reorder = !instant && previous.length > 0;
   const [showNew, setShowNew] = useState(!reorder);
@@ -399,6 +416,8 @@ export function LeaderboardScreen({
   const prevScore = new Map(previous.map((p) => [p.nickname, p.score]));
   // Phase 1: last question's top 5 with their old scores; phase 2: the new order, scores count up.
   const rows = showNew ? top : previous;
+  const withTeams = teams.length > 0;
+  const rowSize = leaderboardRow(Math.max(rows.length, top.length), withTeams);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
@@ -409,35 +428,44 @@ export function LeaderboardScreen({
       >
         Classement
       </motion.h2>
-      <ol className="flex w-full max-w-4xl flex-col gap-4">
-        <AnimatePresence initial={!instant}>
-          {rows.map((p, i) => (
-            <motion.li
-              key={p.nickname}
-              layout
-              initial={{ x: -60, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 60, opacity: 0 }}
-              transition={{
-                layout: { type: 'spring', stiffness: 200, damping: 24 },
-                delay: showNew && reorder ? 0 : i * 0.12,
-              }}
-              className={`flex items-center gap-6 rounded-xl px-8 py-4 text-4xl font-bold shadow-lg transition-colors duration-500 ${i === 0 ? 'bg-white text-brand' : 'bg-black/25'}`}
-            >
-              <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
-              <span className="flex-1 truncate">{p.nickname}</span>
-              <span className="tabular-nums">
-                {showNew && reorder ? (
-                  <CountUp value={p.score} from={prevScore.get(p.nickname) ?? 0} />
-                ) : (
-                  p.score
-                )}
-              </span>
-            </motion.li>
-          ))}
-        </AnimatePresence>
-        {top.length === 0 && <p className="text-center text-2xl opacity-80">Aucun joueur</p>}
-      </ol>
+      <div
+        className={`flex w-full items-start gap-8 ${withTeams ? 'max-w-7xl' : 'max-w-4xl justify-center'}`}
+      >
+        {withTeams && (
+          <div className="flex-[3]">
+            <TeamRanking teams={teams} instant={instant} />
+          </div>
+        )}
+        <ol className={`flex w-full flex-col ${withTeams ? 'flex-[2] gap-1.5' : 'gap-3'}`}>
+          <AnimatePresence initial={!instant}>
+            {rows.map((p, i) => (
+              <motion.li
+                key={p.nickname}
+                layout
+                initial={{ x: -60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 60, opacity: 0 }}
+                transition={{
+                  layout: { type: 'spring', stiffness: 200, damping: 24 },
+                  delay: showNew && reorder ? 0 : i * 0.12,
+                }}
+                className={`flex items-center rounded-xl font-bold shadow-lg transition-colors duration-500 ${rowSize} ${i === 0 ? 'bg-white text-brand' : 'bg-black/25'}`}
+              >
+                <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
+                <span className="flex-1 truncate">{p.nickname}</span>
+                <span className="tabular-nums">
+                  {showNew && reorder ? (
+                    <CountUp value={p.score} from={prevScore.get(p.nickname) ?? 0} />
+                  ) : (
+                    p.score
+                  )}
+                </span>
+              </motion.li>
+            ))}
+          </AnimatePresence>
+          {top.length === 0 && <p className="text-center text-2xl opacity-80">Aucun joueur</p>}
+        </ol>
+      </div>
     </div>
   );
 }

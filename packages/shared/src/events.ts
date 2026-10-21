@@ -3,7 +3,7 @@
  * Keep in sync with docs/PLAN.md §4. Any change must be noted in docs/TASKS.md.
  */
 import { z } from 'zod';
-import { GamePhase, Nickname, Pin } from './game.js';
+import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 
 // ---------- Common ----------
 
@@ -18,6 +18,8 @@ export const ErrorCode = z.enum([
   'NOT_ANSWERING',
   'ALREADY_ANSWERED',
   'SESSION_NOT_FOUND',
+  /** Team mode: a player has no team, or fewer than 2 teams have players. */
+  'TEAMS_NOT_READY',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -35,14 +37,36 @@ export interface RankedPlayer {
   score: number;
 }
 
+/** Team mode: one team's standing, best first. `score` = sum of per-question averages. */
+export interface RankedTeam {
+  id: TeamId;
+  name: string;
+  score: number;
+  playerCount: number;
+}
+
+export interface StandingsPayload {
+  top: RankedPlayer[];
+  /** Team mode only: every team still in the game, best first. */
+  teams?: RankedTeam[];
+}
+
 // ---------- Client → server payloads (validated with zod on the server) ----------
 
-export const HostCreatePayload = z.object({ quizId: z.string().min(1) });
+export const HostCreatePayload = z.object({
+  quizId: z.string().min(1),
+  /** Default `solo`. */
+  mode: GameMode.optional(),
+  /** Team mode only, default 2. */
+  teamCount: TeamCount.optional(),
+});
 export const HostActionPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
 export const HostKickPayload = HostActionPayload.extend({ playerId: z.string().min(1) });
+export const HostMovePlayerPayload = HostKickPayload.extend({ teamId: TeamId });
 
 export const PlayerJoinPayload = z.object({ pin: Pin, nickname: Nickname });
 export const PlayerRejoinPayload = z.object({ pin: Pin, sessionToken: z.string().min(1) });
+export const PlayerTeamPayload = z.object({ pin: Pin, teamId: TeamId });
 export const PlayerAnswerPayload = z.object({
   pin: Pin,
   questionIndex: z.number().int().min(0),
@@ -52,6 +76,8 @@ export const PlayerAnswerPayload = z.object({
 export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
 export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
+export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
+export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
 export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
 export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
@@ -65,6 +91,10 @@ export interface ClientToServerEvents {
   'host:next': (p: HostActionPayload, ack: (r: Ack) => void) => void;
   'host:kick': (p: HostKickPayload, ack: (r: Ack) => void) => void;
   'host:end': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  /** Team mode, LOBBY only: puts a player in another team. */
+  'host:moveplayer': (p: HostMovePlayerPayload, ack: (r: Ack) => void) => void;
+  /** Team mode, LOBBY only: random balanced teams for every player. */
+  'host:shuffle': (p: HostActionPayload, ack: (r: Ack) => void) => void;
   /**
    * Host screen reloaded / reconnected: re-attaches this socket as host, then the server
    * re-sends everything the host screen needs for the current phase.
@@ -79,6 +109,8 @@ export interface ClientToServerEvents {
     p: PlayerRejoinPayload,
     ack: (r: Ack<{ playerId: string; nickname: string; totalScore: number }>) => void,
   ) => void;
+  /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
+  'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack) => void) => void;
 }
 
@@ -86,6 +118,7 @@ export interface ClientToServerEvents {
 
 export interface GameStatePayload {
   phase: GamePhase;
+  mode: GameMode;
   /** -1 in LOBBY. */
   questionIndex: number;
   totalQuestions: number;
@@ -94,7 +127,16 @@ export interface GameStatePayload {
 }
 
 export interface LobbyPlayersPayload {
-  players: { id: string; nickname: string }[];
+  /** `teamId`: team mode, once the player has a team. */
+  players: { id: string; nickname: string; teamId?: TeamId }[];
+}
+
+/**
+ * Team mode only, to everyone: the teams and their members. In LOBBY every team of the game is
+ * listed (empty ones too); from the start on, only the teams in play (those that had players).
+ */
+export interface LobbyTeamsPayload {
+  teams: { id: TeamId; name: string; members: { id: string; nickname: string }[] }[];
 }
 
 /** To the host only: full question. */
@@ -134,18 +176,21 @@ export interface PlayerResultPayload {
   streakBonus: number;
   totalScore: number;
   rank: number;
+  /** Team mode: the player's team after this question (score = sum of averages, PLAN.md §3). */
+  team?: { id: TeamId; score: number; rank: number };
 }
 
 export interface ServerToClientEvents {
   'game:state': (p: GameStatePayload) => void; // all
   'lobby:players': (p: LobbyPlayersPayload) => void; // host
+  'lobby:teams': (p: LobbyTeamsPayload) => void; // all (team mode)
   'question:show': (p: QuestionShowPayload) => void; // host
   'question:prompt': (p: QuestionPromptPayload) => void; // players
   'answer:count': (p: AnswerCountPayload) => void; // host
   'question:reveal': (p: QuestionRevealPayload) => void; // host
   'player:result': (p: PlayerResultPayload) => void; // each player
-  leaderboard: (p: { top: RankedPlayer[] }) => void; // host
-  podium: (p: { top: RankedPlayer[] }) => void; // all
+  leaderboard: (p: StandingsPayload) => void; // host
+  podium: (p: StandingsPayload) => void; // all
   'player:kicked': (p: Record<string, never>) => void; // that player
   error: (p: ErrorPayload) => void; // sender
 }

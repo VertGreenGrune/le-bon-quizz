@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router';
 import type { QuizSummary } from '@lbq/shared';
 import { api } from '../api';
 import { EditorShell, btn } from './EditorShell';
-import { hostUrl } from './hostUrl';
+import { StartGameDialog } from '../components/StartGameDialog';
+import { hostUrl } from '../lib/gameOptions';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -13,6 +14,8 @@ export function QuizListPage() {
   const [quizzes, setQuizzes] = useState<QuizSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Quiz whose "Lancer" was clicked: the Solo / Équipes dialog is open. */
+  const [launchId, setLaunchId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setError(null);
@@ -88,7 +91,7 @@ export function QuizListPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                <button type="button" className={btn.start} onClick={() => navigate(hostUrl(q.id))}>
+                <button type="button" className={btn.start} onClick={() => setLaunchId(q.id)}>
                   ▶ Lancer
                 </button>
                 <Link to={`/editor/${q.id}`} className={btn.ghost}>
@@ -119,6 +122,12 @@ export function QuizListPage() {
           ))}
         </ul>
       </main>
+      {launchId && (
+        <StartGameDialog
+          onStart={(options) => navigate(hostUrl(launchId, options))}
+          onClose={() => setLaunchId(null)}
+        />
+      )}
     </EditorShell>
   );
 }

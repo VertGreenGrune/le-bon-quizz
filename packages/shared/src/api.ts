@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { QuizSchema, type Quiz } from './quiz.js';
+import type { GameMode, TeamId } from './game.js';
 
 // ---------- Errors ----------
 
@@ -100,6 +101,7 @@ export interface GameSummary {
   playerCount: number;
   /** Nickname of the rank-1 player (first one if tied), null without players. */
   winner: string | null;
+  mode: GameMode;
 }
 
 export interface GameReportRow {
@@ -107,6 +109,18 @@ export interface GameReportRow {
   nickname: string;
   score: number;
   correctCount: number;
+  /** Team mode: the player's team (null in solo games). */
+  teamId: TeamId | null;
+}
+
+/** Team mode: final standing of one team. */
+export interface GameTeamReport {
+  teamId: TeamId;
+  name: string;
+  /** Sum of the team's per-question averages (PLAN.md §3). */
+  score: number;
+  playerCount: number;
+  rank: number;
 }
 
 /** How one question went (snapshot of the question as it was played). */
@@ -127,4 +141,6 @@ export interface GameQuestionReport {
 export type GameReport = GameSummary & {
   results: GameReportRow[];
   questions: GameQuestionReport[];
+  /** Team ranking, best first; empty for solo games. */
+  teams: GameTeamReport[];
 };

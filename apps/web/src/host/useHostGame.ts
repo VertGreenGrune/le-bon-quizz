@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
-import type { Ack, ErrorPayload, HostActionPayload, ServerToClientEvents } from '@lbq/shared';
+import type {
+  Ack,
+  ErrorPayload,
+  HostActionPayload,
+  ServerToClientEvents,
+  TeamId,
+} from '@lbq/shared';
+import { SOLO, type GameOptions } from '../lib/gameOptions';
 import { getSocket } from '../lib/socket';
 import { hostReducer, initialHostState } from './hostReducer';
 
@@ -29,11 +36,15 @@ let pendingCreate: Promise<{ pin: string; hostToken: string }> | null = null;
  * Creates a game with `quizId` (the demo quiz by default). Memoized so React StrictMode's
  * double effect doesn't create two games. Rejects if the server doesn't answer (e.g. not running).
  */
-export function createGame(quizId = 'demo'): Promise<{ pin: string; hostToken: string }> {
+export function createGame(
+  quizId = 'demo',
+  options: GameOptions = SOLO,
+): Promise<{ pin: string; hostToken: string }> {
+  const payload = options.mode === 'teams' ? { quizId, ...options } : { quizId };
   pendingCreate ??= new Promise((resolve, reject) => {
     getSocket()
       .timeout(CREATE_TIMEOUT_MS)
-      .emit('host:create', { quizId }, (err, res) => {
+      .emit('host:create', payload, (err, res) => {
         pendingCreate = null;
         if (err) {
           reject({
@@ -69,20 +80,22 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
       dispatch({ type: 'state', payload: p, now: Date.now() });
     const onPlayers: ServerToClientEvents['lobby:players'] = (p) =>
       dispatch({ type: 'players', payload: p });
+    const onTeams: ServerToClientEvents['lobby:teams'] = (p) =>
+      dispatch({ type: 'teams', payload: p });
     const onQuestion: ServerToClientEvents['question:show'] = (p) =>
       dispatch({ type: 'question', payload: p });
     const onCount: ServerToClientEvents['answer:count'] = (p) => dispatch({ type: 'count', ...p });
     const onReveal: ServerToClientEvents['question:reveal'] = (p) =>
       dispatch({ type: 'reveal', payload: p });
     const onLeaderboard: ServerToClientEvents['leaderboard'] = (p) =>
-      dispatch({ type: 'leaderboard', top: p.top });
-    const onPodium: ServerToClientEvents['podium'] = (p) =>
-      dispatch({ type: 'podium', top: p.top });
+      dispatch({ type: 'leaderboard', ...p });
+    const onPodium: ServerToClientEvents['podium'] = (p) => dispatch({ type: 'podium', ...p });
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('game:state', onState);
     socket.on('lobby:players', onPlayers);
+    socket.on('lobby:teams', onTeams);
     socket.on('question:show', onQuestion);
     socket.on('answer:count', onCount);
     socket.on('question:reveal', onReveal);
@@ -94,6 +107,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
       socket.off('disconnect', onDisconnect);
       socket.off('game:state', onState);
       socket.off('lobby:players', onPlayers);
+      socket.off('lobby:teams', onTeams);
       socket.off('question:show', onQuestion);
       socket.off('answer:count', onCount);
       socket.off('question:reveal', onReveal);
@@ -144,6 +158,14 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const a = auth();
     if (a) getSocket().emit('host:kick', { ...a, playerId }, handleAck);
   };
+  const movePlayer = (playerId: string, teamId: TeamId) => {
+    const a = auth();
+    if (a) getSocket().emit('host:moveplayer', { ...a, playerId, teamId }, handleAck);
+  };
+  const shuffle = () => {
+    const a = auth();
+    if (a) getSocket().emit('host:shuffle', a, handleAck);
+  };
 
   return {
     state,
@@ -154,6 +176,8 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     next,
     end,
     kick,
+    movePlayer,
+    shuffle,
     clearError: () => setError(null),
   };
 }

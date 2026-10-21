@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { SHAPES, type GameQuestionReport, type GameReport } from '@lbq/shared';
+import {
+  SHAPES,
+  TEAM_NAMES,
+  type GameQuestionReport,
+  type GameReport,
+  type GameTeamReport,
+} from '@lbq/shared';
 import { ApiError, api } from '../api';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { EditorShell, btn } from '../editor/EditorShell';
@@ -11,6 +17,7 @@ import {
   noAnswerCount,
   percentCorrect,
 } from './reportStats';
+import { ModeBadge } from './ModeBadge';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -71,7 +78,10 @@ function Report({ report }: { report: GameReport }) {
   const average = averagePercentCorrect(report.questions);
   return (
     <>
-      <h1 className="text-3xl font-black">{report.quizTitle}</h1>
+      <h1 className="flex items-center gap-3 text-3xl font-black">
+        {report.quizTitle}
+        <ModeBadge mode={report.mode} />
+      </h1>
       <p className="mb-6 text-gray-500">
         {dateFmt.format(new Date(report.startedAt))}
         {duration && ` · ${duration}`} · PIN {report.pin}
@@ -83,8 +93,12 @@ function Report({ report }: { report: GameReport }) {
         <Stat label="Bonnes réponses" value={average === null ? '—' : `${average} %`} />
       </dl>
 
+      {report.teams.length > 0 && <Teams teams={report.teams} />}
+
       <section className="mb-8">
-        <h2 className="mb-3 text-xl font-black">Classement final</h2>
+        <h2 className="mb-3 text-xl font-black">
+          {report.teams.length > 0 ? 'Classement des joueurs' : 'Classement final'}
+        </h2>
         {report.results.length === 0 ? (
           <p className="rounded-2xl bg-white p-6 text-gray-500 shadow-sm">Aucun joueur.</p>
         ) : (
@@ -94,6 +108,7 @@ function Report({ report }: { report: GameReport }) {
                 <tr>
                   <th className="px-4 py-2 font-semibold">Rang</th>
                   <th className="px-4 py-2 font-semibold">Joueur</th>
+                  {report.mode === 'teams' && <th className="px-4 py-2 font-semibold">Équipe</th>}
                   <th className="px-4 py-2 text-right font-semibold">Score</th>
                   <th className="px-4 py-2 text-right font-semibold">Bonnes réponses</th>
                 </tr>
@@ -105,6 +120,19 @@ function Report({ report }: { report: GameReport }) {
                       {medals[r.rank - 1] ?? ''} {r.rank}
                     </td>
                     <td className="max-w-48 truncate px-4 py-2 font-semibold">{r.nickname}</td>
+                    {report.mode === 'teams' && (
+                      <td className="px-4 py-2">
+                        {r.teamId !== null && (
+                          <span className="flex items-center gap-1.5 text-sm font-semibold">
+                            <span
+                              className={`size-3 rounded-full ${shapeBg[SHAPES[r.teamId].color]}`}
+                              aria-hidden="true"
+                            />
+                            {TEAM_NAMES[r.teamId]}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-2 text-right tabular-nums">{r.score}</td>
                     <td className="px-4 py-2 text-right tabular-nums">
                       {r.correctCount}
@@ -120,6 +148,34 @@ function Report({ report }: { report: GameReport }) {
 
       <Questions questions={report.questions} />
     </>
+  );
+}
+
+function Teams({ teams }: { teams: GameTeamReport[] }) {
+  return (
+    <section className="mb-8">
+      <h2 className="mb-1 text-xl font-black">Classement des équipes</h2>
+      <p className="mb-3 text-sm text-gray-500">Score d'équipe = moyenne des points par joueur.</p>
+      <ol className="flex flex-col gap-2">
+        {teams.map((t) => {
+          const s = SHAPES[t.teamId];
+          return (
+            <li
+              key={t.teamId}
+              className={`flex items-center gap-3 rounded-2xl px-4 py-3 font-bold text-white shadow-sm ${shapeBg[s.color]}`}
+            >
+              <span className="w-8 text-lg">{medals[t.rank - 1] ?? t.rank}</span>
+              <ShapeIcon shape={s.shape} className="size-5 fill-white" />
+              <span className="flex-1 truncate text-lg">{t.name}</span>
+              <span className="text-sm opacity-90">
+                {t.playerCount} joueur{t.playerCount > 1 ? 's' : ''}
+              </span>
+              <span className="w-20 text-right text-lg tabular-nums">{t.score}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 

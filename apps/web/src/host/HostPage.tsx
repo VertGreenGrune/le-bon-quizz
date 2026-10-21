@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } from '@lbq/shared';
-import { currentQuestion, isLastQuestion } from './hostReducer';
+import { parseGameOptions } from '../lib/gameOptions';
+import { currentQuestion, isLastQuestion, teamLobbyStatus } from './hostReducer';
+import { TeamLobby, TeamPodiumScreen } from './teamScreens';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
   LeaderboardScreen,
@@ -14,14 +16,17 @@ import {
 import { setMuted, useHostSounds, useMuted } from './sounds';
 
 /**
- * Shared screen (TV/projector). `/host/new?quizId=<id>` creates a game (demo quiz without
- * `quizId`) then redirects to `/host/:pin`; the same component instance stays mounted across
- * that redirect.
+ * Shared screen (TV/projector). `/host/new?quizId=<id>[&mode=teams&teams=<n>]` creates a game
+ * (demo quiz without `quizId`, solo without `mode`) then redirects to `/host/:pin`; the same
+ * component instance stays mounted across that redirect.
  */
 export function HostPage() {
   const { pin: pinParam } = useParams();
   const navigate = useNavigate();
-  const quizId = useSearchParams()[0].get('quizId') ?? undefined;
+  const [searchParams] = useSearchParams();
+  const quizId = searchParams.get('quizId') ?? undefined;
+  const mode = searchParams.get('mode');
+  const teams = searchParams.get('teams');
   const isNew = pinParam === 'new';
   const pin = isNew ? undefined : pinParam;
   const [hostToken, setHostToken] = useState(() => (pin ? loadHostToken(pin) : null));
@@ -33,7 +38,8 @@ export function HostPage() {
   useEffect(() => {
     if (!isNew) return;
     let cancelled = false;
-    createGame(quizId).then(
+    const options = parseGameOptions(new URLSearchParams({ mode: mode ?? '', teams: teams ?? '' }));
+    createGame(quizId, options).then(
       (res) => {
         if (cancelled) return;
         setHostToken(res.hostToken);
@@ -44,7 +50,7 @@ export function HostPage() {
     return () => {
       cancelled = true;
     };
-  }, [isNew, quizId, navigate]);
+  }, [isNew, quizId, mode, teams, navigate]);
 
   const timed = state.deadline != null;
   const now = useNow(timed);
@@ -91,14 +97,36 @@ export function HostPage() {
   // The lobby is shown until the first game:state, in case the server doesn't send one on create.
   const phase = state.phase ?? 'LOBBY';
   const question = currentQuestion(state);
+  const teamMode = state.mode === 'teams';
 
   let screen: ReactNode;
   let primary: { label: string; onClick: () => void; disabled?: boolean } | null = null;
 
   switch (phase) {
     case 'LOBBY':
-      screen = <LobbyScreen pin={pin} players={state.players} onKick={game.kick} />;
-      primary = { label: 'Commencer', onClick: game.start, disabled: state.players.length === 0 };
+      screen = (
+        <LobbyScreen
+          pin={pin}
+          players={state.players}
+          onKick={game.kick}
+          teamLobby={
+            teamMode ? (
+              <TeamLobby
+                players={state.players}
+                teams={state.teams}
+                onMove={game.movePlayer}
+                onKick={game.kick}
+                onShuffle={game.shuffle}
+              />
+            ) : undefined
+          }
+        />
+      );
+      primary = {
+        label: 'Commencer',
+        onClick: game.start,
+        disabled: teamMode ? !teamLobbyStatus(state).ready : state.players.length === 0,
+      };
       break;
     case 'QUESTION_INTRO':
       screen = (
@@ -133,6 +161,7 @@ export function HostPage() {
           top={state.leaderboard}
           previous={state.previousLeaderboard}
           instant={instant}
+          teams={state.leaderboardTeams}
         />
       );
       primary = {
@@ -141,11 +170,14 @@ export function HostPage() {
       };
       break;
     case 'PODIUM':
-      screen = <PodiumScreen top={state.podium} instant={instant} />;
-      primary = { label: 'Terminer la partie', onClick: game.end };
-      break;
     case 'ENDED':
-      screen = <PodiumScreen top={state.podium} instant={instant} />;
+      screen =
+        state.podiumTeams.length > 0 ? (
+          <TeamPodiumScreen teams={state.podiumTeams} top={state.podium} instant={instant} />
+        ) : (
+          <PodiumScreen top={state.podium} instant={instant} />
+        );
+      if (phase === 'PODIUM') primary = { label: 'Terminer la partie', onClick: game.end };
       break;
   }
 
