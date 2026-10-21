@@ -600,7 +600,7 @@ T16 = editor/library/quiz API, T20 = join/lobby/rankings; both add an independen
 different models) → T17 later.
 
 ### T16 — Public / private quizzes + quiz library (after T14; can run in parallel with T20)
-- **Status:** todo
+- **Status:** in-progress (T16 agent, worktree ../lbq-T16)
 - **Depends on:** T14 merged
 - **Ports:** server 3016 / web 5196, test DB `lbq_test_t16`.
 
