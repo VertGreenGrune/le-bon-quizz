@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { QuizSchema, QuizVisibility, type Quiz, type QuestionType } from './quiz.js';
 import type { GameMode, TeamId } from './game.js';
+import type { AvatarId } from './avatars.js';
 import type { RevealDetails } from './events.js';
 
 // ---------- Errors ----------
@@ -151,6 +152,8 @@ export interface GameReportRow {
   nickname: string;
   score: number;
   correctCount: number;
+  /** Null for games saved before avatars existed. */
+  avatar: AvatarId | null;
   /** Team mode: the player's team (null in solo games). */
   teamId: TeamId | null;
 }

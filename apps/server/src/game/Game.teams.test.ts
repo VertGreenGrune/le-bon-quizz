@@ -126,15 +126,15 @@ describe('Game in team mode', () => {
         ],
       });
       expect(rec.last('lobby:players', 'host')).toEqual({
-        players: [{ id: alice.id, nickname: 'Alice' }],
+        players: [{ id: alice.id, nickname: 'Alice', avatar: expect.any(String) }],
       });
 
       game.setTeam(alice.id, 2);
       expect((rec.last('lobby:teams', 'all') as LobbyTeamsPayload).teams[2]!.members).toEqual([
-        { id: alice.id, nickname: 'Alice' },
+        { id: alice.id, nickname: 'Alice', avatar: expect.any(String) },
       ]);
       expect(rec.last('lobby:players', 'host')).toEqual({
-        players: [{ id: alice.id, nickname: 'Alice', teamId: 2 }],
+        players: [{ id: alice.id, nickname: 'Alice', avatar: expect.any(String), teamId: 2 }],
       });
       game.setTeam(alice.id, 0); // can switch until the start
       expect(alice.teamId).toBe(0);
@@ -172,8 +172,16 @@ describe('Game in team mode', () => {
       expect(game.phase).toBe('QUESTION_INTRO');
       // The empty team (Bleue) is dropped.
       expect((rec.last('lobby:teams', 'all') as LobbyTeamsPayload).teams).toEqual([
-        { id: 0, name: 'Équipe Rouge', members: [{ id: alice!.id, nickname: 'Alice' }] },
-        { id: 2, name: 'Équipe Jaune', members: [{ id: bob.id, nickname: 'Bob' }] },
+        {
+          id: 0,
+          name: 'Équipe Rouge',
+          members: [{ id: alice!.id, nickname: 'Alice', avatar: expect.any(String) }],
+        },
+        {
+          id: 2,
+          name: 'Équipe Jaune',
+          members: [{ id: bob.id, nickname: 'Bob', avatar: expect.any(String) }],
+        },
       ]);
     });
 
@@ -291,7 +299,7 @@ describe('Game in team mode', () => {
 
       game.kick(r2!.id);
       expect((rec.last('lobby:teams', 'all') as LobbyTeamsPayload).teams[0]!.members).toEqual([
-        { id: r1!.id, nickname: 'R1' },
+        { id: r1!.id, nickname: 'R1', avatar: expect.any(String) },
       ]);
       game.next();
       toAnswering();

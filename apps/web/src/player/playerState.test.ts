@@ -167,7 +167,7 @@ describe('playerReducer', () => {
         },
       },
       state({ phase: 'PODIUM', questionIndex: 2 }),
-      { type: 'podium', top: [{ nickname: 'A', score: 3000 }] },
+      { type: 'podium', top: [{ nickname: 'A', avatar: 'batman' as const, score: 3000 }] },
     );
     expect(playerScreen(s)).toBe('podium');
     expect(s.result?.rank).toBe(4);

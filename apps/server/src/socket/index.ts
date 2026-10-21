@@ -5,6 +5,7 @@ import {
   HostKickPayload,
   HostMovePlayerPayload,
   PlayerAnswerPayload,
+  PlayerAvatarsPayload,
   PlayerJoinPayload,
   PlayerRejoinPayload,
   PlayerTeamPayload,
@@ -266,11 +267,15 @@ export function registerSocketHandlers(
       handler(
         socket,
         PlayerJoinPayload,
-        async ({ pin, nickname }) => {
-          const player = games.get(pin).join(nickname, socket.id);
+        async ({ pin, nickname, avatar }) => {
+          const player = games.get(pin).join(nickname, socket.id, avatar);
           session = { pin, role: 'player', playerId: player.id };
           await socket.join(roomAll(pin));
-          return { playerId: player.id, sessionToken: player.sessionToken };
+          return {
+            playerId: player.id,
+            sessionToken: player.sessionToken,
+            avatar: player.avatar,
+          };
         },
         ({ playerId }) => resyncPlayer(playerId),
       ),
@@ -285,10 +290,22 @@ export function registerSocketHandlers(
           const player = games.get(pin).rejoin(sessionToken, socket.id);
           session = { pin, role: 'player', playerId: player.id };
           await socket.join(roomAll(pin));
-          return { playerId: player.id, nickname: player.nickname, totalScore: player.totalScore };
+          return {
+            playerId: player.id,
+            nickname: player.nickname,
+            avatar: player.avatar,
+            totalScore: player.totalScore,
+          };
         },
         ({ playerId }) => resyncPlayer(playerId),
       ),
+    );
+
+    socket.on(
+      'player:avatars',
+      handler(socket, PlayerAvatarsPayload, ({ pin }) => ({
+        taken: games.get(pin).takenAvatars(),
+      })),
     );
 
     socket.on(

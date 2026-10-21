@@ -45,7 +45,10 @@ describe('hostReducer', () => {
 
   it('resets answer count and reveal when the question changes, not within a question', () => {
     const s = run([
-      { type: 'players', payload: { players: [{ id: 'a', nickname: 'A' }] } },
+      {
+        type: 'players',
+        payload: { players: [{ id: 'a', nickname: 'A', avatar: 'batman' as const }] },
+      },
       {
         type: 'state',
         payload: { phase: 'ANSWERING', mode: 'solo', questionIndex: 0, totalQuestions: 2 },
@@ -101,7 +104,10 @@ describe('hostReducer', () => {
         payload: { phase: 'REVEAL', mode: 'solo', questionIndex: 1, totalQuestions: 2 },
         now: 0,
       },
-      { type: 'players', payload: { players: [{ id: 'a', nickname: 'Alice' }] } },
+      {
+        type: 'players',
+        payload: { players: [{ id: 'a', nickname: 'Alice', avatar: 'batman' as const }] },
+      },
       { type: 'question', payload: question(1) },
       { type: 'count', answered: 1, total: 1 },
       { type: 'reveal', payload: { type: 'MCQ', correctIndexes: [0], distribution: [1, 0] } },
@@ -128,10 +134,10 @@ describe('hostReducer', () => {
       payload: { phase: 'LEADERBOARD', mode: 'solo', questionIndex, totalQuestions: 3 },
       now: 0,
     });
-    const first = [{ nickname: 'A', score: 900 }];
+    const first = [{ nickname: 'A', avatar: 'batman' as const, score: 900 }];
     const second = [
-      { nickname: 'B', score: 1800 },
-      { nickname: 'A', score: 900 },
+      { nickname: 'B', avatar: 'batman' as const, score: 1800 },
+      { nickname: 'A', avatar: 'batman' as const, score: 900 },
     ];
     const s1 = run([at(0), { type: 'leaderboard', top: first }]);
     expect(s1.previousLeaderboard).toEqual([]);

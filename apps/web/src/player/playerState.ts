@@ -1,5 +1,6 @@
 import type {
   AnswerInput,
+  AvatarId,
   ErrorCode,
   GameMode,
   GamePhase,
@@ -26,6 +27,8 @@ export interface PlayerState {
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
   nickname: string;
+  /** Own avatar (null until known: old session without it). */
+  avatar: AvatarId | null;
   /** Own player id, to find our team in `teams`. */
   playerId: string;
   totalScore: number;
@@ -40,7 +43,13 @@ export interface PlayerState {
 
 export type PlayerAction =
   | { type: 'connection'; connected: boolean }
-  | { type: 'session'; playerId: string; nickname: string; totalScore: number }
+  | {
+      type: 'session';
+      playerId: string;
+      nickname: string;
+      avatar?: AvatarId;
+      totalScore: number;
+    }
   | { type: 'teams'; payload: LobbyTeamsPayload }
   | { type: 'state'; payload: GameStatePayload; now: number }
   | { type: 'prompt'; payload: QuestionPromptPayload; now: number }
@@ -62,6 +71,7 @@ export const initialPlayerState: PlayerState = {
   myAnswer: null,
   result: null,
   nickname: '',
+  avatar: null,
   playerId: '',
   totalScore: 0,
   teams: [],
@@ -81,6 +91,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         ...state,
         playerId: action.playerId,
         nickname: action.nickname,
+        avatar: action.avatar ?? state.avatar,
         totalScore: action.totalScore,
       };
 

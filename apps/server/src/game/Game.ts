@@ -9,7 +9,9 @@ import {
   TYPE_ANSWER_MAX_LENGTH,
   choiceTexts,
   correctChoiceIndexes,
+  randomAvatarId,
   type AnswerInput,
+  type AvatarId,
   type GameMode,
   type GamePhase,
   type GameStatePayload,
@@ -79,6 +81,7 @@ export interface Player {
   id: string;
   sessionToken: string;
   nickname: string;
+  avatar: AvatarId;
   /** `null` while disconnected — the player can come back with `player:rejoin`. */
   socketId: string | null;
   totalScore: number;
@@ -96,6 +99,7 @@ export interface Player {
 /** Final standing of one player (kicked ones included), as saved in `PlayerResult`. */
 export interface PlayerStanding {
   nickname: string;
+  avatar: AvatarId;
   score: number;
   correctCount: number;
   rank: number;
@@ -317,7 +321,8 @@ export class Game {
 
   // ---------- Player actions ----------
 
-  join(nickname: string, socketId: string): Player {
+  /** `avatar` missing (older clients) → a random one, not taken yet if possible. */
+  join(nickname: string, socketId: string, avatar?: AvatarId): Player {
     if (this.phase !== 'LOBBY')
       throw new GameError('GAME_ALREADY_STARTED', 'La partie a déjà commencé');
     if (this.players.size >= MAX_PLAYERS_PER_GAME)
@@ -332,6 +337,7 @@ export class Game {
       id: randomUUID(),
       sessionToken: randomUUID(),
       nickname: name,
+      avatar: avatar ?? randomAvatarId(this.takenAvatars()),
       socketId,
       totalScore: 0,
       correctCount: 0,
@@ -425,6 +431,7 @@ export class Game {
       (offset: number) =>
       ({ player, rank }: { player: Player; rank: number }) => ({
         nickname: player.nickname,
+        avatar: player.avatar,
         score: player.totalScore,
         correctCount: player.correctCount,
         rank: rank + offset,
@@ -445,6 +452,11 @@ export class Game {
       playerCount: team.playerCount,
       rank,
     }));
+  }
+
+  /** Avatars of the players in the game (several players may share one). */
+  takenAvatars(): AvatarId[] {
+    return [...new Set([...this.players.values()].map((p) => p.avatar))];
   }
 
   statePayload(): GameStatePayload {
@@ -581,7 +593,9 @@ export class Game {
     if (question.type === 'SLIDER') {
       const { slider } = question;
       const guesses = answers.flatMap(({ player, answer }) =>
-        answer.value === null ? [] : [{ nickname: player.nickname, value: answer.value }],
+        answer.value === null
+          ? []
+          : [{ nickname: player.nickname, value: answer.value, avatar: player.avatar }],
       );
       const distance = (g: { value: number }) => Math.abs(g.value - slider.correct);
       let closest: (typeof guesses)[number] | undefined;
@@ -669,7 +683,11 @@ export class Game {
       teams: this.teamIds.map((id) => ({
         id,
         name: TEAM_NAMES[id],
-        members: this.teamMembers(id).map((p) => ({ id: p.id, nickname: p.nickname })),
+        members: this.teamMembers(id).map((p) => ({
+          id: p.id,
+          nickname: p.nickname,
+          avatar: p.avatar,
+        })),
       })),
     };
     send('lobby:teams', payload);
@@ -702,6 +720,7 @@ export class Game {
       players: [...this.players.values()].map((p) => ({
         id: p.id,
         nickname: p.nickname,
+        avatar: p.avatar,
         ...(p.teamId !== null && { teamId: p.teamId }),
       })),
     });

@@ -96,8 +96,9 @@ Every client → server event takes an ack callback receiving
 ### Player → server
 | Event | Payload | Notes |
 |---|---|---|
-| `player:join` | `{ pin, nickname }` | ack `{ playerId, sessionToken }` |
-| `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
+| `player:join` | `{ pin, nickname, avatar? }` | `avatar` = an `AvatarId` (`AVATARS` in `packages/shared/src/avatars.ts`, 20 Batman: The Animated Series portraits, images in `apps/web/public/avatars/<id>.jpg`; unknown id → `INVALID_PAYLOAD`, missing → random, preferably not taken); several players may share one. Ack `{ playerId, sessionToken, avatar }` |
+| `player:avatars` | `{ pin }` | join screen, before joining: ack `{ taken: AvatarId[] }` (avatars already in that game, shown dimmed as a hint); `GAME_NOT_FOUND` |
+| `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, avatar, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
 | `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `text` \| `value` | accepted once, only during ANSWERING; `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER, `value` (in [min, max]) for SLIDER — another kind → `INVALID_PAYLOAD` |
 
@@ -105,15 +106,15 @@ Every client → server event takes an ack callback receiving
 | Event | To | Payload |
 |---|---|---|
 | `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew) |
-| `lobby:players` | host | `{ players: { id, nickname, teamId? }[] }` |
-| `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
+| `lobby:players` | host | `{ players: { id, nickname, avatar, teamId? }[] }` |
+| `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
 | `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer) |
 | `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) — no text, no answer! |
 | `answer:count` | host | `{ answered, total }` |
-| `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value }` (`RevealDetails`) |
+| `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars) (`RevealDetails`) |
 | `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL: `correct` false, 0 points) + SLIDER `yourValue?` (absent without an answer), `correctValue` |
-| `leaderboard` | host | `{ top: { nickname, score }[], teams? }` (everyone, up to 15; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
-| `podium` | all | `{ top: { nickname, score }[], teams? }` (top 3 players; all teams in team mode) |
+| `leaderboard` | host | `{ top: { nickname, avatar, score }[], teams? }` (everyone, up to 15; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
+| `podium` | all | `{ top: { nickname, avatar, score }[], teams? }` (top 3 players; all teams in team mode) |
 | `player:kicked` | that player | `{}` |
 | `error` | sender | `{ code, message }` |
 
@@ -133,7 +134,7 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
   for a poll)
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
   mode (`solo` | `teams`), startedAt, endedAt
-- `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank, teamId? (team mode)
+- `PlayerResult` — id, gameSessionId, nickname, avatar? (null for games saved before avatars), score, correctCount, rank, teamId? (team mode)
 - `TeamResult` — id, gameSessionId, teamId, name, score, playerCount, rank (team mode)
 - `QuestionResult` — id, gameSessionId, index, type (default MCQ), text, choices[],
   correctIndexes[], distribution[], playerCount, correctCount, answerCount? (null for older games
@@ -173,7 +174,7 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
 - `GET /games` (history, `GameSummary` with `winner`, `mode`), `GET /games/:id` (report: ranking
-  with `teamId` + per-question `questions` with `type`, `answerCount`, `details`, empty for games
+  with `teamId`, `avatar` (null before T20) + per-question `questions` with `type`, `answerCount`, `details`, empty for games
   saved before T12, + `teams` ranking,
   empty for solo games), `GET /games/:id/export.csv` (team games get a `team` column)
   (UTF-8 BOM, formula-injection-safe)

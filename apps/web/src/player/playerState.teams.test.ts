@@ -12,7 +12,11 @@ const run = (...actions: PlayerAction[]) => actions.reduce(playerReducer, initia
 
 const teams = {
   teams: [
-    { id: 0 as const, name: 'Équipe Rouge', members: [{ id: 'me', nickname: 'Moi' }] },
+    {
+      id: 0 as const,
+      name: 'Équipe Rouge',
+      members: [{ id: 'me', nickname: 'Moi', avatar: 'batman' as const }],
+    },
     { id: 1 as const, name: 'Équipe Bleue', members: [] },
   ],
 };

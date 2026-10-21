@@ -8,6 +8,7 @@ import {
   type GameTeamReport,
 } from '@lbq/shared';
 import { ApiError, api } from '../api';
+import { Avatar } from '../components/Avatar';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { EditorShell, btn } from '../editor/EditorShell';
 import { QUESTION_TYPES } from '../editor/draft';
@@ -122,7 +123,12 @@ function Report({ report }: { report: GameReport }) {
                     <td className="px-4 py-2 font-bold">
                       {medals[r.rank - 1] ?? ''} {r.rank}
                     </td>
-                    <td className="max-w-48 truncate px-4 py-2 font-semibold">{r.nickname}</td>
+                    <td className="px-4 py-2 font-semibold">
+                      <span className="flex max-w-56 items-center gap-2">
+                        {r.avatar && <Avatar id={r.avatar} size="sm" />}
+                        <span className="truncate">{r.nickname}</span>
+                      </span>
+                    </td>
                     {report.mode === 'teams' && (
                       <td className="px-4 py-2">
                         {r.teamId !== null && (
@@ -380,7 +386,11 @@ function SliderGuesses({ q, noAnswer }: CardProps) {
         {closest && (
           <>
             {' '}
-            · Le plus proche : <b>{closest.nickname}</b> ({formatValue(closest.value, unit)})
+            · Le plus proche :{' '}
+            {closest.avatar && (
+              <Avatar id={closest.avatar} size="xs" className="align-middle" />
+            )}{' '}
+            <b>{closest.nickname}</b> ({formatValue(closest.value, unit)})
           </>
         )}
       </p>
