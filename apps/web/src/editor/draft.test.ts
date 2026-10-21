@@ -216,9 +216,16 @@ describe('new question types', () => {
   });
 
   it('loads every type of a saved quiz into the editor and saves it unchanged', () => {
-    const draft = fromDetail({ ...DEMO_QUIZ, createdAt: '', updatedAt: '' });
+    const draft = fromDetail({ ...DEMO_QUIZ, visibility: 'PRIVATE', createdAt: '', updatedAt: '' });
     const res = validateDraft(draft);
     expect(res.ok && res.data.questions).toEqual(DEMO_QUIZ.questions);
+  });
+
+  it('keeps the visibility: private for a new quiz, as saved otherwise', () => {
+    expect(emptyQuiz().visibility).toBe('PRIVATE');
+    const draft = fromDetail({ ...DEMO_QUIZ, visibility: 'PUBLIC', createdAt: '', updatedAt: '' });
+    const res = validateDraft(draft);
+    expect(res.ok && res.data.visibility).toBe('PUBLIC');
   });
 });
 

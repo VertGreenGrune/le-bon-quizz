@@ -10,7 +10,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { DEMO_QUIZ, type AuthResponse, type QuizDetail, type QuizInput } from '@lbq/shared';
+import {
+  DEMO_QUIZ,
+  type AuthResponse,
+  type LibraryQuiz,
+  type QuizDetail,
+  type QuizInput,
+  type QuizSummary,
+} from '@lbq/shared';
 import { createPrisma, type PrismaClient } from '../db.js';
 import { registerApi } from './index.js';
 
@@ -232,6 +239,156 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       });
       expect(del.statusCode).toBe(404);
       expect((await app.inject({ url: '/api/quizzes', headers: h })).json()).toEqual([]);
+    });
+  });
+
+  describe('visibility & library', () => {
+    type Headers = Record<string, string>;
+    const createQuiz = async (headers: Headers, input: Partial<QuizInput> = {}) =>
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/api/quizzes',
+          headers,
+          payload: { ...quizInput, ...input },
+        })
+      ).json<QuizDetail>();
+    const library = async (headers: Headers, query = '') => {
+      const res = await app.inject({ url: `/api/library${query}`, headers });
+      expect(res.statusCode).toBe(200);
+      return res.json<LibraryQuiz[]>();
+    };
+    const played = (hostId: string, quizId: string, times: number) =>
+      prisma.gameSession.createMany({
+        data: Array.from({ length: times }, () => ({ hostId, quizId, quizTitle: 'x', pin: '1' })),
+      });
+
+    it('is private by default; PUT without visibility keeps it', async () => {
+      const { headers } = await register();
+      const quiz = await createQuiz(headers);
+      expect(quiz.visibility).toBe('PRIVATE');
+
+      const put = (payload: QuizInput) =>
+        app.inject({ method: 'PUT', url: `/api/quizzes/${quiz.id}`, headers, payload });
+      expect((await put({ ...quizInput, visibility: 'PUBLIC' })).json()).toMatchObject({
+        visibility: 'PUBLIC',
+      });
+      expect((await put(quizInput)).json()).toMatchObject({ visibility: 'PUBLIC' });
+      const list = (await app.inject({ url: '/api/quizzes', headers })).json<QuizSummary[]>();
+      expect(list).toMatchObject([{ id: quiz.id, visibility: 'PUBLIC', playCount: 0 }]);
+    });
+
+    it("lists other hosts' public quizzes only, without questions", async () => {
+      const alice = await register('alice@test.fr');
+      const bob = await register('bob@test.fr');
+      const pub = await createQuiz(alice.headers, { title: 'Histoire', visibility: 'PUBLIC' });
+      const pub2 = await createQuiz(alice.headers, { title: 'Géo', visibility: 'PUBLIC' });
+      await createQuiz(alice.headers, { title: 'Secret' });
+      const own = await createQuiz(bob.headers, { title: 'À moi', visibility: 'PUBLIC' });
+      await played(alice.user.id, pub2.id, 2);
+      await played(bob.user.id, pub.id, 1);
+
+      const items = await library(bob.headers);
+      // Most played first by default.
+      expect(items.map((q) => q.title)).toEqual(['Géo', 'Histoire']);
+      expect(items[0]).toEqual({
+        id: pub2.id,
+        title: 'Géo',
+        description: quizInput.description,
+        authorName: 'Host',
+        questionCount: quizInput.questions.length,
+        playCount: 2,
+        createdAt: pub2.createdAt,
+        updatedAt: pub2.updatedAt,
+      });
+      expect(JSON.stringify(items)).not.toContain('isCorrect');
+      expect((await library(bob.headers, '?sort=newest')).map((q) => q.title)).toEqual([
+        'Géo',
+        'Histoire',
+      ]);
+      expect((await library(bob.headers, '?search=HIST')).map((q) => q.id)).toEqual([pub.id]);
+      expect((await library(alice.headers)).map((q) => q.id)).toEqual([own.id]);
+      const bad = await app.inject({ url: '/api/library?sort=random', headers: bob.headers });
+      expect(bad.statusCode).toBe(400);
+
+      // The author sees how many times their quiz was played, by anyone.
+      const mine = (await app.inject({ url: '/api/quizzes', headers: alice.headers })).json<
+        QuizSummary[]
+      >();
+      expect(mine.find((q) => q.id === pub.id)?.playCount).toBe(1);
+
+      // Back to private → gone from the library.
+      await app.inject({
+        method: 'PUT',
+        url: `/api/quizzes/${pub2.id}`,
+        headers: alice.headers,
+        payload: { ...quizInput, title: 'Géo', visibility: 'PRIVATE' },
+      });
+      expect((await library(bob.headers)).map((q) => q.id)).toEqual([pub.id]);
+    });
+
+    it('copies a public quiz as a private quiz of the current host', async () => {
+      const alice = await register('alice@test.fr');
+      const bob = await register('bob@test.fr');
+      const pub = await createQuiz(alice.headers, { title: 'Histoire', visibility: 'PUBLIC' });
+      const priv = await createQuiz(alice.headers, { title: 'Secret' });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/library/${pub.id}/copy`,
+        headers: bob.headers,
+      });
+      expect(res.statusCode).toBe(201);
+      const copy = res.json<QuizDetail>();
+      expect(copy).toMatchObject({ title: 'Histoire (copie)', visibility: 'PRIVATE' });
+      expect(copy.id).not.toBe(pub.id);
+      expect(copy.questions).toEqual(pub.questions);
+      // Bob owns the copy: he can read and edit it.
+      const bobs = (await app.inject({ url: '/api/quizzes', headers: bob.headers })).json();
+      expect(bobs).toMatchObject([{ id: copy.id }]);
+      const edit = await app.inject({
+        method: 'PUT',
+        url: `/api/quizzes/${copy.id}`,
+        headers: bob.headers,
+        payload: { ...quizInput, title: 'Ma version' },
+      });
+      expect(edit.statusCode).toBe(200);
+
+      const copyPrivate = await app.inject({
+        method: 'POST',
+        url: `/api/library/${priv.id}/copy`,
+        headers: bob.headers,
+      });
+      expect(copyPrivate.statusCode).toBe(404);
+      const anonymous = await app.inject({ method: 'POST', url: `/api/library/${pub.id}/copy` });
+      expect(anonymous.statusCode).toBe(401);
+    });
+
+    it('only the owner can read, edit or delete a public quiz', async () => {
+      const alice = await register('alice@test.fr');
+      const bob = await register('bob@test.fr');
+      const pub = await createQuiz(alice.headers, { visibility: 'PUBLIC' });
+      const h = bob.headers;
+      expect((await app.inject({ url: `/api/quizzes/${pub.id}`, headers: h })).statusCode).toBe(
+        404,
+      );
+      const put = await app.inject({
+        method: 'PUT',
+        url: `/api/quizzes/${pub.id}`,
+        headers: h,
+        payload: { ...quizInput, title: 'Piraté' },
+      });
+      expect(put.statusCode).toBe(404);
+      const del = await app.inject({ method: 'DELETE', url: `/api/quizzes/${pub.id}`, headers: h });
+      expect(del.statusCode).toBe(404);
+      const dup = await app.inject({
+        method: 'POST',
+        url: `/api/quizzes/${pub.id}/duplicate`,
+        headers: h,
+      });
+      expect(dup.statusCode).toBe(404);
+      const still = await app.inject({ url: `/api/quizzes/${pub.id}`, headers: alice.headers });
+      expect(still.json()).toMatchObject({ title: quizInput.title });
     });
   });
 

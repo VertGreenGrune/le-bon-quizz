@@ -49,6 +49,20 @@ jobs:
   e2e:
     name: Playwright e2e
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: lbq
+          POSTGRES_PASSWORD: lbq
+          POSTGRES_DB: lbq_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lbq -d lbq_e2e"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      # Enables the specs that need host accounts (library); migrated by playwright.config.ts.
+      E2E_DATABASE_URL: postgresql://lbq:lbq@localhost:5432/lbq_e2e
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

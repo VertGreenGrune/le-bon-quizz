@@ -9,6 +9,7 @@ import type { PrismaClient } from '../db.js';
 import { authRoutes } from './auth.routes.js';
 import { installErrorHandler } from './errors.js';
 import { gameRoutes } from './games.routes.js';
+import { libraryRoutes } from './library.routes.js';
 import { quizRoutes } from './quizzes.routes.js';
 import { uploadRoutes } from './uploads.routes.js';
 
@@ -45,6 +46,7 @@ export async function registerApi(app: FastifyInstance, deps: ApiDeps): Promise<
         priv.addHook('onRequest', requireAuth(deps.prisma));
         await priv.register(quizRoutes, deps);
         await priv.register(gameRoutes, deps);
+        await priv.register(libraryRoutes, deps);
         await priv.register(uploadRoutes, deps);
       });
     },

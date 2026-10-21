@@ -1,6 +1,7 @@
 /**
  * `pnpm db:seed` — demo host account + DEMO_QUIZ (kept with id `demo`, so
  * `host:create { quizId: 'demo' }` still works once games load quizzes from the DB).
+ * The demo quiz is public, so new hosts find it in the library.
  * Idempotent: the demo quiz is recreated on every run.
  */
 import { DEMO_QUIZ } from '@lbq/shared';
@@ -20,7 +21,7 @@ try {
   });
   await prisma.quiz.deleteMany({ where: { id: DEMO_QUIZ.id } });
   const { id, ...input } = DEMO_QUIZ;
-  await createQuiz(prisma, user.id, input, id);
+  await createQuiz(prisma, user.id, { ...input, visibility: 'PUBLIC' }, id);
   console.log(`Seeded quiz "${DEMO_QUIZ.title}" for ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
 } finally {
   await prisma.$disconnect();

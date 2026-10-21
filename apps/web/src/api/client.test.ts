@@ -37,6 +37,19 @@ describe('createApiClient', () => {
     await expect(ok.quizzes.remove('x')).resolves.toBeUndefined();
   });
 
+  it('builds the library query string', async () => {
+    const fetchFn = vi.fn(async (_url: RequestInfo | URL) => json(200, []));
+    const api = createApiClient('', fetchFn);
+    await api.library.list();
+    await api.library.list({ search: ' bastille & co ', sort: 'newest' });
+    await api.library.copy('q 1');
+    expect(fetchFn.mock.calls.map(([url]) => url)).toEqual([
+      '/api/library',
+      '/api/library?search=bastille+%26+co&sort=newest',
+      '/api/library/q%201/copy',
+    ]);
+  });
+
   it('uploads images as multipart without a JSON content-type', async () => {
     const fetchFn = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
       json(201, { url: 'u' }),

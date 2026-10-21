@@ -4,7 +4,7 @@
  * Dates are ISO 8601 strings in JSON.
  */
 import { z } from 'zod';
-import { QuizSchema, type Quiz, type QuestionType } from './quiz.js';
+import { QuizSchema, QuizVisibility, type Quiz, type QuestionType } from './quiz.js';
 import type { GameMode, TeamId } from './game.js';
 import type { RevealDetails } from './events.js';
 
@@ -64,8 +64,13 @@ export interface AuthResponse {
 
 // ---------- Quizzes ----------
 
-/** Body of `POST /quizzes` and `PUT /quizzes/:id` (PUT replaces all questions). */
-export const QuizInput = QuizSchema.omit({ id: true });
+/**
+ * Body of `POST /quizzes` and `PUT /quizzes/:id` (PUT replaces all questions).
+ * `visibility` absent: `PRIVATE` on creation, unchanged on update.
+ */
+export const QuizInput = QuizSchema.omit({ id: true }).extend({
+  visibility: QuizVisibility.optional(),
+});
 export type QuizInput = z.infer<typeof QuizInput>;
 
 export interface QuizSummary {
@@ -73,13 +78,49 @@ export interface QuizSummary {
   title: string;
   description?: string;
   coverImageUrl?: string;
+  visibility: QuizVisibility;
   questionCount: number;
+  /** Games played with this quiz, by any host (public quizzes can be launched by others). */
+  playCount: number;
   createdAt: string;
   updatedAt: string;
 }
 
-/** Response of `GET /quizzes/:id` (and of POST/PUT/duplicate). */
-export type QuizDetail = Quiz & { createdAt: string; updatedAt: string };
+/** Response of `GET /quizzes/:id` (and of POST/PUT/duplicate/library copy). */
+export type QuizDetail = Quiz & {
+  visibility: QuizVisibility;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ---------- Library (public quizzes of the other hosts) ----------
+
+export const LIBRARY_SORTS = ['popular', 'newest'] as const;
+export const LibrarySort = z.enum(LIBRARY_SORTS);
+export type LibrarySort = z.infer<typeof LibrarySort>;
+
+/** Query string of `GET /library` (`popular` = most played first). */
+export const LibraryQuery = z.object({
+  search: z.string().trim().max(95).optional(),
+  sort: LibrarySort.default('popular'),
+});
+export type LibraryQuery = z.input<typeof LibraryQuery>;
+
+/** One card of the library: no questions, so never the answers. */
+export interface LibraryQuiz {
+  id: string;
+  title: string;
+  description?: string;
+  coverImageUrl?: string;
+  authorName: string;
+  questionCount: number;
+  playCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Most results returned by `GET /library`. */
+export const LIBRARY_LIMIT = 100;
 
 // ---------- Uploads ----------
 

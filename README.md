@@ -85,7 +85,10 @@ pnpm exec playwright install chromium
 
 `pnpm test:e2e` starts its own server on port **3004** and web app on port **5184** (no clash
 with `pnpm dev`) and stops them at the end. Change them with `E2E_SERVER_PORT` /
-`E2E_WEB_PORT`. Useful options:
+`E2E_WEB_PORT`. [e2e/library.spec.ts](e2e/library.spec.ts) needs host accounts, so it only
+runs when `E2E_DATABASE_URL` points to a Postgres database (migrated before the server starts;
+the test only adds rows), e.g.
+`E2E_DATABASE_URL=postgresql://lbq:lbq@localhost:5432/lbq_e2e pnpm test:e2e`. Useful options:
 
 ```sh
 pnpm test:e2e --headed          # watch the browsers

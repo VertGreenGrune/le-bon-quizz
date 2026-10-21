@@ -4,6 +4,8 @@ import type {
   AuthResponse,
   GameReport,
   GameSummary,
+  LibraryQuery,
+  LibraryQuiz,
   LoginBody,
   PublicUser,
   QuizDetail,
@@ -76,6 +78,17 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
       remove: (id: string) => request<void>('DELETE', `/quizzes/${encodeURIComponent(id)}`),
       duplicate: (id: string) =>
         request<QuizDetail>('POST', `/quizzes/${encodeURIComponent(id)}/duplicate`),
+    },
+    library: {
+      list: ({ search, sort }: LibraryQuery = {}) => {
+        const query = new URLSearchParams();
+        if (search?.trim()) query.set('search', search.trim());
+        if (sort) query.set('sort', sort);
+        const qs = query.toString();
+        return request<LibraryQuiz[]>('GET', `/library${qs ? `?${qs}` : ''}`);
+      },
+      /** "Copier dans mes quiz": a private copy owned by the current host. */
+      copy: (id: string) => request<QuizDetail>('POST', `/library/${encodeURIComponent(id)}/copy`),
     },
     uploads: {
       image: (file: Blob) => {

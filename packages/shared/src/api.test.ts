@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_QUIZ, LoginBody, QuizInput, RegisterBody } from './index.js';
+import { DEMO_QUIZ, LibraryQuery, LoginBody, QuizInput, RegisterBody } from './index.js';
 
 describe('REST API schemas', () => {
   it('normalizes emails', () => {
@@ -11,5 +11,21 @@ describe('REST API schemas', () => {
   it('QuizInput accepts the demo quiz without its id', () => {
     const { id: _id, ...input } = DEMO_QUIZ;
     expect(QuizInput.safeParse(input).success).toBe(true);
+  });
+
+  it('QuizInput: visibility is optional, PRIVATE or PUBLIC', () => {
+    const { id: _id, ...input } = DEMO_QUIZ;
+    expect(QuizInput.parse(input).visibility).toBeUndefined();
+    expect(QuizInput.parse({ ...input, visibility: 'PUBLIC' }).visibility).toBe('PUBLIC');
+    expect(QuizInput.safeParse({ ...input, visibility: 'SHARED' }).success).toBe(false);
+  });
+
+  it('LibraryQuery defaults to the most played', () => {
+    expect(LibraryQuery.parse({})).toEqual({ sort: 'popular' });
+    expect(LibraryQuery.parse({ search: ' bastille ', sort: 'newest' })).toEqual({
+      search: 'bastille',
+      sort: 'newest',
+    });
+    expect(LibraryQuery.safeParse({ sort: 'random' }).success).toBe(false);
   });
 });
