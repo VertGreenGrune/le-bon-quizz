@@ -12,6 +12,24 @@ export function computePoints(basePoints: number, responseMs: number, timeLimitM
   return Math.round(basePoints * (1 - t / timeLimitMs / 2));
 }
 
+/**
+ * SLIDER (PLAN.md §3): a guess within ± `margin` of the correct value is correct and earns the
+ * time-based points × (1 − 0.5 × distance / margin) — exact = full points, edge of the margin =
+ * half. With margin 0 only the exact value is correct (full points). Outside: 0, wrong.
+ */
+export function sliderPoints(
+  timePoints: number,
+  guess: number,
+  correct: number,
+  margin: number,
+): { correct: boolean; points: number } {
+  const distance = Math.abs(guess - correct);
+  // Float tolerance: steps like 0.1 make 0.3 − 0.1 ≠ 0.2.
+  if (distance > margin + 1e-9) return { correct: false, points: 0 };
+  const factor = margin > 0 ? 1 - (0.5 * Math.min(distance, margin)) / margin : 1;
+  return { correct: true, points: Math.round(timePoints * factor) };
+}
+
 export const STREAK_BONUS_STEP = 100;
 export const STREAK_BONUS_MAX = 500;
 

@@ -1,26 +1,41 @@
-import { SHAPES, type Question } from '@lbq/shared';
+import { SHAPES, TYPE_ANSWER_MAX_LENGTH, type Question } from '@lbq/shared';
 import type { FieldErrors } from '../api/validation';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { btn } from './EditorShell';
 import { ImageField } from './ImageField';
 import {
+  MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
   MIN_CHOICES,
   POINTS_OPTIONS,
+  QUESTION_TYPES,
   TIME_LIMITS,
+  addAcceptedAnswer,
   addChoice,
   duplicateQuestion,
   moveQuestion,
+  removeAcceptedAnswer,
   removeChoice,
   removeQuestion,
   setQuestionType,
   toggleCorrect,
+  updateAcceptedAnswer,
   updateChoice,
+  updateSlider,
+  type DraftQuestion,
   type QuizDraft,
 } from './draft';
 
 const selectClass =
   'rounded-lg border-2 border-gray-300 bg-white px-3 py-2 font-semibold outline-none focus:border-brand';
+const inputClass = (invalid: boolean) =>
+  `rounded-lg border-2 px-3 py-2 font-bold outline-none focus:border-brand ${invalid ? 'border-answer-red' : 'border-gray-300'}`;
+
+type Err = (path: string) => string | undefined;
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <span className="text-sm font-semibold text-answer-red">{message}</span> : null;
+}
 
 export function QuestionEditor({
   index,
@@ -32,14 +47,14 @@ export function QuestionEditor({
 }: {
   index: number;
   total: number;
-  question: Question;
+  question: DraftQuestion;
   errors: FieldErrors;
-  onChange: (q: Question) => void;
+  onChange: (q: DraftQuestion) => void;
   /** Structural changes (move / duplicate / delete), then select question `nextIndex`. */
   onDraftChange: (fn: (d: QuizDraft) => QuizDraft, nextIndex: number) => void;
 }) {
-  const err = (path: string) => errors[`questions.${index}${path}`];
-  const isTF = q.type === 'TRUE_FALSE';
+  const err: Err = (path) => errors[`questions.${index}${path}`];
+  const isPoll = q.type === 'POLL';
 
   return (
     <section className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm">
@@ -87,16 +102,11 @@ export function QuestionEditor({
       </div>
 
       <div
-        className="flex gap-1 self-start rounded-lg bg-gray-100 p-1"
+        className="flex flex-wrap gap-1 self-start rounded-lg bg-gray-100 p-1"
         role="radiogroup"
         aria-label="Type"
       >
-        {(
-          [
-            ['MCQ', 'Choix multiple'],
-            ['TRUE_FALSE', 'Vrai ou faux'],
-          ] as const
-        ).map(([type, label]) => (
+        {QUESTION_TYPES.map(({ type, label }) => (
           <button
             key={type}
             type="button"
@@ -124,9 +134,7 @@ export function QuestionEditor({
           aria-invalid={!!err('.text')}
           className={`resize-none rounded-lg border-2 px-3 py-2 text-center text-xl font-bold outline-none focus:border-brand ${err('.text') ? 'border-answer-red' : 'border-gray-300'}`}
         />
-        {err('.text') && (
-          <span className="text-sm font-semibold text-answer-red">{err('.text')}</span>
-        )}
+        <FieldError message={err('.text')} />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
@@ -153,52 +161,80 @@ export function QuestionEditor({
                 ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-bold text-gray-600">Points</span>
-            <select
-              value={q.basePoints}
-              onChange={(e) =>
-                onChange({ ...q, basePoints: Number(e.target.value) as Question['basePoints'] })
-              }
-              className={selectClass}
-            >
-              {POINTS_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {isPoll ? (
+            <p className="max-w-48 text-sm font-semibold text-gray-500">
+              Sondage : pas de bonne réponse, aucun point, la série des joueurs continue.
+            </p>
+          ) : (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-bold text-gray-600">Points</span>
+              <select
+                value={q.basePoints}
+                onChange={(e) =>
+                  onChange({ ...q, basePoints: Number(e.target.value) as Question['basePoints'] })
+                }
+                className={selectClass}
+              >
+                {POINTS_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-bold text-gray-600">
-          Réponses{' '}
-          <span className="font-normal text-gray-400">
-            — coche {isTF ? 'la bonne réponse' : 'la ou les bonnes réponses'}
-          </span>
+      {q.type === 'TYPE_ANSWER' ? (
+        <AcceptedAnswersField q={q} err={err} onChange={onChange} />
+      ) : q.type === 'SLIDER' ? (
+        <SliderField q={q} err={err} onChange={onChange} />
+      ) : (
+        <ChoicesField q={q} err={err} onChange={onChange} />
+      )}
+    </section>
+  );
+}
+
+type FieldProps = { q: DraftQuestion; err: Err; onChange: (q: DraftQuestion) => void };
+
+/** MCQ, true/false and poll: one colored field per shape. */
+function ChoicesField({ q, err, onChange }: FieldProps) {
+  const isTF = q.type === 'TRUE_FALSE';
+  const isPoll = q.type === 'POLL';
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-bold text-gray-600">
+        Réponses{' '}
+        <span className="font-normal text-gray-400">
+          —{' '}
+          {isPoll
+            ? 'les joueurs votent, pas de bonne réponse'
+            : `coche ${isTF ? 'la bonne réponse' : 'la ou les bonnes réponses'}`}
         </span>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {q.choices.map((c, i) => {
-            const shape = SHAPES[i]!;
-            const textErr = err(`.choices.${i}.text`);
-            return (
-              <div key={i} className="flex flex-col gap-1">
-                <div
-                  className={`flex items-center gap-2 rounded-xl p-2 text-white ${shapeBg[shape.color]}`}
-                >
-                  <ShapeIcon shape={shape.shape} className="size-7 shrink-0 fill-white" />
-                  <input
-                    value={c.text}
-                    maxLength={75}
-                    readOnly={isTF}
-                    placeholder={`Réponse ${i + 1}${i >= MIN_CHOICES ? ' (facultative)' : ''}`}
-                    onChange={(e) => onChange(updateChoice(q, i, { text: e.target.value }))}
-                    aria-label={`Réponse ${i + 1}`}
-                    aria-invalid={!!textErr}
-                    className={`min-w-0 flex-1 rounded-lg bg-white/15 px-2 py-2 font-bold text-white placeholder:text-white/70 outline-none focus:bg-white/25 ${textErr ? 'ring-2 ring-white' : ''}`}
-                  />
+      </span>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {q.choices.map((c, i) => {
+          const shape = SHAPES[i]!;
+          const textErr = err(`.choices.${i}.text`);
+          return (
+            <div key={i} className="flex flex-col gap-1">
+              <div
+                className={`flex items-center gap-2 rounded-xl p-2 text-white ${shapeBg[shape.color]}`}
+              >
+                <ShapeIcon shape={shape.shape} className="size-7 shrink-0 fill-white" />
+                <input
+                  value={c.text}
+                  maxLength={75}
+                  readOnly={isTF}
+                  placeholder={`Réponse ${i + 1}${i >= MIN_CHOICES ? ' (facultative)' : ''}`}
+                  onChange={(e) => onChange(updateChoice(q, i, { text: e.target.value }))}
+                  aria-label={`Réponse ${i + 1}`}
+                  aria-invalid={!!textErr}
+                  className={`min-w-0 flex-1 rounded-lg bg-white/15 px-2 py-2 font-bold text-white placeholder:text-white/70 outline-none focus:bg-white/25 ${textErr ? 'ring-2 ring-white' : ''}`}
+                />
+                {!isPoll && (
                   <button
                     type="button"
                     role="checkbox"
@@ -210,37 +246,149 @@ export function QuestionEditor({
                   >
                     ✓
                   </button>
-                  {!isTF && q.choices.length > MIN_CHOICES && (
-                    <button
-                      type="button"
-                      aria-label={`Retirer la réponse ${i + 1}`}
-                      onClick={() => onChange(removeChoice(q, i))}
-                      className="shrink-0 rounded px-1 text-lg font-bold opacity-80 hover:opacity-100"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                {textErr && (
-                  <span className="text-sm font-semibold text-answer-red">{textErr}</span>
+                )}
+                {!isTF && q.choices.length > MIN_CHOICES && (
+                  <button
+                    type="button"
+                    aria-label={`Retirer la réponse ${i + 1}`}
+                    onClick={() => onChange(removeChoice(q, i))}
+                    className="shrink-0 rounded px-1 text-lg font-bold opacity-80 hover:opacity-100"
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
-            );
-          })}
-        </div>
-        {!isTF && q.choices.length < MAX_CHOICES && (
-          <button
-            type="button"
-            className={`${btn.ghost} self-start`}
-            onClick={() => onChange(addChoice(q))}
-          >
-            + Ajouter une réponse
-          </button>
-        )}
-        {err('.choices') && (
-          <span className="text-sm font-semibold text-answer-red">{err('.choices')}</span>
-        )}
+              <FieldError message={textErr} />
+            </div>
+          );
+        })}
       </div>
-    </section>
+      {!isTF && q.choices.length < MAX_CHOICES && (
+        <button
+          type="button"
+          className={`${btn.ghost} self-start`}
+          onClick={() => onChange(addChoice(q))}
+        >
+          + Ajouter une réponse
+        </button>
+      )}
+      <FieldError message={err('.choices')} />
+    </div>
+  );
+}
+
+/** Réponse libre: 1–3 accepted answers + typo tolerance. */
+function AcceptedAnswersField({ q, err, onChange }: FieldProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-bold text-gray-600">
+        Réponses acceptées{' '}
+        <span className="font-normal text-gray-400">
+          — majuscules, accents, ponctuation et article (le, la, l’…) ne comptent pas
+        </span>
+      </span>
+      {q.acceptedAnswers.map((answer, i) => {
+        const answerErr = err(`.acceptedAnswers.${i}`);
+        return (
+          <div key={i} className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <input
+                value={answer}
+                maxLength={TYPE_ANSWER_MAX_LENGTH}
+                placeholder={i === 0 ? 'Ex. : Léonard de Vinci' : 'Autre réponse acceptée'}
+                onChange={(e) => onChange(updateAcceptedAnswer(q, i, e.target.value))}
+                aria-label={`Réponse acceptée ${i + 1}`}
+                aria-invalid={!!answerErr}
+                className={`min-w-0 flex-1 ${inputClass(!!answerErr)}`}
+              />
+              {q.acceptedAnswers.length > 1 && (
+                <button
+                  type="button"
+                  aria-label={`Retirer la réponse acceptée ${i + 1}`}
+                  onClick={() => onChange(removeAcceptedAnswer(q, i))}
+                  className="shrink-0 rounded px-2 text-lg font-bold text-gray-500 hover:text-answer-red"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <FieldError message={answerErr} />
+          </div>
+        );
+      })}
+      {q.acceptedAnswers.length < MAX_ACCEPTED_ANSWERS && (
+        <button
+          type="button"
+          className={`${btn.ghost} self-start`}
+          onClick={() => onChange(addAcceptedAnswer(q))}
+        >
+          + Ajouter une variante
+        </button>
+      )}
+      <FieldError message={err('.acceptedAnswers')} />
+      <label className="flex items-center gap-2 self-start font-semibold">
+        <input
+          type="checkbox"
+          checked={q.typoTolerance}
+          onChange={(e) => onChange({ ...q, typoTolerance: e.target.checked })}
+          className="size-5 accent-brand"
+        />
+        Tolérer les petites fautes
+        <span className="text-sm font-normal text-gray-400">(les nombres restent exacts)</span>
+      </label>
+    </div>
+  );
+}
+
+const SLIDER_FIELDS = [
+  { key: 'min', label: 'Minimum' },
+  { key: 'max', label: 'Maximum' },
+  { key: 'step', label: 'Cran' },
+  { key: 'correct', label: 'Bonne réponse' },
+  { key: 'margin', label: 'Tolérance ±' },
+] as const;
+
+/** Curseur: range, step, correct value, margin, unit. */
+function SliderField({ q, err, onChange }: FieldProps) {
+  const s = q.slider;
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-bold text-gray-600">
+        Curseur{' '}
+        <span className="font-normal text-gray-400">
+          — juste si l’écart avec la bonne réponse ne dépasse pas la tolérance (0 = valeur exacte)
+        </span>
+      </span>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+        {SLIDER_FIELDS.map(({ key, label }) => {
+          const fieldErr = err(`.slider.${key}`);
+          return (
+            <label key={key} className="flex flex-col gap-1">
+              <span className="text-sm font-bold text-gray-600">{label}</span>
+              <input
+                type="number"
+                step="any"
+                value={Number.isNaN(s[key]) ? '' : s[key]}
+                onChange={(e) => onChange(updateSlider(q, { [key]: e.target.valueAsNumber }))}
+                aria-invalid={!!fieldErr}
+                className={`w-full ${inputClass(!!fieldErr)}`}
+              />
+              <FieldError message={fieldErr} />
+            </label>
+          );
+        })}
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-bold text-gray-600">Unité</span>
+          <input
+            value={s.unit}
+            maxLength={10}
+            placeholder="km, ans…"
+            onChange={(e) => onChange(updateSlider(q, { unit: e.target.value }))}
+            className={`w-full ${inputClass(!!err('.slider.unit'))}`}
+          />
+          <FieldError message={err('.slider.unit')} />
+        </label>
+      </div>
+    </div>
   );
 }

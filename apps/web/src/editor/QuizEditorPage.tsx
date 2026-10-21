@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import type { Question } from '@lbq/shared';
 import { ApiError, api } from '../api';
 import type { FieldErrors } from '../api/validation';
 import { EditorShell, btn } from './EditorShell';
@@ -14,6 +13,7 @@ import {
   fromDetail,
   questionErrorCount,
   validateDraft,
+  type DraftQuestion,
   type QuizDraft,
 } from './draft';
 
@@ -141,7 +141,7 @@ export function QuizEditorPage() {
 
   const question = draft.questions[current] ?? draft.questions[0]!;
   const index = draft.questions[current] ? current : 0;
-  const setQuestion = (q: Question) =>
+  const setQuestion = (q: DraftQuestion) =>
     setDraft((d) => ({ ...d, questions: d.questions.map((x, i) => (i === index ? q : x)) }));
 
   return (

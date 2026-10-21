@@ -1,5 +1,10 @@
 import type { GameQuestionReport, GameSummary } from '@lbq/shared';
 
+/** A poll has no right answer: left out of success rates and of "hardest first". */
+export function isScored(q: Pick<GameQuestionReport, 'type'>): boolean {
+  return q.type !== 'POLL';
+}
+
 /** Share of the players (answered or not) who got the question right, 0–100, rounded. */
 export function percentCorrect(q: GameQuestionReport): number {
   return q.playerCount === 0 ? 0 : Math.round((q.correctCount / q.playerCount) * 100);
@@ -7,23 +12,21 @@ export function percentCorrect(q: GameQuestionReport): number {
 
 /** Players who didn't answer in time. */
 export function noAnswerCount(q: GameQuestionReport): number {
-  const answered = q.distribution.reduce((a, b) => a + b, 0);
-  return Math.max(0, q.playerCount - answered);
+  return Math.max(0, q.playerCount - q.answerCount);
 }
 
-/** Lowest success rate first; ties keep the quiz order. */
+/** Lowest success rate first, polls last; ties keep the quiz order. */
 export function hardestFirst(questions: GameQuestionReport[]): GameQuestionReport[] {
-  return [...questions].sort(
-    (a, b) =>
-      a.correctCount / (a.playerCount || 1) - b.correctCount / (b.playerCount || 1) ||
-      a.index - b.index,
-  );
+  const rate = (q: GameQuestionReport) =>
+    isScored(q) ? q.correctCount / (q.playerCount || 1) : Infinity;
+  return [...questions].sort((a, b) => rate(a) - rate(b) || a.index - b.index);
 }
 
-/** Average success rate over all questions (0–100), null without questions. */
+/** Average success rate over the scored questions (0–100), null without any (polls only). */
 export function averagePercentCorrect(questions: GameQuestionReport[]): number | null {
-  if (questions.length === 0) return null;
-  return Math.round(questions.reduce((sum, q) => sum + percentCorrect(q), 0) / questions.length);
+  const scored = questions.filter(isScored);
+  if (scored.length === 0) return null;
+  return Math.round(scored.reduce((sum, q) => sum + percentCorrect(q), 0) / scored.length);
 }
 
 /** "12 min", "1 h 05", "< 1 min"; null for a game that never ended. */

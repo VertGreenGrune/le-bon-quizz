@@ -4,8 +4,9 @@
  * Dates are ISO 8601 strings in JSON.
  */
 import { z } from 'zod';
-import { QuizSchema, type Quiz } from './quiz.js';
+import { QuizSchema, type Quiz, type QuestionType } from './quiz.js';
 import type { GameMode, TeamId } from './game.js';
+import type { RevealDetails } from './events.js';
 
 // ---------- Errors ----------
 
@@ -127,14 +128,23 @@ export interface GameTeamReport {
 export interface GameQuestionReport {
   /** Position in the quiz (0-based). */
   index: number;
+  /** `MCQ` for games saved before question types existed. */
+  type: QuestionType;
   text: string;
+  /** Choice texts (empty for TYPE_ANSWER / SLIDER). */
   choices: string[];
+  /** Empty for POLL, TYPE_ANSWER and SLIDER. */
   correctIndexes: number[];
   /** Players per choice, same order as `choices`. */
   distribution: number[];
   /** Players in the game at the reveal, answered or not. */
   playerCount: number;
+  /** Always 0 for POLL (no right answer). */
   correctCount: number;
+  /** Players who answered (typed answers / slider guesses included). */
+  answerCount: number;
+  /** TYPE_ANSWER / SLIDER: same as in `question:reveal` (accepted answers, guesses…). */
+  details: RevealDetails;
 }
 
 /** `questions` is empty for games saved before per-question results existed. */

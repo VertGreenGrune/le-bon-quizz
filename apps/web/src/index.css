@@ -25,3 +25,28 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phone slider (question « curseur »): thick track, thumb big enough for a thumb. */
+.slider-big {
+  appearance: none;
+  height: 0.875rem;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.3);
+  touch-action: none;
+}
+.slider-big::-webkit-slider-thumb {
+  appearance: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+}
+.slider-big::-moz-range-thumb {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: none;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
+}

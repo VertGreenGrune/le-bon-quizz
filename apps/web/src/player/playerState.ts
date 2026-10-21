@@ -1,4 +1,5 @@
 import type {
+  AnswerInput,
   ErrorCode,
   GameMode,
   GamePhase,
@@ -21,8 +22,8 @@ export interface PlayerState {
   prompt: QuestionPromptPayload | null;
   /** Local-clock deadline of the ANSWERING phase (derived from `remainingMs`, no clock skew). */
   answeringEndsAt: number | null;
-  /** Choice the player tapped, for `questionIndex` only. */
-  myAnswer: { questionIndex: number; choiceIndex: number } | null;
+  /** What the player answered (choice, text or slider value), for `questionIndex` only. */
+  myAnswer: ({ questionIndex: number } & AnswerInput) | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
   nickname: string;
   /** Own player id, to find our team in `teams`. */
@@ -43,7 +44,7 @@ export type PlayerAction =
   | { type: 'teams'; payload: LobbyTeamsPayload }
   | { type: 'state'; payload: GameStatePayload; now: number }
   | { type: 'prompt'; payload: QuestionPromptPayload; now: number }
-  | { type: 'answer'; questionIndex: number; choiceIndex: number }
+  | { type: 'answer'; questionIndex: number; answer: AnswerInput }
   | { type: 'answerRejected'; questionIndex: number }
   | { type: 'result'; payload: PlayerResultPayload }
   | { type: 'podium'; top: RankedPlayer[]; teams?: RankedTeam[] }
@@ -128,7 +129,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       if (state.myAnswer?.questionIndex === action.questionIndex) return state; // one answer only
       return {
         ...state,
-        myAnswer: { questionIndex: action.questionIndex, choiceIndex: action.choiceIndex },
+        myAnswer: { questionIndex: action.questionIndex, ...action.answer },
       };
 
     case 'answerRejected':

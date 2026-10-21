@@ -2,6 +2,7 @@ import { DEMO_QUIZ, type GameMode, type Quiz } from '@lbq/shared';
 import { getQuizForOwner } from '../api/quizzes.service.js';
 import { getUserBySessionToken } from '../auth/session.js';
 import type { PrismaClient } from '../db.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import { GameError } from './errors.js';
 import type { Game, PlayerStanding, QuestionStats, TeamStanding } from './Game.js';
 
@@ -79,7 +80,9 @@ export function createPrismaPersistence(prisma: PrismaClient): GamePersistence {
           startedAt: r.startedAt,
           endedAt: r.endedAt,
           results: { create: r.results },
-          questions: { create: r.questions },
+          questions: {
+            create: r.questions.map((q) => ({ ...q, details: q.details as Prisma.InputJsonValue })),
+          },
           teams: { create: r.teams },
         },
       });

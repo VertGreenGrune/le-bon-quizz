@@ -500,7 +500,7 @@ Solo e2e must still pass.
   questions (only the individual ranking animates); reports CSV has no per-team sheet.
 
 ### T14 — More question types: réponse libre, sondage, curseur (run alone, after T15)
-- **Status:** in-progress (T14 agent, worktree ../lbq-T14)
+- **Status:** done
 - **Depends on:** T15 merged (builds on its scoring and contract; must work in solo AND team mode)
 - **Ports:** server 3014 / web 5194, test DB `lbq_test_t14`.
 
@@ -564,6 +564,37 @@ dessert préféré ?" (sondage).
 off); slider points (exact, inside, edge, outside, margin 0); poll keeps the streak and gives 0;
 team mode averages with each new type; server rejects an answer of the wrong kind; prompt never
 contains the answer. Update the e2e games (solo + teams) for the new demo questions.
+- **Summary:** shared: `QuestionSchema` is a discriminated union on `type` (missing `type` still
+  defaults to MCQ; poll choices drop `isCorrect`; slider refinements: min < max, correct in range
+  and on a step, ≤ 100 000 positions), helpers `isChoiceQuestion` / `choiceTexts` /
+  `correctChoiceIndexes` / `isOnStep`; contract as specified (+ `SliderPrompt`, `RevealDetails`,
+  `TypedAnswerGroup`, `AnswerInput`). Server: `game/matching.ts` (normalization, Levenshtein,
+  digits exact), `sliderPoints` in `scoring.ts`, `Game.answer(…, number | AnswerInput)` checks
+  the kind per type (`INVALID_PAYLOAD`, also for a slider value out of [min, max]); polls skip the
+  streak update; reveal + `QuestionStats` carry `type`, `answerCount`, `details` (top 6 typed
+  answers grouped after normalization, slider guesses + closest — fastest wins a tie); results
+  carry `poll` / `yourValue` / `correctValue` (re-sent on rejoin). DB: migration
+  `20261021173853_question_types` (enum values, `Question.config` JSON, `QuestionResult.type` /
+  `answerCount` / `details`); quiz service maps the union ↔ rows; old reports get `type: MCQ`,
+  `answerCount` = sum of distribution, `details: {}`. Editor: `DraftQuestion` superset (switching
+  type keeps what was typed; poll → 0 points, back → 1000), 5-type selector, accepted answers
+  (1–3, « Tolérer les petites fautes »), slider fields (min/max/cran/bonne réponse/tolérance/unité)
+  with French errors. Host: hint during typed/slider/poll questions, typed reveal (accepted +
+  grouped answers), slider axis (dots, correct marker, margin band, « Le plus proche »), poll bars
+  with % and nothing dimmed. Phone: text field (auto-focus, 40 max, Valider), big slider with −/+
+  and Valider, « Merci pour ton vote ! », « Ta réponse / Bonne réponse » lines. Reports: per-type
+  cards, polls excluded from % correct and sorted last in « plus difficiles ». Demo quiz (+ seed):
+  dessert poll, Pacifique typed answer, Bastille slider (1700–1900, 1789 ± 5). Tests: matching,
+  slider points, `Game.types.test.ts` (prompt/show never leak the answer, wrong kind rejected,
+  poll keeps streak and gives 0, typed grouping, slider points/closest, rejoin, team averages
+  with poll/typed/slider), shared schema tests, editor draft tests, persistence round trip of
+  every type; existing Game tests use `CLASSIC_QUIZ` (`game/testing.ts`). Both e2e specs play the
+  7-question demo (`e2e/answers.ts`). Checked with screenshots (host 1600×900, Pixel 7).
+- **Notes:** CSV export unchanged (it only lists the ranking, so no per-question type column).
+  `lib/numbers.ts` (French number formatting without grouping, `snapToStep`) is new in web.
+  **After merging, run `pnpm --filter @lbq/server db:migrate`** and re-seed for the new demo
+  questions. Not tried on real phones (range input + keyboard auto-open on iOS).
+
 **Phase 4 order:** T15 (running) → T14 (alone) → **T16 ‖ T20** in parallel (little overlap:
 T16 = editor/library/quiz API, T20 = join/lobby/rankings; both add an independent migration on
 different models) → T17 later.
@@ -730,3 +761,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
 - 2026-10-20, T10 agent (no contract change, no server change). Outside the listed T10 scope:
   new `apps/web/scripts/generate-sounds.mjs` (generator of the CC0 sound files, kept out of
   `public/` so it isn't shipped). `hostReducer` gained `previousLeaderboard` / `leaderboardFor`.
+- 2026-10-21, T14 agent: question types contract as decided in the T14 section (PLAN.md §3–§6
+  updated). `QuestionSchema` is now a zod discriminated union — code reading `q.choices` must
+  narrow on `type` first (`isChoiceQuestion` / `choiceTexts` in shared). `QuestionShowPayload.type`,
+  `QuestionPromptPayload.type`, `QuestionRevealPayload.type` and `GameQuestionReport.type` /
+  `answerCount` / `details` are **required** (test fixtures must set them); `choiceCount` is now
+  optional. `PlayerAnswerPayload` is a union (`choiceIndex` | `text` | `value`). Prisma migration
+  `20261021173853_question_types`. `DEMO_QUIZ` has 7 questions (3 new types).

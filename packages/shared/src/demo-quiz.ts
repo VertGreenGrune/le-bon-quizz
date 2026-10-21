@@ -51,5 +51,32 @@ export const DEMO_QUIZ: Quiz = {
         { text: 'Botticelli', isCorrect: false },
       ],
     },
+    {
+      text: 'Ton dessert préféré ?',
+      type: 'POLL',
+      timeLimitSec: 20,
+      basePoints: 0,
+      choices: [
+        { text: 'Mousse au chocolat' },
+        { text: 'Tarte Tatin' },
+        { text: 'Crème brûlée' },
+        { text: 'Île flottante' },
+      ],
+    },
+    {
+      text: 'Quel est le plus grand océan ?',
+      type: 'TYPE_ANSWER',
+      timeLimitSec: 30,
+      basePoints: 1000,
+      acceptedAnswers: ['Pacifique', 'Océan Pacifique'],
+      typoTolerance: true,
+    },
+    {
+      text: 'En quelle année a eu lieu la prise de la Bastille ?',
+      type: 'SLIDER',
+      timeLimitSec: 30,
+      basePoints: 1000,
+      slider: { min: 1700, max: 1900, step: 1, correct: 1789, margin: 5 },
+    },
   ],
 };

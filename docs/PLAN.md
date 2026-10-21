@@ -49,6 +49,21 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   (1st → +0, 2nd → +100, …, 6th and later → +500), added to `pointsEarned` and the total score.
   A 0-point question awards no bonus but still extends the streak.
 - `responseMs` is measured **on the server** from the `ANSWERING` start.
+- **Question types** (`Question.type`): `MCQ` and `TRUE_FALSE` (shape buttons, ≥ 1 correct
+  choice), plus:
+  - `TYPE_ANSWER` (réponse libre): players type ≤ 40 characters; correct if it matches one of the
+    1–3 `acceptedAnswers` after normalizing both sides (trim, lower case, no accents /
+    punctuation / extra spaces, leading article le/la/les/l'/un/une/des ignored). With
+    `typoTolerance` (default on) a Levenshtein distance of 1 is accepted for normalized answers
+    of 5–9 characters, 2 for 10+; answers containing a digit must match exactly
+    (`apps/server/src/game/matching.ts`). Points as above.
+  - `POLL` (sondage): 2–4 choices, no correct answer, 0 points for everyone; the streak is
+    left **unchanged** (neither broken nor extended, answered or not).
+  - `SLIDER` (curseur): `slider { min, max, step, correct, margin, unit? }`; a guess in
+    [min, max] is correct if `|guess − correct| ≤ margin`, and earns the time-based points ×
+    `(1 − 0.5 × distance / margin)` (exact = full, edge = half; margin 0 = exact only, full
+    points). Outside the margin: wrong, 0 points, streak broken.
+  Team averages (below) apply to every type (a poll adds 0 to every team).
 - **Team mode** (`host:create` with `mode: 'teams'`, 2–4 teams = the first answer colors:
   Équipe Rouge ▲, Bleue ◆, Jaune ●, Verte ■; players pick their team in the lobby, empty teams
   are dropped at the start). Each player scores exactly as above. For each question a team earns
@@ -84,7 +99,7 @@ Every client → server event takes an ack callback receiving
 | `player:join` | `{ pin, nickname }` | ack `{ playerId, sessionToken }` |
 | `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
-| `player:answer` | `{ pin, questionIndex, choiceIndex }` | accepted once, only during ANSWERING |
+| `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `text` \| `value` | accepted once, only during ANSWERING; `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER, `value` (in [min, max]) for SLIDER — another kind → `INVALID_PAYLOAD` |
 
 ### Server → clients
 | Event | To | Payload |
@@ -92,11 +107,11 @@ Every client → server event takes an ack callback receiving
 | `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew) |
 | `lobby:players` | host | `{ players: { id, nickname, teamId? }[] }` |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
-| `question:show` | host | `{ index, text, imageUrl?, choices: string[], timeLimitSec }` |
-| `question:prompt` | players | `{ index, choiceCount, timeLimitSec }` (no text, no answer!) |
+| `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer) |
+| `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) — no text, no answer! |
 | `answer:count` | host | `{ answered, total }` |
-| `question:reveal` | host | `{ correctIndexes: number[], distribution: number[] }` |
-| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) |
+| `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value }` (`RevealDetails`) |
+| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL: `correct` false, 0 points) + SLIDER `yourValue?` (absent without an answer), `correctValue` |
 | `leaderboard` | host | `{ top: { nickname, score }[], teams? }` (everyone, up to 15; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
 | `podium` | all | `{ top: { nickname, score }[], teams? }` (top 3 players; all teams in team mode) |
 | `player:kicked` | that player | `{}` |
@@ -110,15 +125,19 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `User` — id, email (unique, lowercased), name, passwordHash (scrypt), createdAt
 - `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, createdAt, updatedAt
-- `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE`),
-  timeLimitSec (default 20), basePoints (default 1000)
-- `Choice` — id, questionId, order (0–3), text, isCorrect
+- `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
+  `POLL` | `SLIDER`), timeLimitSec (default 20), basePoints (default 1000), config? (JSON:
+  TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`, SLIDER `{ slider }`)
+- `Choice` — id, questionId, order (0–3), text, isCorrect (MCQ / TRUE_FALSE / POLL; always false
+  for a poll)
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
   mode (`solo` | `teams`), startedAt, endedAt
 - `PlayerResult` — id, gameSessionId, nickname, score, correctCount, rank, teamId? (team mode)
 - `TeamResult` — id, gameSessionId, teamId, name, score, playerCount, rank (team mode)
-- `QuestionResult` — id, gameSessionId, index, text, choices[], correctIndexes[], distribution[],
-  playerCount, correctCount (snapshot of each revealed question, for the game report)
+- `QuestionResult` — id, gameSessionId, index, type (default MCQ), text, choices[],
+  correctIndexes[], distribution[], playerCount, correctCount, answerCount? (null for older games
+  = sum of distribution), details? (JSON `RevealDetails`: typed answers / slider guesses)
+  (snapshot of each revealed question, for the game report)
 
 Live game state stays in memory (`Map<pin, Game>`) in a single server process (small games: ~6 players, 15 max).
 Quiz loading, socket auth and result saving go through `GamePersistence`
@@ -146,7 +165,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later)
 - `GET /games` (history, `GameSummary` with `winner`, `mode`), `GET /games/:id` (report: ranking
-  with `teamId` + per-question `questions`, empty for games saved before T12, + `teams` ranking,
+  with `teamId` + per-question `questions` with `type`, `answerCount`, `details`, empty for games
+  saved before T12, + `teams` ranking,
   empty for solo games), `GET /games/:id/export.csv` (team games get a `team` column)
   (UTF-8 BOM, formula-injection-safe)
 

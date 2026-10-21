@@ -1,9 +1,17 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
-import { SHAPES, TEAM_NAMES, type TeamId } from '@lbq/shared';
+import {
+  SHAPES,
+  TEAM_NAMES,
+  TYPE_ANSWER_MAX_LENGTH,
+  type QuestionPromptPayload,
+  type SliderPrompt,
+  type TeamId,
+} from '@lbq/shared';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
+import { formatValue, snapToStep } from '../lib/numbers';
 import { competitionRanks } from '../lib/ranks';
 import { errorMessage, formatRank, myTeam, playerScreen, type PlayerState } from './playerState';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
@@ -75,9 +83,9 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
         </Message>
       );
     case 'answer':
-      return <AnswerButtons choiceCount={s.prompt?.choiceCount ?? 4} />;
+      return <AnswerScreen prompt={s.prompt!} />;
     case 'answered':
-      return <Answered choiceIndex={s.myAnswer!.choiceIndex} />;
+      return <Answered s={s} />;
     case 'waitingResult':
       return <Message title="Résultat…" subtitle="Regarde l'écran !" />;
     case 'result':
@@ -156,6 +164,106 @@ function Countdown({ endsAt }: { endsAt: number | null }) {
   );
 }
 
+/** Shape buttons, a text field or a slider, depending on the question type. */
+function AnswerScreen({ prompt }: { prompt: QuestionPromptPayload }) {
+  if (prompt.type === 'TYPE_ANSWER')
+    return <TextAnswer maxLength={prompt.maxLength ?? TYPE_ANSWER_MAX_LENGTH} />;
+  if (prompt.type === 'SLIDER' && prompt.slider) return <SliderAnswer slider={prompt.slider} />;
+  return <AnswerButtons choiceCount={prompt.choiceCount ?? 4} />;
+}
+
+/** Réponse libre: the keyboard opens right away; « Valider » sends the trimmed text. */
+function TextAnswer({ maxLength }: { maxLength: number }) {
+  const [text, setText] = useState('');
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => input.current?.focus(), []);
+  const answer = text.trim();
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (answer) sendAnswer({ text: answer });
+      }}
+      className="flex flex-1 flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+    >
+      <h2 className="text-center text-2xl font-black">Écris ta réponse</h2>
+      <input
+        ref={input}
+        value={text}
+        maxLength={maxLength}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Ta réponse…"
+        aria-label="Ta réponse"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="none"
+        spellCheck={false}
+        enterKeyHint="send"
+        className="rounded-2xl bg-white px-4 py-4 text-center text-2xl font-black text-brand outline-none placeholder:text-brand/40"
+      />
+      <p className="-mt-2 text-right text-sm font-semibold opacity-80 tabular-nums">
+        {text.length} / {maxLength}
+      </p>
+      <motion.button
+        type="submit"
+        disabled={!answer}
+        whileTap={{ scale: 0.95 }}
+        className="touch-manipulation rounded-2xl bg-answer-green py-4 text-2xl font-black shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] disabled:opacity-50"
+      >
+        Valider
+      </motion.button>
+    </form>
+  );
+}
+
+/** Curseur: big value, slider with − / + for fine tuning, « Valider ». */
+function SliderAnswer({ slider }: { slider: SliderPrompt }) {
+  const { min, max, step, unit } = slider;
+  const [value, setValue] = useState(() => snapToStep((min + max) / 2, min, max, step));
+  const nudge = (direction: 1 | -1) =>
+    setValue((v) => snapToStep(v + direction * step, min, max, step));
+  const nudgeClass =
+    'flex size-14 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/20 text-3xl font-black active:bg-white/40';
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <h2 className="text-2xl font-black">Choisis ta valeur</h2>
+      <p className="text-6xl font-black tabular-nums" aria-live="polite">
+        {formatValue(value, unit)}
+      </p>
+      <div className="flex w-full items-center gap-3">
+        <button type="button" aria-label="Moins" onClick={() => nudge(-1)} className={nudgeClass}>
+          −
+        </button>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => setValue(snapToStep(Number(e.target.value), min, max, step))}
+          aria-label="Ta valeur"
+          className="slider-big min-w-0 flex-1"
+        />
+        <button type="button" aria-label="Plus" onClick={() => nudge(1)} className={nudgeClass}>
+          +
+        </button>
+      </div>
+      <div className="flex w-full justify-between px-16 text-sm font-bold opacity-80 tabular-nums">
+        <span>{formatValue(min, unit)}</span>
+        <span>{formatValue(max, unit)}</span>
+      </div>
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.95 }}
+        onClick={() => sendAnswer({ value })}
+        className="w-full touch-manipulation rounded-2xl bg-answer-green py-4 text-2xl font-black shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)]"
+      >
+        Valider
+      </motion.button>
+    </div>
+  );
+}
+
 function AnswerButtons({ choiceCount }: { choiceCount: number }) {
   const shapes = SHAPES.slice(0, choiceCount);
   return (
@@ -175,9 +283,9 @@ function AnswerButtons({ choiceCount }: { choiceCount: number }) {
           onPointerDown={(e) => {
             // Fire on touch-down for speed (points depend on response time).
             e.preventDefault();
-            sendAnswer(shape.index);
+            sendAnswer({ choiceIndex: shape.index });
           }}
-          onClick={() => sendAnswer(shape.index)}
+          onClick={() => sendAnswer({ choiceIndex: shape.index })}
           aria-label={`Réponse ${shape.symbol}`}
           className={`flex touch-manipulation items-center justify-center rounded-2xl shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] active:brightness-90 ${shapeBg[shape.color]}`}
         >
@@ -191,8 +299,31 @@ function AnswerButtons({ choiceCount }: { choiceCount: number }) {
   );
 }
 
-function Answered({ choiceIndex }: { choiceIndex: number }) {
-  const shape = SHAPES[choiceIndex] ?? SHAPES[0];
+/** What the player sent, in words: « Pacifique », 1789 ans… (null for a shape). */
+function answerLabel(s: PlayerState): string | null {
+  const a = s.myAnswer;
+  if (!a || 'choiceIndex' in a) return null;
+  return 'text' in a ? `« ${a.text} »` : formatValue(a.value, s.prompt?.slider?.unit);
+}
+
+function Answered({ s }: { s: PlayerState }) {
+  const label = answerLabel(s);
+  if (label !== null) {
+    return (
+      <Message title="Réponse envoyée !" subtitle="On attend les autres…">
+        <motion.p
+          initial={{ scale: 1.4, rotate: -6 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 12 }}
+          className="max-w-full break-words rounded-2xl bg-white px-6 py-4 text-3xl font-black text-brand"
+        >
+          {label}
+        </motion.p>
+      </Message>
+    );
+  }
+  const a = s.myAnswer;
+  const shape = SHAPES[a && 'choiceIndex' in a ? a.choiceIndex : 0] ?? SHAPES[0];
   return (
     <Message title="Réponse envoyée !" subtitle="On attend les autres…">
       <div className="relative">
@@ -219,7 +350,9 @@ function Answered({ choiceIndex }: { choiceIndex: number }) {
 function Result({ s }: { s: PlayerState }) {
   const r = s.result!;
   const answered = s.myAnswer?.questionIndex === s.questionIndex;
+  if (r.poll) return <PollThanks s={s} voted={answered} />;
   const title = r.correct ? 'Correct !' : answered ? 'Raté !' : 'Temps écoulé !';
+  const unit = s.prompt?.slider?.unit;
   return (
     <div
       className={`flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center ${
@@ -250,6 +383,14 @@ function Result({ s }: { s: PlayerState }) {
           '+ 0 pt'
         )}
       </motion.p>
+      {r.correctValue !== undefined ? (
+        <p className="font-bold">
+          {r.yourValue !== undefined && <>Ta réponse : {formatValue(r.yourValue, unit)} · </>}
+          Bonne réponse : {formatValue(r.correctValue, unit)}
+        </p>
+      ) : (
+        answered && answerLabel(s) && <p className="font-bold">Ta réponse : {answerLabel(s)}</p>
+      )}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
       <motion.p
         initial={{ opacity: 0 }}
@@ -261,6 +402,30 @@ function Result({ s }: { s: PlayerState }) {
       </motion.p>
       {r.team && <TeamLine {...r.team} />}
     </div>
+  );
+}
+
+/** Poll: no right or wrong, no points; the streak is untouched. */
+function PollThanks({ s, voted }: { s: PlayerState; voted: boolean }) {
+  const r = s.result!;
+  return (
+    <Message
+      title={voted ? 'Merci pour ton vote !' : 'Sondage terminé'}
+      subtitle="Regarde les résultats sur l'écran"
+    >
+      <motion.p
+        initial={{ scale: 0.3, rotate: -20 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 14 }}
+        className="text-7xl"
+        aria-hidden="true"
+      >
+        🗳️
+      </motion.p>
+      {r.streak >= 2 && <Streak streak={r.streak} bonus={0} />}
+      <p className="text-lg font-bold">Tu es {formatRank(r.rank)}</p>
+      {r.team && <TeamLine {...r.team} />}
+    </Message>
   );
 }
 

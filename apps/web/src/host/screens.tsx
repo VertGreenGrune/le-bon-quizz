@@ -10,6 +10,7 @@ import {
 } from '@lbq/shared';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
+import { formatValue } from '../lib/numbers';
 import { joinOrigins, joinUrl } from './joinUrl';
 import { TICK_FROM_SEC } from './sounds';
 import { TeamRanking } from './teamScreens';
@@ -190,23 +191,35 @@ export function QuestionScreen({
           done={reveal != null}
         />
 
-        <div className="flex min-h-0 flex-1 items-center justify-center self-stretch">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 self-stretch">
           {reveal ? (
-            <DistributionChart
-              distribution={reveal.distribution}
-              correct={reveal.correctIndexes}
-              count={question.choices.length}
-              instant={instant}
-            />
-          ) : question.imageUrl ? (
-            <motion.img
-              src={question.imageUrl}
-              alt=""
-              initial={instant ? false : { scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="max-h-[40vh] max-w-full rounded-xl object-contain shadow-lg"
-            />
-          ) : null}
+            reveal.type === 'TYPE_ANSWER' ? (
+              <TypedAnswersReveal reveal={reveal} instant={instant} />
+            ) : reveal.type === 'SLIDER' ? (
+              <SliderReveal reveal={reveal} instant={instant} />
+            ) : (
+              <DistributionChart
+                distribution={reveal.distribution}
+                correct={reveal.correctIndexes}
+                count={question.choices.length}
+                poll={reveal.type === 'POLL'}
+                instant={instant}
+              />
+            )
+          ) : (
+            <>
+              {question.imageUrl && (
+                <motion.img
+                  src={question.imageUrl}
+                  alt=""
+                  initial={instant ? false : { scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="max-h-[40vh] max-w-full min-h-0 rounded-xl object-contain shadow-lg"
+                />
+              )}
+              <AnswerHint question={question} />
+            </>
+          )}
         </div>
 
         <div className="flex w-32 shrink-0 flex-col items-center rounded-2xl bg-black/25 py-3">
@@ -226,11 +239,146 @@ export function QuestionScreen({
         </div>
       </div>
 
-      <AnswerGrid
-        choices={question.choices}
-        correct={reveal?.correctIndexes ?? null}
-        instant={instant}
-      />
+      {question.choices.length > 0 && (
+        <AnswerGrid
+          choices={question.choices}
+          // A poll has no right answer: nothing is dimmed at the reveal.
+          correct={reveal && reveal.type !== 'POLL' ? reveal.correctIndexes : null}
+          instant={instant}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Typed / slider questions: how to answer (on the phone), shown while answering. */
+function AnswerHint({ question }: { question: QuestionShowPayload }) {
+  const { slider } = question;
+  const hint =
+    question.type === 'TYPE_ANSWER'
+      ? '✍️ Écris ta réponse sur ton téléphone'
+      : question.type === 'SLIDER' && slider
+        ? `🎚️ Entre ${formatValue(slider.min, slider.unit)} et ${formatValue(slider.max, slider.unit)}`
+        : question.type === 'POLL'
+          ? '🗳️ Sondage : pas de bonne réponse !'
+          : null;
+  if (!hint) return null;
+  return (
+    <motion.p
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="rounded-2xl bg-black/25 px-8 py-4 text-center text-4xl font-black"
+    >
+      {hint}
+    </motion.p>
+  );
+}
+
+/** Réponse libre: the accepted answer(s), then the most typed answers (right ones in green). */
+function TypedAnswersReveal({
+  reveal,
+  instant,
+}: {
+  reveal: QuestionRevealPayload;
+  instant: boolean;
+}) {
+  const top = reveal.topAnswers ?? [];
+  return (
+    <div className="flex w-full max-w-5xl flex-col gap-5">
+      <motion.p
+        initial={instant ? false : { scale: 0.7, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 16 }}
+        className="rounded-2xl bg-answer-green px-8 py-4 text-center text-4xl font-black shadow-lg ring-4 ring-white"
+      >
+        ✓ {(reveal.acceptedAnswers ?? []).join(' · ')}
+      </motion.p>
+      {top.length === 0 ? (
+        <p className="text-center text-2xl font-bold opacity-80">Aucune réponse</p>
+      ) : (
+        <ul className="grid grid-cols-2 gap-3">
+          {top.map((a, i) => (
+            <motion.li
+              key={`${a.text}-${i}`}
+              initial={instant ? false : { x: -30, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: instant ? 0 : 0.3 + i * 0.12 }}
+              className={`flex items-center gap-4 rounded-xl px-5 py-3 text-2xl font-bold shadow ${a.correct ? 'bg-answer-green' : 'bg-black/25'}`}
+            >
+              <span className="flex-1 truncate">
+                {a.correct && '✓ '}
+                {a.text}
+              </span>
+              <span className="tabular-nums opacity-90">× {a.count}</span>
+            </motion.li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Curseur: an axis with each guess as a dot, the correct value and its margin band. */
+function SliderReveal({ reveal, instant }: { reveal: QuestionRevealPayload; instant: boolean }) {
+  const slider = reveal.slider;
+  if (!slider) return null;
+  const { min, max, correct, margin, unit } = slider;
+  const pos = (v: number) => `${((Math.min(Math.max(v, min), max) - min) / (max - min)) * 100}%`;
+  const low = Math.max(min, correct - margin);
+  const high = Math.min(max, correct + margin);
+  // Equal guesses pile up.
+  const seen = new Map<number, number>();
+  const dots = (reveal.guesses ?? []).map((value) => {
+    const level = seen.get(value) ?? 0;
+    seen.set(value, level + 1);
+    return { value, level };
+  });
+  return (
+    <div className="flex w-full max-w-5xl flex-col gap-6 px-6">
+      <div className="relative mt-[7.5rem] h-4 rounded-full bg-black/30">
+        <motion.div
+          className="absolute -inset-y-3 rounded-lg bg-answer-green/60"
+          style={{ left: pos(low), width: `calc(${pos(high)} - ${pos(low)})`, minWidth: 6 }}
+          initial={instant ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: instant ? 0 : 0.2 }}
+        />
+        <div
+          className="absolute -inset-y-5 w-1.5 -translate-x-1/2 rounded bg-white"
+          style={{ left: pos(correct) }}
+        />
+        {dots.map(({ value, level }, i) => (
+          <motion.div
+            key={i}
+            className="absolute size-7 -translate-x-1/2 rounded-full border-2 border-white bg-answer-yellow shadow"
+            style={{ left: pos(value), bottom: `${1.75 + level * 1.5}rem` }}
+            initial={instant ? false : { scale: 0, y: -40 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ delay: instant ? 0 : 0.4 + i * 0.08, type: 'spring', stiffness: 300 }}
+          />
+        ))}
+      </div>
+      <div className="relative h-10 text-2xl font-bold tabular-nums">
+        <span className="absolute left-0">{formatValue(min, unit)}</span>
+        <span className="absolute right-0">{formatValue(max, unit)}</span>
+        <span
+          className="absolute -translate-x-1/2 whitespace-nowrap rounded-lg bg-white px-3 py-0.5 font-black text-brand"
+          style={{ left: pos(correct) }}
+        >
+          ✓ {formatValue(correct, unit)}
+          {margin > 0 && <span className="font-bold opacity-70"> ± {formatValue(margin)}</span>}
+        </span>
+      </div>
+      {reveal.closest && (
+        <motion.p
+          initial={instant ? false : { scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: instant ? 0 : 0.6 + dots.length * 0.08 }}
+          className="text-center text-4xl font-black"
+        >
+          🎯 Le plus proche : {reveal.closest.nickname} ({formatValue(reveal.closest.value, unit)})
+        </motion.p>
+      )}
     </div>
   );
 }
@@ -343,14 +491,18 @@ function DistributionChart({
   distribution,
   correct,
   count,
+  poll,
   instant,
 }: {
   distribution: number[];
   correct: number[];
   count: number;
+  /** Poll: no right answer (no bar dimmed), percentages shown. */
+  poll: boolean;
   instant: boolean;
 }) {
   const max = Math.max(1, ...distribution);
+  const votes = distribution.reduce((sum, n) => sum + n, 0);
   return (
     <div className="flex h-full max-h-[40vh] min-h-48 items-end gap-6">
       {Array.from({ length: count }, (_, i) => {
@@ -362,8 +514,13 @@ function DistributionChart({
             <span className="text-3xl font-black tabular-nums">
               {instant ? n : <CountUp value={n} from={0} duration={800} delay={delay * 1000} />}
             </span>
+            {poll && (
+              <span className="-mt-2 text-xl font-bold tabular-nums opacity-90">
+                {votes > 0 ? Math.round((n / votes) * 100) : 0} %
+              </span>
+            )}
             <motion.div
-              className={`w-full rounded-t-lg ${shapeBg[s.color]} ${correct.includes(i) ? '' : 'opacity-40'}`}
+              className={`w-full rounded-t-lg ${shapeBg[s.color]} ${poll || correct.includes(i) ? '' : 'opacity-40'}`}
               initial={instant ? false : { height: 0 }}
               animate={{ height: `${(n / max) * 100}%` }}
               transition={{ duration: 0.8, ease: 'easeOut', delay }}

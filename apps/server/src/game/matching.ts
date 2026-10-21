@@ -1,0 +1,60 @@
+/**
+ * TYPE_ANSWER matching (server only, PLAN.md §3): both sides are normalized — trimmed, lower
+ * case, without accents, punctuation, extra spaces or a leading article — then compared. With
+ * typo tolerance, a Levenshtein distance of 1 is accepted for answers of 5–9 characters and 2
+ * for 10+. Answers containing a number must match exactly ("8" ≠ "9").
+ */
+
+const LEADING_ARTICLE = /^(?:le|la|les|l|un|une|des) (?=\S)/;
+
+export function normalizeAnswer(input: string): string {
+  return (
+    input
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '') // accents
+      .toLowerCase()
+      .replace(/œ/g, 'oe')
+      .replace(/æ/g, 'ae')
+      // Punctuation (apostrophes included: "l'océan" → "l ocean") becomes a space.
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(LEADING_ARTICLE, '')
+  );
+}
+
+/** Edit distance (insertions, deletions, substitutions). */
+export function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      row.push(Math.min(prev[j]! + 1, row[j - 1]! + 1, prev[j - 1]! + cost));
+    }
+    prev = row;
+  }
+  return prev[b.length]!;
+}
+
+/** Typos allowed for a normalized accepted answer of this length. */
+export function allowedTypos(length: number): number {
+  if (length >= 10) return 2;
+  if (length >= 5) return 1;
+  return 0;
+}
+
+export function matchesAnswer(
+  typed: string,
+  acceptedAnswers: readonly string[],
+  typoTolerance: boolean,
+): boolean {
+  const guess = normalizeAnswer(typed);
+  if (!guess) return false;
+  return acceptedAnswers.some((answer) => {
+    const accepted = normalizeAnswer(answer);
+    if (guess === accepted) return true;
+    if (!typoTolerance || /\d/.test(accepted) || /\d/.test(guess)) return false;
+    return levenshtein(guess, accepted) <= allowedTypos(accepted.length);
+  });
+}

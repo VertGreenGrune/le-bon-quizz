@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { ErrorCode, TeamId } from '@lbq/shared';
+import type { AnswerInput, ErrorCode, TeamId } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import {
   initialPlayerState,
@@ -174,15 +174,16 @@ export function resumeSession(): PlayerSession | null {
   return session;
 }
 
-export function sendAnswer(choiceIndex: number) {
+/** A shape tapped (choice questions), a typed text or a slider value. */
+export function sendAnswer(answer: AnswerInput) {
   const session = loadSession();
   const { questionIndex, myAnswer } = state;
   if (!session || myAnswer?.questionIndex === questionIndex) return;
   vibrate(40);
-  dispatch({ type: 'answer', questionIndex, choiceIndex }); // optimistic
+  dispatch({ type: 'answer', questionIndex, answer }); // optimistic
   getSocket()
     .timeout(ACK_TIMEOUT_MS)
-    .emit('player:answer', { pin: session.pin, questionIndex, choiceIndex }, (err, res) => {
+    .emit('player:answer', { pin: session.pin, questionIndex, ...answer }, (err, res) => {
       // Server already has an answer: keep ours displayed. Otherwise let the player retry.
       if (err || (!res.ok && res.error.code !== 'ALREADY_ANSWERED')) {
         dispatch({ type: 'answerRejected', questionIndex });

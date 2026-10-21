@@ -1,4 +1,4 @@
-import type { Quiz, QuizDetail, QuizInput, QuizSummary } from '@lbq/shared';
+import type { Question, Quiz, QuizDetail, QuizInput, QuizSummary } from '@lbq/shared';
 import type { PrismaClient } from '../db.js';
 import type { Prisma } from '../generated/prisma/client.js';
 
@@ -7,7 +7,58 @@ const withQuestions = {
 } satisfies Prisma.QuizInclude;
 
 type QuizRow = Prisma.QuizGetPayload<{ include: typeof withQuestions }>;
+type QuestionRow = QuizRow['questions'][number];
 type BasePoints = Quiz['questions'][number]['basePoints'];
+
+/** `Question.config` (JSON) of the typed / slider questions, written by `questionsCreate`. */
+type QuestionConfig = Pick<
+  Extract<Question, { type: 'TYPE_ANSWER' }>,
+  'acceptedAnswers' | 'typoTolerance'
+> &
+  Pick<Extract<Question, { type: 'SLIDER' }>, 'slider'>;
+
+function toQuestion(qu: QuestionRow): Question {
+  const base = {
+    text: qu.text,
+    imageUrl: qu.imageUrl ?? undefined,
+    timeLimitSec: qu.timeLimitSec,
+    basePoints: qu.basePoints as BasePoints,
+  };
+  const config = (qu.config ?? {}) as Partial<QuestionConfig>;
+  switch (qu.type) {
+    case 'TYPE_ANSWER':
+      return {
+        ...base,
+        type: qu.type,
+        acceptedAnswers: config.acceptedAnswers ?? [],
+        typoTolerance: config.typoTolerance ?? true,
+      };
+    case 'SLIDER':
+      return { ...base, type: qu.type, slider: config.slider! };
+    case 'POLL':
+      return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
+    default:
+      return {
+        ...base,
+        type: qu.type,
+        choices: qu.choices.map((c) => ({ text: c.text, isCorrect: c.isCorrect })),
+      };
+  }
+}
+
+function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
+  if (qu.type === 'TYPE_ANSWER')
+    return { acceptedAnswers: qu.acceptedAnswers, typoTolerance: qu.typoTolerance };
+  if (qu.type === 'SLIDER') return { slider: qu.slider };
+  return undefined;
+}
+
+/** Poll choices are stored with `isCorrect: false`; typed / slider questions have none. */
+function choiceRows(qu: Question): { order: number; text: string; isCorrect: boolean }[] {
+  if (qu.type === 'TYPE_ANSWER' || qu.type === 'SLIDER') return [];
+  if (qu.type === 'POLL') return qu.choices.map((c, order) => ({ order, ...c, isCorrect: false }));
+  return qu.choices.map((c, order) => ({ order, ...c }));
+}
 
 export function toQuizDetail(q: QuizRow): QuizDetail {
   return {
@@ -17,14 +68,7 @@ export function toQuizDetail(q: QuizRow): QuizDetail {
     coverImageUrl: q.coverImageUrl ?? undefined,
     createdAt: q.createdAt.toISOString(),
     updatedAt: q.updatedAt.toISOString(),
-    questions: q.questions.map((qu) => ({
-      text: qu.text,
-      imageUrl: qu.imageUrl ?? undefined,
-      type: qu.type,
-      timeLimitSec: qu.timeLimitSec,
-      basePoints: qu.basePoints as BasePoints,
-      choices: qu.choices.map((c) => ({ text: c.text, isCorrect: c.isCorrect })),
-    })),
+    questions: q.questions.map(toQuestion),
   };
 }
 
@@ -37,9 +81,8 @@ const questionsCreate = (input: QuizInput) =>
       type: qu.type,
       timeLimitSec: qu.timeLimitSec,
       basePoints: qu.basePoints,
-      choices: {
-        create: qu.choices.map((c, i) => ({ order: i, text: c.text, isCorrect: c.isCorrect })),
-      },
+      config: questionConfig(qu),
+      choices: { create: choiceRows(qu) },
     })),
   }) satisfies Prisma.QuestionCreateNestedManyWithoutQuizInput;
 
