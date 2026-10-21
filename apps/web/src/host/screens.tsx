@@ -102,7 +102,7 @@ export function LobbyScreen({
                     type="button"
                     onClick={() => onKick(p.id)}
                     title="Cliquer pour exclure"
-                    className="group flex items-center gap-3 rounded-full bg-black/25 py-2 pr-6 pl-2 text-2xl font-bold hover:bg-answer-red hover:line-through"
+                    className="group flex items-center gap-4 rounded-full bg-black/25 py-3 pr-8 pl-3 text-3xl font-bold hover:bg-answer-red hover:line-through"
                   >
                     <motion.span
                       initial={{ scale: 0, rotate: -40 }}

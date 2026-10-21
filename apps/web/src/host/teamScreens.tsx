@@ -61,7 +61,7 @@ export function TeamLobby({
         type="button"
         onClick={() => setSelected(selected === p.id ? null : p.id)}
         aria-expanded={selected === p.id}
-        className="flex w-full items-center gap-2 rounded-full bg-black/25 py-1 pr-3 pl-1 text-xl font-bold hover:bg-black/40"
+        className="flex w-full items-center gap-3 rounded-full bg-black/25 py-2 pr-4 pl-2 text-xl font-bold hover:bg-black/40"
       >
         <motion.span
           initial={{ scale: 0, rotate: -40 }}
