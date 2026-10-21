@@ -791,6 +791,58 @@ test). e2e: a phone goes offline mid-question (Playwright `context.setOffline`) 
 pause → phone back online → countdown → game continues and finishes; second e2e: player's page
 is closed and a new page takes over with the same nickname.
 
+### T22 — Media questions: sound clips (blind test) + picture reveal effects (run alone, after T21)
+- **Status:** todo
+- **Depends on:** T21 merged (the sound must pause with the game; same host question screen)
+- **Ports:** server 3022 / web 5202, test DB `lbq_test_t22`, e2e DB `lbq_e2e_t22`.
+
+**User requirement (2026-10-21):** fun quizzes, "not just text": music and pictures.
+
+**Design (decided):**
+- **Sound clip on any question type** (optional): `audio: { url, startSec, durationSec }` —
+  uploaded file (MP3, OGG, M4A/AAC, WAV; ≤ 10 MB; type checked by magic bytes like images),
+  `startSec` ≥ 0 (start inside the file), `durationSec` 5–30 (default 15). Plays **on the host
+  screen only** (TV speakers), from the start of ANSWERING, looping until the clip length if the
+  answering time is longer; stops at REVEAL; **pauses with the game** (T21) and resumes after the
+  3-2-1. Follows the host 🔊/🔇 toggle; background lobby music/ticks are ducked while a clip plays.
+  Host screen: a big animated 🎵 visual + "Écoutez bien !" and a "Rejouer" button. Optional
+  `audioOnReveal: true` = play the clip at REVEAL instead (e.g. "listen to the answer").
+- **Picture reveal effect** (optional, questions with an image): `imageEffect: 'none' | 'blur' |
+  'zoom' | 'pixelate'` — the picture starts unrecognisable and becomes clear progressively over
+  the answering time (blur 30 px → 0, zoom ×6 on a random point → ×1, pixelate 8 → full), fully
+  clear at REVEAL. Pauses with the game. Faster answers already earn more points, so guessing
+  early pays off. Phones never get the image (unchanged).
+- **Editor:** per question, "Ajouter un son" (upload, start time with a small player to pick the
+  excerpt, duration, "jouer à la révélation") and "Effet sur l'image" (Aucun / Flou / Zoom /
+  Pixelisé) with a live preview. When a quiz with uploaded sounds or images is switched to
+  **Public**, show: "Vous devez avoir les droits sur les images et sons partagés publiquement."
+- **Contract:** `questionBase` gains optional `audio`, `audioOnReveal`, `imageEffect` (zod, all
+  question types); `QuestionShowPayload` (host) gains them; `QuestionPromptPayload` (phones)
+  **doesn't**. Upload endpoint accepts audio (`POST /api/uploads/audio` or a `kind` field).
+  Prisma: new nullable columns on `Question` (migration). PLAN.md §4–§6.
+- **Tests:** schema (duration bounds, audio types by magic bytes, effect only with an image), the
+  host screen plays/stops/pauses the clip (unit test of the audio controller with a fake `Audio`),
+  e2e: a question with a sound and a blurred image is played (assert the `<audio>` starts and the
+  blur decreases), and the phone payload contains neither.
+
+### T23 — Content: "Tim Burton" quiz + quiz import script (after T22)
+- **Status:** todo
+- **Depends on:** T22 merged
+- **Scope:** `content/quizzes/tim-burton/**` (quiz JSON + freely licensed media + `CREDITS.md`),
+  `apps/server/scripts/import-quiz.ts` + a `quiz:import` script in `apps/server/package.json`.
+- **Import script:** `pnpm --filter @lbq/server quiz:import <folder> <owner email>` validates the
+  quiz JSON with `QuizInput`, copies its media into the uploads dir and creates the quiz (always
+  **Privé**) for that host. Re-running it updates the same quiz (matched by title + owner) instead
+  of duplicating it.
+- **Quiz content:** French, ~15–20 questions, mixing every type and effect. Every fact checked
+  against reliable sources (list them in `CREDITS.md`). **Copyright:** no movie stills, posters or
+  soundtrack files downloaded from the web; pictures only from freely licensed sources (e.g.
+  Wikimedia Commons CC-BY/CC-BY-SA/public domain photos of the director, actors, places), with
+  author + license in `CREDITS.md`. **Music questions use placeholders**: the question is fully
+  written (which track, excerpt start, duration) with `audio` pointing to
+  `content/quizzes/tim-burton/audio/<name>.mp3`, and `CREDITS.md` lists the files the user must
+  add from their own copies; the import script skips the sound with a warning if a file is missing.
+
 - T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
 
