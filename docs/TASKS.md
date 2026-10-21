@@ -500,7 +500,7 @@ Solo e2e must still pass.
   questions (only the individual ranking animates); reports CSV has no per-team sheet.
 
 ### T14 — More question types: réponse libre, sondage, curseur (run alone, after T15)
-- **Status:** todo
+- **Status:** in-progress (T14 agent, worktree ../lbq-T14)
 - **Depends on:** T15 merged (builds on its scoring and contract; must work in solo AND team mode)
 - **Ports:** server 3014 / web 5194, test DB `lbq_test_t14`.
 
