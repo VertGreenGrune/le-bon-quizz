@@ -834,7 +834,7 @@ is closed and a new page takes over with the same nickname.
   paused until they unlock).
 
 ### T22 — Media questions: sound clips (blind test) + picture reveal effects (run alone, after T21)
-- **Status:** in-progress (claude, worktree ../lbq-T22, branch task/T22-media)
+- **Status:** done
 - **Depends on:** T21 merged (the sound must pause with the game; same host question screen)
 - **Ports:** server 3022 / web 5202, test DB `lbq_test_t22`, e2e DB `lbq_e2e_t22`.
 
@@ -866,6 +866,48 @@ is closed and a new page takes over with the same nickname.
   host screen plays/stops/pauses the clip (unit test of the audio controller with a fake `Audio`),
   e2e: a question with a sound and a blurred image is played (assert the `<audio>` starts and the
   blur decreases), and the phone payload contains neither.
+
+- **Summary:** shared (`quiz.ts`): `QuestionAudioSchema` (`url`, `startSec` 0–3600 default 0,
+  `durationSec` integer 5–30 default 15), `ImageEffect` enum, `questionBase` gains `audio?`,
+  `audioOnReveal?`, `imageEffect?` (every type); the question union refines "effect needs an
+  image"; `QuestionShowPayload` gains `audio?`, `audioOnReveal?: true`, `imageEffect?` (`none` not
+  sent), `QuestionPromptPayload` unchanged; `AUDIO_UPLOAD_MAX_BYTES` (10 MB). Server: `showPayload`
+  adds the media (host only); `POST /api/uploads/audio` (`sniffAudioType`: ID3 / MPEG frame →
+  mp3, ADTS → aac, `OggS`, `ftyp` → m4a, RIFF/WAVE), size limits per route (image 5 MB, audio
+  10 MB); migration `20261021201359_media` (`Question.audioUrl` / `audioStartSec` /
+  `audioDurationSec` / `audioOnReveal`, enum `ImageEffect` column `imageEffect`, all nullable),
+  mapped in `quizzes.service.ts` (so copies / duplicates keep them). Host: `host/clipPlayer.ts`
+  (`ClipPlayer`: declarative `update(wish, muted)`, excerpt looped by `timeupdate` / `ended`,
+  position kept across a pause, new key = restart, one-shot at the reveal, `replay()`, autoplay
+  retry on the first click; `clipWish(question, phase, paused)`; `useQuestionClip` with a hidden
+  `<audio data-testid="question-clip">`); `sounds.ts` `setDucked` (game sounds × 0.3 while a clip
+  plays). `components/RevealImage.tsx` + `lib/imageEffect.ts` (`effectFrame`: blur / scale /
+  pixel blocks doubling at a steady pace; `zoomOrigin` seeded by picture URL + question index so
+  a reload zooms on the same point; pixelate = tiny canvas stretched with
+  `image-rendering: pixelated`). Question screen: picture with its effect (progress from the
+  clock, frozen while paused), « 🎵 Écoutez bien ! » badge + « ↻ Rejouer » (« Écoutez la
+  réponse ! » at the reveal with `audioOnReveal`, « (son coupé) » when muted), at REVEAL the clear
+  picture beside the results. Editor (`editor/MediaFields.tsx`): « 🎵 Ajouter un son » (upload /
+  drag & drop, player, « Début de l'extrait » + « ⏱ Position du lecteur », duration 5–30 s,
+  « ▶ Écouter l'extrait », « Jouer à la révélation »), « Effet sur l'image » (Aucun / Flou / Zoom /
+  Pixelisé) with a looping live preview; an effect left without a picture is dropped on save;
+  « ⚠️ Vous devez avoir les droits sur les images et sons partagés publiquement. » under the
+  visibility switch when the quiz is public and has a cover, pictures or sounds (`hasMedia`).
+  Tests: shared schema (defaults, duration / start bounds, effect only with an image), server
+  `Game.media.test.ts` (media in `question:show` to the host only, nothing media-related in any
+  phone / room payload), `uploads.test.ts` (magic bytes), API (audio upload 6 MB OK / 11 MB 413 /
+  PNG 415, image route still 5 MB, media round trip, effect without image 400); web
+  `clipPlayer.test.ts` (fake `Audio`: loop, pause / resume position, stop, mute, reveal once,
+  « Rejouer »), `imageEffect.test.ts`, draft (round trip, dropped effect, `hasMedia`,
+  `checkAudioFile`); e2e `e2e/media.spec.ts` (needs `E2E_DATABASE_URL`: uploads a PNG + generated
+  WAV, editor shows the effect / sound and the public warning, game: the clip plays, the blur
+  decreases, reveal stops the clip and clears the picture, the phone's socket frames contain no
+  media). Checked with screenshots (host 1600×900 blur / zoom / pixelate, editor).
+- **Notes:** (1) The intro screen (`QUESTION_INTRO`) still doesn't show the picture, so the effect
+  starts with ANSWERING. (2) A host reload mid-question restarts the clip from the excerpt start.
+  (3) Uploaded sounds, like images, are never deleted when replaced (T9 follow-up). (4) The clip
+  `<audio>` is created by the host page and stays (paused) in the DOM after leaving it.
+  **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on a real TV.
 
 ### T23 — Content: "Tim Burton" quiz + quiz import script (after T22)
 - **Status:** todo
@@ -1013,3 +1055,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   longer ends early when the last awaited player drops — the game pauses for them. Outside the
   T21 scope: Socket.IO heartbeat 5 s + 5 s in `apps/server/src/index.ts`. Phone sessions moved
   from sessionStorage to localStorage (`lbq:player-sessions`).
+- 2026-10-21, T22 agent: media contract (PLAN.md §3–§6): `QuestionSchema` (every type) gains
+  optional `audio` (`QuestionAudio`), `audioOnReveal`, `imageEffect` (`ImageEffect`), plus a union
+  refinement (effect needs an image); `QuestionShowPayload` gains `audio?`, `audioOnReveal?`,
+  `imageEffect?` (host only — `QuestionPromptPayload` unchanged); new `POST /api/uploads/audio`
+  and `AUDIO_UPLOAD_MAX_BYTES`. Prisma migration `20261021201359_media`. The multipart plugin no
+  longer has a global file size limit: each upload route sets its own (`apps/server/src/api/index.ts`).

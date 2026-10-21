@@ -29,11 +29,44 @@ export type Choice = z.infer<typeof ChoiceSchema>;
 /** A poll choice has no right or wrong. */
 export const PollChoiceSchema = z.object({ text: z.string().trim().min(1).max(75) });
 
+export const AUDIO_MIN_DURATION_SEC = 5;
+export const AUDIO_MAX_DURATION_SEC = 30;
+export const AUDIO_DEFAULT_DURATION_SEC = 15;
+/** Latest start inside the audio file (1 hour). */
+export const AUDIO_MAX_START_SEC = 3600;
+
+/**
+ * Sound clip of a question (blind test), played on the host screen only: the excerpt
+ * [startSec, startSec + durationSec] of the uploaded file, looped while answering.
+ */
+export const QuestionAudioSchema = z.object({
+  url: z.string().url(),
+  startSec: z.number().min(0).max(AUDIO_MAX_START_SEC).default(0),
+  durationSec: z
+    .number()
+    .int()
+    .min(AUDIO_MIN_DURATION_SEC)
+    .max(AUDIO_MAX_DURATION_SEC)
+    .default(AUDIO_DEFAULT_DURATION_SEC),
+});
+export type QuestionAudio = z.infer<typeof QuestionAudioSchema>;
+
+/**
+ * The question's picture starts unrecognisable and becomes clear over the answering time
+ * (host screen only): `blur` 30 px → 0, `zoom` ×6 on a point → ×1, `pixelate` 8 blocks → full.
+ */
+export const ImageEffect = z.enum(['none', 'blur', 'zoom', 'pixelate']);
+export type ImageEffect = z.infer<typeof ImageEffect>;
+
 const questionBase = {
   text: z.string().trim().min(1).max(120),
   imageUrl: z.string().url().optional(),
   timeLimitSec: z.number().int().min(5).max(240).default(20),
   basePoints: BasePoints.default(1000),
+  audio: QuestionAudioSchema.optional(),
+  /** Play the clip at REVEAL instead of during ANSWERING (e.g. "listen to the answer"). */
+  audioOnReveal: z.boolean().optional(),
+  imageEffect: ImageEffect.optional(),
 };
 
 const hasCorrectChoice: [
@@ -121,13 +154,18 @@ const SliderQuestion = z.object({
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
-  z.discriminatedUnion('type', [
-    McqQuestion,
-    TrueFalseQuestion,
-    TypeAnswerQuestion,
-    PollQuestion,
-    SliderQuestion,
-  ]),
+  z
+    .discriminatedUnion('type', [
+      McqQuestion,
+      TrueFalseQuestion,
+      TypeAnswerQuestion,
+      PollQuestion,
+      SliderQuestion,
+    ])
+    .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
+      message: 'An image effect needs an image',
+      path: ['imageEffect'],
+    }),
 );
 export type Question = z.infer<typeof QuestionSchema>;
 export type ChoiceQuestion = Extract<Question, { type: ChoiceQuestionType }>;

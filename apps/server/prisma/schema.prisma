@@ -78,8 +78,24 @@ model Question {
   /// Type-specific settings: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
   /// SLIDER `{ slider: { min, max, step, correct, margin, unit? } }`; null otherwise.
   config       Json?
+  /// Sound clip played on the host screen (`audio` in @lbq/shared): file URL, excerpt start
+  /// (seconds) and length (5–30 s); all null without a sound.
+  audioUrl         String?
+  audioStartSec    Float?
+  audioDurationSec Int?
+  /// Play the clip at REVEAL instead of during ANSWERING; null = false.
+  audioOnReveal    Boolean?
+  /// Picture reveal effect (only with `imageUrl`); null = none.
+  imageEffect      ImageEffect?
 
   @@unique([quizId, order])
+}
+
+enum ImageEffect {
+  none
+  blur
+  zoom
+  pixelate
 }
 
 model Choice {

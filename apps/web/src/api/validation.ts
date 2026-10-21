@@ -32,6 +32,7 @@ const customMessages: Record<string, string> = {
   'Too many steps': 'Pas trop petit pour cet intervalle',
   'Correct value out of range': 'La bonne réponse doit être entre le minimum et le maximum',
   'Correct value not on a step': 'La bonne réponse doit tomber sur un cran du curseur',
+  'An image effect needs an image': 'Ajoute une image pour utiliser un effet',
 };
 
 export function issueMessage(issue: Issue): string {

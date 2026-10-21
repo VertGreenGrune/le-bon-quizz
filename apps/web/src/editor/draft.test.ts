@@ -6,6 +6,7 @@ import {
   addQuestion,
   emptyQuiz,
   fromDetail,
+  hasMedia,
   moveQuestion,
   newQuestion,
   questionErrorCount,
@@ -19,7 +20,7 @@ import {
   type DraftQuestion,
   type QuizDraft,
 } from './draft';
-import { checkImageFile } from './imageFile';
+import { checkAudioFile, checkImageFile } from './imageFile';
 
 const q = (
   text: string,
@@ -234,5 +235,72 @@ describe('checkImageFile', () => {
     expect(checkImageFile({ type: 'image/png', size: 1000 })).toBeNull();
     expect(checkImageFile({ type: 'image/svg+xml', size: 1000 })).toMatch(/Formats/);
     expect(checkImageFile({ type: 'image/jpeg', size: 6 * 1024 * 1024 })).toMatch(/trop lourde/);
+  });
+});
+
+describe('media (sound clip, picture effect)', () => {
+  const img = 'http://h/uploads/a.png';
+  const audio = { url: 'http://h/uploads/b.mp3', startSec: 12, durationSec: 20 };
+  const mcq = () =>
+    q('Quel film ?', [
+      ['A', true],
+      ['B', false],
+    ]);
+
+  it('sends the sound and the effect, round-trips them', () => {
+    const draft: QuizDraft = {
+      title: 'Ciné',
+      questions: [{ ...mcq(), imageUrl: img, imageEffect: 'zoom', audio, audioOnReveal: true }],
+    };
+    const res = validateDraft(draft);
+    expect(res.ok && res.data.questions[0]).toMatchObject({
+      imageUrl: img,
+      imageEffect: 'zoom',
+      audio,
+      audioOnReveal: true,
+    });
+    if (!res.ok) return;
+    const back = fromDetail({
+      ...res.data,
+      id: 'x',
+      visibility: 'PRIVATE',
+      createdAt: '',
+      updatedAt: '',
+    });
+    expect(back.questions[0]).toMatchObject({ imageEffect: 'zoom', audio, audioOnReveal: true });
+  });
+
+  it('drops an effect left without a picture, and « à la révélation » without a sound', () => {
+    const res = validateDraft({
+      title: 'Ciné',
+      questions: [{ ...mcq(), imageEffect: 'blur', audioOnReveal: true }],
+    });
+    expect(res.ok).toBe(true);
+    const sent = res.ok ? res.data.questions[0]! : null;
+    expect(sent?.imageEffect).toBeUndefined();
+    expect(sent?.audioOnReveal).toBeUndefined();
+    expect(sent?.audio).toBeUndefined();
+  });
+
+  it('a saved question without media gets no effect and no sound', () => {
+    const draft = fromDetail({ ...DEMO_QUIZ, visibility: 'PRIVATE', createdAt: '', updatedAt: '' });
+    expect(draft.questions[0]).toMatchObject({ imageEffect: 'none', audioOnReveal: false });
+    expect(draft.questions[0]!.audio).toBeUndefined();
+  });
+
+  it('hasMedia: a cover, a question picture or a sound', () => {
+    expect(hasMedia(validDraft())).toBe(false);
+    expect(hasMedia({ ...validDraft(), coverImageUrl: img })).toBe(true);
+    expect(hasMedia({ title: 'x', questions: [{ ...mcq(), imageUrl: img }] })).toBe(true);
+    expect(hasMedia({ title: 'x', questions: [{ ...mcq(), audio }] })).toBe(true);
+  });
+
+  it('checkAudioFile: audio types or extensions up to 10 MB', () => {
+    expect(checkAudioFile({ name: 'a.mp3', type: 'audio/mpeg', size: 1000 })).toBeNull();
+    expect(checkAudioFile({ name: 'a.m4a', type: '', size: 1000 })).toBeNull();
+    expect(checkAudioFile({ name: 'a.png', type: 'image/png', size: 1000 })).toMatch(/Formats/);
+    expect(checkAudioFile({ name: 'a.wav', type: 'audio/wav', size: 11 * 1024 * 1024 })).toMatch(
+      /trop lourd/,
+    );
   });
 });

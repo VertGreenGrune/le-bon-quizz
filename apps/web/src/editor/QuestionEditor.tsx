@@ -3,6 +3,7 @@ import type { FieldErrors } from '../api/validation';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { btn } from './EditorShell';
 import { ImageField } from './ImageField';
+import { AudioField, ImageEffectField } from './MediaFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -184,6 +185,27 @@ export function QuestionEditor({
             </label>
           )}
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <AudioField
+          value={q.audio}
+          onReveal={q.audioOnReveal}
+          errors={{
+            url: err('.audio.url'),
+            startSec: err('.audio.startSec'),
+            durationSec: err('.audio.durationSec'),
+          }}
+          onChange={(audio) => onChange({ ...q, audio })}
+          onRevealChange={(audioOnReveal) => onChange({ ...q, audioOnReveal })}
+        />
+        {q.imageUrl && (
+          <ImageEffectField
+            imageUrl={q.imageUrl}
+            value={q.imageEffect}
+            onChange={(imageEffect) => onChange({ ...q, imageEffect })}
+          />
+        )}
       </div>
 
       {q.type === 'TYPE_ANSWER' ? (

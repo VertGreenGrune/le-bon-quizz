@@ -16,6 +16,7 @@ import {
   validateDraft,
   type DraftQuestion,
   type QuizDraft,
+  hasMedia,
 } from './draft';
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready' };
@@ -222,6 +223,7 @@ export function QuizEditorPage() {
             <VisibilityField
               value={draft.visibility ?? 'PRIVATE'}
               onChange={(visibility) => setDraft((d) => ({ ...d, visibility }))}
+              hasMedia={hasMedia(draft)}
             />
           </div>
           <ImageField

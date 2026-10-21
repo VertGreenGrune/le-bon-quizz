@@ -12,6 +12,7 @@ import {
 } from './hostReducer';
 import { ComebackToasts, PauseOverlay, nicknameList } from './pauseScreens';
 import { TeamLobby, TeamPodiumScreen } from './teamScreens';
+import { useQuestionClip } from './clipPlayer';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
   LeaderboardScreen,
@@ -74,6 +75,9 @@ export function HostPage() {
     resumeCount,
     playerCount: state.players.length,
   });
+
+  // Sound clip of the question (host screen only): paused with the game, until the 3-2-1 ends.
+  const clip = useQuestionClip(currentQuestion(state), state.phase, state.paused !== null);
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
   // entrance animations (podium reveal, re-ordering…) instead of replaying them.
@@ -164,6 +168,7 @@ export function HostPage() {
           answerTotal={state.answerTotal}
           reveal={phase === 'REVEAL' ? state.reveal : null}
           instant={instant}
+          onReplay={clip.replay}
         />
       );
       primary =

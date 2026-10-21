@@ -11,13 +11,19 @@ const HELP: Record<QuizVisibility, string> = {
     'Public : les autres animateurs pourront lancer ce quiz. Ils ne pourront pas le modifier.',
 };
 
+export const MEDIA_RIGHTS_WARNING =
+  'Vous devez avoir les droits sur les images et sons partagés publiquement.';
+
 /** "Visibilité : Privé / Public" switch of the quiz form. */
 export function VisibilityField({
   value,
   onChange,
+  hasMedia = false,
 }: {
   value: QuizVisibility;
   onChange: (value: QuizVisibility) => void;
+  /** The quiz has uploaded pictures / sounds: copyright warning when public. */
+  hasMedia?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -45,6 +51,14 @@ export function VisibilityField({
         ))}
       </div>
       <span className="text-sm text-gray-500">{HELP[value]}</span>
+      {value === 'PUBLIC' && hasMedia && (
+        <p
+          role="alert"
+          className="rounded-lg border-2 border-answer-yellow bg-yellow-50 px-3 py-2 text-sm font-semibold text-yellow-900"
+        >
+          ⚠️ {MEDIA_RIGHTS_WARNING}
+        </p>
+      )}
     </div>
   );
 }

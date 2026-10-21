@@ -104,4 +104,53 @@ describe('shared schemas', () => {
     expect(answer({ text: 'x'.repeat(41) })).toBe(false);
     expect(answer({ value: Infinity })).toBe(false);
   });
+
+  describe('media (sound clip, picture effect)', () => {
+    const mcq = {
+      text: 'Q',
+      choices: [
+        { text: 'a', isCorrect: true },
+        { text: 'b', isCorrect: false },
+      ],
+    };
+    const url = 'http://localhost/uploads/x.mp3';
+
+    it('defaults the excerpt to 0 s + 15 s, on any question type', () => {
+      expect(QuestionSchema.parse({ ...mcq, audio: { url } }).audio).toEqual({
+        url,
+        startSec: 0,
+        durationSec: 15,
+      });
+      const slider = {
+        text: 'S',
+        type: 'SLIDER',
+        slider: { min: 0, max: 10, correct: 5 },
+        audio: { url, startSec: 61.5, durationSec: 30 },
+        audioOnReveal: true,
+      };
+      expect(QuestionSchema.safeParse(slider).success).toBe(true);
+    });
+
+    it('bounds the clip duration to 5–30 s and the start to ≥ 0', () => {
+      const ok = (audio: object) => QuestionSchema.safeParse({ ...mcq, audio }).success;
+      expect(ok({ url, durationSec: 5 })).toBe(true);
+      expect(ok({ url, durationSec: 4 })).toBe(false);
+      expect(ok({ url, durationSec: 31 })).toBe(false);
+      expect(ok({ url, durationSec: 10.5 })).toBe(false);
+      expect(ok({ url, startSec: -1 })).toBe(false);
+      expect(ok({ url: 'pas une url' })).toBe(false);
+    });
+
+    it('accepts an image effect only with an image', () => {
+      const image = { imageUrl: 'http://localhost/uploads/x.png' };
+      for (const imageEffect of ['blur', 'zoom', 'pixelate']) {
+        expect(QuestionSchema.safeParse({ ...mcq, ...image, imageEffect }).success).toBe(true);
+        expect(QuestionSchema.safeParse({ ...mcq, imageEffect }).success).toBe(false);
+      }
+      expect(QuestionSchema.safeParse({ ...mcq, imageEffect: 'none' }).success).toBe(true);
+      expect(QuestionSchema.safeParse({ ...mcq, ...image, imageEffect: 'swirl' }).success).toBe(
+        false,
+      );
+    });
+  });
 });
