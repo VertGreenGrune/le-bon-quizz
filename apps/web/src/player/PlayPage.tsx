@@ -5,6 +5,7 @@ import {
   SHAPES,
   TEAM_NAMES,
   TYPE_ANSWER_MAX_LENGTH,
+  WORD_CLOUD_MAX_LENGTH,
   type QuestionPromptPayload,
   type SliderPrompt,
   type TeamId,
@@ -22,6 +23,7 @@ import {
   playerScreen,
   type PlayerState,
 } from './playerState';
+import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 
@@ -241,16 +243,36 @@ function PauseOverlay({ s }: { s: PlayerState }) {
   );
 }
 
-/** Shape buttons, a text field or a slider, depending on the question type. */
+/** Shape buttons, a text field, a slider… depending on the question type. */
 function AnswerScreen({ prompt }: { prompt: QuestionPromptPayload }) {
   if (prompt.type === 'TYPE_ANSWER')
     return <TextAnswer maxLength={prompt.maxLength ?? TYPE_ANSWER_MAX_LENGTH} />;
+  if (prompt.type === 'WORD_CLOUD')
+    return (
+      <TextAnswer
+        maxLength={prompt.maxLength ?? WORD_CLOUD_MAX_LENGTH}
+        title="Un mot ou deux"
+        placeholder="Ton mot…"
+      />
+    );
   if (prompt.type === 'SLIDER' && prompt.slider) return <SliderAnswer slider={prompt.slider} />;
+  if (prompt.type === 'ORDER' && prompt.items) return <OrderAnswer items={prompt.items} />;
+  if (prompt.type === 'PIN' && prompt.imageUrl) return <PinAnswer imageUrl={prompt.imageUrl} />;
+  if (prompt.type === 'WHO_OF_US' && prompt.candidates)
+    return <WhoOfUsAnswer candidates={prompt.candidates} />;
   return <AnswerButtons choiceCount={prompt.choiceCount ?? 4} />;
 }
 
 /** Réponse libre: the keyboard opens right away; « Valider » sends the trimmed text. */
-function TextAnswer({ maxLength }: { maxLength: number }) {
+function TextAnswer({
+  maxLength,
+  title = 'Écris ta réponse',
+  placeholder = 'Ta réponse…',
+}: {
+  maxLength: number;
+  title?: string;
+  placeholder?: string;
+}) {
   const [text, setText] = useState('');
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => input.current?.focus(), []);
@@ -263,13 +285,13 @@ function TextAnswer({ maxLength }: { maxLength: number }) {
       }}
       className="flex flex-1 flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
-      <h2 className="text-center text-2xl font-black">Écris ta réponse</h2>
+      <h2 className="text-center text-2xl font-black">{title}</h2>
       <input
         ref={input}
         value={text}
         maxLength={maxLength}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Ta réponse…"
+        placeholder={placeholder}
         aria-label="Ta réponse"
         autoComplete="off"
         autoCorrect="off"
@@ -376,14 +398,24 @@ function AnswerButtons({ choiceCount }: { choiceCount: number }) {
   );
 }
 
-/** What the player sent, in words: « Pacifique », 1789 ans… (null for a shape). */
+/** What the player sent, in words: « Pacifique », 1789 ans… (null for a shape and the rest). */
 function answerLabel(s: PlayerState): string | null {
   const a = s.myAnswer;
-  if (!a || 'choiceIndex' in a) return null;
-  return 'text' in a ? `« ${a.text} »` : formatValue(a.value, s.prompt?.slider?.unit);
+  if (!a) return null;
+  if ('text' in a) return `« ${a.text} »`;
+  if ('value' in a) return formatValue(a.value, s.prompt?.slider?.unit);
+  return null;
 }
 
 function Answered({ s }: { s: PlayerState }) {
+  const more = s.myAnswer && !('choiceIndex' in s.myAnswer) && <MoreAnswered s={s} />;
+  if (more) {
+    return (
+      <Message title="Réponse envoyée !" subtitle="On attend les autres…">
+        {more}
+      </Message>
+    );
+  }
   const label = answerLabel(s);
   if (label !== null) {
     return (
@@ -428,12 +460,20 @@ function Result({ s }: { s: PlayerState }) {
   const r = s.result!;
   const answered = s.myAnswer?.questionIndex === s.questionIndex;
   if (r.poll) return <PollThanks s={s} voted={answered} />;
-  const title = r.correct ? 'Correct !' : answered ? 'Raté !' : 'Temps écoulé !';
+  // Partial points (order, pin close to the zone): not right, but not for nothing.
+  const partial = !r.correct && r.pointsEarned > 0;
+  const title = r.correct
+    ? 'Correct !'
+    : partial
+      ? 'Presque !'
+      : answered
+        ? 'Raté !'
+        : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
       className={`flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center ${
-        r.correct ? 'bg-answer-green' : 'bg-answer-red'
+        r.correct ? 'bg-answer-green' : partial ? 'bg-answer-yellow' : 'bg-answer-red'
       }`}
     >
       <motion.div
@@ -443,7 +483,7 @@ function Result({ s }: { s: PlayerState }) {
         className="flex size-28 items-center justify-center rounded-full bg-white/20 text-7xl font-black"
         aria-hidden="true"
       >
-        {r.correct ? '✓' : '✗'}
+        {r.correct ? '✓' : partial ? '≈' : '✗'}
       </motion.div>
       <h2 className="text-4xl font-black">{title}</h2>
       <motion.p
@@ -452,7 +492,7 @@ function Result({ s }: { s: PlayerState }) {
         transition={{ delay: 0.2 }}
         className="rounded-lg bg-black/25 px-5 py-2 text-2xl font-black tabular-nums"
       >
-        {r.correct ? (
+        {r.pointsEarned > 0 ? (
           <>
             + <CountUp value={r.pointsEarned} from={0} delay={250} /> pts
           </>
@@ -460,6 +500,11 @@ function Result({ s }: { s: PlayerState }) {
           '+ 0 pt'
         )}
       </motion.p>
+      {r.placed && (
+        <p className="font-bold">
+          {r.placed.correct} / {r.placed.total} bien placé{r.placed.correct > 1 ? 's' : ''}
+        </p>
+      )}
       {r.correctValue !== undefined ? (
         <p className="font-bold">
           {r.yourValue !== undefined && <>Ta réponse : {formatValue(r.yourValue, unit)} · </>}
@@ -482,14 +527,18 @@ function Result({ s }: { s: PlayerState }) {
   );
 }
 
-/** Poll: no right or wrong, no points; the streak is untouched. */
+/**
+ * Poll, « Qui de nous ? », word cloud: no right or wrong; the streak is untouched. Only the
+ * « Qui de nous ? » majority bonus gives points.
+ */
 function PollThanks({ s, voted }: { s: PlayerState; voted: boolean }) {
   const r = s.result!;
+  const who = r.votesReceived !== undefined;
+  const cloud = s.prompt?.type === 'WORD_CLOUD';
+  const thanks = cloud ? 'Merci pour ta réponse !' : 'Merci pour ton vote !';
+  const over = cloud ? 'Temps écoulé' : who ? 'Vote terminé' : 'Sondage terminé';
   return (
-    <Message
-      title={voted ? 'Merci pour ton vote !' : 'Sondage terminé'}
-      subtitle="Regarde les résultats sur l'écran"
-    >
+    <Message title={voted ? thanks : over} subtitle="Regarde les résultats sur l'écran">
       <motion.p
         initial={{ scale: 0.3, rotate: -20 }}
         animate={{ scale: 1, rotate: 0 }}
@@ -497,8 +546,20 @@ function PollThanks({ s, voted }: { s: PlayerState; voted: boolean }) {
         className="text-7xl"
         aria-hidden="true"
       >
-        🗳️
+        {cloud ? '☁️' : who ? '👀' : '🗳️'}
       </motion.p>
+      {who && (
+        <p className="text-xl font-black">
+          {r.votesReceived === 0
+            ? 'Personne n’a voté pour toi'
+            : `${r.votesReceived} vote${r.votesReceived! > 1 ? 's' : ''} pour toi !`}
+        </p>
+      )}
+      {r.pointsEarned > 0 && (
+        <p className="rounded-lg bg-black/25 px-5 py-2 text-xl font-black tabular-nums">
+          + {r.pointsEarned} pts : tu as voté comme la majorité !
+        </p>
+      )}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={0} />}
       <p className="text-lg font-bold">Tu es {formatRank(r.rank)}</p>
       {r.team && <TeamLine {...r.team} />}

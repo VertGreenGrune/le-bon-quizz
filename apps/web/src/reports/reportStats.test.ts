@@ -4,6 +4,7 @@ import {
   averagePercentCorrect,
   formatDuration,
   hardestFirst,
+  isScored,
   noAnswerCount,
   percentCorrect,
 } from './reportStats';
@@ -64,5 +65,16 @@ describe('reportStats', () => {
     expect(formatDuration({ startedAt: at(0), endedAt: at(0) })).toBe('< 1 min');
     expect(formatDuration({ startedAt: at(0), endedAt: at(12) })).toBe('12 min');
     expect(formatDuration({ startedAt: at(0), endedAt: at(65) })).toBe('1 h 05');
+  });
+});
+
+describe('reportStats with the types without a right answer', () => {
+  it('leaves « Qui de nous ? » and word clouds out of success rates, like polls', () => {
+    const who = q(1, 0, 4, [], { type: 'WHO_OF_US', correctIndexes: [], answerCount: 4 });
+    const cloud = q(2, 0, 4, [], { type: 'WORD_CLOUD', correctIndexes: [], answerCount: 3 });
+    const order = q(3, 1, 4, [], { type: 'ORDER', correctIndexes: [], answerCount: 4 });
+    expect([who, cloud, order].map(isScored)).toEqual([false, false, true]);
+    expect(averagePercentCorrect([who, cloud, order])).toBe(25);
+    expect(hardestFirst([who, cloud, order]).map((x) => x.index)).toEqual([3, 1, 2]);
   });
 });

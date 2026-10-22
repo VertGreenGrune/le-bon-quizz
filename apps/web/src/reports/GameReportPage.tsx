@@ -22,6 +22,7 @@ import {
   percentCorrect,
 } from './reportStats';
 import { ModeBadge } from './ModeBadge';
+import { MoreTypeDetails } from './moreTypeCards';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -238,6 +239,8 @@ function Questions({ questions }: { questions: GameQuestionReport[] }) {
 const typeLabel = (type: GameQuestionReport['type']) =>
   QUESTION_TYPES.find((t) => t.type === type)?.label ?? type;
 
+const MORE_TYPES: GameQuestionReport['type'][] = ['ORDER', 'PIN', 'WHO_OF_US', 'WORD_CLOUD'];
+
 function QuestionCard({ q }: { q: GameQuestionReport }) {
   const scored = isScored(q);
   const pct = percentCorrect(q);
@@ -267,9 +270,11 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
       <p className="mb-3 text-sm text-gray-500">
         {scored
           ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont bien répondu`
-          : `${q.answerCount} / ${q.playerCount} joueur${plural} ont voté — pas de bonne réponse`}
+          : `${q.answerCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'WORD_CLOUD' ? 'répondu' : 'voté'} — pas de bonne réponse`}
       </p>
-      {q.type === 'TYPE_ANSWER' ? (
+      {MORE_TYPES.includes(q.type) ? (
+        <MoreTypeDetails q={q} noAnswer={noAnswer} />
+      ) : q.type === 'TYPE_ANSWER' ? (
         <TypedAnswers q={q} noAnswer={noAnswer} />
       ) : q.type === 'SLIDER' ? (
         <SliderGuesses q={q} noAnswer={noAnswer} />
