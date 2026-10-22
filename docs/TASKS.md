@@ -1066,7 +1066,7 @@ Blooket Gold Quest (random chests, stealing), Gimkit (Draw That), "Qui veut gagn
 jokers, Jeopardy final wager. Target audience: **friends, ~6 players, 15 max**, one TV.
 
 **Order** (each task touches `Game.ts` + host + phones, so they run **one at a time** unless
-noted): **T25 → T26 → T27 → T31 → T28 → T30** (T29, T32 cancelled). Every feature is a **host option**
+noted): **T25 ‖ T27 → T26 → T31 → T28 → T30** (T29, T32 cancelled). Every feature is a **host option**
 in the Solo/Équipes dialog or a question type in the editor, off by default when it changes the
 classic game, and must work in solo + team mode, with the pause (T21) and the rejoin/resync.
 Each agent designs its contract additively and documents it in PLAN.md + the notes below.
@@ -1106,7 +1106,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
 
 ### T26 — « Mytho ! » bluff question type (Fibbage-like) ⭐ the most "friends" feature
 - **Status:** todo
-- **Depends on:** T25
+- **Depends on:** T25 and T27 merged (bluff votes must work with jokers and the new answer path)
 - New type `BLUFF`: the editor gives a question with a surprising true answer ("Le premier film
   de Tim Burton s'appelle… ?"). Phase 1 (≈ 45 s): every phone **types a fake answer** meant to
   look true (rejected if too close to the real one — reuse `matching.ts`). Phase 2: the TV shows
@@ -1117,9 +1117,27 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
 - **Tests:** phases + timers + pause, duplicate lies merged, own-lie vote refused, scoring;
   e2e with 3 phones.
 
+### Wave 6 coordination — T25 ‖ T27 run in parallel (read before starting)
+- **Only T25 implements jokers.** T27 doesn't add joker code; for T27's types the joker rules are
+  **decided here**: `WHO_OF_US` and `WORD_CLOUD` have no right answer → treated like `POLL`
+  (jokers refunded / not offered); `ORDER` and `PIN` → every joker works **except 🎯 50/50**
+  (greyed out). T25 must read joker availability from **one per-type table** (e.g.
+  `jokerAvailability(type)` in `packages/shared`), so wiring T27's types is a one-line change at
+  merge (done by the main agent after both are merged).
+- **One answer path:** T27's answers go through the existing `Game.answer` / `AnswerInput` union
+  (add `order: number[]`, `point: { x, y }` in 0–1 image coordinates, `playerId`; word cloud uses
+  `text`) and the existing scoring flow — no separate path — so T25's joker hooks (Copieur,
+  Double ou rien, Sablier, Voleur…) apply to them automatically.
+- **Keep shared files easy to merge:** both tasks only **add** to `packages/shared/src/events.ts`
+  / `quiz.ts`; T27 puts per-type logic in new files (`apps/server/src/game/questionTypes/*.ts`,
+  new phone/host components) with small hooks in `Game.ts`, `PlayPage.tsx` and `screens.tsx`;
+  T25 does the same for jokers (`game/jokers.ts`, new components). Each adds its own migration.
+- Ports: T25 3025 / 5225, T27 3027 / 5227; test DBs `lbq_test_t25` / `lbq_test_t27`, e2e DBs
+  `lbq_e2e_t25` / `lbq_e2e_t27`. Shared Postgres, never `docker compose down`.
+
 ### T27 — New question types: ordre, point sur l'image, « Qui de nous ? », nuage de mots
 - **Status:** todo
-- **Depends on:** T26 (same question pipeline)
+- **Depends on:** T24 — **runs in parallel with T25** (see "Wave 6 coordination" above)
 - **`ORDER` — Remettre dans l'ordre:** 3–6 items (e.g. films by release year) dragged into order
   on the phone; full points if all correct, partial points per item in the right place.
 - **`PIN` — Point sur l'image:** host image (map, poster, photo) + correct zone (circle drawn in
