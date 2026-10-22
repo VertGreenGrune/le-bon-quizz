@@ -93,6 +93,39 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   drops mid-question counts with 0, one absent for the whole question is left out. A kicked
   player stops counting from then on (points already earned by the team stay). Ties share a
   rank (competition ranks, like players).
+- **Jokers** (T25; `host:create` with `jokers: true` — the start dialog's « 🃏 Jokers », on by
+  default there; code `apps/server/src/game/jokers.ts`, ids/names/constants
+  `packages/shared/src/jokers.ts`). Each player gets 3 different random jokers at the start and
+  1 random one more each time their streak reaches 3, 6, 9… (max 5 in hand). One joker per
+  question, played during `QUESTION_INTRO` / `ANSWERING` before answering, not while paused
+  (`JOKER_REFUSED` / `GAME_PAUSED` otherwise; a refused joker stays in hand). Which jokers a
+  question type takes comes from **one table**, `jokerAvailability(type)` in shared: `POLL` takes
+  none (bar hidden), `TRUE_FALSE` no 50/50.
+  - 🎯 **50/50** (`fifty`): hides `min(ceil(wrong / 2), wrong − 1)` wrong choices on that phone;
+    SLIDER: a range half as wide containing the answer (random position); TYPE_ANSWER: the first
+    letter of the first accepted answer (leading article skipped). Refused when it would hide
+    nothing.
+  - 🦜 **Copieur** (`copy`, target; team mode: own team): as soon as the target answers, the
+    copier gives the same answer with `responseMs = max(target's + 1 s, elapsed when played,
+    own Gel)`. Target never answers → nothing. A copier is never awaited by itself (it waits for
+    its target; a kicked target / copy loop → not awaited). The target stays secret (`joker:used`
+    has no `target`).
+  - 🥶 **Gel** (`freeze`, attack): at the target's next question that takes jokers, its answers
+    are refused (`FROZEN`) during the first 5 s of `ANSWERING` (pauses excluded).
+  - 🌀 **Brouilleur** (`scramble`, attack): at the target's next question whose type has
+    `scramble: true` (MCQ / TRUE_FALSE), its phone gets grey buttons in a shuffled order labelled
+    with the choice texts.
+  - ✖️2 **Double ou rien** (`double`): right → `pointsEarned` ×2 (streak bonus included); wrong /
+    no answer → −500 (the total never goes below 0).
+  - 🛡️ **Bouclier** (`shield`): arms a shield that blocks the next attack aimed at the player
+    (announced `blocked`), and a wrong answer on this question keeps the streak.
+  - 🦹 **Voleur** (`thief`, attack): if the thief is right, `round(10 % × target's total)` after
+    this question's points moves from the target to the thief (both `pointsEarned` change).
+  - ⏳ **Sablier** (`hourglass`): speed points computed with `responseMs / 2`.
+  Attacks (Gel, Brouilleur, Voleur): one per target per question; team mode: other teams only.
+  Team averages use the points after the jokers (a negative member pulls the average down; a
+  team score never goes below 0). Order at REVEAL: question points + streak bonus → Double →
+  Voleur → new jokers for streaks.
 
 ## 4. Socket protocol (source of truth = `packages/shared/src/events.ts`)
 
@@ -104,7 +137,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams', teamCount?: 2 \| 3 \| 4 }` | default solo / 2 teams; ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams', teamCount?: 2 \| 3 \| 4, jokers?: boolean }` | default solo / 2 teams / no jokers; ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -121,12 +154,13 @@ Every client → server event takes an ack callback receiving
 | `player:avatars` | `{ pin }` | join screen, before joining: ack `{ taken: AvatarId[], started: boolean }` (avatars already in that game, shown dimmed as a hint; `started` → the join screen offers to take a disconnected player's place); `GAME_NOT_FOUND` |
 | `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, avatar, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
-| `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `text` \| `value` | accepted once, only during ANSWERING; `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER, `value` (in [min, max]) for SLIDER — another kind → `INVALID_PAYLOAD` |
+| `player:joker` | `{ pin, questionIndex, joker, targetId? }` | games with jokers (§3 "Jokers"): `joker` = `fifty` \| `copy` \| `freeze` \| `scramble` \| `double` \| `shield` \| `thief` \| `hourglass`, `targetId` for copy / freeze / scramble / thief; then `joker:used` + `joker:state`. `JOKER_REFUSED` (not in hand, one per question, already answered, wrong target / phase / question type), `GAME_PAUSED` |
+| `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `text` \| `value` | accepted once, only during ANSWERING (`FROZEN` during a Gel, `ALREADY_ANSWERED` for a Copieur); `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER, `value` (in [min, max]) for SLIDER — another kind → `INVALID_PAYLOAD` |
 
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs }`, `waitingFor` empty during the resume countdown) |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs }`, `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers) |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -134,10 +168,12 @@ Every client → server event takes an ack callback receiving
 | `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) — no text, no answer, no picture, no sound! |
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars) (`RevealDetails`) |
-| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL: `correct` false, 0 points) + SLIDER `yourValue?` (absent without an answer), `correctValue` |
-| `leaderboard` | host | `{ top: { nickname, avatar, score }[], teams? }` (everyone, up to 15; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
+| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL: `correct` false, 0 points) + SLIDER `yourValue?` (absent without an answer), `correctValue` + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) |
+| `leaderboard` | host | `{ top: { nickname, avatar, score, jokers? }[], teams? }` (everyone, up to 15; `jokers` = `{ hand, used? }` in games with jokers; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
 | `podium` | all | `{ top: { nickname, avatar, score }[], teams? }` (top 3 players; all teams in team mode) |
 | `player:kicked` | that player | `{}` |
+| `joker:state` | each player | games with jokers, sent at the start, each question, each joker played, REVEAL, kick and in the rejoin resync: `{ questionIndex, questionType?, hand, played?: { joker, target? }, shield?, others: { id, nickname, avatar, teamId? }[], attacked: string[], effects }` — `effects` (this phone only) = `hiddenChoices?`, `sliderRange?`, `firstLetter?`, `frozen?: { ms, by }`, `scrambled?: { by, choices: { index, text }[] }`, `copied?` |
+| `joker:used` | all | `{ questionIndex, joker, by, target?, blocked? }` (TV announcement; no `target` for Copieur; never re-sent) |
 | `error` | sender | `{ code, message }` |
 
 Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow ●`, `3 = green ■`.
@@ -159,8 +195,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `Choice` — id, questionId, order (0–3), text, isCorrect (MCQ / TRUE_FALSE / POLL; always false
   for a poll)
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
-  mode (`solo` | `teams`), startedAt, endedAt
-- `PlayerResult` — id, gameSessionId, nickname, avatar? (null for games saved before avatars), score, correctCount, rank, teamId? (team mode)
+  mode (`solo` | `teams`), jokers (bool, default false), startedAt, endedAt
+- `PlayerResult` — id, gameSessionId, nickname, avatar? (null for games saved before avatars), score, correctCount, rank, teamId? (team mode), jokersUsed (`String[]`, default empty: joker ids played, in order)
 - `TeamResult` — id, gameSessionId, teamId, name, score, playerCount, rank (team mode)
 - `QuestionResult` — id, gameSessionId, index, type (default MCQ), text, choices[],
   correctIndexes[], distribution[], playerCount, correctCount, answerCount? (null for older games
@@ -210,10 +246,11 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later).
   `POST /uploads/audio`: same, MP3/OGG/M4A/AAC/WAV ≤ 10 MB (`AUDIO_UPLOAD_MAX_BYTES`)
-- `GET /games` (history, `GameSummary` with `winner`, `mode`), `GET /games/:id` (report: ranking
+- `GET /games` (history, `GameSummary` with `winner`, `mode`, `jokers?: true`), `GET /games/:id` (report: ranking
   with `teamId`, `avatar` (null before T20) + per-question `questions` with `type`, `answerCount`, `details`, empty for games
   saved before T12, + `teams` ranking,
-  empty for solo games), `GET /games/:id/export.csv` (team games get a `team` column)
+  empty for solo games), `GET /games/:id/export.csv` (team games get a `team` column, games with jokers a `jokers`
+  column = names of the jokers played; report rows have `jokersUsed?`)
   (UTF-8 BOM, formula-injection-safe)
 
 ## 7. Web routes (`apps/web`)
@@ -221,9 +258,9 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/` landing → "Join a game" / "Host"
 - `/join?pin=123456` → phone join screen (QR code points here)
 - `/play` → phone controller
-- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>` creates a game
-  (opened by the Solo / Équipes dialog of the editor and of the home page; no `quizId` = demo,
-  no `mode` = solo)
+- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1` creates a
+  game (opened by the Solo / Équipes + Jokers dialog of the editor and of the home page; no
+  `quizId` = demo, no `mode` = solo, no `jokers` = classic game)
 - `/login`, `/register` → host account (`?next=` = page to return to)
 - `/forgot-password` (« Mot de passe oublié ? » on `/login`), `/reset-password?token=` (link of
   the e-mail: new password ×2 → logged in → `/editor`), `/account` « Mon compte » (change

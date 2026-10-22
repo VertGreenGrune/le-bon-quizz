@@ -6,7 +6,9 @@ import type {
   GamePause,
   GamePhase,
   GameStatePayload,
+  JokerUsedPayload,
   LobbyTeamsPayload,
+  PlayerJokersPayload,
   PlayerResultPayload,
   QuestionPromptPayload,
   RankedPlayer,
@@ -46,6 +48,12 @@ export interface PlayerState {
   kicked: boolean;
   /** Fatal: the session can't be resumed (game gone, unknown token…). */
   lost: ErrorCode | null;
+  /** The game is played with jokers (`game:state.jokers`). */
+  jokerGame: boolean;
+  /** Own jokers: hand + effects on the current question (`joker:state`). */
+  jokers: PlayerJokersPayload | null;
+  /** Last joker played by anyone (toast), with the local time it arrived. */
+  jokerNews: (JokerUsedPayload & { at: number }) | null;
 }
 
 export type PlayerAction =
@@ -66,7 +74,9 @@ export type PlayerAction =
   | { type: 'result'; payload: PlayerResultPayload }
   | { type: 'podium'; top: RankedPlayer[]; teams?: RankedTeam[] }
   | { type: 'kicked' }
-  | { type: 'lost'; code: ErrorCode };
+  | { type: 'lost'; code: ErrorCode }
+  | { type: 'jokers'; payload: PlayerJokersPayload }
+  | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number };
 
 export const initialPlayerState: PlayerState = {
   connected: false,
@@ -90,6 +100,9 @@ export const initialPlayerState: PlayerState = {
   podiumTeams: [],
   kicked: false,
   lost: null,
+  jokerGame: false,
+  jokers: null,
+  jokerNews: null,
 };
 
 export function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
@@ -126,6 +139,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
         mode,
+        jokerGame: !!action.payload.jokers,
         questionIndex,
         totalQuestions,
         answeringEndsAt,
@@ -183,6 +197,12 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
 
     case 'lost':
       return { ...state, lost: action.code };
+
+    case 'jokers':
+      return { ...state, jokers: action.payload };
+
+    case 'jokerUsed':
+      return { ...state, jokerNews: { ...action.payload, at: action.now } };
   }
 }
 
@@ -228,6 +248,18 @@ export function playerScreen(s: PlayerState): PlayerScreen {
     case 'ENDED':
       return 'ended';
   }
+}
+
+/** Effects of the jokers on the current question (empty when none / another question). */
+export function jokerEffects(s: PlayerState): NonNullable<PlayerJokersPayload['effects']> {
+  return s.jokers?.questionIndex === s.questionIndex ? s.jokers.effects : {};
+}
+
+/** Copieur played on this question and the copy hasn't happened yet: no buttons. */
+export function copyingTarget(s: PlayerState) {
+  const j = s.jokers;
+  if (!j || j.questionIndex !== s.questionIndex || j.played?.joker !== 'copy') return null;
+  return j.effects.copied ? null : (j.played.target ?? null);
 }
 
 const errorMessages: Partial<Record<ErrorCode, string>> = {

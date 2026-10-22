@@ -22,4 +22,15 @@ describe('game options in the host URL', () => {
     expect(parse('/host/new?mode=teams&teams=9')).toEqual({ mode: 'teams', teamCount: 2 });
     expect(parse('/host/new?mode=other&teams=3')).toEqual({ mode: 'solo' });
   });
+
+  it('carries the jokers option', () => {
+    expect(hostUrl('abc', { mode: 'solo', jokers: true })).toBe('/host/new?quizId=abc&jokers=1');
+    expect(parse('/host/new?jokers=1')).toEqual({ mode: 'solo', jokers: true });
+    expect(parse(hostUrl(undefined, { mode: 'teams', teamCount: 3, jokers: true }))).toEqual({
+      mode: 'teams',
+      teamCount: 3,
+      jokers: true,
+    });
+    expect(parse('/host/new?jokers=0')).toEqual({ mode: 'solo' });
+  });
 });

@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  JOKERS,
+  JokerType,
   TEAM_NAMES,
   isAvatarId,
   type GameReport,
@@ -31,7 +33,15 @@ const toSummary = (g: GameRow): GameSummary => ({
   playerCount: g._count.results,
   winner: g.results[0]?.nickname ?? null,
   mode: g.mode,
+  ...(g.jokers && { jokers: true as const }),
 });
+
+/** Joker ids are written by the game server only; anything unknown is dropped. */
+const jokerIds = (ids: string[]): JokerType[] =>
+  ids.flatMap((id) => {
+    const parsed = JokerType.safeParse(id);
+    return parsed.success ? [parsed.data] : [];
+  });
 
 /** Team ids are written by the game server (0–3) only. */
 const asTeamId = (id: number) => id as TeamId;
@@ -49,14 +59,20 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
     if (!g) throw notFound('Partie');
     return {
       ...toSummary(g),
-      results: g.results.map(({ rank, nickname, avatar, score, correctCount, teamId }) => ({
-        rank,
-        nickname,
-        avatar: isAvatarId(avatar) ? avatar : null,
-        score,
-        correctCount,
-        teamId: teamId === null ? null : asTeamId(teamId),
-      })),
+      results: g.results.map(
+        ({ rank, nickname, avatar, score, correctCount, teamId, jokersUsed }) => {
+          const jokers = jokerIds(jokersUsed);
+          return {
+            rank,
+            nickname,
+            avatar: isAvatarId(avatar) ? avatar : null,
+            score,
+            correctCount,
+            teamId: teamId === null ? null : asTeamId(teamId),
+            ...(jokers.length > 0 && { jokersUsed: jokers }),
+          };
+        },
+      ),
       questions: g.questions.map(({ id: _id, gameSessionId: _g, answerCount, details, ...q }) => ({
         ...q,
         // Games saved before question types: every answer was a choice.
@@ -88,17 +104,29 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
 
   app.get<IdParams>('/games/:id/export.csv', async (request, reply) => {
     const report = await getReport(request.params.id, currentUser(request).id);
-    // Team games get a `team` column (team name); solo exports are unchanged.
+    // Team games get a `team` column (team name), games with jokers a `jokers` column (names);
+    // classic solo exports are unchanged.
     const teams = report.mode === 'teams';
+    const jokers = !!report.jokers;
     const teamCell = (id: TeamId | null) => (teams ? [id === null ? '' : TEAM_NAMES[id]] : []);
+    const jokerCell = (used: JokerType[] = []) =>
+      jokers ? [used.map((j) => JOKERS[j].name).join(', ')] : [];
     const csv = toCsv([
-      ['rank', 'nickname', 'score', 'correctCount', ...(teams ? ['team'] : [])],
+      [
+        'rank',
+        'nickname',
+        'score',
+        'correctCount',
+        ...(teams ? ['team'] : []),
+        ...(jokers ? ['jokers'] : []),
+      ],
       ...report.results.map((r) => [
         r.rank,
         r.nickname,
         r.score,
         r.correctCount,
         ...teamCell(r.teamId),
+        ...jokerCell(r.jokersUsed),
       ]),
     ]);
     const filename = `lebonquizz-${report.startedAt.slice(0, 10)}-${report.pin}.csv`;

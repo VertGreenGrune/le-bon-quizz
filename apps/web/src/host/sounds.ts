@@ -2,7 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { GamePhase } from '@lbq/shared';
 
 /** Host screen only — phones never play sounds. Files and licenses: `public/sounds/CREDITS.md`. */
-export type SoundName = 'lobby' | 'join' | 'tick' | 'reveal' | 'podium';
+export type SoundName = 'lobby' | 'join' | 'tick' | 'reveal' | 'podium' | 'joker';
 
 const VOLUME: Record<SoundName, number> = {
   lobby: 0.45,
@@ -10,6 +10,7 @@ const VOLUME: Record<SoundName, number> = {
   tick: 0.7,
   reveal: 0.8,
   podium: 0.9,
+  joker: 0.7,
 };
 
 /** Volume factor of the game sounds while a question's sound clip plays. */

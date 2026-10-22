@@ -19,6 +19,8 @@ export interface GameRecord {
   quizTitle: string;
   pin: string;
   mode: GameMode;
+  /** Played with jokers. */
+  jokers: boolean;
   startedAt: Date;
   endedAt: Date;
   results: PlayerStanding[];
@@ -78,6 +80,7 @@ export function createPrismaPersistence(prisma: PrismaClient): GamePersistence {
           quizTitle: r.quizTitle,
           pin: r.pin,
           mode: r.mode,
+          jokers: r.jokers,
           startedAt: r.startedAt,
           endedAt: r.endedAt,
           results: { create: r.results },
@@ -107,6 +110,7 @@ export function gameRecord(
     quizTitle: game.quiz.title,
     pin: game.pin,
     mode: game.mode,
+    jokers: game.jokers !== null,
     startedAt: game.startedAt,
     endedAt: new Date(),
     results: game.standings(),

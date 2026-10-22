@@ -175,3 +175,18 @@ mkdirSync(OUT, { recursive: true });
   }
   save('podium', buf);
 }
+
+// ---- joker: magic whoosh + sparkly arpeggio when a player plays a joker ----
+{
+  const buf = buffer(0.9);
+  tone(buf, 0, 0.35, (t) => 300 + 2400 * (t / 0.35) ** 2, {
+    wave: 'triangle',
+    vol: 0.18,
+    decay: 0.3,
+  });
+  noiseBurst(buf, 0, 0.35, { vol: 0.08, decay: 0.15 });
+  ['E6', 'G6', 'B6', 'E7'].forEach((n, i) => {
+    tone(buf, 0.3 + i * 0.07, 0.45, hz(n), { vol: 0.16, decay: 0.15 });
+  });
+  save('joker', buf);
+}

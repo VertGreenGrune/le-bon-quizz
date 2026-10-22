@@ -5,6 +5,7 @@ import {
   SHAPES,
   TEAM_NAMES,
   TYPE_ANSWER_MAX_LENGTH,
+  type JokerEffects,
   type QuestionPromptPayload,
   type SliderPrompt,
   type TeamId,
@@ -15,8 +16,10 @@ import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue, snapToStep } from '../lib/numbers';
 import { competitionRanks } from '../lib/ranks';
 import {
+  copyingTarget,
   errorMessage,
   formatRank,
+  jokerEffects,
   myTeam,
   pauseWaitingText,
   playerScreen,
@@ -24,6 +27,14 @@ import {
 } from './playerState';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
+import {
+  CopyWaiting,
+  FrozenOverlay,
+  JokerBar,
+  JokerResultLines,
+  JokerToast,
+  ScrambledButtons,
+} from './jokers';
 
 /** /play — phone controller. Question text is only on the shared screen. */
 export function PlayPage() {
@@ -50,6 +61,9 @@ export function PlayPage() {
             {renderScreen(screen, s)}
           </motion.section>
         </AnimatePresence>
+        <JokerBar s={s} screen={screen} />
+        <FrozenOverlay s={s} />
+        <JokerToast s={s} />
         {!s.connected && screen !== 'kicked' && screen !== 'lost' && (
           <div className="bg-black/70 py-2 text-center text-sm font-bold">Reconnexion…</div>
         )}
@@ -101,8 +115,11 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           <BouncingShapes />
         </Message>
       );
-    case 'answer':
-      return <AnswerScreen prompt={s.prompt!} />;
+    case 'answer': {
+      const copying = copyingTarget(s);
+      if (copying) return <CopyWaiting target={copying} />;
+      return <AnswerScreen prompt={s.prompt!} effects={jokerEffects(s)} />;
+    }
     case 'answered':
       return <Answered s={s} />;
     case 'waitingResult':
@@ -241,16 +258,49 @@ function PauseOverlay({ s }: { s: PlayerState }) {
   );
 }
 
-/** Shape buttons, a text field or a slider, depending on the question type. */
-function AnswerScreen({ prompt }: { prompt: QuestionPromptPayload }) {
+/**
+ * Shape buttons, a text field or a slider, depending on the question type. `effects`: jokers
+ * (50/50 hides choices / narrows the slider / gives a first letter, Brouilleur scrambles).
+ */
+function AnswerScreen({
+  prompt,
+  effects = {},
+}: {
+  prompt: QuestionPromptPayload;
+  effects?: JokerEffects;
+}) {
   if (prompt.type === 'TYPE_ANSWER')
-    return <TextAnswer maxLength={prompt.maxLength ?? TYPE_ANSWER_MAX_LENGTH} />;
-  if (prompt.type === 'SLIDER' && prompt.slider) return <SliderAnswer slider={prompt.slider} />;
-  return <AnswerButtons choiceCount={prompt.choiceCount ?? 4} />;
+    return (
+      <TextAnswer
+        maxLength={prompt.maxLength ?? TYPE_ANSWER_MAX_LENGTH}
+        firstLetter={effects.firstLetter}
+      />
+    );
+  if (prompt.type === 'SLIDER' && prompt.slider) {
+    const range = effects.sliderRange;
+    return (
+      <SliderAnswer
+        key={range ? 'narrowed' : 'full'}
+        slider={{ ...prompt.slider, ...range }}
+        narrowed={!!range}
+      />
+    );
+  }
+  if (effects.scrambled)
+    return (
+      <ScrambledButtons
+        choices={effects.scrambled.choices}
+        by={effects.scrambled.by}
+        hidden={effects.hiddenChoices}
+      />
+    );
+  return (
+    <AnswerButtons choiceCount={prompt.choiceCount ?? 4} hidden={effects.hiddenChoices ?? []} />
+  );
 }
 
 /** Réponse libre: the keyboard opens right away; « Valider » sends the trimmed text. */
-function TextAnswer({ maxLength }: { maxLength: number }) {
+function TextAnswer({ maxLength, firstLetter }: { maxLength: number; firstLetter?: string }) {
   const [text, setText] = useState('');
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => input.current?.focus(), []);
@@ -264,6 +314,11 @@ function TextAnswer({ maxLength }: { maxLength: number }) {
       className="flex flex-1 flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
       <h2 className="text-center text-2xl font-black">Écris ta réponse</h2>
+      {firstLetter && (
+        <p className="-mt-2 text-center font-black" data-testid="first-letter">
+          🎯 Commence par « {firstLetter} »
+        </p>
+      )}
       <input
         ref={input}
         value={text}
@@ -294,7 +349,7 @@ function TextAnswer({ maxLength }: { maxLength: number }) {
 }
 
 /** Curseur: big value, slider with − / + for fine tuning, « Valider ». */
-function SliderAnswer({ slider }: { slider: SliderPrompt }) {
+function SliderAnswer({ slider, narrowed }: { slider: SliderPrompt; narrowed?: boolean }) {
   const { min, max, step, unit } = slider;
   const [value, setValue] = useState(() => snapToStep((min + max) / 2, min, max, step));
   const nudge = (direction: 1 | -1) =>
@@ -304,6 +359,7 @@ function SliderAnswer({ slider }: { slider: SliderPrompt }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <h2 className="text-2xl font-black">Choisis ta valeur</h2>
+      {narrowed && <p className="-mt-4 font-black">🎯 50/50 : plage réduite</p>}
       <p className="text-6xl font-black tabular-nums" aria-live="polite">
         {formatValue(value, unit)}
       </p>
@@ -341,7 +397,7 @@ function SliderAnswer({ slider }: { slider: SliderPrompt }) {
   );
 }
 
-function AnswerButtons({ choiceCount }: { choiceCount: number }) {
+function AnswerButtons({ choiceCount, hidden }: { choiceCount: number; hidden: number[] }) {
   const shapes = SHAPES.slice(0, choiceCount);
   return (
     <div
@@ -349,29 +405,34 @@ function AnswerButtons({ choiceCount }: { choiceCount: number }) {
         choiceCount === 2 ? 'grid-cols-1 grid-rows-2' : 'grid-cols-2 grid-rows-2'
       }`}
     >
-      {shapes.map((shape, i) => (
-        <motion.button
-          key={shape.index}
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileTap={{ scale: 0.9 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 20, delay: i * 0.05 }}
-          type="button"
-          onPointerDown={(e) => {
-            // Fire on touch-down for speed (points depend on response time).
-            e.preventDefault();
-            sendAnswer({ choiceIndex: shape.index });
-          }}
-          onClick={() => sendAnswer({ choiceIndex: shape.index })}
-          aria-label={`Réponse ${shape.symbol}`}
-          className={`flex touch-manipulation items-center justify-center rounded-2xl shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] active:brightness-90 ${shapeBg[shape.color]}`}
-        >
-          <ShapeIcon
-            shape={shape.shape}
-            className="size-1/2 max-h-32 max-w-32 fill-white drop-shadow"
-          />
-        </motion.button>
-      ))}
+      {shapes.map((shape, i) =>
+        // 50/50: the hidden wrong choices leave an empty slot (the layout doesn't move).
+        hidden.includes(shape.index) ? (
+          <div key={shape.index} className="rounded-2xl bg-black/20" aria-hidden="true" />
+        ) : (
+          <motion.button
+            key={shape.index}
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20, delay: i * 0.05 }}
+            type="button"
+            onPointerDown={(e) => {
+              // Fire on touch-down for speed (points depend on response time).
+              e.preventDefault();
+              sendAnswer({ choiceIndex: shape.index });
+            }}
+            onClick={() => sendAnswer({ choiceIndex: shape.index })}
+            aria-label={`Réponse ${shape.symbol}`}
+            className={`flex touch-manipulation items-center justify-center rounded-2xl shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] active:brightness-90 ${shapeBg[shape.color]}`}
+          >
+            <ShapeIcon
+              shape={shape.shape}
+              className="size-1/2 max-h-32 max-w-32 fill-white drop-shadow"
+            />
+          </motion.button>
+        ),
+      )}
     </div>
   );
 }
@@ -452,10 +513,12 @@ function Result({ s }: { s: PlayerState }) {
         transition={{ delay: 0.2 }}
         className="rounded-lg bg-black/25 px-5 py-2 text-2xl font-black tabular-nums"
       >
-        {r.correct ? (
+        {r.pointsEarned > 0 ? (
           <>
             + <CountUp value={r.pointsEarned} from={0} delay={250} /> pts
           </>
+        ) : r.pointsEarned < 0 ? (
+          `− ${-r.pointsEarned} pts`
         ) : (
           '+ 0 pt'
         )}
@@ -469,6 +532,7 @@ function Result({ s }: { s: PlayerState }) {
         answered && answerLabel(s) && <p className="font-bold">Ta réponse : {answerLabel(s)}</p>
       )}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
+      {r.jokers && <JokerResultLines results={r.jokers} />}
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -18,6 +18,7 @@ import {
   type GamePause,
   type GamePhase,
   type GameStatePayload,
+  type JokerType,
   type LobbyMember,
   type LobbyTeamsPayload,
   type PlayerResultPayload,
@@ -36,6 +37,7 @@ import {
   type TeamId,
 } from '@lbq/shared';
 import { GameError } from './errors.js';
+import { Jokers } from './jokers.js';
 import { matchesAnswer, normalizeAnswer } from './matching.js';
 import {
   computePoints,
@@ -110,6 +112,8 @@ export interface PlayerStanding {
   correctCount: number;
   rank: number;
   teamId: TeamId | null;
+  /** Games with jokers: the jokers played during the game. */
+  jokersUsed?: JokerType[];
 }
 
 /** Final standing of one team, as saved in `TeamResult`. */
@@ -151,6 +155,12 @@ export interface GameSettings {
   mode: GameMode;
   /** Team mode: number of teams offered in the lobby (default 2). */
   teamCount?: TeamCount;
+  /** Jokers (power-ups, PLAN.md §3). */
+  jokers?: boolean;
+  /** Random source of the jokers (tests). */
+  random?: () => number;
+  /** Same fixed starting hand for every player (e2e tests, `E2E_JOKER_HAND`). */
+  jokerHand?: JokerType[];
 }
 
 export interface GameHooks {
@@ -209,6 +219,10 @@ export class Game {
   private readonly teamScores = new Map<TeamId, number>();
   /** Players connected when the current ANSWERING phase started (team averages). */
   private readonly presentIds = new Set<string>();
+  /** Games with jokers only (`game/jokers.ts`). */
+  readonly jokers: Jokers | null;
+  /** > 0 while copied answers are being recorded (`recordAnswer`). */
+  private recordingCopies = 0;
 
   constructor(
     readonly pin: string,
@@ -223,6 +237,25 @@ export class Game {
       this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
       for (const id of this.teamIds) this.teamScores.set(id, 0);
     }
+    this.jokers = settings.jokers
+      ? new Jokers(
+          {
+            mode: this.mode,
+            phase: () => this.phase,
+            questionIndex: () => this.questionIndex,
+            question: () => this.currentQuestion,
+            paused: () => this.paused,
+            players: () => this.players,
+            elapsedMs: () =>
+              this.phase === 'ANSWERING' ? Date.now() - this.answeringStartedAt : 0,
+            recordAnswer: (player, given, responseMs) =>
+              this.recordAnswer(player, given, responseMs),
+            transport,
+          },
+          settings.random,
+          settings.jokerHand,
+        )
+      : null;
   }
 
   get totalQuestions(): number {
@@ -247,6 +280,7 @@ export class Game {
     if (this.phase !== 'LOBBY') throw new GameError('GAME_ALREADY_STARTED', 'Game already started');
     if (this.mode === 'teams') this.startTeams();
     this.touch();
+    this.jokers?.deal();
     this.enterQuestionIntro(0);
   }
 
@@ -295,6 +329,7 @@ export class Game {
     }
     this.sendLobbyPlayers();
     this.sendTeams();
+    this.jokers?.onKick();
     this.checkPause();
     if (this.phase === 'ANSWERING' && !this.pause) this.onAnswersChanged();
   }
@@ -461,6 +496,7 @@ export class Game {
     send('game:state', this.statePayload());
     this.sendResuming(send);
     this.sendTeams(send);
+    this.jokers?.sendState(player, send);
     if (this.phase === 'ANSWERING' && !player.answer) {
       this.transport.toSocket(sid, 'question:prompt', this.promptPayload());
     } else if (this.phase === 'REVEAL' && player.lastResult) {
@@ -495,11 +531,40 @@ export class Game {
     if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
 
     const responseMs = Date.now() - this.answeringStartedAt;
-    const timePoints = computePoints(question.basePoints, responseMs, question.timeLimitSec * 1000);
+    this.jokers?.checkAnswer(player, responseMs);
     const given = typeof input === 'number' ? { choiceIndex: input } : input;
-    player.answer = { ...judgeAnswer(question, given, timePoints), responseMs };
+    this.recordAnswer(player, given, responseMs);
+  }
+
+  /** Plays a joker (games with jokers, `player:joker`). */
+  useJoker(playerId: string, questionIndex: number, joker: JokerType, targetId?: string): void {
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    if (!this.jokers) throw new GameError('JOKER_REFUSED', 'Pas de jokers dans cette partie');
     this.touch();
-    this.onAnswersChanged();
+    this.jokers.use(player, questionIndex, joker, targetId);
+  }
+
+  /** Judges and stores an answer (sent by the player, or copied with a Copieur). */
+  private recordAnswer(player: Player, given: AnswerInput, responseMs: number): void {
+    const question = this.currentQuestion!;
+    const limitMs = question.timeLimitSec * 1000;
+    const points = (ms: number) => computePoints(question.basePoints, ms, limitMs);
+    const scoringMs = this.jokers?.scoringMs(player.id, responseMs) ?? responseMs;
+    player.answer = { ...judgeAnswer(question, given, points(scoringMs)), responseMs };
+    const extra =
+      scoringMs === responseMs
+        ? 0
+        : player.answer.points - judgeAnswer(question, given, points(responseMs)).points;
+    this.touch();
+    // Copieur: the copiers' answers are recorded too, before checking whether all answered.
+    this.recordingCopies++;
+    try {
+      this.jokers?.onAnswered(player, given, extra);
+    } finally {
+      this.recordingCopies--;
+    }
+    if (this.recordingCopies === 0) this.onAnswersChanged();
   }
 
   // ---------- Queries ----------
@@ -523,6 +588,7 @@ export class Game {
         correctCount: player.correctCount,
         rank: rank + offset,
         teamId: player.teamId,
+        ...(this.jokers && { jokersUsed: this.jokers.usedBy(player.id) }),
       });
     return [
       ...rankPlayers(this.players.values()).map(standing(0)),
@@ -552,6 +618,7 @@ export class Game {
       mode: this.mode,
       questionIndex: this.questionIndex,
       totalQuestions: this.totalQuestions,
+      ...(this.jokers && { jokers: true as const }),
     };
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;
@@ -584,6 +651,7 @@ export class Game {
     this.setPhase('QUESTION_INTRO', QUESTION_INTRO_MS);
     this.broadcastState();
     this.transport.toHost('question:show', this.showPayload());
+    this.jokers?.startQuestion();
     // Someone still offline from the previous phases: the question starts paused.
     this.checkPause({ immediate: true });
   }
@@ -624,10 +692,13 @@ export class Game {
       if (a?.choiceIndex != null)
         distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
       const correct = a?.correct ?? false;
-      if (!poll) p.streak = correct ? p.streak + 1 : 0;
+      // Bouclier: a wrong answer keeps the streak.
+      if (!poll && (correct || !this.jokers?.savesStreak(p.id)))
+        p.streak = correct ? p.streak + 1 : 0;
       // A 0-point question awards nothing, streak bonus included (the streak still counts).
       const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
-      const pointsEarned = (a?.points ?? 0) + bonus;
+      const questionPoints = (a?.points ?? 0) + bonus;
+      const pointsEarned = this.jokers?.adjustPoints(p, correct, questionPoints) ?? questionPoints;
       p.totalScore += pointsEarned;
       if (correct) {
         p.correctCount++;
@@ -635,6 +706,7 @@ export class Game {
       }
       p.lastResult = { correct, pointsEarned, streakBonus: bonus };
     }
+    this.jokers?.afterScoring(poll);
     if (this.mode === 'teams') this.scoreTeams();
     const correctIndexes = correctChoiceIndexes(question);
     const details = this.revealDetails(question);
@@ -746,7 +818,9 @@ export class Game {
         if (p.teamId !== id || (!this.presentIds.has(p.id) && !p.answer)) continue;
         points.push(p.lastResult?.pointsEarned ?? 0);
       }
-      this.teamScores.set(id, (this.teamScores.get(id) ?? 0) + teamQuestionPoints(points));
+      // Jokers can make a member's points negative (Double ou rien, Voleur): never below 0.
+      const score = (this.teamScores.get(id) ?? 0) + teamQuestionPoints(points);
+      this.teamScores.set(id, Math.max(0, score));
     }
   }
 
@@ -767,7 +841,15 @@ export class Game {
   }
 
   private standingsPayload(size: number): StandingsPayload {
-    const top = topPlayers(this.players.values(), size);
+    let top = topPlayers(this.players.values(), size);
+    const jokers = this.jokers;
+    if (jokers && size === LEADERBOARD_SIZE) {
+      const byName = new Map([...this.players.values()].map((p) => [p.nickname, p.id]));
+      top = top.map((r) => {
+        const info = jokers.leaderboardInfo(byName.get(r.nickname) ?? '');
+        return info ? { ...r, jokers: info } : r;
+      });
+    }
     return this.mode === 'teams' ? { top, teams: this.rankedTeams() } : { top };
   }
 
@@ -792,8 +874,14 @@ export class Game {
   }
 
   /** Is the current question still waiting for this player? */
-  private isAwaited(p: Player): boolean {
+  private isAwaited(p: Player, copying = new Set<string>()): boolean {
     if (this.phase === 'ANSWERING' && p.answer) return false;
+    // Copieur: answers when the target does (target gone / copy loop: nothing to wait for).
+    const target = this.jokers?.copyTargetOf(p.id);
+    if (target !== undefined) {
+      if (!target || copying.has(p.id)) return false;
+      return this.isAwaited(target, copying.add(p.id));
+    }
     // Excused players (« Continuer sans ») are awaited again only once they are back.
     return p.socketId !== null || !this.excused.has(p.id);
   }
@@ -812,7 +900,10 @@ export class Game {
 
   /** Offline players the current timed phase is waiting for. */
   private awaitedOffline(): Player[] {
-    return [...this.players.values()].filter((p) => p.socketId === null && this.isAwaited(p));
+    return [...this.players.values()].filter(
+      // A copier answers by itself: no need to wait for its phone.
+      (p) => p.socketId === null && this.isAwaited(p) && !this.jokers?.copyTargetOf(p.id),
+    );
   }
 
   private hostMissing(): boolean {
@@ -988,6 +1079,7 @@ export class Game {
       player.teamId === null
         ? undefined
         : rankTeams(this.rankedTeams()).find((t) => t.team.id === player.teamId);
+    const jokers = this.jokers?.results(player.id);
     return {
       correct: player.lastResult?.correct ?? false,
       pointsEarned: player.lastResult?.pointsEarned ?? 0,
@@ -1001,6 +1093,7 @@ export class Game {
         correctValue: q.slider.correct,
         ...(player.answer?.value != null && { yourValue: player.answer.value }),
       }),
+      ...(jokers && { jokers }),
     };
   }
 

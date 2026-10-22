@@ -40,7 +40,11 @@ export function createGame(
   quizId = 'demo',
   options: GameOptions = SOLO,
 ): Promise<{ pin: string; hostToken: string }> {
-  const payload = options.mode === 'teams' ? { quizId, ...options } : { quizId };
+  const payload = {
+    quizId,
+    ...(options.mode === 'teams' && { mode: options.mode, teamCount: options.teamCount }),
+    ...(options.jokers && { jokers: true }),
+  };
   pendingCreate ??= new Promise((resolve, reject) => {
     getSocket()
       .timeout(CREATE_TIMEOUT_MS)

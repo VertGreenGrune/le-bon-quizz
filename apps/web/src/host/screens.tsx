@@ -17,6 +17,7 @@ import { formatValue } from '../lib/numbers';
 import { joinOrigins, joinUrl } from './joinUrl';
 import { TICK_FROM_SEC, useMuted } from './sounds';
 import { TeamRanking } from './teamScreens';
+import { JokerIcons } from './jokerScreens';
 
 // ---------- Lobby ----------
 
@@ -693,6 +694,7 @@ export function LeaderboardScreen({
                 <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
                 <Avatar id={p.avatar} size={avatarSize} />
                 <span className="flex-1 truncate">{p.nickname}</span>
+                {p.jokers && <JokerIcons jokers={p.jokers} />}
                 <span className="tabular-nums">
                   {showNew && reorder ? (
                     <CountUp value={p.score} from={prevScore.get(p.nickname) ?? 0} />
