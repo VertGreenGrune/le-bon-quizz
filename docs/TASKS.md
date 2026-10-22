@@ -927,6 +927,61 @@ is closed and a new page takes over with the same nickname.
   `content/quizzes/tim-burton/audio/<name>.mp3`, and `CREDITS.md` lists the files the user must
   add from their own copies; the import script skips the sound with a warning if a file is missing.
 
+### T24 — Forgotten password: reset by e-mail (+ login rate limit, change password)
+- **Status:** todo
+- **Depends on:** — (all auth work done; can run in parallel with T23, which only touches
+  `content/**` and the import script)
+- **Ports:** server 3024 / web 5204, test DB `lbq_test_t24`, e2e DB `lbq_e2e_t24`.
+
+**User requirement (2026-10-22):** a host who forgot their password can get an e-mail to choose a
+new one.
+
+**Design (decided — note any deviation below):**
+- **Flow:** "Mot de passe oublié ?" link on `/login` → `/forgot-password` (e-mail field) →
+  always the same answer, whether the account exists or not: « Si un compte existe pour cette
+  adresse, vous allez recevoir un e-mail avec un lien pour choisir un nouveau mot de passe. »
+  (no account enumeration). The e-mail (French, plain text + simple HTML in the app colors)
+  contains a link `<web origin>/reset-password?token=…` valid **1 hour**, single use. The page
+  asks for the new password twice (same rules as registration, `PASSWORD_MIN_LENGTH`), then the
+  host is **logged in** and sent to `/editor` with « Mot de passe modifié ✓ ». Expired / used /
+  unknown link → clear message + button to ask for a new link.
+- **Security:** token = 32 random bytes (base64url), only its **SHA-256 is stored** (like
+  sessions); a new request invalidates the previous unused tokens of that user; on success
+  **all existing sessions of the user are revoked** (logged out everywhere) and the token is
+  marked used. Rate limits (in memory — one process): reset requests max 3 / hour per e-mail and
+  10 / hour per IP (beyond: same neutral answer, nothing sent); **login** max 10 failed attempts
+  / 15 min per IP + e-mail → `429` « Trop de tentatives, réessayez dans quelques minutes. »
+  (closes T5/T9 follow-up "rate-limit /auth/login").
+- **Change password while logged in:** small "Mon compte" page `/account` (link in the editor
+  header): current password + new password ×2 → other sessions revoked, this one kept.
+- **Sending e-mails:** `nodemailer` over **SMTP**, provider-agnostic, configured by env vars
+  `SMTP_URL` (e.g. `smtps://user:pass@smtp-relay.brevo.com:465`), `MAIL_FROM` (« Le Bon Quizz
+  <noreply@…> »), `PUBLIC_WEB_URL` (origin used in the link; default: the request's origin).
+  - **Dev:** add a **Mailpit** service to `docker-compose.yml` (SMTP `localhost:1025`, web UI
+    **http://localhost:8025** to read the captured mails); the dev default `SMTP_URL` points to
+    it, so nothing real is ever sent in dev.
+  - **No SMTP configured in production:** the server logs a warning at startup, the request
+    still answers neutrally, and the reset link is written to the server log (so the admin can
+    help someone).
+  - `DEPLOY.md`: a section to set up a provider (recommended: **Brevo**, French, free tier
+    300 mails/day; alternatives Resend, Mailjet), the Fly secrets, and the sender domain's
+    SPF/DKIM records so mails don't land in spam.
+- **Contract (`packages/shared/src/api.ts` + PLAN.md §5/§6/§7):** `POST /auth/forgot-password`
+  `{ email }` → 204 (always); `POST /auth/reset-password` `{ token, password }` → `AuthResponse`
+  (sets the cookie) or 400 `RESET_TOKEN_INVALID`; `POST /auth/change-password`
+  `{ currentPassword, newPassword }` → 204 or 400 `WRONG_PASSWORD`; login may answer 429
+  `TOO_MANY_ATTEMPTS`. Prisma: new `PasswordResetToken` (id = SHA-256 of the token, userId,
+  expiresAt, usedAt?, createdAt) — migration. New routes `/forgot-password`, `/reset-password`,
+  `/account`.
+
+**Tests:** API (neutral answer for unknown e-mail, token stored hashed, link works once, expired
+→ invalid, new request invalidates the old token, sessions revoked after reset, change password
+with wrong current password, rate limits for reset and login), mailer with a fake transport
+(French content, link with the token, `PUBLIC_WEB_URL`), web form validation. e2e (needs the
+Mailpit container): forgot password → read the mail through Mailpit's API
+(`http://localhost:8025/api/v1/…`) → open the link → new password → logged in → old password
+refused, new one works.
+
 - T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
 
