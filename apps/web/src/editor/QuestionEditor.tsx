@@ -1,9 +1,10 @@
-import { SHAPES, TYPE_ANSWER_MAX_LENGTH, type Question } from '@lbq/shared';
+import { SHAPES, TYPE_ANSWER_MAX_LENGTH, hasRightAnswer, type Question } from '@lbq/shared';
 import type { FieldErrors } from '../api/validation';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { btn } from './EditorShell';
 import { ImageField } from './ImageField';
 import { AudioField, ImageEffectField } from './MediaFields';
+import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './MoreTypeFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -55,7 +56,7 @@ export function QuestionEditor({
   onDraftChange: (fn: (d: QuizDraft) => QuizDraft, nextIndex: number) => void;
 }) {
   const err: Err = (path) => errors[`questions.${index}${path}`];
-  const isPoll = q.type === 'POLL';
+  const noRightAnswer = !hasRightAnswer(q.type);
 
   return (
     <section className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm">
@@ -140,7 +141,11 @@ export function QuestionEditor({
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <ImageField
-          label="Image (facultative)"
+          label={
+            q.type === 'PIN'
+              ? 'Image (obligatoire : les joueurs la touchent)'
+              : 'Image (facultative)'
+          }
           value={q.imageUrl}
           onChange={(imageUrl) => onChange({ ...q, imageUrl })}
         />
@@ -162,9 +167,10 @@ export function QuestionEditor({
                 ))}
             </select>
           </label>
-          {isPoll ? (
+          {noRightAnswer ? (
             <p className="max-w-48 text-sm font-semibold text-gray-500">
-              Sondage : pas de bonne réponse, aucun point, la série des joueurs continue.
+              {q.type === 'POLL' ? 'Sondage' : q.type === 'WORD_CLOUD' ? 'Nuage de mots' : 'Vote'} :
+              pas de bonne réponse, aucun point, la série des joueurs continue.
             </p>
           ) : (
             <label className="flex flex-col gap-1">
@@ -199,7 +205,7 @@ export function QuestionEditor({
           onChange={(audio) => onChange({ ...q, audio })}
           onRevealChange={(audioOnReveal) => onChange({ ...q, audioOnReveal })}
         />
-        {q.imageUrl && (
+        {q.imageUrl && q.type !== 'PIN' && (
           <ImageEffectField
             imageUrl={q.imageUrl}
             value={q.imageEffect}
@@ -212,6 +218,14 @@ export function QuestionEditor({
         <AcceptedAnswersField q={q} err={err} onChange={onChange} />
       ) : q.type === 'SLIDER' ? (
         <SliderField q={q} err={err} onChange={onChange} />
+      ) : q.type === 'ORDER' ? (
+        <OrderItemsField q={q} err={err} onChange={onChange} />
+      ) : q.type === 'PIN' ? (
+        <PinZoneField q={q} err={err} onChange={onChange} />
+      ) : q.type === 'WHO_OF_US' ? (
+        <WhoOfUsField q={q} err={err} onChange={onChange} />
+      ) : q.type === 'WORD_CLOUD' ? (
+        <WordCloudHint />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

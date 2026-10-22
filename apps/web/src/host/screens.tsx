@@ -15,6 +15,7 @@ import { RevealImage } from '../components/RevealImage';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue } from '../lib/numbers';
 import { joinOrigins, joinUrl } from './joinUrl';
+import { MORE_TYPES, MoreTypeHint, MoreTypeReveal } from './moreTypeScreens';
 import { TICK_FROM_SEC, useMuted } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -232,7 +233,9 @@ export function QuestionScreen({
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 self-stretch">
           {reveal ? (
-            reveal.type === 'TYPE_ANSWER' ? (
+            MORE_TYPES.includes(reveal.type) ? (
+              <MoreTypeReveal reveal={reveal} instant={instant} questionIndex={question.index} />
+            ) : reveal.type === 'TYPE_ANSWER' ? (
               <TypedAnswersReveal reveal={reveal} instant={instant} />
             ) : reveal.type === 'SLIDER' ? (
               <SliderReveal reveal={reveal} instant={instant} />
@@ -258,6 +261,7 @@ export function QuestionScreen({
               )}
               {listen}
               <AnswerHint question={question} />
+              <MoreTypeHint question={question} instant={instant} />
             </>
           )}
         </div>

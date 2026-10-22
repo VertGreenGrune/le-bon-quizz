@@ -5,15 +5,48 @@ import { z } from 'zod';
  * - `TYPE_ANSWER` (réponse libre): players type their answer, matched on the server.
  * - `POLL` (sondage): shape buttons, no correct answer, 0 points, streak unchanged.
  * - `SLIDER` (curseur): players guess a number, correct within ± `margin`.
+ * - `ORDER` (remettre dans l'ordre): players put 3–6 items in order; partial points per item.
+ * - `PIN` (point sur l'image): players tap the picture (sent to the phones for this type only);
+ *   correct inside the zone, partial points just outside.
+ * - `WHO_OF_US` (« Qui de nous ? »): players vote for a player of the game; no right answer.
+ * - `WORD_CLOUD` (nuage de mots): players type a word or two; no right answer, 0 points.
  */
-export const QuestionType = z.enum(['MCQ', 'TRUE_FALSE', 'TYPE_ANSWER', 'POLL', 'SLIDER']);
+export const QuestionType = z.enum([
+  'MCQ',
+  'TRUE_FALSE',
+  'TYPE_ANSWER',
+  'POLL',
+  'SLIDER',
+  'ORDER',
+  'PIN',
+  'WHO_OF_US',
+  'WORD_CLOUD',
+]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
 /** Types answered with the shape buttons (`choices`). */
 export const CHOICE_QUESTION_TYPES = ['MCQ', 'TRUE_FALSE', 'POLL'] as const;
 export type ChoiceQuestionType = (typeof CHOICE_QUESTION_TYPES)[number];
 
+/**
+ * Types without a right answer: never "correct", the streak is left unchanged and no time points
+ * are given (`WHO_OF_US` may give a majority bonus).
+ */
+export const NO_RIGHT_ANSWER_TYPES = ['POLL', 'WHO_OF_US', 'WORD_CLOUD'] as const;
+
+export function hasRightAnswer(type: QuestionType): boolean {
+  return !(NO_RIGHT_ANSWER_TYPES as readonly string[]).includes(type);
+}
+
 export const TYPE_ANSWER_MAX_LENGTH = 40;
+export const WORD_CLOUD_MAX_LENGTH = 20;
+export const ORDER_MIN_ITEMS = 3;
+export const ORDER_MAX_ITEMS = 6;
+/** « Qui de nous ? » with `majorityBonus`: points for each player who voted like the majority. */
+export const WHO_OF_US_MAJORITY_BONUS = 200;
+/** Smallest / largest PIN zone radius, as a fraction of the picture (see `PinZoneSchema`). */
+export const PIN_MIN_RADIUS = 0.02;
+export const PIN_MAX_RADIUS = 0.5;
 export const MAX_ACCEPTED_ANSWERS = 3;
 /** A slider has at most this many positions ((max − min) / step). */
 export const SLIDER_MAX_STEPS = 100_000;
@@ -151,6 +184,52 @@ const SliderQuestion = z.object({
   slider: SliderSettingsSchema,
 });
 
+const OrderQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('ORDER'),
+    /** In the right order (the phones and the TV get them shuffled). */
+    items: z.array(z.string().trim().min(1).max(75)).min(ORDER_MIN_ITEMS).max(ORDER_MAX_ITEMS),
+  })
+  .refine((q) => new Set(q.items.map((i) => i.toLocaleLowerCase())).size === q.items.length, {
+    message: 'Items must be different',
+    path: ['items'],
+  });
+
+/** A point on a picture: fractions of its width (`x`) and height (`y`), 0–1 from the top left. */
+export const PinPointSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+});
+export type PinPoint = z.infer<typeof PinPointSchema>;
+
+/**
+ * Correct zone of a PIN question. Distances are measured in picture fractions (x in widths, y in
+ * heights), so on a non-square picture the zone is drawn as an ellipse of radii
+ * `radius` × width and `radius` × height.
+ */
+export const PinZoneSchema = PinPointSchema.extend({
+  radius: z.number().min(PIN_MIN_RADIUS).max(PIN_MAX_RADIUS),
+});
+export type PinZone = z.infer<typeof PinZoneSchema>;
+
+const PinQuestion = z
+  .object({ ...questionBase, type: z.literal('PIN'), zone: PinZoneSchema })
+  .refine((q) => !!q.imageUrl, { message: 'A pin question needs an image', path: ['imageUrl'] })
+  .refine((q) => !q.imageEffect || q.imageEffect === 'none', {
+    message: 'A pin question has no image effect',
+    path: ['imageEffect'],
+  });
+
+const WhoOfUsQuestion = z.object({
+  ...questionBase,
+  type: z.literal('WHO_OF_US'),
+  /** + WHO_OF_US_MAJORITY_BONUS for the players who voted for the most voted player(s). */
+  majorityBonus: z.boolean().default(false),
+});
+
+const WordCloudQuestion = z.object({ ...questionBase, type: z.literal('WORD_CLOUD') });
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -161,6 +240,10 @@ export const QuestionSchema = z.preprocess(
       TypeAnswerQuestion,
       PollQuestion,
       SliderQuestion,
+      OrderQuestion,
+      PinQuestion,
+      WhoOfUsQuestion,
+      WordCloudQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -171,17 +254,20 @@ export type Question = z.infer<typeof QuestionSchema>;
 export type ChoiceQuestion = Extract<Question, { type: ChoiceQuestionType }>;
 export type TypeAnswerQuestion = Extract<Question, { type: 'TYPE_ANSWER' }>;
 export type SliderQuestion = Extract<Question, { type: 'SLIDER' }>;
+export type OrderQuestion = Extract<Question, { type: 'ORDER' }>;
+export type PinQuestion = Extract<Question, { type: 'PIN' }>;
+export type WhoOfUsQuestion = Extract<Question, { type: 'WHO_OF_US' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
 }
 
-/** Choice texts (empty for typed / slider questions). */
+/** Choice texts (empty for the types without choices). */
 export function choiceTexts(q: Question): string[] {
   return isChoiceQuestion(q) ? q.choices.map((c) => c.text) : [];
 }
 
-/** Indexes of the correct choices (empty for polls, typed and slider questions). */
+/** Indexes of the correct choices (empty for polls and the types without choices). */
 export function correctChoiceIndexes(q: Question): number[] {
   if (q.type !== 'MCQ' && q.type !== 'TRUE_FALSE') return [];
   return q.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));

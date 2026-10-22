@@ -29,7 +29,9 @@ export async function answerOnPhone(phone: Page, question: Question, plan: Plan)
       await phone.getByRole('button', { name: 'Valider' }).click();
       return;
     }
-    default: {
+    case 'MCQ':
+    case 'TRUE_FALSE':
+    case 'POLL': {
       const buttons = phone.getByRole('button', { name: /^Réponse / });
       await expect(buttons).toHaveCount(question.choices.length);
       const index =
@@ -37,7 +39,11 @@ export async function answerOnPhone(phone: Page, question: Question, plan: Plan)
           ? 0
           : question.choices.findIndex((c) => c.isCorrect === (plan === 'right'));
       await phone.getByRole('button', { name: `Réponse ${SHAPES[index]!.symbol}` }).click();
+      return;
     }
+    default:
+      // ORDER / PIN / WHO_OF_US / WORD_CLOUD: see e2e/question-types.spec.ts.
+      throw new Error(`answerOnPhone: unsupported type ${question.type}`);
   }
 }
 

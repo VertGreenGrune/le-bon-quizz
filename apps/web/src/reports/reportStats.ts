@@ -1,8 +1,11 @@
-import type { GameQuestionReport, GameSummary } from '@lbq/shared';
+import { hasRightAnswer, type GameQuestionReport, type GameSummary } from '@lbq/shared';
 
-/** A poll has no right answer: left out of success rates and of "hardest first". */
+/**
+ * A poll (or a « Qui de nous ? », a word cloud) has no right answer: left out of success rates
+ * and of "hardest first".
+ */
 export function isScored(q: Pick<GameQuestionReport, 'type'>): boolean {
-  return q.type !== 'POLL';
+  return hasRightAnswer(q.type);
 }
 
 /** Share of the players (answered or not) who got the question right, 0–100, rounded. */

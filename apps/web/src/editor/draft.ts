@@ -1,9 +1,13 @@
 import {
   MAX_ACCEPTED_ANSWERS,
+  ORDER_MAX_ITEMS,
+  ORDER_MIN_ITEMS,
   QuizInput,
   SHAPES,
+  hasRightAnswer,
   type Choice,
   type ImageEffect,
+  type PinZone,
   type Question,
   type QuestionAudio,
   type QuestionType,
@@ -28,6 +32,12 @@ export interface DraftQuestion {
   typoTolerance: boolean;
   /** SLIDER. A number field being edited may be NaN (empty input). */
   slider: { min: number; max: number; step: number; correct: number; margin: number; unit: string };
+  /** ORDER: 3–6 items, in the right order. */
+  items: string[];
+  /** PIN: correct zone on the picture (fractions of its size). */
+  zone: PinZone;
+  /** WHO_OF_US: points for the players who vote like the majority. */
+  majorityBonus: boolean;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -44,7 +54,7 @@ export type QuizDraft = Omit<QuizInput, 'questions'> & { questions: DraftQuestio
 export const MIN_CHOICES = 2;
 /** One choice per answer shape (matches `QuestionSchema.choices.max`). */
 export const MAX_CHOICES = SHAPES.length;
-export { MAX_ACCEPTED_ANSWERS };
+export { MAX_ACCEPTED_ANSWERS, ORDER_MAX_ITEMS, ORDER_MIN_ITEMS };
 export const TIME_LIMITS = [5, 10, 20, 30, 45, 60, 90, 120, 180, 240] as const;
 export const POINTS_OPTIONS = [
   { value: 1000, label: 'Standard (1000)' },
@@ -58,7 +68,13 @@ export const QUESTION_TYPES: { type: QuestionType; label: string }[] = [
   { type: 'TYPE_ANSWER', label: 'Réponse libre' },
   { type: 'SLIDER', label: 'Curseur' },
   { type: 'POLL', label: 'Sondage' },
+  { type: 'ORDER', label: 'Ordre' },
+  { type: 'PIN', label: 'Point sur l’image' },
+  { type: 'WHO_OF_US', label: 'Qui de nous ?' },
+  { type: 'WORD_CLOUD', label: 'Nuage de mots' },
 ];
+
+export const DEFAULT_PIN_ZONE: PinZone = { x: 0.5, y: 0.5, radius: 0.1 };
 
 export function newQuestion(): DraftQuestion {
   return {
@@ -70,6 +86,9 @@ export function newQuestion(): DraftQuestion {
     acceptedAnswers: [''],
     typoTolerance: true,
     slider: { min: 0, max: 100, step: 1, correct: 50, margin: 0, unit: '' },
+    items: Array.from({ length: ORDER_MIN_ITEMS }, () => ''),
+    zone: DEFAULT_PIN_ZONE,
+    majorityBonus: false,
     audioOnReveal: false,
     imageEffect: 'none',
   };
@@ -95,6 +114,14 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       return { ...draft, slider: { ...q.slider, unit: q.slider.unit ?? '' } };
     case 'POLL':
       return { ...draft, choices: q.choices.map((c) => ({ text: c.text, isCorrect: false })) };
+    case 'ORDER':
+      return { ...draft, items: [...q.items] };
+    case 'PIN':
+      return { ...draft, zone: q.zone };
+    case 'WHO_OF_US':
+      return { ...draft, majorityBonus: q.majorityBonus };
+    case 'WORD_CLOUD':
+      return draft;
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -125,8 +152,17 @@ function keptAnswers(q: DraftQuestion): number[] {
   return kept.length > 0 ? kept : [0];
 }
 
+/** Indexes of the ORDER items sent: empty ones are dropped while at least 3 remain. */
+function keptItems(q: DraftQuestion): number[] {
+  const kept = q.items.flatMap((item, i) => (item.trim() ? [i] : []));
+  return kept.length >= ORDER_MIN_ITEMS ? kept : q.items.map((_, i) => i);
+}
+
+type Kept = { choices: number[]; acceptedAnswers: number[]; items: number[] };
+
 /** The API body of one question: only the fields of its type. */
-function questionBody(q: DraftQuestion, choices: number[], answers: number[]): unknown {
+function questionBody(q: DraftQuestion, kept: Kept): unknown {
+  const { choices, acceptedAnswers: answers } = kept;
   const base = {
     text: q.text,
     imageUrl: q.imageUrl || undefined,
@@ -135,8 +171,9 @@ function questionBody(q: DraftQuestion, choices: number[], answers: number[]): u
     basePoints: q.basePoints,
     audio: q.audio,
     audioOnReveal: q.audio && q.audioOnReveal ? true : undefined,
-    // An effect without a picture (removed after choosing it) is dropped.
-    imageEffect: q.imageUrl && q.imageEffect !== 'none' ? q.imageEffect : undefined,
+    // An effect without a picture (removed after choosing it) is dropped; PIN has none.
+    imageEffect:
+      q.imageUrl && q.imageEffect !== 'none' && q.type !== 'PIN' ? q.imageEffect : undefined,
   };
   switch (q.type) {
     case 'TYPE_ANSWER':
@@ -149,34 +186,41 @@ function questionBody(q: DraftQuestion, choices: number[], answers: number[]): u
       return { ...base, slider: { ...q.slider, unit: q.slider.unit.trim() || undefined } };
     case 'POLL':
       return { ...base, choices: choices.map((i) => ({ text: q.choices[i]!.text })) };
+    case 'ORDER':
+      return { ...base, items: kept.items.map((i) => q.items[i]) };
+    case 'PIN':
+      return { ...base, zone: q.zone };
+    case 'WHO_OF_US':
+      return { ...base, majorityBonus: q.majorityBonus };
+    case 'WORD_CLOUD':
+      return base;
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
   }
 }
 
 /**
- * Body sent to the API: drops empty optional strings, empty extra choices / accepted answers
- * and the fields of the other types, then validates with `QuizInput`. Error paths always refer
- * to the draft's own choice / answer indexes.
+ * Body sent to the API: drops empty optional strings, empty extra choices / accepted answers /
+ * items and the fields of the other types, then validates with `QuizInput`. Error paths always
+ * refer to the draft's own choice / answer / item indexes.
  */
 export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
   const description = draft.description?.trim();
-  const kept = draft.questions.map((q) => ({
+  const kept: Kept[] = draft.questions.map((q) => ({
     choices: keptChoices(q),
     acceptedAnswers: keptAnswers(q),
+    items: keptItems(q),
   }));
   const result = validate(QuizInput, {
     ...draft,
     description: description ? description : undefined,
-    questions: draft.questions.map((q, qi) =>
-      questionBody(q, kept[qi]!.choices, kept[qi]!.acceptedAnswers),
-    ),
+    questions: draft.questions.map((q, qi) => questionBody(q, kept[qi]!)),
   });
   if (result.ok) return result;
   const errors: FieldErrors = {};
   for (const [key, message] of Object.entries(result.errors)) {
-    const m = /^questions\.(\d+)\.(choices|acceptedAnswers)\.(\d+)(.*)$/.exec(key);
-    const list = m ? kept[Number(m[1])]?.[m[2] as 'choices' | 'acceptedAnswers'] : undefined;
+    const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items)\.(\d+)(.*)$/.exec(key);
+    const list = m ? kept[Number(m[1])]?.[m[2] as keyof Kept] : undefined;
     const original = m ? `questions.${m[1]}.${m[2]}.${list?.[Number(m[3])] ?? m[3]}${m[4]}` : key;
     errors[original] = message;
   }
@@ -224,6 +268,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     choices: q.choices.map((c) => ({ ...c })),
     acceptedAnswers: [...q.acceptedAnswers],
     slider: { ...q.slider },
+    items: [...q.items],
   });
   return { ...draft, questions };
 }
@@ -244,7 +289,8 @@ export function moveQuestion(draft: QuizDraft, from: number, to: number): QuizDr
 
 /**
  * Switching to true/false sets the choices to « Vrai » / « Faux », keeping one correct answer;
- * a poll gives no points. The fields of the other types are kept for a switch back.
+ * a type without a right answer (poll, « Qui de nous ? », word cloud) gives no points. The fields
+ * of the other types are kept for a switch back.
  */
 export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQuestion {
   if (type === q.type) return q;
@@ -259,9 +305,10 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
       ],
     };
   }
-  if (type === 'POLL') return { ...q, type, basePoints: 0 };
-  // Leaving a poll: back to the standard points.
-  return { ...q, type, basePoints: q.type === 'POLL' && q.basePoints === 0 ? 1000 : q.basePoints };
+  if (!hasRightAnswer(type)) return { ...q, type, basePoints: 0 };
+  // Leaving a type without a right answer: back to the standard points.
+  const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
+  return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };
 }
 
 // ---------- Choices ----------
@@ -317,4 +364,28 @@ export function updateSlider(
   patch: Partial<DraftQuestion['slider']>,
 ): DraftQuestion {
   return { ...q, slider: { ...q.slider, ...patch } };
+}
+
+// ---------- Order ----------
+
+export function updateItem(q: DraftQuestion, index: number, text: string): DraftQuestion {
+  return { ...q, items: replaceAt(q.items, index, text) };
+}
+
+export function addItem(q: DraftQuestion): DraftQuestion {
+  if (q.items.length >= ORDER_MAX_ITEMS) return q;
+  return { ...q, items: [...q.items, ''] };
+}
+
+export function removeItem(q: DraftQuestion, index: number): DraftQuestion {
+  if (q.items.length <= ORDER_MIN_ITEMS) return q;
+  return { ...q, items: q.items.filter((_, i) => i !== index) };
+}
+
+export function moveItem(q: DraftQuestion, from: number, to: number): DraftQuestion {
+  if (to < 0 || to >= q.items.length || from === to) return q;
+  const items = [...q.items];
+  const [item] = items.splice(from, 1);
+  items.splice(to, 0, item!);
+  return { ...q, items };
 }

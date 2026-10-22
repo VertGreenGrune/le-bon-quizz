@@ -1,5 +1,6 @@
 /** Test helpers (not used by the app). */
 import { DEMO_QUIZ, type AnswerInput, type Question, type Quiz } from '@lbq/shared';
+import { isExtraQuestion } from './questionTypes/index.js';
 
 type ClassicQuestion = Extract<Question, { type: 'MCQ' | 'TRUE_FALSE' }>;
 
@@ -11,8 +12,12 @@ export const CLASSIC_QUIZ: Quiz & { questions: ClassicQuestion[] } = {
   ),
 };
 
-/** A right answer to any question (a poll has none: its first choice). */
+/**
+ * A right answer to a question of the older types (a poll has none: its first choice). The types
+ * of `questionTypes/` depend on the prompt (ORDER shuffle) or the players: not supported.
+ */
 export function rightAnswer(q: Question): AnswerInput {
+  if (isExtraQuestion(q)) throw new Error(`rightAnswer: unsupported type ${q.type}`);
   switch (q.type) {
     case 'TYPE_ANSWER':
       return { text: q.acceptedAnswers[0]! };
@@ -25,8 +30,9 @@ export function rightAnswer(q: Question): AnswerInput {
   }
 }
 
-/** A wrong answer to any question (a poll has none: its last choice). */
+/** A wrong answer to a question of the older types (a poll has none: its last choice). */
 export function wrongAnswer(q: Question): AnswerInput {
+  if (isExtraQuestion(q)) throw new Error(`wrongAnswer: unsupported type ${q.type}`);
   switch (q.type) {
     case 'TYPE_ANSWER':
       return { text: 'zzzzzz' };

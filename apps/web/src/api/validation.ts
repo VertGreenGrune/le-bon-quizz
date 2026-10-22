@@ -33,6 +33,9 @@ const customMessages: Record<string, string> = {
   'Correct value out of range': 'La bonne réponse doit être entre le minimum et le maximum',
   'Correct value not on a step': 'La bonne réponse doit tomber sur un cran du curseur',
   'An image effect needs an image': 'Ajoute une image pour utiliser un effet',
+  'Items must be different': 'Les éléments doivent être tous différents',
+  'A pin question needs an image': 'Ajoute une image : les joueurs vont la toucher',
+  'A pin question has no image effect': 'Pas d’effet sur l’image pour cette question',
 };
 
 export function issueMessage(issue: Issue): string {
