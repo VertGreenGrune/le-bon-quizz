@@ -1055,6 +1055,140 @@ refused, new one works.
 
 ---
 
+## Phase 5 — Party features: beyond Kahoot
+
+**User requirement (2026-10-22):** the game is "really close to Kahoot"; add fun features that
+make it better, starting with **jokers** (copy an answer, block a player…) and **new question
+types**. Inspiration (researched): Quizizz power-ups (Double Jeopardy, 50-50, Streak Saver,
+Immunity, Time Freeze), Trivia Crack power-ups (bomb, double chance, extra time), Kahoot types
+(puzzle/order, pin answer, word cloud), Jackbox (Fibbage bluffing, Trivia Murder Party ghosts),
+Blooket Gold Quest (random chests, stealing), Gimkit (Draw That), "Qui veut gagner des millions"
+jokers, Jeopardy final wager. Target audience: **friends, ~6 players, 15 max**, one TV.
+
+**Order** (each task touches `Game.ts` + host + phones, so they run **one at a time** unless
+noted): **T25 → T26 → T27 (‖ T32) → T29 → T31 → T28 → T30.** Every feature is a **host option**
+in the Solo/Équipes dialog or a question type in the editor, off by default when it changes the
+classic game, and must work in solo + team mode, with the pause (T21) and the rejoin/resync.
+Each agent designs its contract additively and documents it in PLAN.md + the notes below.
+Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025 / 5225), test DB
+`lbq_test_t<nn>`, e2e DB `lbq_e2e_t<nn>`.
+
+### T25 — Jokers (power-ups) ⭐ user idea
+- **Status:** todo
+- **Depends on:** T24 (everything merged)
+- **Host option** « Jokers » (on by default in the dialog: it's the selling point) — each player
+  gets **3 jokers drawn at random** at the start + **1 more every 3 correct answers in a row**
+  (max 5 in hand). One joker per question per player, usable during QUESTION_INTRO / ANSWERING
+  before answering. Phone: a joker bar at the bottom of the question screen; the target picker
+  shows avatars. Host screen: big animated announcement « 🥶 Red a gelé Batou ! » + sound, and
+  icons next to players on the leaderboard.
+- **Jokers (French names, icons):**
+  - **🎯 50/50** — hides half of the wrong choices on your phone (choice questions; for a slider:
+    narrows the range around the answer; typed answer: shows the first letter).
+  - **🪞 Copieur** — pick a player: you automatically give **their** answer as soon as they answer
+    (your points use their answer time + 1 s). If they never answer, you get nothing.
+  - **🥶 Gel** — pick a player: their buttons are frozen for **5 s** at the start of the next
+    question they play (attack).
+  - **🌀 Brouilleur** — pick a player: on their next question their buttons lose colors/shapes
+    order (shuffled, grey) — they must read the text on the TV (attack).
+  - **✖️2 Double ou rien** — this question: correct = points ×2, wrong = lose 500 points (floor 0).
+  - **🛡️ Bouclier** — blocks the next attack aimed at you (Gel / Brouilleur / Voleur) and keeps your
+    streak if you get this question wrong.
+  - **🦹 Voleur** — pick a player: if you answer correctly, you steal **10 %** of their score.
+  - **⏳ Sablier** — your speed points are computed as if you answered at half the elapsed time.
+- Rules: attacks can't target the same player twice in one question; in team mode attacks and
+  Voleur only target the other teams, Copieur only your own team; polls ignore jokers (refunded).
+  Server-authoritative (the server applies 50/50 by sending the reduced choice list to that phone
+  only, freezes by refusing early answers, etc.). Reports: jokers used per player.
+- **Tests:** each joker's effect and its interaction with streaks, team averages, pause, rejoin,
+  every question type; earning rule; refunds; e2e: two phones, one freezes the other, Copieur
+  copies an answer.
+
+### T26 — « Mytho ! » bluff question type (Fibbage-like) ⭐ the most "friends" feature
+- **Status:** todo
+- **Depends on:** T25
+- New type `BLUFF`: the editor gives a question with a surprising true answer ("Le premier film
+  de Tim Burton s'appelle… ?"). Phase 1 (≈ 45 s): every phone **types a fake answer** meant to
+  look true (rejected if too close to the real one — reuse `matching.ts`). Phase 2: the TV shows
+  all fake answers + the true one, shuffled; each phone votes (can't vote for its own). Reveal,
+  one by one: who wrote each lie and who fell for it. Points: **+1000 for finding the truth,
+  +500 for each player fooled by your lie**. Works in team mode (team averages) and with jokers
+  (Copieur copies the vote; 50/50 removes half of the lies).
+- **Tests:** phases + timers + pause, duplicate lies merged, own-lie vote refused, scoring;
+  e2e with 3 phones.
+
+### T27 — New question types: ordre, point sur l'image, « Qui de nous ? », nuage de mots
+- **Status:** todo
+- **Depends on:** T26 (same question pipeline); can run in parallel with T32
+- **`ORDER` — Remettre dans l'ordre:** 3–6 items (e.g. films by release year) dragged into order
+  on the phone; full points if all correct, partial points per item in the right place.
+- **`PIN` — Point sur l'image:** host image (map, poster, photo) + correct zone (circle drawn in
+  the editor); players tap the picture on their phone (the phone gets the image for this type
+  only); points by distance to the zone; reveal shows every pin with avatars.
+- **`WHO_OF_US` — « Qui de nous… ? »:** "Qui est le plus susceptible de rater son train ?" —
+  players vote for a **player of the game** (avatars on the phone); no right answer, the most
+  voted gets a funny title on the TV; 0 points (or +200 to whoever voted with the majority —
+  editor option).
+- **`WORD_CLOUD` — Nuage de mots:** free text (≤ 20 chars), animated word cloud on the TV,
+  0 points.
+- **Tests:** scoring/partial points, phone payloads never leak the answer (except PIN image),
+  reports; e2e for each type.
+
+### T32 — Ambiance: live reactions + end-of-game awards
+- **Status:** todo
+- **Depends on:** T25; can run in parallel with T27 (touches the reaction overlay and the podium,
+  not the question screens)
+- **Reactions:** phones get a reaction bar (😂 🔥 😱 👏 🤡 💀) during REVEAL / LEADERBOARD / PODIUM;
+  they float up on the TV with the sender's avatar (rate-limited, 1 per 2 s per player; host can
+  turn them off).
+- **Awards at the end** (after the podium, one card at a time, with sound): « ⚡ L'éclair »
+  (fastest average answer), « 🐢 La tortue », « 🎯 Le sniper » (best accuracy), « 🤡 Le roi du
+  bluff » (most players fooled, T26), « 🦹 Le pickpocket » (most points stolen, T25), « 💥 Le
+  kamikaze » (most points lost with Double ou rien), « 🔥 La série » (longest streak), « 😂 Le
+  public » (most reactions sent). Only awards that make sense for this game are shown. Saved in
+  the report.
+
+### T29 — Twists: « Quitte ou double » final + Roue des surprises
+- **Status:** todo
+- **Depends on:** T25, T26, T27
+- **Quitte ou double** (host option): before the **last question**, each player **bets 0–100 %
+  of their score** on their phone (Jeopardy final); correct = + bet, wrong = − bet. The TV shows
+  the bets as suspense before the reveal.
+- **Roue des surprises** (host option, every N questions, default 3): a wheel spins on the TV and
+  lands on a random event for one random player or everyone — « +500 », « Échange ton score avec
+  le joueur juste devant », « Joker gratuit », « Question à points doubles », « −10 % », « Rien
+  du tout ». Server-chosen, animated on the TV, saved in the report.
+
+### T31 — Game mode « Survie » (elimination with ghosts)
+- **Status:** todo
+- **Depends on:** T29
+- New mode in the dialog (Solo / Équipes / **Survie**): everyone has **3 ❤️**; a wrong or missing
+  answer costs a heart; at 0 the player becomes a **👻 fantôme**: still answers, and each correct
+  ghost answer lets them **haunt** a living player (Gel or Brouilleur from T25). Last survivor
+  wins (ties → most points). Survie ends early when one player is left; host can set the hearts
+  (1–5). Inspired by Jackbox Trivia Murder Party.
+
+### T28 — Buzzer round
+- **Status:** todo
+- **Depends on:** T31
+- Question option « Buzzer »: the question is shown on the TV without choices; phones show one
+  huge **BUZZ** button; the first to buzz (server timestamp) answers **out loud**; the host
+  presses ✅ / ❌ on the TV (or a host phone); wrong → that player is locked out and the others
+  can buzz again; points to the winner only. Great for blind tests (T22 sound clips).
+
+### T30 — « Dessine-moi » (Pictionary round)
+- **Status:** todo
+- **Depends on:** T28
+- Question type `DRAW`: one player (rotating) gets a secret word on their phone and **draws** with
+  the finger; strokes stream live to the TV (small vector messages, not images); the others type
+  guesses (reuse `matching.ts`, typo tolerance); points to the fastest guessers and to the drawer
+  per correct guess. Word lists in the editor (or a built-in French list).
+
+- **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
+  leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
+
+---
+
 ## Contract changes / cross-task notes
 _(Append here: date, agent, what changed in `packages/shared` or outside your scope, why.)_
 
