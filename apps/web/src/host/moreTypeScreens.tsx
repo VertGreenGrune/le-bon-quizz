@@ -138,7 +138,7 @@ function PinReveal({
       <PinPicture
         src={pin.imageUrl}
         className="overflow-hidden rounded-xl shadow-lg"
-        imgClassName="max-h-[55vh] max-w-full"
+        imgClassName="h-[50vh] w-auto max-w-none"
       >
         <motion.span
           initial={instant ? false : { opacity: 0 }}

@@ -1136,7 +1136,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   `lbq_e2e_t25` / `lbq_e2e_t27`. Shared Postgres, never `docker compose down`.
 
 ### T27 — New question types: ordre, point sur l'image, « Qui de nous ? », nuage de mots
-- **Status:** in-progress (T27 agent, worktree ../lbq-T27, branch task/T27-question-types)
+- **Status:** done
 - **Depends on:** T24 — **runs in parallel with T25** (see "Wave 6 coordination" above)
 - **`ORDER` — Remettre dans l'ordre:** 3–6 items (e.g. films by release year) dragged into order
   on the phone; full points if all correct, partial points per item in the right place.
@@ -1151,6 +1151,50 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   0 points.
 - **Tests:** scoring/partial points, phone payloads never leak the answer (except PIN image),
   reports; e2e for each type.
+- **Summary:** shared (`quiz.ts`): 4 new `QuestionType`s in the discriminated union — `ORDER`
+  (`items` 3–6, different, in the right order), `PIN` (`imageUrl` required, `zone { x, y, radius }`
+  in picture fractions, no image effect; `PinPointSchema` / `PinZoneSchema`), `WHO_OF_US`
+  (`majorityBonus`, default off), `WORD_CLOUD`; `NO_RIGHT_ANSWER_TYPES` + `hasRightAnswer` (POLL,
+  WHO_OF_US, WORD_CLOUD), constants (`ORDER_MIN/MAX_ITEMS`, `WORD_CLOUD_MAX_LENGTH` 20,
+  `WHO_OF_US_MAJORITY_BONUS` 200, `PIN_MIN/MAX_RADIUS`). Contract (`events.ts`, additive):
+  `player:answer` / `AnswerInput` gain `order` | `point` | `playerId`; `question:show` gains `items`
+  / `candidates`; `question:prompt` gains `items` (shuffled) / `imageUrl` (PIN only) / `candidates`
+  / `maxLength` 20; `RevealDetails` gains `order` / `pin` / `votes` + `majorityBonus` / `words`
+  (types `PinMark`, `VoteCount`); `player:result` gains `placed`, `votesReceived`, `withMajority`,
+  and `poll: true` for the 3 types without a right answer. Server: per-type logic in
+  `game/questionTypes/` (`order.ts` derangement shuffle + share of points per item in place,
+  `pin.ts` full points in the zone / half at its edge fading to 0 at 0.2, `whoOfUs.ts` tally + most
+  voted with ties, `wordCloud.ts` grouping after normalization, `index.ts` hooks: prepare / show /
+  prompt / judge / settle (majority bonus at the reveal) / reveal / result); `Game.ts` only calls
+  them (answers still go through `Game.answer` → time points, streak, team averages, pause,
+  rejoin); `Answer` gains optional `order` / `point` / `votedFor`; streak untouched for every type
+  without a right answer. DB: migration `20261022200000_more_question_types` (enum values only;
+  settings in `Question.config`, mapped in `quizzes.service.ts`). Editor: 4 types in the selector,
+  `editor/MoreTypeFields.tsx` (items with ↑ ↓ / add / remove, click-the-picture zone + size
+  slider, majority bonus checkbox, word-cloud hint), draft model + French errors. TV
+  (`host/moreTypeScreens.tsx`): items labelled A, B, C…, avatars to vote for, hints; reveals:
+  right order with « ✓ n » per item, picture with the zone and every pin as an avatar (« n / m dans
+  la zone »), most voted player(s) with a crown + funny title (« Légende vivante »…) and the other
+  votes, animated word cloud (`lib/wordCloud.ts`). Phone (`player/moreAnswers.tsx`): drag-and-drop
+  list (Framer Motion `Reorder`) + ↑ ↓, tap-the-picture pin + Valider, avatar grid, word field;
+  « Presque ! » (yellow) for partial points, « n / m bien placés », votes received / majority
+  bonus. Shared `components/PinPicture.tsx` (editor, phone, TV, report). Reports: per-type cards
+  (`reports/moreTypeCards.tsx`), WHO_OF_US / WORD_CLOUD left out of % correct like polls. Tests:
+  `Game.moreTypes.test.ts` (no leak in prompts / show, wrong kinds, order full / partial /
+  untouched, pin in / near / far, votes + majority with ties, no-bonus option, word cloud, rejoin
+  keeps the shuffle, pause, team averages), `questionTypes.test.ts`, persistence round trip +
+  saved reveal details (Postgres), shared schemas, editor draft, word-cloud layout, report stats;
+  e2e `e2e/question-types.spec.ts` (DB quiz with the 4 types, host + 2 phones to the report, phone
+  frames contain neither the order nor the zone). Checked with screenshots (host 1600×900, Pixel 7).
+- **Notes:** (1) The ORDER shuffle is the same for everyone (the TV shows the list with the same
+  letters) and is a derangement, so an untouched list scores 0. (2) PIN distances are in picture
+  fractions, so on a non-square picture the zone is an ellipse (drawn the same everywhere). (3) Votes
+  for a player kicked during the question still count in the tally but aren't listed. (4) No change
+  to `DEMO_QUIZ` / the seed (the solo / team e2e play it; the new types have their own e2e).
+  (5) Jokers: per Wave 6, WHO_OF_US / WORD_CLOUD = like POLL, ORDER / PIN = all but 50/50 — to wire
+  in T25's `jokerAvailability` at merge. **After merging, run `pnpm --filter @lbq/server db:migrate`.**
+- **Follow-ups:** not tried on real phones (drag-and-drop on iOS Safari, picture tap precision);
+  no ORDER / PIN question in the demo quiz yet.
 
 ### T32 — Ambiance: live reactions + end-of-game awards
 - **Status:** cancelled (2026-10-22, user decision — was: emoji reactions from the phones on the
@@ -1331,3 +1375,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `EditorShell.tsx` (« Mon compte » link + one-off `location.state.flash` banner), `main.tsx`
   (3 routes), README / CLAUDE.md (Mailpit). Login/register form pieces moved from `AuthPage.tsx`
   to `auth/AuthCard.tsx`.
+- 2026-10-22, T27 agent (additive): `QuestionType` gains `ORDER`, `PIN`, `WHO_OF_US`,
+  `WORD_CLOUD`; `AnswerInput` / `PlayerAnswerPayload` gain `order` | `point` | `playerId`;
+  `QuestionShowPayload` / `QuestionPromptPayload` / `RevealDetails` / `PlayerResultPayload` gain
+  optional fields (PLAN.md §3–§5). `PlayerResultPayload.poll` is now also set for WHO_OF_US and
+  WORD_CLOUD (no right answer). New shared helpers `hasRightAnswer` / `NO_RIGHT_ANSWER_TYPES`.
+  Code switching on `Question['type']` must handle the 4 types (`isExtraQuestion` in
+  `apps/server/src/game/questionTypes/`); `game/testing.ts` `rightAnswer` / `wrongAnswer` throw for
+  them. Prisma migration `20261022200000_more_question_types`. Outside the listed scope:
+  `e2e/answers.ts` (default branch narrowed to the choice types).
