@@ -610,3 +610,58 @@ describe('e2eJokerHand', () => {
     expect(e2eJokerHand({})).toBeUndefined();
   });
 });
+
+// Wave 6: jokers on the T27 question types (wired in `jokerAvailability` at merge).
+describe('Jokers on the T27 question types', () => {
+  const ITEMS = ['Beetlejuice', 'Batman', 'Edward aux mains d’argent', 'Ed Wood'];
+  const quizT27: Quiz = {
+    id: 'jokers-t27',
+    title: 'Jokers et nouveaux types',
+    questions: [
+      { text: 'Dans l’ordre', type: 'ORDER', timeLimitSec: 20, basePoints: 1000, items: ITEMS },
+      { text: 'Nuage', type: 'WORD_CLOUD', timeLimitSec: 20, basePoints: 0 },
+    ] as Question[],
+  };
+  let rec: ReturnType<typeof recorder>;
+  let game: Game;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    rec = recorder();
+    game = new Game('123456', quizT27, rec.transport, {}, { mode: 'solo', jokers: true });
+  });
+  afterEach(() => {
+    game.dispose();
+    vi.useRealTimers();
+  });
+
+  it('ordre: Double ou rien doubles the points, 50/50 is refused', () => {
+    const alice = game.join('Alice', 'sock-a');
+    game.join('Bob', 'sock-b');
+    game.start();
+    game.jokers!.setHand(alice.id, ['double', 'fifty']);
+    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    expectGameError(() => game.useJoker(alice.id, 0, 'fifty'), 'JOKER_REFUSED');
+    game.useJoker(alice.id, 0, 'double');
+    const prompt = rec.last('question:prompt', 'sock-a') as { items: string[] };
+    const order = ITEMS.map((item) => prompt.items.indexOf(item));
+    game.answer(alice.id, 0, { order });
+    vi.advanceTimersByTime(20_000); // Bob doesn't answer: the timer ends ANSWERING
+    const res = rec.last('player:result', 'sock-a') as PlayerResultPayload;
+    expect(res.correct).toBe(true);
+    expect(res.pointsEarned).toBe(2000);
+  });
+
+  it('nuage de mots: no right answer, so jokers are refused (like a poll)', () => {
+    const alice = game.join('Alice', 'sock-a');
+    game.start();
+    game.jokers!.setHand(alice.id, ['double']);
+    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    game.next(); // skip the ORDER question
+    game.next();
+    game.next();
+    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    expect(game.currentQuestion?.type).toBe('WORD_CLOUD');
+    expectGameError(() => game.useJoker(alice.id, 1, 'double'), 'JOKER_REFUSED');
+  });
+});

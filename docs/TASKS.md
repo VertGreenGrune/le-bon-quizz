@@ -1439,3 +1439,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `apps/server/src/game/questionTypes/`); `game/testing.ts` `rightAnswer` / `wrongAnswer` throw for
   them. Prisma migration `20261022200000_more_question_types`. Outside the listed scope:
   `e2e/answers.ts` (default branch narrowed to the choice types).
+- 2026-10-22, main agent (post-merge, wave 6): T25 + T27 merged. `jokerAvailability` now lists
+  the T27 types as decided (ORDER / PIN: all but 50/50, no Brouilleur; WHO_OF_US / WORD_CLOUD: no
+  jokers); `Game.recordAnswer` routes T27 types to `judgeExtra`, so score jokers (Double ou rien,
+  Sablier, Copieur…) apply to them. Tests: `packages/shared/src/jokers.test.ts`, "Jokers on the
+  T27 question types" in `Game.jokers.test.ts`. Note: both migrations share the timestamp
+  `20261022200000_*` (applied in name order, independent — no drift).

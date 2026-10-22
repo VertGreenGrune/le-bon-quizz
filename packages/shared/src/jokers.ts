@@ -131,6 +131,11 @@ const AVAILABILITY: Record<QuestionType, JokerAvailability> = {
   TYPE_ANSWER: { jokers: true, unavailable: [], scramble: false },
   SLIDER: { jokers: true, unavailable: [], scramble: false },
   POLL: { jokers: false, unavailable: [], scramble: false },
+  // T27 types: no 50/50 on ordre / point (no wrong choices to hide); no right answer → like POLL.
+  ORDER: { jokers: true, unavailable: ['fifty'], scramble: false },
+  PIN: { jokers: true, unavailable: ['fifty'], scramble: false },
+  WHO_OF_US: { jokers: false, unavailable: [], scramble: false },
+  WORD_CLOUD: { jokers: false, unavailable: [], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = { jokers: false, unavailable: [], scramble: false };
