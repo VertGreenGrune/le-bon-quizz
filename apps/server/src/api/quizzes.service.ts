@@ -26,7 +26,10 @@ type QuestionConfig = Pick<
   Extract<Question, { type: 'TYPE_ANSWER' }>,
   'acceptedAnswers' | 'typoTolerance'
 > &
-  Pick<Extract<Question, { type: 'SLIDER' }>, 'slider'>;
+  Pick<Extract<Question, { type: 'SLIDER' }>, 'slider'> &
+  Pick<Extract<Question, { type: 'ORDER' }>, 'items'> &
+  Pick<Extract<Question, { type: 'PIN' }>, 'zone'> &
+  Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -55,6 +58,14 @@ function toQuestion(qu: QuestionRow): Question {
       };
     case 'SLIDER':
       return { ...base, type: qu.type, slider: config.slider! };
+    case 'ORDER':
+      return { ...base, type: qu.type, items: config.items ?? [] };
+    case 'PIN':
+      return { ...base, type: qu.type, zone: config.zone! };
+    case 'WHO_OF_US':
+      return { ...base, type: qu.type, majorityBonus: config.majorityBonus ?? false };
+    case 'WORD_CLOUD':
+      return { ...base, type: qu.type };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -70,14 +81,18 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'TYPE_ANSWER')
     return { acceptedAnswers: qu.acceptedAnswers, typoTolerance: qu.typoTolerance };
   if (qu.type === 'SLIDER') return { slider: qu.slider };
+  if (qu.type === 'ORDER') return { items: qu.items };
+  if (qu.type === 'PIN') return { zone: qu.zone };
+  if (qu.type === 'WHO_OF_US') return { majorityBonus: qu.majorityBonus };
   return undefined;
 }
 
-/** Poll choices are stored with `isCorrect: false`; typed / slider questions have none. */
+/** Poll choices are stored with `isCorrect: false`; the types without choices have none. */
 function choiceRows(qu: Question): { order: number; text: string; isCorrect: boolean }[] {
-  if (qu.type === 'TYPE_ANSWER' || qu.type === 'SLIDER') return [];
   if (qu.type === 'POLL') return qu.choices.map((c, order) => ({ order, ...c, isCorrect: false }));
-  return qu.choices.map((c, order) => ({ order, ...c }));
+  if (qu.type === 'MCQ' || qu.type === 'TRUE_FALSE')
+    return qu.choices.map((c, order) => ({ order, ...c }));
+  return [];
 }
 
 export function toQuizDetail(q: QuizRow): QuizDetail {

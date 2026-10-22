@@ -5,6 +5,7 @@ import {
   PlayerJoinPayload,
   QuestionSchema,
   QuizSchema,
+  hasRightAnswer,
 } from './index.js';
 
 describe('shared schemas', () => {
@@ -151,6 +152,56 @@ describe('shared schemas', () => {
       expect(QuestionSchema.safeParse({ ...mcq, ...image, imageEffect: 'swirl' }).success).toBe(
         false,
       );
+    });
+  });
+  describe('ordre, point sur l’image, « Qui de nous ? », nuage de mots', () => {
+    const base = { text: 'Q', timeLimitSec: 20 };
+    const ok = (q: object) => QuestionSchema.safeParse({ ...base, ...q }).success;
+
+    it('order: 3–6 different items', () => {
+      expect(ok({ type: 'ORDER', items: ['a', 'b', 'c'] })).toBe(true);
+      expect(ok({ type: 'ORDER', items: ['a', 'b'] })).toBe(false);
+      expect(ok({ type: 'ORDER', items: ['a', 'b', 'c', 'd', 'e', 'f', 'g'] })).toBe(false);
+      expect(ok({ type: 'ORDER', items: ['a', 'b', 'A'] })).toBe(false);
+      expect(ok({ type: 'ORDER', items: ['a', 'b', ' '] })).toBe(false);
+    });
+
+    it('pin: an image and a zone inside the picture, no image effect', () => {
+      const imageUrl = 'https://example.com/carte.png';
+      const zone = { x: 0.5, y: 0.5, radius: 0.1 };
+      expect(ok({ type: 'PIN', imageUrl, zone })).toBe(true);
+      expect(ok({ type: 'PIN', zone })).toBe(false);
+      expect(ok({ type: 'PIN', imageUrl, zone: { ...zone, x: 1.2 } })).toBe(false);
+      expect(ok({ type: 'PIN', imageUrl, zone: { ...zone, radius: 0 } })).toBe(false);
+      expect(ok({ type: 'PIN', imageUrl, zone, imageEffect: 'blur' })).toBe(false);
+      expect(ok({ type: 'PIN', imageUrl, zone, imageEffect: 'none' })).toBe(true);
+    });
+
+    it('who of us: majority bonus off by default; word cloud has no settings', () => {
+      expect(QuestionSchema.parse({ ...base, type: 'WHO_OF_US' })).toMatchObject({
+        majorityBonus: false,
+      });
+      expect(ok({ type: 'WORD_CLOUD' })).toBe(true);
+    });
+
+    it('only polls, « Qui de nous ? » and word clouds have no right answer', () => {
+      expect(['POLL', 'WHO_OF_US', 'WORD_CLOUD'].every((t) => !hasRightAnswer(t as never))).toBe(
+        true,
+      );
+      expect(hasRightAnswer('ORDER')).toBe(true);
+      expect(hasRightAnswer('PIN')).toBe(true);
+    });
+
+    it('player:answer takes an order, a point or a player id', () => {
+      const target = { pin: '123456', questionIndex: 0 };
+      const valid = (a: object) => PlayerAnswerPayload.safeParse({ ...target, ...a }).success;
+      expect(valid({ order: [2, 0, 1] })).toBe(true);
+      expect(valid({ order: [0, 1] })).toBe(false);
+      expect(valid({ order: [0, 1, 6] })).toBe(false);
+      expect(valid({ point: { x: 0.3, y: 1 } })).toBe(true);
+      expect(valid({ point: { x: -0.1, y: 0 } })).toBe(false);
+      expect(valid({ playerId: 'abc' })).toBe(true);
+      expect(valid({ playerId: 'abc', choiceIndex: 1 })).toBe(false);
     });
   });
 });

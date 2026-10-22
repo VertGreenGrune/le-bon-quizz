@@ -75,6 +75,10 @@ enum QuestionType {
   TYPE_ANSWER
   POLL
   SLIDER
+  ORDER
+  PIN
+  WHO_OF_US
+  WORD_CLOUD
 }
 
 model Question {
@@ -90,7 +94,8 @@ model Question {
   /// MCQ / TRUE_FALSE / POLL (poll choices are all `isCorrect: false`); empty for the others.
   choices          Choice[]
   /// Type-specific settings: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
-  /// SLIDER `{ slider: { min, max, step, correct, margin, unit? } }`; null otherwise.
+  /// SLIDER `{ slider: { min, max, step, correct, margin, unit? } }`, ORDER `{ items }` (right
+  /// order), PIN `{ zone: { x, y, radius } }`, WHO_OF_US `{ majorityBonus }`; null otherwise.
   config           Json?
   /// Sound clip played on the host screen (`audio` in @lbq/shared): file URL, excerpt start
   /// (seconds) and length (5–30 s); all null without a sound.
@@ -196,7 +201,8 @@ model QuestionResult {
   correctCount   Int
   /// Players who answered; null for games saved before question types (= sum of distribution).
   answerCount    Int?
-  /// TYPE_ANSWER / SLIDER reveal details (`RevealDetails` in @lbq/shared); null otherwise.
+  /// Type-specific reveal details (`RevealDetails` in @lbq/shared: typed answers, slider
+  /// guesses, order, pins, votes, words); null otherwise.
   details        Json?
 
   @@unique([gameSessionId, index])

@@ -11,6 +11,7 @@ import {
   TYPE_ANSWER_MAX_LENGTH,
   choiceTexts,
   correctChoiceIndexes,
+  hasRightAnswer,
   randomAvatarId,
   type AnswerInput,
   type AvatarId,
@@ -20,6 +21,7 @@ import {
   type GameStatePayload,
   type LobbyMember,
   type LobbyTeamsPayload,
+  type PinPoint,
   type PlayerResultPayload,
   type Question,
   type QuestionPromptPayload,
@@ -37,6 +39,19 @@ import {
 } from '@lbq/shared';
 import { GameError } from './errors.js';
 import { matchesAnswer, normalizeAnswer } from './matching.js';
+import {
+  NO_SETUP,
+  extraPromptFields,
+  extraResultFields,
+  extraRevealDetails,
+  extraShowFields,
+  isExtraQuestion,
+  judgeExtra,
+  prepareQuestion,
+  settleExtra,
+  type ClassicQuestion,
+  type QuestionSetup,
+} from './questionTypes/index.js';
 import {
   computePoints,
   sliderPoints,
@@ -68,11 +83,17 @@ export interface GameTransport {
 /** Sends one event to some audience (host room, one socket…). */
 type Send = GameTransport['toAll'];
 
-/** A player's answer to the current question: one of choice / typed text / slider value. */
+/**
+ * A player's answer to the current question: one of choice / typed text / slider value, or for
+ * the types of `questionTypes/`: order (shown indexes), point on the picture, player voted for.
+ */
 export interface Answer {
   choiceIndex: number | null;
   text: string | null;
   value: number | null;
+  order?: number[];
+  point?: PinPoint;
+  votedFor?: string;
   responseMs: number;
   correct: boolean;
   points: number;
@@ -191,6 +212,8 @@ export class Game {
   private readonly hostSockets = new Set<string>();
   /** Reveal of the current question, re-sent to a host that rejoins. */
   private reveal: QuestionRevealPayload | null = null;
+  /** Drawn when the current question starts (ORDER shuffle), see `questionTypes/`. */
+  private setup: QuestionSetup = NO_SETUP;
   private phaseEndsAt: number | null = null;
   private phaseStartedAt = 0;
   /** ANSWERING start, pushed forward by the paused time: `responseMs` excludes the pauses. */
@@ -497,7 +520,10 @@ export class Game {
     const responseMs = Date.now() - this.answeringStartedAt;
     const timePoints = computePoints(question.basePoints, responseMs, question.timeLimitSec * 1000);
     const given = typeof input === 'number' ? { choiceIndex: input } : input;
-    player.answer = { ...judgeAnswer(question, given, timePoints), responseMs };
+    const judged = isExtraQuestion(question)
+      ? judgeExtra(question, given, timePoints, this.setup, this.players)
+      : judgeAnswer(question, given, timePoints);
+    player.answer = { ...judged, responseMs };
     this.touch();
     this.onAnswersChanged();
   }
@@ -576,6 +602,7 @@ export class Game {
     this.startedAt ??= new Date();
     this.questionIndex = index;
     this.reveal = null;
+    this.setup = prepareQuestion(question);
     this.excused.clear();
     for (const p of this.players.values()) {
       p.answer = null;
@@ -614,8 +641,9 @@ export class Game {
 
     const choices = choiceTexts(question);
     const distribution = choices.map(() => 0);
-    // A poll has no right answer: 0 points, and the streak neither breaks nor grows.
-    const poll = question.type === 'POLL';
+    if (isExtraQuestion(question)) settleExtra(question, this.players.values());
+    // A poll (or another type without a right answer) leaves the streak as it is.
+    const poll = !hasRightAnswer(question.type);
     let correctCount = 0;
     let answerCount = 0;
     for (const p of this.players.values()) {
@@ -697,6 +725,8 @@ export class Game {
       for (const g of guesses) if (!closest || distance(g) < distance(closest)) closest = g;
       return { slider, guesses: guesses.map((g) => g.value), ...(closest && { closest }) };
     }
+    if (isExtraQuestion(question))
+      return extraRevealDetails(question, this.setup, answers, this.players.values());
     return {};
   }
 
@@ -963,6 +993,7 @@ export class Game {
       ...(q.imageUrl &&
         q.imageEffect &&
         q.imageEffect !== 'none' && { imageEffect: q.imageEffect }),
+      ...(isExtraQuestion(q) && extraShowFields(q, this.setup, this.players.values())),
     };
   }
 
@@ -976,6 +1007,8 @@ export class Game {
     };
     if (q.type === 'SLIDER') prompt.slider = sliderPrompt(q.slider);
     else if (q.type === 'TYPE_ANSWER') prompt.maxLength = TYPE_ANSWER_MAX_LENGTH;
+    else if (isExtraQuestion(q))
+      Object.assign(prompt, extraPromptFields(q, this.setup, this.players.values()));
     else prompt.choiceCount = q.choices.length;
     return prompt;
   }
@@ -996,7 +1029,10 @@ export class Game {
       totalScore: player.totalScore,
       rank,
       ...(team && { team: { id: team.team.id, score: team.team.score, rank: team.rank } }),
-      ...(q?.type === 'POLL' && { poll: true as const }),
+      ...(q && !hasRightAnswer(q.type) && { poll: true as const }),
+      ...(q &&
+        isExtraQuestion(q) &&
+        extraResultFields(q, player, this.setup, this.players.values())),
       ...(q?.type === 'SLIDER' && {
         correctValue: q.slider.correct,
         ...(player.answer?.value != null && { yourValue: player.answer.value }),
@@ -1039,7 +1075,7 @@ const sliderPrompt = ({ min, max, step, unit }: SliderSettings): SliderPrompt =>
 
 /** Checks the answer kind matches the question, then whether it is right and its points. */
 function judgeAnswer(
-  q: Question,
+  q: ClassicQuestion,
   given: AnswerInput,
   timePoints: number,
 ): Omit<Answer, 'responseMs'> {

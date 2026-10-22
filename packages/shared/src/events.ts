@@ -6,8 +6,13 @@ import { z } from 'zod';
 import { AvatarId } from './avatars.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import {
+  ORDER_MAX_ITEMS,
+  ORDER_MIN_ITEMS,
+  PinPointSchema,
   TYPE_ANSWER_MAX_LENGTH,
   type ImageEffect,
+  type PinPoint,
+  type PinZone,
   type QuestionAudio,
   type QuestionType,
   type SliderSettings,
@@ -94,8 +99,10 @@ export const PlayerRejoinPayload = z.object({ pin: Pin, sessionToken: z.string()
 export const PlayerTeamPayload = z.object({ pin: Pin, teamId: TeamId });
 const answerTarget = { pin: Pin, questionIndex: z.number().int().min(0) };
 /**
- * Exactly one of `choiceIndex` (MCQ, TRUE_FALSE, POLL), `text` (TYPE_ANSWER) or `value`
- * (SLIDER). The server answers `INVALID_PAYLOAD` if the kind doesn't match the question.
+ * Exactly one of `choiceIndex` (MCQ, TRUE_FALSE, POLL), `text` (TYPE_ANSWER, WORD_CLOUD), `value`
+ * (SLIDER), `order` (ORDER: indexes of `question:prompt.items`, first to last), `point` (PIN:
+ * picture fractions) or `playerId` (WHO_OF_US: the player voted for). The server answers
+ * `INVALID_PAYLOAD` if the kind doesn't match the question.
  */
 export const PlayerAnswerPayload = z.union([
   z.strictObject({ ...answerTarget, choiceIndex: z.number().int().min(0).max(3) }),
@@ -104,6 +111,21 @@ export const PlayerAnswerPayload = z.union([
     text: z.string().trim().min(1).max(TYPE_ANSWER_MAX_LENGTH),
   }),
   z.strictObject({ ...answerTarget, value: z.number() }),
+  z.strictObject({
+    ...answerTarget,
+    order: z
+      .array(
+        z
+          .number()
+          .int()
+          .min(0)
+          .max(ORDER_MAX_ITEMS - 1),
+      )
+      .min(ORDER_MIN_ITEMS)
+      .max(ORDER_MAX_ITEMS),
+  }),
+  z.strictObject({ ...answerTarget, point: PinPointSchema }),
+  z.strictObject({ ...answerTarget, playerId: z.string().min(1).max(64) }),
 ]);
 
 export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
@@ -116,7 +138,13 @@ export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
 export type PlayerAvatarsPayload = z.infer<typeof PlayerAvatarsPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
-export type AnswerInput = { choiceIndex: number } | { text: string } | { value: number };
+export type AnswerInput =
+  | { choiceIndex: number }
+  | { text: string }
+  | { value: number }
+  | { order: number[] }
+  | { point: PinPoint }
+  | { playerId: string };
 
 export interface PlayerJoinAck {
   playerId: string;
@@ -244,6 +272,10 @@ export interface QuestionShowPayload {
   audioOnReveal?: true;
   /** Picture reveal effect (only with `imageUrl`; absent = none). */
   imageEffect?: Exclude<ImageEffect, 'none'>;
+  /** ORDER: the items, shuffled (never in the right order), as shown on the phones. */
+  items?: string[];
+  /** WHO_OF_US: the players one can vote for (everyone in the game). */
+  candidates?: LobbyMember[];
 }
 
 /** To players only: never contains the question text or the correct answer. */
@@ -255,8 +287,14 @@ export interface QuestionPromptPayload {
   choiceCount?: number;
   /** SLIDER: range of the slider. */
   slider?: SliderPrompt;
-  /** TYPE_ANSWER: max length of the typed answer. */
+  /** TYPE_ANSWER / WORD_CLOUD: max length of the typed answer. */
   maxLength?: number;
+  /** ORDER: the items to put in order, shuffled (same order as on the TV, never the answer). */
+  items?: string[];
+  /** PIN: the picture to tap (the only type whose phones get the picture; never the zone). */
+  imageUrl?: string;
+  /** WHO_OF_US: the players one can vote for (everyone in the game, oneself included). */
+  candidates?: LobbyMember[];
 }
 
 export interface AnswerCountPayload {
@@ -287,6 +325,29 @@ export interface RevealDetails {
    * games saved before avatars existed.
    */
   closest?: { nickname: string; value: number; avatar?: AvatarId };
+  /** ORDER: the items in the right order, and per position how many players got it right. */
+  order?: { items: string[]; placed: number[] };
+  /** PIN: the picture, the correct zone and every player's pin (earliest first). */
+  pin?: { imageUrl: string; zone: PinZone; pins: PinMark[] };
+  /** WHO_OF_US: the players who got votes, most voted first (ties: by nickname). */
+  votes?: VoteCount[];
+  /** WHO_OF_US: the voters of the most voted player(s) got WHO_OF_US_MAJORITY_BONUS. */
+  majorityBonus?: true;
+  /** WORD_CLOUD: the words typed (grouped after normalization), most frequent first (top 40). */
+  words?: { text: string; count: number }[];
+}
+
+export interface PinMark extends PinPoint {
+  nickname: string;
+  avatar: AvatarId;
+  /** Inside the zone. */
+  correct: boolean;
+}
+
+export interface VoteCount {
+  nickname: string;
+  avatar: AvatarId;
+  count: number;
 }
 
 export interface QuestionRevealPayload extends RevealDetails {
@@ -312,11 +373,22 @@ export interface PlayerResultPayload {
   rank: number;
   /** Team mode: the player's team after this question (score = sum of averages, PLAN.md §3). */
   team?: { id: TeamId; score: number; rank: number };
-  /** POLL: no right or wrong (`correct` false, 0 points, streak unchanged). */
+  /**
+   * POLL, WHO_OF_US, WORD_CLOUD: no right or wrong (`correct` false, streak unchanged; 0 points
+   * except the WHO_OF_US majority bonus).
+   */
   poll?: true;
   /** SLIDER: the player's guess (absent without an answer) and the correct value. */
   yourValue?: number;
   correctValue?: number;
+  /**
+   * ORDER: how many items the player put in the right place (absent without an answer). Partial
+   * points: `pointsEarned` can be > 0 with `correct` false.
+   */
+  placed?: { correct: number; total: number };
+  /** WHO_OF_US: votes the player got, and whether they voted for the most voted player. */
+  votesReceived?: number;
+  withMajority?: boolean;
 }
 
 export interface ServerToClientEvents {

@@ -11,6 +11,7 @@ import {
   isChoiceQuestion,
   type GameReport,
   type GameSummary,
+  type QuestionPromptPayload,
   type Question,
   type Quiz,
   type RevealDetails,
@@ -302,5 +303,78 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const saved = await prisma.gameSession.findFirstOrThrow({ include: { results: true } });
     expect(saved.quizId).toBeNull();
     expect(saved.results).toHaveLength(2);
+  });
+  it('keeps the ORDER / PIN / WHO_OF_US / WORD_CLOUD settings and saves their reveal details', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const imageUrl = 'http://localhost:3001/uploads/carte.png';
+    const base = { timeLimitSec: 20, basePoints: 1000 as const };
+    const questions: Question[] = [
+      { ...base, text: 'Ordre', type: 'ORDER', items: ['Un', 'Deux', 'Trois'] },
+      { ...base, text: 'Point', type: 'PIN', imageUrl, zone: { x: 0.25, y: 0.75, radius: 0.05 } },
+      { ...base, basePoints: 0, text: 'Qui ?', type: 'WHO_OF_US', majorityBonus: true },
+      { ...base, basePoints: 0, text: 'Un mot', type: 'WORD_CLOUD' },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Nouveaux types', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    let prompt: QuestionPromptPayload | undefined;
+    const game = new Game('123456', quiz, {
+      ...noop,
+      toSocket: (_to, event, payload) => {
+        if (event === 'question:prompt') prompt = payload as QuestionPromptPayload;
+      },
+    });
+    const alice = game.join('Alice', 's1', 'batman');
+    game.join('Bob', 's2', 'robin');
+    game.start();
+    const answers = [
+      () => ({ order: ['Un', 'Deux', 'Trois'].map((item) => prompt!.items!.indexOf(item)) }),
+      () => ({ point: { x: 0.25, y: 0.75 } }),
+      () => ({ playerId: alice.id }),
+      () => ({ text: 'Super' }),
+    ];
+    answers.forEach((answer, i) => {
+      game.next();
+      game.answer(alice.id, i, answer());
+      game.next();
+      game.next();
+      game.next();
+    });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions.map((r) => [r.type, r.correctCount, r.answerCount, r.details])).toEqual(
+      [
+        ['ORDER', 1, 1, { order: { items: ['Un', 'Deux', 'Trois'], placed: [1, 1, 1] } }],
+        [
+          'PIN',
+          1,
+          1,
+          {
+            pin: {
+              imageUrl,
+              zone: { x: 0.25, y: 0.75, radius: 0.05 },
+              pins: [{ x: 0.25, y: 0.75, nickname: 'Alice', avatar: 'batman', correct: true }],
+            },
+          },
+        ],
+        [
+          'WHO_OF_US',
+          0,
+          1,
+          { votes: [{ nickname: 'Alice', avatar: 'batman', count: 1 }], majorityBonus: true },
+        ],
+        ['WORD_CLOUD', 0, 1, { words: [{ text: 'Super', count: 1 }] }],
+      ],
+    );
+    // Order + pin right (1000 each, +100 streak bonus) + majority bonus (200).
+    expect(report.results[0]).toMatchObject({ nickname: 'Alice', score: 2300, correctCount: 2 });
   });
 });
