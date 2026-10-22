@@ -910,7 +910,7 @@ is closed and a new page takes over with the same nickname.
   **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on a real TV.
 
 ### T23 — Content: "Tim Burton" quiz + quiz import script (after T22)
-- **Status:** in-progress (claude T23, ../lbq-T23)
+- **Status:** done
 - **Depends on:** T22 merged
 - **Scope:** `content/quizzes/tim-burton/**` (quiz JSON + freely licensed media + `CREDITS.md`),
   `apps/server/scripts/import-quiz.ts` + a `quiz:import` script in `apps/server/package.json`.
@@ -926,6 +926,32 @@ is closed and a new page takes over with the same nickname.
   written (which track, excerpt start, duration) with `audio` pointing to
   `content/quizzes/tim-burton/audio/<name>.mp3`, and `CREDITS.md` lists the files the user must
   add from their own copies; the import script skips the sound with a warning if a file is missing.
+
+- **Summary:** `apps/server/scripts/quizImport.ts` (`prepareQuiz`: reads `quiz.json`, copies local
+  media into `UPLOAD_DIR` under a content-hash name (type checked by magic bytes, re-imports reuse
+  the files) and rewrites them as `<base URL>/uploads/…`, missing sound → warning + question kept
+  without it, missing picture / invalid quiz → error with the zod path, always `PRIVATE`;
+  `saveImportedQuiz`: creates the quiz, or updates the host's quiz with the same title) + CLI
+  `scripts/import-quiz.ts` (`quiz:import <folder> <email> [--base-url]`, base URL = `PUBLIC_URL` or
+  `http://localhost:<PORT>`, folder resolved from where pnpm was launched). Quiz
+  `content/quizzes/tim-burton/quiz.json` « L'étrange quiz de Tim Burton », 20 questions: 3 emoji
+  rebus, 2 « Qui a dit ? », 1 intrus, 2 vrai/faux, 4 sliders (year, Depp films, box office, « dites
+  son nom »), 4 typed answers, 1 poll, 4 blind tests (one `audioOnReveal`), 4 Commons photos with
+  zoom / pixelate / blur (+ cover); 10–30 s, 1000 / 2000 / 0 points. `CREDITS.md`: every fact with
+  its Wikipedia / Wikiquote source, author + license of each picture (CC BY / CC BY-SA), the 4 MP3
+  files to add. Tests `scripts/quizImport.test.ts` (media copy + URL rewrite, idempotent files,
+  missing sound / picture, invalid quiz, forced private; create-then-update and unknown host on
+  Postgres). Imported into the dev DB for loicmoster@hotmail.fr (private, run twice → updated in
+  place) and played once with a scripted socket game (host + 3 phones, all 20 questions to the
+  podium: right / wrong / slider-edge results as expected, typed answers with typos accepted, no
+  answer or media in phone prompts, report saved with 20 questions — then that test game and its
+  temporary host session were deleted).
+- **Notes:** (1) The 4 music files are not in the repo (`audio/` is empty): until they are added the
+  blind tests are imported without sound (still answerable from the text). (2) Media URLs are
+  absolute (`url()` in the schema): import with `--base-url` / `PUBLIC_URL` matching how the host
+  screen reaches the server, and with `UPLOAD_DIR` = the running server's upload dir (the dev
+  import used `<main checkout>/apps/server/uploads`, served by `pnpm dev` on :3001). (3) The quiz
+  has portraits of real people under CC BY-SA: keep the credits if it is ever made public.
 
 ### T24 — Forgotten password: reset by e-mail (+ login rate limit, change password)
 - **Status:** in-progress (claude T24, ../lbq-T24)
@@ -1116,3 +1142,6 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `imageEffect?` (host only — `QuestionPromptPayload` unchanged); new `POST /api/uploads/audio`
   and `AUDIO_UPLOAD_MAX_BYTES`. Prisma migration `20261021201359_media`. The multipart plugin no
   longer has a global file size limit: each upload route sets its own (`apps/server/src/api/index.ts`).
+- 2026-10-22, T23 agent (no contract change): outside the listed scope, `apps/server/tsconfig.json`
+  includes `scripts/` (typechecked) and CLAUDE.md lists the `quiz:import` command. New top-level
+  `content/` folder for bundled quiz content.

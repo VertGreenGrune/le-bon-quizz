@@ -1,0 +1,225 @@
+{
+  "title": "L'étrange quiz de Tim Burton",
+  "description": "Rébus, blind tests, photos floutées et citations : 20 questions sur l'univers de Tim Burton, de Beetlejuice à Mercredi.",
+  "coverImageUrl": "images/tim-burton.jpg",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Rébus 🎬 : 😴 + 🕳️ + 🎃🐴 = quel film de Tim Burton ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Sleepy Hollow", "isCorrect": true },
+        { "text": "Les Noces funèbres", "isCorrect": false },
+        { "text": "Dark Shadows", "isCorrect": false },
+        { "text": "Beetlejuice", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : avant de devenir réalisateur, Tim Burton a été animateur chez Disney.",
+      "imageUrl": "images/tim-burton.jpg",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Blind test 🎵 De quel film vient cette chanson ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/this-is-halloween.mp3", "startSec": 18, "durationSec": 15 },
+      "choices": [
+        { "text": "L'Étrange Noël de monsieur Jack", "isCorrect": true },
+        { "text": "Les Noces funèbres", "isCorrect": false },
+        { "text": "Frankenweenie", "isCorrect": false },
+        { "text": "Coraline", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Tim Burton a lui-même réalisé L'Étrange Noël de monsieur Jack (1993).",
+      "timeLimitSec": 15,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Zoom 🔍 Qui est cet acteur, à la fois Beetlejuice et Batman chez Burton ?",
+      "imageUrl": "images/michael-keaton.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Michael Keaton", "Keaton"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? « T'as déjà dansé avec le diable au clair de lune ? »",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Le Joker", "isCorrect": true },
+        { "text": "Batman", "isCorrect": false },
+        { "text": "Le Pingouin", "isCorrect": false },
+        { "text": "Beetlejuice", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année est sorti le Batman de Tim Burton, avec Jack Nicholson en Joker ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": { "min": 1980, "max": 2000, "step": 1, "correct": 1989, "margin": 2 }
+    },
+    {
+      "type": "POLL",
+      "text": "Sondage 🗳️ Ton film de Tim Burton préféré ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "choices": [
+        { "text": "Beetlejuice" },
+        { "text": "Edward aux mains d'argent" },
+        { "text": "Charlie et la Chocolaterie" },
+        { "text": "Les Noces funèbres" }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Pixels 👾 Ce compositeur signe la musique de presque tous les films de Burton. Qui est-ce ?",
+      "imageUrl": "images/danny-elfman.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Danny Elfman", "Elfman"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Blind test 🎵 Pour quel film de Burton Danny Elfman a-t-il composé ce thème ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/batman-theme.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Batman", "isCorrect": true },
+        { "text": "Beetlejuice", "isCorrect": false },
+        { "text": "Edward aux mains d'argent", "isCorrect": false },
+        { "text": "Mars Attacks!", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Trouve l'intrus 🕵️ Dans lequel de ces films de Burton Johnny Depp ne joue-t-il PAS ?",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Ed Wood", "isCorrect": false },
+        { "text": "Big Fish", "isCorrect": true },
+        { "text": "Sleepy Hollow", "isCorrect": false },
+        { "text": "Edward aux mains d'argent", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de films de Tim Burton Johnny Depp a-t-il tournés (rôles vocaux compris) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 0, "max": 15, "step": 1, "correct": 8, "margin": 1, "unit": "films" }
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test 🎵 Pendant un dîner, des invités possédés dansent sur ce tube. Quel film ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "audio": { "url": "audio/day-o.mp3", "startSec": 0, "durationSec": 15 },
+      "acceptedAnswers": ["Beetlejuice", "Beetle Juice"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Flou 🌫️ Cette actrice a joué Mrs Lovett dans Sweeney Todd. Qui est-ce ?",
+      "imageUrl": "images/helena-bonham-carter.jpg",
+      "imageEffect": "blur",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Winona Ryder", "isCorrect": false },
+        { "text": "Helena Bonham Carter", "isCorrect": true },
+        { "text": "Eva Green", "isCorrect": false },
+        { "text": "Christina Ricci", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? « Qu'on lui coupe la tête ! » (Alice au pays des merveilles, 2010)",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "La Reine Blanche", "isCorrect": false },
+        { "text": "Le Chapelier fou", "isCorrect": false },
+        { "text": "La Reine Rouge", "isCorrect": true },
+        { "text": "Le Valet de cœur", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Rébus 🎬 : 🍫 + 🏭 + 🎫✨ = quel film de Burton sorti en 2005 ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": [
+        "Charlie et la Chocolaterie",
+        "Charlie and the Chocolate Factory",
+        "Charlie"
+      ],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Zoom 🔍 Qui incarne Mercredi Addams dans la série Mercredi de Tim Burton ?",
+      "imageUrl": "images/jenna-ortega.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Christina Ricci", "isCorrect": false },
+        { "text": "Emma Myers", "isCorrect": false },
+        { "text": "Winona Ryder", "isCorrect": false },
+        { "text": "Jenna Ortega", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Sur quel titre des Cramps Mercredi danse-t-elle au bal ? (écoutez la réponse 🎵)",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/goo-goo-muck.mp3", "startSec": 0, "durationSec": 20 },
+      "audioOnReveal": true,
+      "choices": [
+        { "text": "Human Fly", "isCorrect": false },
+        { "text": "Goo Goo Muck", "isCorrect": true },
+        { "text": "Surfin' Bird", "isCorrect": false },
+        { "text": "Fever", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "Alice au pays des merveilles (2010), son plus gros succès, a rapporté combien dans le monde ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 0, "max": 2000, "step": 25, "correct": 1025, "margin": 150, "unit": "M$" }
+    },
+    {
+      "type": "SLIDER",
+      "text": "Dernière ! Combien de fois faut-il dire son nom pour invoquer Beetlejuice ?",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "slider": { "min": 1, "max": 10, "step": 1, "correct": 3, "margin": 0, "unit": "fois" }
+    }
+  ]
+}
