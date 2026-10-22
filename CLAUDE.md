@@ -39,6 +39,7 @@ pnpm build         # production build (server bundled by esbuild into apps/serve
 docker compose up -d            # Postgres (localhost:5432, lbq/lbq)
 pnpm --filter @lbq/server db:migrate   # apply/create migrations (prisma migrate dev)
 pnpm --filter @lbq/server db:seed      # demo host demo@lebonquizz.local / demo1234 + DEMO_QUIZ
+pnpm --filter @lbq/server quiz:import content/quizzes/tim-burton <host email>  # private quiz from a folder
 ```
 
 Phones on the same Wi-Fi: open `http://<PC LAN IP>:5173`. The web app connects to
