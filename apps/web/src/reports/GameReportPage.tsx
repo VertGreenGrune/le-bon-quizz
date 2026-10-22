@@ -21,7 +21,7 @@ import {
   noAnswerCount,
   percentCorrect,
 } from './reportStats';
-import { ModeBadge } from './ModeBadge';
+import { JokersBadge, JokersUsed, ModeBadge } from './ModeBadge';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -85,6 +85,7 @@ function Report({ report }: { report: GameReport }) {
       <h1 className="flex items-center gap-3 text-3xl font-black">
         {report.quizTitle}
         <ModeBadge mode={report.mode} />
+        {report.jokers && <JokersBadge />}
       </h1>
       <p className="mb-6 text-gray-500">
         {dateFmt.format(new Date(report.startedAt))}
@@ -113,6 +114,7 @@ function Report({ report }: { report: GameReport }) {
                   <th className="px-4 py-2 font-semibold">Rang</th>
                   <th className="px-4 py-2 font-semibold">Joueur</th>
                   {report.mode === 'teams' && <th className="px-4 py-2 font-semibold">Équipe</th>}
+                  {report.jokers && <th className="px-4 py-2 font-semibold">Jokers joués</th>}
                   <th className="px-4 py-2 text-right font-semibold">Score</th>
                   <th className="px-4 py-2 text-right font-semibold">Bonnes réponses</th>
                 </tr>
@@ -140,6 +142,11 @@ function Report({ report }: { report: GameReport }) {
                             {TEAM_NAMES[r.teamId]}
                           </span>
                         )}
+                      </td>
+                    )}
+                    {report.jokers && (
+                      <td className="px-4 py-2 text-xl">
+                        <JokersUsed jokers={r.jokersUsed ?? []} />
                       </td>
                     )}
                     <td className="px-4 py-2 text-right tabular-nums">{r.score}</td>

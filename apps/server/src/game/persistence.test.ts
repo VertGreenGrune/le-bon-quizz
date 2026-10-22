@@ -293,6 +293,36 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect(csv.body).toContain(`1,Alice,${alice.totalScore},${SCORED},Équipe Jaune\r\n`);
   });
 
+  it('saves the jokers played by each player: report, summary flag, CSV column', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const game = new Game('333333', DEMO_QUIZ, noop, {}, { mode: 'solo', jokers: true });
+    const alice = game.join('Alice', 's1');
+    game.join('Bob', 's2');
+    game.start();
+    game.jokers!.setHand(alice.id, ['double', 'shield']);
+    game.useJoker(alice.id, 0, 'double');
+    game.next(); // → ANSWERING
+    game.answer(alice.id, 0, rightAnswer(DEMO_QUIZ.questions[0]!));
+    game.next();
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, null)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    expect(summary!.jokers).toBe(true);
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.results.map((r) => [r.nickname, r.jokersUsed])).toEqual([
+      ['Alice', ['double']],
+      ['Bob', undefined],
+    ]);
+    const csv = await app.inject({ url: `/api/games/${summary!.id}/export.csv`, headers });
+    expect(csv.body).toContain('rank,nickname,score,correctCount,jokers\r\n');
+    expect(csv.body).toContain(',Double ou rien\r\n');
+  });
+
   it('keeps the history when the quiz was deleted during the game', async () => {
     const host = await user('host@test.fr');
     const q = await createQuiz(prisma, host.id, demoInput);

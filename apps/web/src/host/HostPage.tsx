@@ -3,6 +3,7 @@ import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } from '@lbq/shared';
 import { parseGameOptions } from '../lib/gameOptions';
+import { JokerAnnouncements } from './jokerScreens';
 import {
   currentQuestion,
   isLastQuestion,
@@ -35,6 +36,7 @@ export function HostPage() {
   const quizId = searchParams.get('quizId') ?? undefined;
   const mode = searchParams.get('mode');
   const teams = searchParams.get('teams');
+  const jokers = searchParams.get('jokers');
   const isNew = pinParam === 'new';
   const pin = isNew ? undefined : pinParam;
   const [hostToken, setHostToken] = useState(() => (pin ? loadHostToken(pin) : null));
@@ -46,7 +48,9 @@ export function HostPage() {
   useEffect(() => {
     if (!isNew) return;
     let cancelled = false;
-    const options = parseGameOptions(new URLSearchParams({ mode: mode ?? '', teams: teams ?? '' }));
+    const options = parseGameOptions(
+      new URLSearchParams({ mode: mode ?? '', teams: teams ?? '', jokers: jokers ?? '' }),
+    );
     createGame(quizId, options).then(
       (res) => {
         if (cancelled) return;
@@ -58,7 +62,7 @@ export function HostPage() {
     return () => {
       cancelled = true;
     };
-  }, [isNew, quizId, mode, teams, navigate]);
+  }, [isNew, quizId, mode, teams, jokers, navigate]);
 
   const timed = state.deadline != null;
   const now = useNow(timed || state.paused !== null || state.comebacks.length > 0);
@@ -210,6 +214,11 @@ export function HostPage() {
             Le Bon Quizz
           </Link>
           {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
+          {state.jokers && (
+            <span className="rounded bg-white/15 px-2" title="Partie avec jokers">
+              🃏 Jokers
+            </span>
+          )}
           {state.questionIndex >= 0 && phase !== 'PODIUM' && phase !== 'ENDED' && (
             <span className="opacity-80">
               Question {state.questionIndex + 1} / {state.totalQuestions}
@@ -257,6 +266,7 @@ export function HostPage() {
           )}
         </AnimatePresence>
         <ComebackToasts state={state} now={now} />
+        {state.jokers && <JokerAnnouncements />}
 
         <footer className="flex min-h-20 items-center justify-end gap-4 px-6 pb-6">
           {game.error && (

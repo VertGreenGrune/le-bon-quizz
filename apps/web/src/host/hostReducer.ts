@@ -18,6 +18,8 @@ export interface HostGameState {
   /** null until the first `game:state` arrives. */
   phase: GamePhase | null;
   mode: GameMode;
+  /** The game is played with jokers. */
+  jokers: boolean;
   questionIndex: number;
   totalQuestions: number;
   /** Local timestamp (ms) when the current timed phase ends, derived from `remainingMs`. */
@@ -64,6 +66,7 @@ export type HostAction =
 export const initialHostState: HostGameState = {
   phase: null,
   mode: 'solo',
+  jokers: false,
   questionIndex: -1,
   totalQuestions: 0,
   deadline: null,
@@ -97,6 +100,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         ...state,
         phase,
         mode,
+        jokers: !!action.payload.jokers,
         questionIndex,
         totalQuestions,
         deadline: remainingMs != null && !paused ? action.now + remainingMs : null,

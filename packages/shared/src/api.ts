@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { QuizSchema, QuizVisibility, type Quiz, type QuestionType } from './quiz.js';
 import type { GameMode, TeamId } from './game.js';
 import type { AvatarId } from './avatars.js';
+import type { JokerType } from './jokers.js';
 import type { RevealDetails } from './events.js';
 
 // ---------- Errors ----------
@@ -178,6 +179,8 @@ export interface GameSummary {
   /** Nickname of the rank-1 player (first one if tied), null without players. */
   winner: string | null;
   mode: GameMode;
+  /** Played with jokers (absent otherwise). */
+  jokers?: true;
 }
 
 export interface GameReportRow {
@@ -189,6 +192,8 @@ export interface GameReportRow {
   avatar: AvatarId | null;
   /** Team mode: the player's team (null in solo games). */
   teamId: TeamId | null;
+  /** Games with jokers: the jokers the player played, in order (absent when none). */
+  jokersUsed?: JokerType[];
 }
 
 /** Team mode: final standing of one team. */

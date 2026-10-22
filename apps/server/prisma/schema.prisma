@@ -133,6 +133,8 @@ model GameSession {
   host      User             @relation(fields: [hostId], references: [id], onDelete: Cascade)
   pin       String
   mode      GameMode         @default(solo)
+  /// Played with jokers (T25).
+  jokers    Boolean          @default(false)
   startedAt DateTime         @default(now())
   endedAt   DateTime?
   results   PlayerResult[]
@@ -154,6 +156,8 @@ model PlayerResult {
   rank          Int
   /// Team mode: team id (0–3 = shape index, see TEAM_NAMES in @lbq/shared); null in solo games.
   teamId        Int?
+  /// Jokers played during the game (JokerType ids, in order); empty without jokers.
+  jokersUsed    String[]    @default([])
 
   @@index([gameSessionId, rank])
 }

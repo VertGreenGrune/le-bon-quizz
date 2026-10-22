@@ -7,6 +7,7 @@ import {
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
   PlayerJoinPayload,
+  PlayerJokerPayload,
   PlayerRejoinPayload,
   PlayerTeamPayload,
   roomAll,
@@ -14,6 +15,7 @@ import {
   type Ack,
   type ClientToServerEvents,
   type ErrorPayload,
+  type JokerType,
   type PlayerJoinAck,
   type ServerToClientEvents,
 } from '@lbq/shared';
@@ -116,12 +118,14 @@ export interface SocketDeps {
   games?: GameManager;
   /** Defaults to the demo quiz only, nothing saved (no DB). */
   persistence?: GamePersistence;
+  /** Games with jokers start with this hand instead of a random one (e2e tests only). */
+  jokerHand?: JokerType[];
 }
 
 /** Entry point for all socket handlers (T1). Returns the game registry. */
 export function registerSocketHandlers(
   io: IoServer,
-  { games = new GameManager(), persistence = demoOnlyPersistence }: SocketDeps = {},
+  { games = new GameManager(), persistence = demoOnlyPersistence, jokerHand }: SocketDeps = {},
 ): GameManager {
   const saveOnEnd = (hostId: string | null, dbQuizId: string | null) => (game: Game) => {
     const record = gameRecord(game, hostId, dbQuizId);
@@ -179,7 +183,7 @@ export function registerSocketHandlers(
       handler(
         socket,
         HostCreatePayload,
-        async ({ quizId, mode = 'solo', teamCount }) => {
+        async ({ quizId, mode = 'solo', teamCount, jokers }) => {
           const token = handshakeToken(socket);
           const hostId = token ? await persistence.authenticate(token) : null;
           const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
@@ -187,7 +191,7 @@ export function registerSocketHandlers(
             quiz,
             (pin) => makeTransport(io, pin),
             { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount },
+            { mode, teamCount, jokers, jokerHand },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
@@ -346,6 +350,15 @@ export function registerSocketHandlers(
       handler(socket, PlayerAnswerPayload, ({ pin, questionIndex, ...answer }) => {
         const { game, playerId } = asPlayer(pin);
         game.answer(playerId, questionIndex, answer);
+        return {};
+      }),
+    );
+
+    socket.on(
+      'player:joker',
+      handler(socket, PlayerJokerPayload, ({ pin, questionIndex, joker, targetId }) => {
+        const { game, playerId } = asPlayer(pin);
+        game.useJoker(playerId, questionIndex, joker, targetId);
         return {};
       }),
     );

@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { AvatarId } from './avatars.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
+import { JokerType } from './jokers.js';
 import {
   TYPE_ANSWER_MAX_LENGTH,
   type ImageEffect,
@@ -30,6 +31,10 @@ export const ErrorCode = z.enum([
   'TEAMS_NOT_READY',
   /** Answer sent while the game is paused (a player or the host screen lost the connection). */
   'GAME_PAUSED',
+  /** Jokers: not in hand, already one this question, wrong moment / target / question type. */
+  'JOKER_REFUSED',
+  /** Gel: this player's answers are refused for the first seconds of the question. */
+  'FROZEN',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -46,6 +51,8 @@ export interface RankedPlayer {
   nickname: string;
   avatar: AvatarId;
   score: number;
+  /** `leaderboard` of a game with jokers: the player's hand and the joker played last question. */
+  jokers?: { hand: JokerType[]; used?: JokerType };
 }
 
 /** A player as listed in the lobby / team columns. */
@@ -77,6 +84,8 @@ export const HostCreatePayload = z.object({
   mode: GameMode.optional(),
   /** Team mode only, default 2. */
   teamCount: TeamCount.optional(),
+  /** Jokers (power-ups, PLAN.md §3). Default off (the start dialog turns them on). */
+  jokers: z.boolean().optional(),
 });
 export const HostActionPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
 export const HostKickPayload = HostActionPayload.extend({ playerId: z.string().min(1) });
@@ -106,6 +115,14 @@ export const PlayerAnswerPayload = z.union([
   z.strictObject({ ...answerTarget, value: z.number() }),
 ]);
 
+/** Plays a joker on the current question; `targetId` for Copieur, Gel, Brouilleur, Voleur. */
+export const PlayerJokerPayload = z.object({
+  pin: Pin,
+  questionIndex: z.number().int().min(0),
+  joker: JokerType,
+  targetId: z.string().min(1).optional(),
+});
+
 export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
 export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
@@ -115,6 +132,7 @@ export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
 export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
 export type PlayerAvatarsPayload = z.infer<typeof PlayerAvatarsPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
+export type PlayerJokerPayload = z.infer<typeof PlayerJokerPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput = { choiceIndex: number } | { text: string } | { value: number };
 
@@ -175,6 +193,12 @@ export interface ClientToServerEvents {
   /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack) => void) => void;
+  /**
+   * Games with jokers: plays one joker of the hand on the current question (QUESTION_INTRO /
+   * ANSWERING, before answering, not paused, one per question). `JOKER_REFUSED` otherwise (the
+   * joker stays in hand). The server then sends `joker:used` to everyone and `joker:state`.
+   */
+  'player:joker': (p: PlayerJokerPayload, ack: (r: Ack) => void) => void;
 }
 
 // ---------- Server → client payloads ----------
@@ -192,6 +216,8 @@ export interface GameStatePayload {
   remainingMs?: number;
   /** QUESTION_INTRO / ANSWERING only: the game is paused, the timer frozen (PLAN.md §2). */
   paused?: GamePause;
+  /** The game is played with jokers. */
+  jokers?: true;
 }
 
 export interface GamePause {
@@ -317,7 +343,69 @@ export interface PlayerResultPayload {
   /** SLIDER: the player's guess (absent without an answer) and the correct value. */
   yourValue?: number;
   correctValue?: number;
+  /**
+   * Games with jokers: what jokers did to this player on this question (included in
+   * `pointsEarned`, which can then be negative: Double ou rien lost, Voleur victim).
+   */
+  jokers?: JokerResult[];
 }
+
+/** What a joker does to one phone's controls on the current question (that phone only). */
+export interface JokerEffects {
+  /** 50/50, choice questions: choice indexes to hide (wrong ones only). */
+  hiddenChoices?: number[];
+  /** 50/50, SLIDER: a narrower range that contains the answer. */
+  sliderRange?: { min: number; max: number };
+  /** 50/50, TYPE_ANSWER: first letter of the expected answer. */
+  firstLetter?: string;
+  /** Gel: answers refused during the first `ms` of ANSWERING (pauses excluded). */
+  frozen?: { ms: number; by: LobbyMember };
+  /** Brouilleur: grey buttons in this order, labelled with the choice texts (read the TV). */
+  scrambled?: { by: LobbyMember; choices: { index: number; text: string }[] };
+  /** Copieur: the target answered, so did you (copied answer, not shown). */
+  copied?: true;
+}
+
+/** To each player of a game with jokers: their hand and what jokers do to them right now. */
+export interface PlayerJokersPayload {
+  /** Question these effects / `played` refer to (-1 in LOBBY). */
+  questionIndex: number;
+  /** Its type, so the phone greys out the jokers it doesn't take (`jokerAvailability`). */
+  questionType?: QuestionType;
+  hand: JokerType[];
+  /** Joker played on `questionIndex`, with its target (Copieur, Gel, Brouilleur, Voleur). */
+  played?: { joker: JokerType; target?: LobbyMember };
+  /** A Bouclier is armed: it blocks the next attack aimed at this player. */
+  shield?: true;
+  /** The other players (possible targets), with their team in team mode. */
+  others: (LobbyMember & { teamId?: TeamId })[];
+  /** Ids of the players already attacked on this question (one attack per target). */
+  attacked: string[];
+  effects: JokerEffects;
+}
+
+/** To everyone (big announcement on the TV): someone played a joker. */
+export interface JokerUsedPayload {
+  questionIndex: number;
+  joker: JokerType;
+  by: LobbyMember;
+  /** Gel, Brouilleur, Voleur (never Copieur: whom you copy stays secret). */
+  target?: LobbyMember;
+  /** The target's Bouclier blocked this attack. */
+  blocked?: true;
+}
+
+/** What jokers changed for one player at the reveal (`player:result.jokers`). */
+export type JokerResult =
+  | { kind: 'double'; points: number } // right answer, `points` = extra points (×2)
+  | { kind: 'doubleLost'; points: number } // wrong / no answer, `points` = points lost (≤ 500)
+  | { kind: 'shieldSaved' } // wrong answer, the streak was kept
+  | { kind: 'stole'; points: number; player: LobbyMember }
+  | { kind: 'stolen'; points: number; player: LobbyMember }
+  | { kind: 'copied'; player: LobbyMember }
+  | { kind: 'copyMissed'; player: LobbyMember }
+  | { kind: 'hourglass'; points: number } // extra points thanks to the Sablier
+  | { kind: 'earned'; joker: JokerType }; // new joker for a streak of 3, 6, 9…
 
 export interface ServerToClientEvents {
   'game:state': (p: GameStatePayload) => void; // all
@@ -332,6 +420,8 @@ export interface ServerToClientEvents {
   leaderboard: (p: StandingsPayload) => void; // host
   podium: (p: StandingsPayload) => void; // all
   'player:kicked': (p: Record<string, never>) => void; // that player
+  'joker:state': (p: PlayerJokersPayload) => void; // each player (games with jokers)
+  'joker:used': (p: JokerUsedPayload) => void; // all (games with jokers)
   error: (p: ErrorPayload) => void; // sender
 }
 

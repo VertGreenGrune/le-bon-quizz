@@ -7,6 +7,7 @@ import { registerSocketHandlers } from './socket/index.js';
 import { registerApi } from './api/index.js';
 import { createPrisma } from './db.js';
 import { createPrismaPersistence } from './game/persistence.js';
+import { e2eJokerHand } from './game/jokers.js';
 import { mailerFromEnv } from './mail/mailer.js';
 import { registerWeb } from './web.js';
 
@@ -46,7 +47,10 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(app.server, {
   pingInterval: 5_000,
   pingTimeout: 5_000,
 });
-registerSocketHandlers(io, { persistence: createPrismaPersistence(prisma) });
+registerSocketHandlers(io, {
+  persistence: createPrismaPersistence(prisma),
+  jokerHand: e2eJokerHand(process.env),
+});
 
 // Fly.io stops machines with SIGINT, Docker with SIGTERM.
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

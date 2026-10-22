@@ -32,7 +32,12 @@ export default defineConfig({
       command: `${DATABASE_URL ? 'pnpm exec prisma migrate deploy && ' : ''}node --import tsx src/index.ts`,
       cwd: 'apps/server',
       url: `${SERVER_URL}/health`,
-      env: { PORT: String(SERVER_PORT), ...(DATABASE_URL && { DATABASE_URL }) },
+      // Known joker hands for `e2e/jokers.spec.ts` (instead of random ones).
+      env: {
+        PORT: String(SERVER_PORT),
+        E2E_JOKER_HAND: 'freeze,copy,fifty',
+        ...(DATABASE_URL && { DATABASE_URL }),
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },

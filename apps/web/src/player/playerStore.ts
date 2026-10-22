@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import type { AnswerInput, AvatarId, ErrorCode, TeamId } from '@lbq/shared';
+import type { AnswerInput, AvatarId, ErrorCode, JokerType, TeamId } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import {
+  errorMessage,
   initialPlayerState,
   playerReducer,
   type PlayerAction,
@@ -68,6 +69,11 @@ function attach() {
     vibrate(payload.correct ? [80, 60, 80] : 300);
   });
   socket.on('lobby:teams', (payload) => dispatch({ type: 'teams', payload }));
+  socket.on('joker:state', (payload) => dispatch({ type: 'jokers', payload }));
+  socket.on('joker:used', (payload) => {
+    dispatch({ type: 'jokerUsed', payload, now: Date.now() });
+    if (payload.target?.id === state.playerId) vibrate([200, 80, 200]); // attacked!
+  });
   socket.on('podium', ({ top, teams }) => dispatch({ type: 'podium', top, teams }));
   socket.on('player:kicked', () => {
     clearSession();
@@ -234,6 +240,28 @@ export function sendAnswer(answer: AnswerInput) {
         dispatch({ type: 'answerRejected', questionIndex });
       }
     });
+}
+
+/**
+ * Plays a joker on the current question; resolves with the French error message, or null when
+ * the server accepted it (it then sends `joker:state` / `joker:used`).
+ */
+export function playJoker(joker: JokerType, targetId?: string): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  vibrate(40);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit(
+        'player:joker',
+        { pin: session.pin, questionIndex: state.questionIndex, joker, targetId },
+        (err, res) => {
+          if (err) resolve(errorMessage('TIMEOUT'));
+          else resolve(res.ok ? null : res.error.message);
+        },
+      );
+  });
 }
 
 /** Team mode, lobby: picks / switches team. The server answers with `lobby:teams`. */

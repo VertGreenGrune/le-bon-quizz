@@ -15,6 +15,8 @@ export function StartGameDialog({
 }) {
   const [mode, setMode] = useState<GameOptions['mode']>('solo');
   const [teamCount, setTeamCount] = useState<TeamCount>(2);
+  // Jokers are the selling point: on by default.
+  const [jokers, setJokers] = useState(true);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -105,6 +107,22 @@ export function StartGameDialog({
           </fieldset>
         )}
 
+        <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 border-gray-200 p-3 hover:border-brand/50">
+          <input
+            type="checkbox"
+            checked={jokers}
+            onChange={(e) => setJokers(e.target.checked)}
+            className="mt-1 size-5 accent-brand"
+          />
+          <span>
+            <span className="font-black">🃏 Jokers</span>
+            <span className="block text-sm text-gray-500">
+              3 jokers par joueur (50/50, Gel, Copieur, Voleur…), +1 toutes les 3 bonnes réponses
+              d'affilée.
+            </span>
+          </span>
+        </label>
+
         <div className="flex justify-end gap-2">
           <button
             type="button"
@@ -115,7 +133,12 @@ export function StartGameDialog({
           </button>
           <button
             type="button"
-            onClick={() => onStart(mode === 'teams' ? { mode, teamCount } : { mode })}
+            onClick={() =>
+              onStart({
+                ...(mode === 'teams' ? { mode, teamCount } : { mode }),
+                ...(jokers && { jokers: true }),
+              })
+            }
             className="rounded-lg bg-answer-green px-5 py-2 font-black text-white"
           >
             ▶ Lancer

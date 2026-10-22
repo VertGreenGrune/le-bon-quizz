@@ -1074,7 +1074,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
 `lbq_test_t<nn>`, e2e DB `lbq_e2e_t<nn>`.
 
 ### T25 — Jokers (power-ups) ⭐ user idea
-- **Status:** in-progress (T25 agent, worktree ../lbq-T25, branch task/T25-jokers)
+- **Status:** done
 - **Depends on:** T24 (everything merged)
 - **Host option** « Jokers » (on by default in the dialog: it's the selling point) — each player
   gets **3 jokers drawn at random** at the start + **1 more every 3 correct answers in a row**
@@ -1103,6 +1103,48 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
 - **Tests:** each joker's effect and its interaction with streaks, team averages, pause, rejoin,
   every question type; earning rule; refunds; e2e: two phones, one freezes the other, Copieur
   copies an answer.
+- **Summary:** shared `jokers.ts`: `JokerType` (`fifty`, `copy`, `freeze`, `scramble`, `double`,
+  `shield`, `thief`, `hourglass`), `JOKERS` (French name, icon, description, target / attack),
+  constants (3 at start, max 5, +1 per streak of 3, Gel 5 s, −500, 10 %, +1 s) and **the single
+  per-type table `jokerAvailability(type)`** / `jokerAllowed` (Wave 6: T27's types = one line
+  each). Contract (additive): `host:create.jokers?`, `player:joker` → `Ack`, `joker:state` (each
+  player: hand, played joker, shield, possible targets, attacked ids, effects of this phone only)
+  and `joker:used` (TV announcement), `game:state.jokers?`, `RankedPlayer.jokers?` (leaderboard),
+  `player:result.jokers?` (`JokerResult[]`), errors `JOKER_REFUSED` / `FROZEN`; REST
+  `GameSummary.jokers?`, `GameReportRow.jokersUsed?`. Server: all joker logic in
+  `game/jokers.ts` (`Jokers` class: deal, per-question reset where pending Gel / Brouilleur land,
+  50/50 effects, Copieur chains, Double / Bouclier / Voleur / Sablier at REVEAL, streak rewards,
+  payloads), `Game.ts` only calls hooks (`deal`, `startQuestion`, `checkAnswer`, `scoringMs`,
+  `onAnswered`, `savesStreak`, `adjustPoints`, `afterScoring`, copier awaiting rules, resync) —
+  answers go through one `recordAnswer` path (Copieur reuses it); team scores floored at 0.
+  Migration `20261022200000_jokers` (`GameSession.jokers`, `PlayerResult.jokersUsed`), report +
+  CSV `jokers` column. Web: start dialog « 🃏 Jokers » (on by default) → `&jokers=1`; phone
+  `player/jokers.tsx` (joker bar under the get-ready / answer screens, bottom sheet with
+  description + avatar target picker filtered like the server, frozen overlay with countdown,
+  « Tu copies … » screen, grey scrambled buttons with texts, 50/50 empty slots / narrowed slider
+  / first letter, result lines, toasts, vibration when attacked), small hooks in `PlayPage.tsx`;
+  TV `host/jokerScreens.tsx` (queued big announcements with avatars + new CC0 `joker.wav`,
+  leaderboard icons: joker played + hand) + « 🃏 Jokers » header badge; reports: badge + « Jokers
+  joués » column. Tests: `Game.jokers.test.ts` (29: deal, earning + cap, every refusal, each joker,
+  two copiers, copy of a past answer, copy miss, kicked target, Gel with a pause, Brouilleur
+  waiting past poll / typed / slider, one attack per target, Bouclier block + streak, Voleur,
+  Double floor, Sablier, typed / slider, team targeting + averages, rejoin resync, leaderboard /
+  standings, paused), persistence (Postgres: saved jokers, summary flag, CSV), web
+  `lib/jokers.test.ts`, `playerState.jokers.test.ts`, game options; e2e `e2e/jokers.spec.ts`
+  (dialog option, Gel announced on TV + toast, Copieur, 50/50, frozen phone next question, 50/50
+  greyed on a vrai/faux). Checked with screenshots (host 1600×900, Pixel 7).
+- **Deviations / notes:** (1) Attacks (Gel, Brouilleur) always land on the target's **next**
+  question (never the current one), and wait past questions they can't hit (polls; Brouilleur also
+  typed / slider). (2) « Refunded » on polls = jokers are refused there and stay in hand (the
+  bar is hidden). (3) 50/50 is refused when it would hide nothing (vrai/faux, 2 choices with one
+  wrong). (4) Copieur's target is secret on the TV; a copier can't answer by itself after playing
+  it; copying a player who already answered counts from the moment it is played. (5) The phone
+  learns the question type in `joker:state.questionType` (to grey jokers during the intro).
+  (6) Test hook: `E2E_JOKER_HAND=freeze,copy,fifty` gives everyone that hand (ignored in
+  production); set in `playwright.config.ts` (outside scope). (7) Jokers are on by default in the
+  dialog, so the team e2e now plays with jokers (unused). (8) 🦜 for Copieur: 🪞 isn't rendered by
+  Windows fonts. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on
+  real phones.
 
 ### T26 — « Mytho ! » bluff question type (Fibbage-like) ⭐ the most "friends" feature
 - **Status:** todo
@@ -1331,3 +1373,16 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `EditorShell.tsx` (« Mon compte » link + one-off `location.state.flash` banner), `main.tsx`
   (3 routes), README / CLAUDE.md (Mailpit). Login/register form pieces moved from `AuthPage.tsx`
   to `auth/AuthCard.tsx`.
+- 2026-10-22, T25 agent (all additive, PLAN.md §3–§7): new `packages/shared/src/jokers.ts`
+  (exported from the index) with **`jokerAvailability(type)`** — T27's types are wired there at
+  merge (`WHO_OF_US` / `WORD_CLOUD`: `{ jokers: false }`; `ORDER` / `PIN`: `unavailable:
+  ['fifty']`, `scramble: false`). `events.ts`: errors `JOKER_REFUSED` / `FROZEN`,
+  `HostCreatePayload.jokers?`, `PlayerJokerPayload` + `player:joker`, `joker:state`
+  (`PlayerJokersPayload`, `JokerEffects`), `joker:used` (`JokerUsedPayload`),
+  `GameStatePayload.jokers?`, `RankedPlayer.jokers?`, `PlayerResultPayload.jokers?`
+  (`JokerResult`). `api.ts`: `GameSummary.jokers?`, `GameReportRow.jokersUsed?`. Prisma
+  migration `20261022200000_jokers`. In `Game.ts`, `answer()` now delegates to a private
+  `recordAnswer(player, given, responseMs)` (T27: new answer kinds just go through it; the
+  Copieur replays the original `AnswerInput`). Outside scope: `playwright.config.ts`
+  (`E2E_JOKER_HAND`), `apps/server/src/index.ts` (passes it), `apps/web/scripts/generate-sounds.mjs`
+  + `public/sounds/joker.wav`.
