@@ -1066,7 +1066,7 @@ Blooket Gold Quest (random chests, stealing), Gimkit (Draw That), "Qui veut gagn
 jokers, Jeopardy final wager. Target audience: **friends, ~6 players, 15 max**, one TV.
 
 **Order** (each task touches `Game.ts` + host + phones, so they run **one at a time** unless
-noted): **T25 → T26 → T27 (‖ T32) → T29 → T31 → T28 → T30.** Every feature is a **host option**
+noted): **T25 → T26 → T27 → T31 → T28 → T30** (T29, T32 cancelled). Every feature is a **host option**
 in the Solo/Équipes dialog or a question type in the editor, off by default when it changes the
 classic game, and must work in solo + team mode, with the pause (T21) and the rejoin/resync.
 Each agent designs its contract additively and documents it in PLAN.md + the notes below.
@@ -1119,7 +1119,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
 
 ### T27 — New question types: ordre, point sur l'image, « Qui de nous ? », nuage de mots
 - **Status:** todo
-- **Depends on:** T26 (same question pipeline); can run in parallel with T32
+- **Depends on:** T26 (same question pipeline)
 - **`ORDER` — Remettre dans l'ordre:** 3–6 items (e.g. films by release year) dragged into order
   on the phone; full points if all correct, partial points per item in the right place.
 - **`PIN` — Point sur l'image:** host image (map, poster, photo) + correct zone (circle drawn in
@@ -1135,33 +1135,16 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   reports; e2e for each type.
 
 ### T32 — Ambiance: live reactions + end-of-game awards
-- **Status:** todo
-- **Depends on:** T25; can run in parallel with T27 (touches the reaction overlay and the podium,
-  not the question screens)
-- **Reactions:** phones get a reaction bar (😂 🔥 😱 👏 🤡 💀) during REVEAL / LEADERBOARD / PODIUM;
-  they float up on the TV with the sender's avatar (rate-limited, 1 per 2 s per player; host can
-  turn them off).
-- **Awards at the end** (after the podium, one card at a time, with sound): « ⚡ L'éclair »
-  (fastest average answer), « 🐢 La tortue », « 🎯 Le sniper » (best accuracy), « 🤡 Le roi du
-  bluff » (most players fooled, T26), « 🦹 Le pickpocket » (most points stolen, T25), « 💥 Le
-  kamikaze » (most points lost with Double ou rien), « 🔥 La série » (longest streak), « 😂 Le
-  public » (most reactions sent). Only awards that make sense for this game are shown. Saved in
-  the report.
+- **Status:** cancelled (2026-10-22, user decision — was: emoji reactions from the phones on the
+  TV + end-of-game awards). Don't implement.
 
 ### T29 — Twists: « Quitte ou double » final + Roue des surprises
-- **Status:** todo
-- **Depends on:** T25, T26, T27
-- **Quitte ou double** (host option): before the **last question**, each player **bets 0–100 %
-  of their score** on their phone (Jeopardy final); correct = + bet, wrong = − bet. The TV shows
-  the bets as suspense before the reveal.
-- **Roue des surprises** (host option, every N questions, default 3): a wheel spins on the TV and
-  lands on a random event for one random player or everyone — « +500 », « Échange ton score avec
-  le joueur juste devant », « Joker gratuit », « Question à points doubles », « −10 % », « Rien
-  du tout ». Server-chosen, animated on the TV, saved in the report.
+- **Status:** cancelled (2026-10-22, user decision — was: final bet on the last question +
+  random-event wheel). Don't implement.
 
 ### T31 — Game mode « Survie » (elimination with ghosts)
 - **Status:** todo
-- **Depends on:** T29
+- **Depends on:** T27
 - New mode in the dialog (Solo / Équipes / **Survie**): everyone has **3 ❤️**; a wrong or missing
   answer costs a heart; at 0 the player becomes a **👻 fantôme**: still answers, and each correct
   ghost answer lets them **haunt** a living player (Gel or Brouilleur from T25). Last survivor
