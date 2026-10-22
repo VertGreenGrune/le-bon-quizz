@@ -1074,7 +1074,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
 `lbq_test_t<nn>`, e2e DB `lbq_e2e_t<nn>`.
 
 ### T25 — Jokers (power-ups) ⭐ user idea
-- **Status:** todo
+- **Status:** in-progress (T25 agent, worktree ../lbq-T25, branch task/T25-jokers)
 - **Depends on:** T24 (everything merged)
 - **Host option** « Jokers » (on by default in the dialog: it's the selling point) — each player
   gets **3 jokers drawn at random** at the start + **1 more every 3 correct answers in a row**
