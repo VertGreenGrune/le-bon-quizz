@@ -1136,7 +1136,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   `lbq_e2e_t25` / `lbq_e2e_t27`. Shared Postgres, never `docker compose down`.
 
 ### T27 — New question types: ordre, point sur l'image, « Qui de nous ? », nuage de mots
-- **Status:** todo
+- **Status:** in-progress (T27 agent, worktree ../lbq-T27, branch task/T27-question-types)
 - **Depends on:** T24 — **runs in parallel with T25** (see "Wave 6 coordination" above)
 - **`ORDER` — Remettre dans l'ordre:** 3–6 items (e.g. films by release year) dragged into order
   on the phone; full points if all correct, partial points per item in the right place.
