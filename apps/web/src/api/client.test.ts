@@ -50,6 +50,29 @@ describe('createApiClient', () => {
     ]);
   });
 
+  it('calls the password endpoints', async () => {
+    const fetchFn = vi.fn(
+      async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 204 }),
+    );
+    const api = createApiClient('', fetchFn);
+    await api.auth.forgotPassword({ email: 'a@b.fr' });
+    await api.auth.changePassword({ currentPassword: 'old', newPassword: 'nouveau-mdp' });
+    expect(fetchFn.mock.calls.map(([url, init]) => [url, init?.method, init?.body])).toEqual([
+      ['/api/auth/forgot-password', 'POST', '{"email":"a@b.fr"}'],
+      [
+        '/api/auth/change-password',
+        'POST',
+        '{"currentPassword":"old","newPassword":"nouveau-mdp"}',
+      ],
+    ]);
+    const expired = createApiClient('', async () =>
+      json(400, { error: { code: 'RESET_TOKEN_INVALID', message: 'Lien expiré' } }),
+    );
+    await expect(
+      expired.auth.resetPassword({ token: 't', password: 'nouveau-mdp' }),
+    ).rejects.toMatchObject({ status: 400, code: 'RESET_TOKEN_INVALID' });
+  });
+
   it('uploads images as multipart without a JSON content-type', async () => {
     const fetchFn = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) =>
       json(201, { url: 'u' }),

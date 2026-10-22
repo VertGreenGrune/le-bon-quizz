@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
-import type { LoginBody, PublicUser, RegisterBody } from '@lbq/shared';
+import type { LoginBody, PublicUser, RegisterBody, ResetPasswordBody } from '@lbq/shared';
 import { ApiError, api } from '../api';
 import { reconnectSocket } from '../lib/socket';
 
@@ -19,6 +19,8 @@ interface AuthValue {
   loadError: string | null;
   login: (body: LoginBody) => Promise<void>;
   register: (body: RegisterBody) => Promise<void>;
+  /** New password from an e-mailed link; logs the host in. */
+  resetPassword: (body: ResetPasswordBody) => Promise<void>;
   logout: () => Promise<void>;
   reload: () => void;
 }
@@ -54,6 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((await api.auth.register(body)).user);
     reconnectSocket();
   }, []);
+  const resetPassword = useCallback(async (body: ResetPasswordBody) => {
+    setUser((await api.auth.resetPassword(body)).user);
+    reconnectSocket();
+  }, []);
   const logout = useCallback(async () => {
     await api.auth.logout().catch(() => {});
     setUser(null);
@@ -66,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loadError, login, register, logout, reload }),
-    [user, loadError, login, register, logout, reload],
+    () => ({ user, loadError, login, register, resetPassword, logout, reload }),
+    [user, loadError, login, register, resetPassword, logout, reload],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -78,7 +84,7 @@ export function useAuth(): AuthValue {
   return ctx;
 }
 
-/** Layout route for `/login`, `/register` and `/editor/**`. */
+/** Layout route for `/login`, `/register`, the password pages and `/editor/**`. */
 export function AuthLayout() {
   return (
     <AuthProvider>

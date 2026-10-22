@@ -60,6 +60,10 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U lbq -d lbq_e2e"
           --health-interval 5s --health-timeout 3s --health-retries 10
+      # Catches the password reset e-mail (e2e/password-reset.spec.ts reads it via its API).
+      mailpit:
+        image: axllent/mailpit:v1.27
+        ports: ['1025:1025', '8025:8025']
     env:
       # Enables the specs that need host accounts (library); migrated by playwright.config.ts.
       E2E_DATABASE_URL: postgresql://lbq:lbq@localhost:5432/lbq_e2e

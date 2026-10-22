@@ -36,7 +36,7 @@ pnpm typecheck     # all packages
 pnpm test          # Vitest, all packages
 pnpm format:check  # Prettier (CI fails on unformatted files: run `pnpm format`)
 pnpm build         # production build (server bundled by esbuild into apps/server/dist)
-docker compose up -d            # Postgres (localhost:5432, lbq/lbq)
+docker compose up -d            # Postgres (localhost:5432, lbq/lbq) + Mailpit (dev e-mails: http://localhost:8025)
 pnpm --filter @lbq/server db:migrate   # apply/create migrations (prisma migrate dev)
 pnpm --filter @lbq/server db:seed      # demo host demo@lebonquizz.local / demo1234 + DEMO_QUIZ
 pnpm --filter @lbq/server quiz:import content/quizzes/tim-burton <host email>  # private quiz from a folder

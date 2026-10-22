@@ -7,6 +7,7 @@ import { registerSocketHandlers } from './socket/index.js';
 import { registerApi } from './api/index.js';
 import { createPrisma } from './db.js';
 import { createPrismaPersistence } from './game/persistence.js';
+import { mailerFromEnv } from './mail/mailer.js';
 import { registerWeb } from './web.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -28,6 +29,9 @@ await registerApi(app, {
   prisma,
   uploadDir: path.resolve(process.env.UPLOAD_DIR ?? 'uploads'),
   publicUrl: process.env.PUBLIC_URL,
+  mailer: mailerFromEnv(process.env, app.log),
+  // Links in e-mails: PUBLIC_WEB_URL, else the single allowed web origin, else the request's.
+  publicWebUrl: process.env.PUBLIC_WEB_URL || process.env.CORS_ORIGIN,
 });
 
 app.get('/health', async () => ({ status: 'ok' }));

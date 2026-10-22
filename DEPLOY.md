@@ -99,6 +99,48 @@ connection string instead.
 Without DSNs Sentry stays off. `SENTRY_TRACES_SAMPLE_RATE` (`[env]`, default 0) enables
 performance tracing on the server.
 
+## 4b. E-mails — "Mot de passe oublié" (recommended before opening accounts to others)
+
+The server sends one kind of e-mail: the password reset link (valid 1 hour). It uses plain
+**SMTP** (nodemailer), so any provider works. Recommended: **Brevo** (French company, free tier
+300 e-mails/day, more than enough). Alternatives: Resend, Mailjet (same steps, other SMTP host).
+
+**Without SMTP configured** the app still works: the server logs a warning at startup, "Mot de
+passe oublié" still answers normally, and the reset link is written to the server log
+(`fly logs`, look for `SMTP_URL not set`) — you can pass it to the host yourself.
+
+1. **Sender domain.** E-mails must come from a domain you own (e.g. `lebonquizz.fr`), not
+   `fly.dev` nor a Gmail/Hotmail address, otherwise they land in spam or are refused.
+2. **Brevo account:** https://www.brevo.com → sign up (free plan) → _Senders, Domains & Dedicated
+   IPs_ → **Domains** → _Add a domain_ → your domain. Brevo shows DNS records to add at your
+   registrar (OVH, Gandi, Cloudflare…):
+   - **SPF** (TXT on the domain): `v=spf1 include:spf.brevo.com ~all` — if a `v=spf1` record
+     already exists, add `include:spf.brevo.com` to it (a domain must have only one SPF record);
+   - **DKIM** (the TXT / CNAME records Brevo gives, `brevo._domainkey…`);
+   - **DMARC** (TXT on `_dmarc`, if you don't have one): `v=DMARC1; p=none;`;
+   - the Brevo verification code (TXT).
+     Click _Verify_ once DNS has propagated (minutes to a few hours). Then add a **sender**
+     `noreply@<your domain>` (_Senders_ → _Add a sender_).
+3. **SMTP key:** _SMTP & API_ → **SMTP** tab → _Generate a new SMTP key_. Note the **login**
+   shown there (looks like `xxxx@smtp-brevo.com`) and the key.
+4. **Fly secrets** (URL-encode `@` as `%40` in the login):
+   ```powershell
+   fly secrets set --app lebonquizz `
+     SMTP_URL="smtps://xxxx%40smtp-brevo.com:<smtp key>@smtp-relay.brevo.com:465" `
+     MAIL_FROM="Le Bon Quizz <noreply@lebonquizz.fr>"
+   ```
+   `PUBLIC_WEB_URL` (in `fly.toml` `[env]`) is the origin used in the links: keep it equal to
+   the public address of the app (change it with a custom domain, see §7).
+5. **Test:** open `/login` → « Mot de passe oublié ? » with your own account, check the e-mail
+   arrives (not in spam) and the link opens the app. `fly logs` shows SMTP errors if any.
+
+Limits built in: 3 reset requests / hour per e-mail and 10 / hour per IP (beyond, the answer is
+the same but nothing is sent); 10 failed logins / 15 min per IP + e-mail → « Trop de
+tentatives ». Counters are in memory (reset by a deploy / restart).
+
+In dev nothing real is sent: without `SMTP_URL` the server uses **Mailpit**
+(`docker compose up -d mailpit`), inbox at http://localhost:8025.
+
 ## 5. First deploy
 
 ```powershell
@@ -155,7 +197,7 @@ under `deploy:` (next to `runs-on`).
 ## 7. Later
 
 - **Custom domain:** `fly certs add quiz.example.com --app lebonquizz`, create the DNS records
-  it prints, then set `CORS_ORIGIN` and `PUBLIC_URL` in `fly.toml` to `https://quiz.example.com`
+  it prints, then set `CORS_ORIGIN`, `PUBLIC_URL` and `PUBLIC_WEB_URL` in `fly.toml` to `https://quiz.example.com`
   and redeploy. Images uploaded before keep their old absolute `*.fly.dev` URL (still works).
 - **Deploys interrupt live games** (in-memory state, one machine). Deploy between sessions.
 - **Rollback:** `fly releases --app lebonquizz --image`, then
@@ -171,6 +213,8 @@ under `deploy:` (next to `runs-on`).
 | --------------------------- | ------------------------- | -------------------------------------------- |
 | `DATABASE_URL`              | secret                    | set by `fly mpg attach`                      |
 | `SENTRY_DSN`                | secret                    | server DSN (optional)                        |
+| `SMTP_URL`, `MAIL_FROM`     | secret                    | SMTP provider + sender (§4b, optional)       |
+| `PUBLIC_WEB_URL`            | `fly.toml`                | `https://lebonquizz.fly.dev` (e-mail links)  |
 | `NODE_ENV`                  | `fly.toml` / image        | `production` (Secure cookie)                 |
 | `PORT`                      | `fly.toml` / image        | `8080`                                       |
 | `WEB_DIST_DIR`              | image                     | `/app/public` (web app served by the server) |

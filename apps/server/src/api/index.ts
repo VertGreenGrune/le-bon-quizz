@@ -4,7 +4,9 @@ import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { requireAuth } from '../auth/index.js';
+import type { AuthRateLimits } from '../auth/rateLimit.js';
 import type { PrismaClient } from '../db.js';
+import type { Mailer } from '../mail/mailer.js';
 import { authRoutes } from './auth.routes.js';
 import { installErrorHandler } from './errors.js';
 import { gameRoutes } from './games.routes.js';
@@ -18,6 +20,12 @@ export interface ApiDeps {
   uploadDir: string;
   /** Public base URL of this server for upload URLs; defaults to the request's host. */
   publicUrl?: string;
+  /** Sends the password reset e-mails; default: written to the log. */
+  mailer?: Mailer;
+  /** Web app origin used in e-mailed links; defaults to the request's `Origin`. */
+  publicWebUrl?: string;
+  /** In-memory limits of login / reset requests; default: fresh ones. */
+  rateLimits?: AuthRateLimits;
 }
 
 /** REST API of PLAN.md §6 under `/api`, plus static `/uploads/`. */
