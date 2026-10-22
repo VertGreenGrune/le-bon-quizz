@@ -928,7 +928,7 @@ is closed and a new page takes over with the same nickname.
   add from their own copies; the import script skips the sound with a warning if a file is missing.
 
 ### T24 — Forgotten password: reset by e-mail (+ login rate limit, change password)
-- **Status:** todo
+- **Status:** in-progress (claude T24, ../lbq-T24)
 - **Depends on:** — (all auth work done; can run in parallel with T23, which only touches
   `content/**` and the import script)
 - **Ports:** server 3024 / web 5204, test DB `lbq_test_t24`, e2e DB `lbq_e2e_t24`.
