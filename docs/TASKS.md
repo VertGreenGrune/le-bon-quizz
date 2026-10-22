@@ -910,7 +910,7 @@ is closed and a new page takes over with the same nickname.
   **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on a real TV.
 
 ### T23 — Content: "Tim Burton" quiz + quiz import script (after T22)
-- **Status:** todo
+- **Status:** in-progress (claude T23, ../lbq-T23)
 - **Depends on:** T22 merged
 - **Scope:** `content/quizzes/tim-burton/**` (quiz JSON + freely licensed media + `CREDITS.md`),
   `apps/server/scripts/import-quiz.ts` + a `quiz:import` script in `apps/server/package.json`.
