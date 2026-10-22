@@ -1,4 +1,4 @@
-# Local Postgres for development: `docker compose up -d`
+# Local Postgres + Mailpit for development: `docker compose up -d`
 name: lebonquizz
 services:
   postgres:
@@ -17,6 +17,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  # Catches every e-mail sent in dev (password reset): SMTP localhost:1025, inbox at
+  # http://localhost:8025. Nothing real is ever sent.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
 
 volumes:
   pgdata:

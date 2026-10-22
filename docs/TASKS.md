@@ -928,7 +928,7 @@ is closed and a new page takes over with the same nickname.
   add from their own copies; the import script skips the sound with a warning if a file is missing.
 
 ### T24 — Forgotten password: reset by e-mail (+ login rate limit, change password)
-- **Status:** in-progress (claude T24, ../lbq-T24)
+- **Status:** done
 - **Depends on:** — (all auth work done; can run in parallel with T23, which only touches
   `content/**` and the import script)
 - **Ports:** server 3024 / web 5204, test DB `lbq_test_t24`, e2e DB `lbq_e2e_t24`.
@@ -981,6 +981,48 @@ with wrong current password, rate limits for reset and login), mailer with a fak
 Mailpit container): forgot password → read the mail through Mailpit's API
 (`http://localhost:8025/api/v1/…`) → open the link → new password → logged in → old password
 refused, new one works.
+
+- **Summary:** shared (`api.ts`): `ForgotPasswordBody`, `ResetPasswordBody`, `ChangePasswordBody`
+  (new password = registration rules), error codes `TOO_MANY_ATTEMPTS` / `RESET_TOKEN_INVALID` /
+  `WRONG_PASSWORD`. DB: `PasswordResetToken` (id = SHA-256 of the token, 1 h, `usedAt`), migration
+  `20261022162431_password_reset`. Server (`api/auth.routes.ts`): `forgot-password` always 204,
+  32-byte base64url token, previous unused tokens deleted, mail sent without awaiting (no timing
+  hint); `reset-password` consumes the token with a conditional update (single use even when
+  concurrent), deletes all sessions + other tokens, sets the new hash, logs in (cookie);
+  `change-password` checks the current password, keeps this session only. Rate limits in memory
+  (`auth/rateLimit.ts`, sliding window): login 10 failed / 15 min per IP + e-mail → 429 (a success
+  resets it), reset 3 / h per e-mail and 10 / h per IP (neutral 204, nothing sent). Mail
+  (`mail/`): `mailerFromEnv` — nodemailer on `SMTP_URL` + `MAIL_FROM`; dev default
+  `smtp://localhost:1025` (Mailpit, added to `docker-compose.yml`, UI :8025); production without
+  SMTP → startup warning + mail (with its link) written to the log; a failed send is logged with
+  the link too. French mail, plain text + HTML in the app colors (`passwordResetMail`). Web:
+  « Mot de passe oublié ? » on `/login` (carries the typed e-mail), `/forgot-password` (neutral
+  message), `/reset-password?token=` (new password ×2 → logged in → `/editor` with « Mot de passe
+  modifié ✓ »; invalid link → message + « Demander un nouveau lien »), `/account` « Mon compte »
+  (name, e-mail, change password; link in the editor header); shared `auth/AuthCard.tsx`
+  (layout + fields), `auth/passwordForm.ts`. DEPLOY.md §4b: Brevo step by step (domain, SPF /
+  DKIM / DMARC, SMTP key, Fly secrets, test), alternatives, behaviour without SMTP. Tests:
+  `api/password.test.ts` (Postgres: neutral answer, hashed token + 1 h, origin fallback, new
+  request invalidates, rate limits, reset once / expired / unknown / weak, sessions revoked,
+  change password wrong / right, login 429 + reset on success), `mail/mailer.test.ts` (fake
+  transport, French content, link, log mailer, startup warning), `auth/rateLimit.test.ts`, web
+  client + form validation; e2e `e2e/password-reset.spec.ts` (Mailpit API: forgot → mail → link →
+  mismatched then matching passwords → `/editor` → link refused the 2nd time → old password 401,
+  new 200 → « Mon compte » wrong then right current password).
+- **Deviations / notes:** (1) Link origin: `PUBLIC_WEB_URL`, else **`CORS_ORIGIN`**, else the
+  request's `Origin` header. The `Origin` header is chosen by the client, so a deployment must
+  set one of the first two (`fly.toml` now sets `PUBLIC_WEB_URL`), otherwise someone could
+  request a reset for a victim with a fake origin and get a phishing link sent from our domain.
+  (2) The reset page doesn't check the token before the form is filled (no extra endpoint): an
+  expired link is reported on submit. (3) `change-password` also deletes unused reset tokens; it
+  has no rate limit of its own (it needs a session). (4) Rate-limit counters live in memory and
+  reset on restart / deploy. (5) `.github/workflows/ci.yml` got a Mailpit service (outside
+  scope). The e2e spec is skipped without `E2E_DATABASE_URL`, and locally (not in CI) when Mailpit
+  isn't reachable. (6) nodemailer pinned to 8.x (matches `@types/nodemailer` 8). **After merging,
+  run `pnpm --filter @lbq/server db:migrate`** and `docker compose up -d mailpit`.
+- **Follow-ups:** not tried with a real SMTP provider (only Mailpit); no e-mail verification at
+  registration (anyone can register with someone else's address — the reset mail then goes to
+  the real owner, which is fine).
 
 - T17 AI-generated quizzes from a topic (to be detailed later)
 - ~~T18 Redis state + Socket.IO Redis adapter + load test~~ — **cancelled** (2026-10-20): games have ~6 players, 15 max; one server process is enough. Do not add Redis/multi-instance work.
@@ -1116,3 +1158,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `imageEffect?` (host only — `QuestionPromptPayload` unchanged); new `POST /api/uploads/audio`
   and `AUDIO_UPLOAD_MAX_BYTES`. Prisma migration `20261021201359_media`. The multipart plugin no
   longer has a global file size limit: each upload route sets its own (`apps/server/src/api/index.ts`).
+- 2026-10-22, T24 agent (REST only, additive): `ApiErrorCode` gains `TOO_MANY_ATTEMPTS`,
+  `RESET_TOKEN_INVALID`, `WRONG_PASSWORD`; new bodies `ForgotPasswordBody`, `ResetPasswordBody`,
+  `ChangePasswordBody` (PLAN.md §5–§7). Prisma migration `20261022162431_password_reset`.
+  `ApiDeps` gains optional `mailer`, `publicWebUrl`, `rateLimits`. Also touched:
+  `docker-compose.yml` (Mailpit service), `.github/workflows/ci.yml` (Mailpit service in the e2e
+  job), `fly.toml` (`PUBLIC_WEB_URL`), `.env.example`, `apps/server/src/index.ts` (mailer wiring),
+  `EditorShell.tsx` (« Mon compte » link + one-off `location.state.flash` banner), `main.tsx`
+  (3 routes), README / CLAUDE.md (Mailpit). Login/register form pieces moved from `AuthPage.tsx`
+  to `auth/AuthCard.tsx`.

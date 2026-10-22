@@ -5,8 +5,8 @@ import type { PrismaClient } from '../db.js';
 export const SESSION_COOKIE = 'lbq_session';
 export const SESSION_TTL_MS = 30 * 24 * 3600 * 1000;
 
-/** Only the hash is stored: a leaked DB dump does not leak usable tokens. */
-const hashToken = (token: string) => createHash('sha256').update(token).digest('base64url');
+/** Only the hash is stored: a leaked DB dump does not leak usable tokens (sessions, reset links). */
+export const hashToken = (token: string) => createHash('sha256').update(token).digest('base64url');
 
 export function toPublicUser(u: {
   id: string;
@@ -47,4 +47,15 @@ export async function getUserBySessionToken(
 
 export async function deleteSession(prisma: PrismaClient, token: string): Promise<void> {
   await prisma.session.deleteMany({ where: { id: hashToken(token) } });
+}
+
+/** Logs the user out everywhere, except the session of `keepToken` if given. */
+export async function deleteUserSessions(
+  prisma: PrismaClient,
+  userId: string,
+  keepToken?: string,
+): Promise<void> {
+  await prisma.session.deleteMany({
+    where: { userId, ...(keepToken && { id: { not: hashToken(keepToken) } }) },
+  });
 }

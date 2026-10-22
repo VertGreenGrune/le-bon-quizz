@@ -6,6 +6,9 @@ import './index.css';
 import { Home } from './Home';
 import { AuthLayout, RequireAuth } from './auth/AuthContext';
 import { AuthPage } from './auth/AuthPage';
+import { AccountPage } from './auth/AccountPage';
+import { ForgotPasswordPage } from './auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './auth/ResetPasswordPage';
 import { QuizEditorPage } from './editor/QuizEditorPage';
 import { QuizListPage } from './editor/QuizListPage';
 import { HostPage } from './host/HostPage';
@@ -27,6 +30,16 @@ createRoot(document.getElementById('root')!).render(
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route
+            path="/account"
+            element={
+              <RequireAuth>
+                <AccountPage />
+              </RequireAuth>
+            }
+          />
           <Route
             path="/editor"
             element={

@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 
 /** Light dashboard layout shared by the editor pages (the game screens stay on brand purple). */
 export function EditorShell({ actions, children }: { actions?: ReactNode; children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  // One-off message passed by `navigate(…, { state: { flash } })` (e.g. after a password reset).
+  const flash = (useLocation().state as { flash?: string } | null)?.flash;
   return (
     <div className="flex min-h-dvh flex-col bg-gray-100 text-gray-900">
       <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 bg-brand px-4 py-3 text-white shadow">
@@ -29,6 +31,9 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
         {user && (
           <span className="flex items-center gap-2 text-sm">
             <span className="hidden opacity-80 sm:inline">{user.name}</span>
+            <Link to="/account" className="rounded-lg px-2 py-1 font-semibold hover:bg-white/10">
+              Mon compte
+            </Link>
             <button
               type="button"
               onClick={async () => {
@@ -42,6 +47,14 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
           </span>
         )}
       </header>
+      {flash && (
+        <p
+          role="status"
+          className="bg-green-50 px-4 py-2 text-center font-semibold text-answer-green shadow-sm"
+        >
+          {flash}
+        </p>
+      )}
       {children}
     </div>
   );

@@ -17,6 +17,12 @@ export const ApiErrorCode = z.enum([
   'NOT_FOUND',
   'EMAIL_TAKEN',
   'INVALID_CREDENTIALS',
+  /** 429: too many failed logins for this IP + e-mail (wait a few minutes). */
+  'TOO_MANY_ATTEMPTS',
+  /** Password reset link unknown, expired or already used. */
+  'RESET_TOKEN_INVALID',
+  /** `POST /auth/change-password`: the current password is wrong. */
+  'WRONG_PASSWORD',
   'FILE_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE',
   'INTERNAL',
@@ -34,11 +40,13 @@ export const PASSWORD_MIN_LENGTH = 8;
 
 /** Emails are trimmed and lowercased before validation, so lookups are case-insensitive. */
 const Email = z.string().trim().toLowerCase().max(254).pipe(z.email());
+/** Rules of a new password (registration, reset, change). */
+const NewPassword = z.string().min(PASSWORD_MIN_LENGTH).max(128);
 
 export const RegisterBody = z.object({
   email: Email,
   name: z.string().trim().min(1).max(60),
-  password: z.string().min(PASSWORD_MIN_LENGTH).max(128),
+  password: NewPassword,
 });
 export const LoginBody = z.object({
   email: Email,
@@ -46,6 +54,25 @@ export const LoginBody = z.object({
 });
 export type RegisterBody = z.infer<typeof RegisterBody>;
 export type LoginBody = z.infer<typeof LoginBody>;
+
+/** `POST /auth/forgot-password` → always 204, whether the account exists or not. */
+export const ForgotPasswordBody = z.object({ email: Email });
+/**
+ * `POST /auth/reset-password` (token from the e-mailed link, valid 1 hour, single use) →
+ * `AuthResponse` (logged in, every other session revoked) or 400 `RESET_TOKEN_INVALID`.
+ */
+export const ResetPasswordBody = z.object({
+  token: z.string().trim().min(1).max(200),
+  password: NewPassword,
+});
+/** `POST /auth/change-password` (logged in) → 204 (other sessions revoked) or 400 `WRONG_PASSWORD`. */
+export const ChangePasswordBody = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: NewPassword,
+});
+export type ForgotPasswordBody = z.infer<typeof ForgotPasswordBody>;
+export type ResetPasswordBody = z.infer<typeof ResetPasswordBody>;
+export type ChangePasswordBody = z.infer<typeof ChangePasswordBody>;
 
 export interface PublicUser {
   id: string;
@@ -55,7 +82,7 @@ export interface PublicUser {
 }
 
 /**
- * Response of `POST /auth/register` and `POST /auth/login`. The token is also set as an
+ * Response of `POST /auth/register`, `POST /auth/login` and `POST /auth/reset-password`. The token is also set as an
  * httpOnly cookie (`lbq_session`); either the cookie or `Authorization: Bearer <token>` works.
  */
 export interface AuthResponse {

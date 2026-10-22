@@ -11,14 +11,15 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime      @default(now())
-  quizzes      Quiz[]
-  sessions     Session[]
-  gameSessions GameSession[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  passwordHash        String
+  createdAt           DateTime             @default(now())
+  quizzes             Quiz[]
+  sessions            Session[]
+  gameSessions        GameSession[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 /// Host login session. `id` is the SHA-256 of the opaque token given to the client.
@@ -32,17 +33,30 @@ model Session {
   @@index([userId])
 }
 
+/// "Mot de passe oublié" link. `id` is the SHA-256 of the token sent by e-mail; valid 1 hour,
+/// single use (`usedAt`). A new request deletes the user's previous unused tokens.
+model PasswordResetToken {
+  id        String    @id
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model Quiz {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   ownerId       String
-  owner         User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   title         String
   description   String?
   coverImageUrl String?
   /// PUBLIC quizzes are listed in the library and can be launched / copied by any host.
   visibility    QuizVisibility @default(PRIVATE)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   questions     Question[]
   gameSessions  GameSession[]
 
@@ -64,20 +78,20 @@ enum QuestionType {
 }
 
 model Question {
-  id           String       @id @default(cuid())
-  quizId       String
-  quiz         Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  order        Int
-  text         String
-  imageUrl     String?
-  type         QuestionType @default(MCQ)
-  timeLimitSec Int          @default(20)
-  basePoints   Int          @default(1000)
+  id               String       @id @default(cuid())
+  quizId           String
+  quiz             Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order            Int
+  text             String
+  imageUrl         String?
+  type             QuestionType @default(MCQ)
+  timeLimitSec     Int          @default(20)
+  basePoints       Int          @default(1000)
   /// MCQ / TRUE_FALSE / POLL (poll choices are all `isCorrect: false`); empty for the others.
-  choices      Choice[]
+  choices          Choice[]
   /// Type-specific settings: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
   /// SLIDER `{ slider: { min, max, step, correct, margin, unit? } }`; null otherwise.
-  config       Json?
+  config           Json?
   /// Sound clip played on the host screen (`audio` in @lbq/shared): file URL, excerpt start
   /// (seconds) and length (5–30 s); all null without a sound.
   audioUrl         String?
@@ -110,13 +124,13 @@ model Choice {
 }
 
 model GameSession {
-  id        String         @id @default(cuid())
+  id        String           @id @default(cuid())
   /// Null once the quiz is deleted; history is kept thanks to `quizTitle`.
   quizId    String?
-  quiz      Quiz?          @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  quiz      Quiz?            @relation(fields: [quizId], references: [id], onDelete: SetNull)
   quizTitle String
   hostId    String
-  host      User           @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  host      User             @relation(fields: [hostId], references: [id], onDelete: Cascade)
   pin       String
   mode      GameMode         @default(solo)
   startedAt DateTime         @default(now())
@@ -166,9 +180,9 @@ model TeamResult {
 
 /// Snapshot of one played question (text/choices as they were) and how players answered it.
 model QuestionResult {
-  id             String      @id @default(cuid())
+  id             String       @id @default(cuid())
   gameSessionId  String
-  gameSession    GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  gameSession    GameSession  @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
   /// Position in the quiz (0-based).
   index          Int
   type           QuestionType @default(MCQ)

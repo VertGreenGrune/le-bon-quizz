@@ -18,6 +18,7 @@ tapping big colored shapes (red ▲, blue ◆, yellow ●, green ■).
 ```sh
 pnpm install
 docker compose up -d                     # Postgres on localhost:5432 (lbq/lbq) — optional for the demo
+                                         # + Mailpit: e-mails sent in dev land in http://localhost:8025
 pnpm --filter @lbq/server db:migrate     # create the tables
 pnpm --filter @lbq/server db:seed        # demo host demo@lebonquizz.local / demo1234
 pnpm dev                                 # server :3001 + web :5173

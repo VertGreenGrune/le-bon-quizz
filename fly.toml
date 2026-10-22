@@ -22,8 +22,11 @@ primary_region = 'cdg' # Paris
   TRUST_PROXY = 'true'
   CORS_ORIGIN = 'https://lebonquizz.fly.dev'
   PUBLIC_URL = 'https://lebonquizz.fly.dev'
+  # Origin of the links in password reset e-mails.
+  PUBLIC_WEB_URL = 'https://lebonquizz.fly.dev'
   UPLOAD_DIR = '/data/uploads'
-  # Secrets (fly secrets set): DATABASE_URL (set by `fly mpg attach`), SENTRY_DSN.
+  # Secrets (fly secrets set): DATABASE_URL (set by `fly mpg attach`), SENTRY_DSN,
+  # SMTP_URL + MAIL_FROM (e-mails, see DEPLOY.md §4b).
 
 # Uploaded images. A volume belongs to one machine, which also keeps the app on exactly one
 # machine — required while live games are kept in memory (Redis = T18).

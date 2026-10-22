@@ -147,6 +147,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 
 - `User` — id, email (unique, lowercased), name, passwordHash (scrypt), createdAt
 - `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
+- `PasswordResetToken` — id (= SHA-256 of the token in the e-mailed link), userId, expiresAt
+  (1 hour), usedAt? (single use), createdAt; a new request deletes the user's unused ones
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), createdAt, updatedAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
@@ -177,15 +179,25 @@ order); players kicked in the lobby are not.
 ## 6. REST API (prefix `/api`)
 
 Contract: `packages/shared/src/api.ts` (zod request bodies + response types). Errors are
-`{ error: { code, message } }` (`ApiErrorBody`). Everything except register/login/logout
-requires a host session: httpOnly cookie `lbq_session` (set by register/login; web uses
+`{ error: { code, message } }` (`ApiErrorBody`). Everything except register/login/logout and
+forgot/reset-password requires a host session: httpOnly cookie `lbq_session` (set by register/login; web uses
 `credentials: 'include'`) **or** `Authorization: Bearer <token>`. Another host's resources
 answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/src/auth`
 (`getUserBySessionToken` is reusable for socket auth).
 
 - `POST /auth/register` `{ email, name, password }` → 201 `AuthResponse { user, token }`;
   `POST /auth/login` `{ email, password }` → `AuthResponse`; `POST /auth/logout` → 204;
-  `GET /auth/me` → `PublicUser`
+  `GET /auth/me` → `PublicUser`. Login: 10 failed attempts / 15 min per IP + e-mail → 429
+  `TOO_MANY_ATTEMPTS` (in-memory counters, `apps/server/src/auth/rateLimit.ts`)
+- Password (T24): `POST /auth/forgot-password` `{ email }` → **always 204** (no account
+  enumeration; 3 requests / hour per e-mail and 10 / hour per IP, beyond = nothing sent) and, if
+  the account exists, an e-mail (`apps/server/src/mail/`, nodemailer over `SMTP_URL`, Mailpit in
+  dev, server log in production without SMTP) with `<PUBLIC_WEB_URL or CORS_ORIGIN or request
+  Origin>/reset-password?token=…` (32 random bytes, 1 hour, single use);
+  `POST /auth/reset-password` `{ token, password }` → `AuthResponse` + cookie (every other
+  session revoked) or 400 `RESET_TOKEN_INVALID`; `POST /auth/change-password`
+  `{ currentPassword, newPassword }` (logged in) → 204 (other sessions revoked, this one kept) or
+  400 `WRONG_PASSWORD`
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
   (body `QuizInput` = `QuizSchema` without `id` + optional `visibility` — absent = `PRIVATE` on
   creation, unchanged on update; PUT replaces all questions). Owner only, public or not.
@@ -213,6 +225,9 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   (opened by the Solo / Équipes dialog of the editor and of the home page; no `quizId` = demo,
   no `mode` = solo)
 - `/login`, `/register` → host account (`?next=` = page to return to)
+- `/forgot-password` (« Mot de passe oublié ? » on `/login`), `/reset-password?token=` (link of
+  the e-mail: new password ×2 → logged in → `/editor`), `/account` « Mon compte » (change
+  password; link in the editor header, auth required)
 - `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
 - `/reports` → past games, `/reports/:gameId` → game report (auth required)
 - `/library` → public quizzes of the other hosts: search, sort, launch, copy (auth required)

@@ -2,6 +2,8 @@ import type {
   ApiErrorBody,
   ApiErrorCode,
   AuthResponse,
+  ChangePasswordBody,
+  ForgotPasswordBody,
   GameReport,
   GameSummary,
   LibraryQuery,
@@ -12,6 +14,7 @@ import type {
   QuizInput,
   QuizSummary,
   RegisterBody,
+  ResetPasswordBody,
   UploadImageResponse,
 } from '@lbq/shared';
 
@@ -68,6 +71,13 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
       login: (body: LoginBody) => request<AuthResponse>('POST', '/auth/login', body),
       logout: () => request<void>('POST', '/auth/logout'),
       me: () => request<PublicUser>('GET', '/auth/me'),
+      /** Always resolves (neutral answer), unless the server can't be reached. */
+      forgotPassword: (body: ForgotPasswordBody) =>
+        request<void>('POST', '/auth/forgot-password', body),
+      resetPassword: (body: ResetPasswordBody) =>
+        request<AuthResponse>('POST', '/auth/reset-password', body),
+      changePassword: (body: ChangePasswordBody) =>
+        request<void>('POST', '/auth/change-password', body),
     },
     quizzes: {
       list: () => request<QuizSummary[]>('GET', '/quizzes'),
