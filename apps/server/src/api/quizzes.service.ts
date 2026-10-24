@@ -1,5 +1,6 @@
 import {
   AUDIO_DEFAULT_DURATION_SEC,
+  BLUFF_DEFAULT_VOTE_SEC,
   LIBRARY_LIMIT,
   type LibraryQuery,
   type LibraryQuiz,
@@ -29,7 +30,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'SLIDER' }>, 'slider'> &
   Pick<Extract<Question, { type: 'ORDER' }>, 'items'> &
   Pick<Extract<Question, { type: 'PIN' }>, 'zone'> &
-  Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'>;
+  Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'> &
+  Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -66,6 +68,13 @@ function toQuestion(qu: QuestionRow): Question {
       return { ...base, type: qu.type, majorityBonus: config.majorityBonus ?? false };
     case 'WORD_CLOUD':
       return { ...base, type: qu.type };
+    case 'BLUFF':
+      return {
+        ...base,
+        type: qu.type,
+        truth: config.truth ?? '',
+        voteTimeSec: config.voteTimeSec ?? BLUFF_DEFAULT_VOTE_SEC,
+      };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -84,6 +93,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'ORDER') return { items: qu.items };
   if (qu.type === 'PIN') return { zone: qu.zone };
   if (qu.type === 'WHO_OF_US') return { majorityBonus: qu.majorityBonus };
+  if (qu.type === 'BLUFF') return { truth: qu.truth, voteTimeSec: qu.voteTimeSec };
   return undefined;
 }
 

@@ -50,6 +50,8 @@ export interface PlayerState {
   lost: ErrorCode | null;
   /** The game is played with jokers (`game:state.jokers`). */
   jokerGame: boolean;
+  /** « Mytho ! »: the lie sent while writing (for `questionIndex` only). */
+  lie: { questionIndex: number; text: string } | null;
   /** Own jokers: hand + effects on the current question (`joker:state`). */
   jokers: PlayerJokersPayload | null;
   /** Last joker played by anyone (toast), with the local time it arrived. */
@@ -75,6 +77,7 @@ export type PlayerAction =
   | { type: 'podium'; top: RankedPlayer[]; teams?: RankedTeam[] }
   | { type: 'kicked' }
   | { type: 'lost'; code: ErrorCode }
+  | { type: 'lie'; questionIndex: number; text: string | null }
   | { type: 'jokers'; payload: PlayerJokersPayload }
   | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number };
 
@@ -101,6 +104,7 @@ export const initialPlayerState: PlayerState = {
   kicked: false,
   lost: null,
   jokerGame: false,
+  lie: null,
   jokers: null,
   jokerNews: null,
 };
@@ -167,8 +171,22 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
             : action.now + p.timeLimitSec * 1000,
         myAnswer: state.myAnswer?.questionIndex === p.index ? state.myAnswer : null,
         result: isCurrent ? state.result : null,
+        // « Mytho ! »: after a rejoin the server tells which lie it already has.
+        lie:
+          p.bluff?.stage === 'write' && p.bluff.lie
+            ? { questionIndex: p.index, text: p.bluff.lie }
+            : state.lie?.questionIndex === p.index
+              ? state.lie
+              : null,
       };
     }
+
+    case 'lie':
+      return {
+        ...state,
+        lie:
+          action.text === null ? null : { questionIndex: action.questionIndex, text: action.text },
+      };
 
     case 'answer':
       if (state.myAnswer?.questionIndex === action.questionIndex) return state; // one answer only
@@ -238,6 +256,7 @@ export function playerScreen(s: PlayerState): PlayerScreen {
       return 'getReady';
     case 'ANSWERING':
       if (s.myAnswer?.questionIndex === s.questionIndex) return 'answered';
+      if (bluffStage(s) === 'write' && s.lie?.questionIndex === s.questionIndex) return 'answered';
       return s.prompt?.index === s.questionIndex ? 'answer' : 'getReady';
     case 'REVEAL':
       return s.result ? 'result' : 'waitingResult';
@@ -259,7 +278,13 @@ export function jokerEffects(s: PlayerState): NonNullable<PlayerJokersPayload['e
 export function copyingTarget(s: PlayerState) {
   const j = s.jokers;
   if (!j || j.questionIndex !== s.questionIndex || j.played?.joker !== 'copy') return null;
+  if (bluffStage(s) === 'write') return null; // « Mytho ! »: the copier still writes its lie
   return j.effects.copied ? null : (j.played.target ?? null);
+}
+
+/** « Mytho ! » stage of the current question (null for the other types). */
+export function bluffStage(s: PlayerState): 'write' | 'vote' | null {
+  return s.prompt?.index === s.questionIndex ? (s.prompt.bluff?.stage ?? null) : null;
 }
 
 const errorMessages: Partial<Record<ErrorCode, string>> = {

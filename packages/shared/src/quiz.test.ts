@@ -205,3 +205,27 @@ describe('shared schemas', () => {
     });
   });
 });
+
+describe('« Mytho ! » question schema', () => {
+  it('defaults: 45 s to write, 20 s to vote; the truth is required and ≤ 40 characters', () => {
+    const q = QuestionSchema.parse({
+      type: 'BLUFF',
+      text: 'Le premier film ?',
+      truth: ' Vincent ',
+    });
+    expect(q).toMatchObject({
+      truth: 'Vincent',
+      timeLimitSec: 45,
+      voteTimeSec: 20,
+      basePoints: 1000,
+    });
+    expect(hasRightAnswer('BLUFF')).toBe(true);
+    expect(QuestionSchema.safeParse({ type: 'BLUFF', text: 'Q ?', truth: '' }).success).toBe(false);
+    expect(
+      QuestionSchema.safeParse({ type: 'BLUFF', text: 'Q ?', truth: 'x'.repeat(41) }).success,
+    ).toBe(false);
+    expect(
+      QuestionSchema.safeParse({ type: 'BLUFF', text: 'Q ?', truth: 'V', voteTimeSec: 2 }).success,
+    ).toBe(false);
+  });
+});

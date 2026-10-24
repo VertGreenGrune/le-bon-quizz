@@ -5,6 +5,7 @@ import { btn } from './EditorShell';
 import { ImageField } from './ImageField';
 import { AudioField, ImageEffectField } from './MediaFields';
 import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './MoreTypeFields';
+import { BluffFields } from './BluffFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -151,7 +152,9 @@ export function QuestionEditor({
         />
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-bold text-gray-600">Temps</span>
+            <span className="text-sm font-bold text-gray-600">
+              {q.type === 'BLUFF' ? 'Temps pour écrire' : 'Temps'}
+            </span>
             <select
               value={q.timeLimitSec}
               onChange={(e) => onChange({ ...q, timeLimitSec: Number(e.target.value) })}
@@ -226,6 +229,8 @@ export function QuestionEditor({
         <WhoOfUsField q={q} err={err} onChange={onChange} />
       ) : q.type === 'WORD_CLOUD' ? (
         <WordCloudHint />
+      ) : q.type === 'BLUFF' ? (
+        <BluffFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

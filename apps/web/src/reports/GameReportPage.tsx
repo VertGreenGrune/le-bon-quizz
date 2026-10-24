@@ -23,6 +23,7 @@ import {
 } from './reportStats';
 import { JokersBadge, JokersUsed, ModeBadge } from './ModeBadge';
 import { MoreTypeDetails } from './moreTypeCards';
+import { BluffDetails } from './bluffCard';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -276,10 +277,12 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
       </div>
       <p className="mb-3 text-sm text-gray-500">
         {scored
-          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont bien répondu`
+          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'BLUFF' ? 'trouvé la vérité' : 'bien répondu'}`
           : `${q.answerCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'WORD_CLOUD' ? 'répondu' : 'voté'} — pas de bonne réponse`}
       </p>
-      {MORE_TYPES.includes(q.type) ? (
+      {q.type === 'BLUFF' ? (
+        <BluffDetails q={q} noAnswer={noAnswer} />
+      ) : MORE_TYPES.includes(q.type) ? (
         <MoreTypeDetails q={q} noAnswer={noAnswer} />
       ) : q.type === 'TYPE_ANSWER' ? (
         <TypedAnswers q={q} noAnswer={noAnswer} />

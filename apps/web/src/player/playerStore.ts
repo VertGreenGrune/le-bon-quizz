@@ -243,6 +243,32 @@ export function sendAnswer(answer: AnswerInput) {
 }
 
 /**
+ * « Mytho ! », writing stage: sends (or replaces) the player's lie through `player:answer`;
+ * resolves with the French error message (lie too close to the truth…) or null.
+ */
+export function sendLie(text: string): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  const { questionIndex } = state;
+  vibrate(40);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:answer', { pin: session.pin, questionIndex, text }, (err, res) => {
+        if (err) return resolve(errorMessage('TIMEOUT'));
+        if (!res.ok) return resolve(res.error.message);
+        dispatch({ type: 'lie', questionIndex, text });
+        resolve(null);
+      });
+  });
+}
+
+/** « Mytho ! »: back to the text field to write another lie (until the vote starts). */
+export function editLie() {
+  dispatch({ type: 'lie', questionIndex: state.questionIndex, text: null });
+}
+
+/**
  * Plays a joker on the current question; resolves with the French error message, or null when
  * the server accepted it (it then sends `joker:state` / `joker:used`).
  */

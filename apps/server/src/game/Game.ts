@@ -39,10 +39,12 @@ import {
   type TeamId,
 } from '@lbq/shared';
 import { GameError } from './errors.js';
+import { checkVote, otherLies, startVote, writeLie } from './questionTypes/bluff.js';
 import { Jokers } from './jokers.js';
 import { matchesAnswer, normalizeAnswer } from './matching.js';
 import {
   NO_SETUP,
+  extraBonusPoints,
   extraPromptFields,
   extraResultFields,
   extraRevealDetails,
@@ -273,6 +275,8 @@ export class Game {
               this.phase === 'ANSWERING' ? Date.now() - this.answeringStartedAt : 0,
             recordAnswer: (player, given, responseMs) =>
               this.recordAnswer(player, given, responseMs),
+            bluffLies: (playerId) =>
+              this.setup.bluff?.stage === 'vote' ? otherLies(this.setup.bluff, playerId) : null,
             transport,
           },
           settings.random,
@@ -316,7 +320,7 @@ export class Game {
       case 'QUESTION_INTRO':
         return this.enterAnswering();
       case 'ANSWERING':
-        return this.enterReveal();
+        return this.finishAnswering();
       case 'REVEAL':
         return this.enterLeaderboard();
       case 'LEADERBOARD':
@@ -343,6 +347,7 @@ export class Game {
     if (!player) return; // idempotent
     this.touch();
     this.players.delete(playerId);
+    this.setup.bluff?.lies.delete(playerId); // « Mytho ! »: their lie goes with them
     if (this.phase !== 'LOBBY') this.kicked.push(player);
     this.excused.delete(playerId);
     if (player.socketId) {
@@ -521,7 +526,7 @@ export class Game {
     this.sendTeams(send);
     this.jokers?.sendState(player, send);
     if (this.phase === 'ANSWERING' && !player.answer) {
-      this.transport.toSocket(sid, 'question:prompt', this.promptPayload());
+      this.transport.toSocket(sid, 'question:prompt', this.promptPayload(player));
     } else if (this.phase === 'REVEAL' && player.lastResult) {
       this.transport.toSocket(sid, 'player:result', this.resultPayload(player));
     } else if (this.phase === 'PODIUM') {
@@ -553,9 +558,18 @@ export class Game {
     if (player.answer) throw new GameError('ALREADY_ANSWERED', 'Réponse déjà envoyée');
     if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
 
+    const given = typeof input === 'number' ? { choiceIndex: input } : input;
+    // « Mytho ! », stage 1: the lie is stored, not scored (nor copied); stage 2 is the vote.
+    const bluff = this.setup.bluff;
+    if (question.type === 'BLUFF' && bluff?.stage === 'write') {
+      if (!('text' in given)) throw new GameError('INVALID_PAYLOAD', 'Écris un mytho');
+      writeLie(question, bluff, player.id, given.text);
+      this.touch();
+      return this.onAnswersChanged();
+    }
+    if (bluff && 'choiceIndex' in given) checkVote(bluff, player.id, given.choiceIndex);
     const responseMs = Date.now() - this.answeringStartedAt;
     this.jokers?.checkAnswer(player, responseMs);
-    const given = typeof input === 'number' ? { choiceIndex: input } : input;
     this.recordAnswer(player, given, responseMs);
   }
 
@@ -576,7 +590,7 @@ export class Game {
     // T27 types (ordre, point, « Qui de nous ? », nuage de mots) have their own judge.
     const judge = (timePoints: number) =>
       isExtraQuestion(question)
-        ? judgeExtra(question, given, timePoints, this.setup, this.players)
+        ? judgeExtra(question, given, timePoints, this.setup, this.players, player.id)
         : judgeAnswer(question, given, timePoints);
     const scoringMs = this.jokers?.scoringMs(player.id, responseMs) ?? responseMs;
     player.answer = { ...judge(points(scoringMs)), responseMs };
@@ -692,14 +706,39 @@ export class Game {
     this.presentIds.clear();
     for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
     this.broadcastState();
-    const prompt = this.promptPayload();
-    for (const p of this.players.values()) {
-      if (p.socketId) this.transport.toSocket(p.socketId, 'question:prompt', prompt);
-    }
+    this.sendPrompts();
     this.sendAnswerCount();
     this.checkPause();
     // Nobody to wait for → don't block on the timer.
-    if (!this.pause && this.allAnswered()) this.enterReveal();
+    if (!this.pause && this.allAnswered()) this.finishAnswering();
+  }
+
+  private sendPrompts(): void {
+    for (const p of this.players.values()) {
+      if (p.socketId) this.transport.toSocket(p.socketId, 'question:prompt', this.promptPayload(p));
+    }
+  }
+
+  /** End of ANSWERING (everyone answered, timer, host): the reveal — or the « Mytho ! » vote. */
+  private finishAnswering(): void {
+    const question = this.currentQuestion;
+    const bluff = this.setup.bluff;
+    if (this.phase === 'ANSWERING' && question?.type === 'BLUFF' && bluff?.stage === 'write') {
+      startVote(question, bluff);
+      // Same phase, new timer: pauses, rejoins and `responseMs` work as for any question.
+      this.setPhase('ANSWERING', question.voteTimeSec * 1000);
+      this.answeringStartedAt = Date.now();
+      for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
+      this.broadcastState();
+      this.transport.toHost('question:show', this.showPayload());
+      this.jokers?.onBluffVote();
+      this.sendPrompts();
+      this.sendAnswerCount();
+      this.checkPause();
+      if (!this.pause && this.allAnswered()) this.enterReveal();
+      return;
+    }
+    this.enterReveal();
   }
 
   private enterReveal(): void {
@@ -717,7 +756,8 @@ export class Game {
     for (const p of this.players.values()) {
       const a = p.answer;
       if (a) answerCount++;
-      if (a?.choiceIndex != null)
+      // Shape choices only (a « Mytho ! » vote is a `choiceIndex` too, among its own options).
+      if (a?.choiceIndex != null && a.choiceIndex < distribution.length)
         distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
       const correct = a?.correct ?? false;
       // Bouclier: a wrong answer keeps the streak.
@@ -725,7 +765,11 @@ export class Game {
         p.streak = correct ? p.streak + 1 : 0;
       // A 0-point question awards nothing, streak bonus included (the streak still counts).
       const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
-      const questionPoints = (a?.points ?? 0) + bonus;
+      // « Mytho ! »: + points for every player fooled by your lie, voted or not.
+      const others = isExtraQuestion(question)
+        ? extraBonusPoints(question, this.setup, p, this.players.values())
+        : 0;
+      const questionPoints = (a?.points ?? 0) + bonus + others;
       const pointsEarned = this.jokers?.adjustPoints(p, correct, questionPoints) ?? questionPoints;
       p.totalScore += pointsEarned;
       if (correct) {
@@ -900,11 +944,23 @@ export class Game {
 
   private onAnswersChanged(): void {
     this.sendAnswerCount();
-    if (this.allAnswered()) this.enterReveal();
+    if (this.allAnswered()) this.finishAnswering();
+  }
+
+  /** « Mytho ! » writing stage: the lies are what the question waits for. */
+  private writingLies(): boolean {
+    return this.setup.bluff?.stage === 'write';
+  }
+
+  /** Has the player done what the current stage asks (answer, or lie while writing)? */
+  private hasAnswered(p: Player): boolean {
+    return this.writingLies() ? !!this.setup.bluff?.lies.has(p.id) : !!p.answer;
   }
 
   /** Is the current question still waiting for this player? */
   private isAwaited(p: Player, copying = new Set<string>()): boolean {
+    if (this.writingLies())
+      return !this.setup.bluff!.lies.has(p.id) && (p.socketId !== null || !this.excused.has(p.id));
     if (this.phase === 'ANSWERING' && p.answer) return false;
     // Copieur: answers when the target does (target gone / copy loop: nothing to wait for).
     const target = this.jokers?.copyTargetOf(p.id);
@@ -1004,7 +1060,7 @@ export class Game {
     this.phaseEndsAt = now + pause.remainingMs;
     this.timer = setTimeout(() => this.onPhaseTimeout(), pause.remainingMs);
     this.broadcastState();
-    if (this.phase === 'ANSWERING' && this.allAnswered()) this.enterReveal();
+    if (this.phase === 'ANSWERING' && this.allAnswered()) this.finishAnswering();
   }
 
   private sendResuming(send: Send = this.transport.toAll.bind(this.transport)): void {
@@ -1028,7 +1084,7 @@ export class Game {
       if (this.pause) return;
     }
     if (this.phase === 'QUESTION_INTRO') this.enterAnswering();
-    else if (this.phase === 'ANSWERING') this.enterReveal();
+    else if (this.phase === 'ANSWERING') this.finishAnswering();
   }
 
   private clearPause(): void {
@@ -1053,8 +1109,9 @@ export class Game {
     let answered = 0;
     let total = 0;
     for (const p of this.players.values()) {
-      if (p.answer) answered++;
-      if (p.answer || this.isAwaited(p)) total++;
+      const done = this.hasAnswered(p);
+      if (done) answered++;
+      if (done || this.isAwaited(p)) total++;
     }
     send('answer:count', { answered, total });
   }
@@ -1089,7 +1146,7 @@ export class Game {
   }
 
   /** What the phones need to answer — never the question text nor the answer. */
-  private promptPayload(): QuestionPromptPayload {
+  private promptPayload(player: Player): QuestionPromptPayload {
     const q = this.currentQuestion!;
     const prompt: QuestionPromptPayload = {
       index: this.questionIndex,
@@ -1099,7 +1156,7 @@ export class Game {
     if (q.type === 'SLIDER') prompt.slider = sliderPrompt(q.slider);
     else if (q.type === 'TYPE_ANSWER') prompt.maxLength = TYPE_ANSWER_MAX_LENGTH;
     else if (isExtraQuestion(q))
-      Object.assign(prompt, extraPromptFields(q, this.setup, this.players.values()));
+      Object.assign(prompt, extraPromptFields(q, this.setup, this.players.values(), player.id));
     else prompt.choiceCount = q.choices.length;
     return prompt;
   }

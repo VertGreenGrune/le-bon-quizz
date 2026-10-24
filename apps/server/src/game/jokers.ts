@@ -39,6 +39,11 @@ export interface JokerContext {
   elapsedMs(): number;
   /** Records an answer for a player as if they had sent it (Copieur). */
   recordAnswer(player: Player, given: AnswerInput, responseMs: number): void;
+  /**
+   * « Mytho ! » vote: option indexes of the lies this player didn't write (null while the lies
+   * are still being written).
+   */
+  bluffLies?(playerId: string): number[] | null;
   transport: GameTransport;
 }
 
@@ -305,7 +310,7 @@ export class Jokers {
         throw refuse('Ce joueur a déjà été attaqué sur cette question');
     }
     // Computed before spending the joker: 50/50 may have nothing to hide.
-    const fifty = joker === 'fifty' ? this.fiftyEffects(q) : null;
+    const fifty = joker === 'fifty' ? this.fiftyEffects(q, player.id) : null;
 
     h.hand.splice(h.hand.indexOf(joker), 1);
     h.used.push(joker);
@@ -350,8 +355,11 @@ export class Jokers {
   }
 
   /** 50/50 for the current question, or a refusal when it would do nothing. */
-  private fiftyEffects(q: Question): JokerEffects {
+  private fiftyEffects(q: Question, playerId: string): JokerEffects {
     switch (q.type) {
+      case 'BLUFF':
+        // Played while the lies are being written: applied when the vote starts.
+        return this.bluffFifty(playerId) ?? {};
       case 'MCQ':
       case 'TRUE_FALSE': {
         const wrong = q.choices.flatMap((c, i) => (c.isCorrect ? [] : [i]));
@@ -383,6 +391,28 @@ export class Jokers {
       default:
         throw refuse('Le 50/50 ne sert à rien ici');
     }
+  }
+
+  /** « Mytho ! » 50/50: half of the others' lies (always one left), null before the vote. */
+  private bluffFifty(playerId: string): JokerEffects | null {
+    const lies = this.ctx.bluffLies?.(playerId);
+    if (!lies) return null;
+    const count = Math.min(Math.ceil(lies.length / 2), lies.length - 1);
+    if (count <= 0) return {};
+    return {
+      hiddenChoices: this.shuffled(lies)
+        .slice(0, count)
+        .sort((a, b) => a - b),
+    };
+  }
+
+  /** « Mytho ! »: the vote starts, the 50/50 played while writing now hides lies. */
+  onBluffVote(): void {
+    for (const [id, h] of this.hands) {
+      if (h.played?.joker !== 'fifty') continue;
+      Object.assign(h.effects, this.bluffFifty(id) ?? {});
+    }
+    this.sendStates();
   }
 
   /** Random order, never the original one when there is a choice (Brouilleur). */

@@ -10,6 +10,8 @@ import { z } from 'zod';
  *   correct inside the zone, partial points just outside.
  * - `WHO_OF_US` (« Qui de nous ? »): players vote for a player of the game; no right answer.
  * - `WORD_CLOUD` (nuage de mots): players type a word or two; no right answer, 0 points.
+ * - `BLUFF` (« Mytho ! »): players write a fake answer, then vote for the one they think is
+ *   true among the lies and the real answer (`truth`).
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -21,6 +23,7 @@ export const QuestionType = z.enum([
   'PIN',
   'WHO_OF_US',
   'WORD_CLOUD',
+  'BLUFF',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -48,6 +51,13 @@ export const WHO_OF_US_MAJORITY_BONUS = 200;
 export const PIN_MIN_RADIUS = 0.02;
 export const PIN_MAX_RADIUS = 0.5;
 export const MAX_ACCEPTED_ANSWERS = 3;
+/** « Mytho ! »: length of the true answer and of the lies. */
+export const BLUFF_MAX_LENGTH = 40;
+/** « Mytho ! »: default writing time (`timeLimitSec`) and voting time (`voteTimeSec`). */
+export const BLUFF_DEFAULT_WRITE_SEC = 45;
+export const BLUFF_DEFAULT_VOTE_SEC = 20;
+/** « Mytho ! »: each player fooled by your lie earns you this share of `basePoints` (+500). */
+export const BLUFF_FOOL_SHARE = 0.5;
 /** A slider has at most this many positions ((max − min) / step). */
 export const SLIDER_MAX_STEPS = 100_000;
 
@@ -229,6 +239,18 @@ const WhoOfUsQuestion = z.object({
 });
 
 const WordCloudQuestion = z.object({ ...questionBase, type: z.literal('WORD_CLOUD') });
+/**
+ * « Mytho ! » (Fibbage-like): `timeLimitSec` = time to write a lie (default 45 s), then
+ * `voteTimeSec` to vote. Finding `truth` = `basePoints`; each player fooled by your lie =
+ * `basePoints × BLUFF_FOOL_SHARE`. Points don't depend on the speed.
+ */
+const BluffQuestion = z.object({
+  ...questionBase,
+  type: z.literal('BLUFF'),
+  timeLimitSec: questionBase.timeLimitSec.default(BLUFF_DEFAULT_WRITE_SEC),
+  truth: z.string().trim().min(1).max(BLUFF_MAX_LENGTH),
+  voteTimeSec: z.number().int().min(5).max(120).default(BLUFF_DEFAULT_VOTE_SEC),
+});
 
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
@@ -244,6 +266,7 @@ export const QuestionSchema = z.preprocess(
       PinQuestion,
       WhoOfUsQuestion,
       WordCloudQuestion,
+      BluffQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -257,6 +280,7 @@ export type SliderQuestion = Extract<Question, { type: 'SLIDER' }>;
 export type OrderQuestion = Extract<Question, { type: 'ORDER' }>;
 export type PinQuestion = Extract<Question, { type: 'PIN' }>;
 export type WhoOfUsQuestion = Extract<Question, { type: 'WHO_OF_US' }>;
+export type BluffQuestion = Extract<Question, { type: 'BLUFF' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);

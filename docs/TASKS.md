@@ -1147,7 +1147,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   real phones.
 
 ### T26 — « Mytho ! » bluff question type (Fibbage-like) ⭐ the most "friends" feature
-- **Status:** in-progress (T26 agent, worktree ../lbq-T26, branch task/T26-bluff)
+- **Status:** done
 - **Depends on:** T25 and T27 merged (bluff votes must work with jokers and the new answer path)
 - New type `BLUFF`: the editor gives a question with a surprising true answer ("Le premier film
   de Tim Burton s'appelle… ?"). Phase 1 (≈ 45 s): every phone **types a fake answer** meant to
@@ -1158,6 +1158,46 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   (Copieur copies the vote; 50/50 removes half of the lies).
 - **Tests:** phases + timers + pause, duplicate lies merged, own-lie vote refused, scoring;
   e2e with 3 phones.
+- **Summary:** shared (`quiz.ts`): `BLUFF` in the question union (`truth` ≤ 40, `voteTimeSec`
+  5–120 default 20, `timeLimitSec` default 45), constants `BLUFF_MAX_LENGTH`,
+  `BLUFF_DEFAULT_WRITE_SEC` / `_VOTE_SEC`, `BLUFF_FOOL_SHARE` (0.5); `jokerAvailability.BLUFF`
+  (all jokers but Brouilleur and Sablier). Contract (`events.ts`, additive): error
+  `LIE_TOO_CLOSE`, `question:show.bluff` (`BluffShow`), `question:prompt.bluff` (`BluffPrompt`,
+  per phone), `RevealDetails.bluff` (`BluffOption`), `player:result.bluff`. Server: everything in
+  `game/questionTypes/bluff.ts` (lies, merge + shuffle, own-lie rules, vote judge, fool points,
+  payloads), wired in `questionTypes/index.ts`; `Game.ts` hooks: `answer()` stores the lie while
+  writing (same `player:answer`), checks own-lie votes, `finishAnswering()` (every place that
+  ended ANSWERING) starts the vote stage with a new timer or reveals, per-player prompts,
+  awaited / answer count = lies while writing, kicked player's lie dropped, fool points added
+  at the reveal (`extraBonusPoints`); jokers: `onBluffVote` (50/50 on the lies), `bluffLies`
+  context. Migration `20261024120000_bluff` (enum value; settings in `Question.config`, mapped in
+  `quizzes.service.ts`). Editor: « Mytho ! » type (`editor/BluffFields.tsx`: vraie réponse, temps
+  pour voter; « Temps pour écrire », 45 s on switching). Phone (`player/bluff.tsx`): « 🤥 Invente
+  un mytho » field with the « Trop proche » error, « Mytho enregistré ! » + « Changer mon mytho »,
+  lettered vote buttons (own lie greyed « Ton mytho », 50/50 dimmed), « Vérité trouvée ! / Bien
+  mythoné ! / Piégé ! » result with the truth, who fooled you, whom you fooled (avatars, points);
+  `playerState` `lie` + `bluffStage` (Copieur writes its lie, Gel only blocks the vote). TV
+  (`host/bluffScreens.tsx`): writing hint, lettered options, reveal one answer at a time (lies
+  then « ✅ La vérité », authors and fooled players with avatars, past ones as struck chips;
+  instant after a reload). Reports: `reports/bluffCard.tsx` (each lie, votes, authors), « ont
+  trouvé la vérité ». Tests: `Game.bluff.test.ts` (14: stages + timers, no truth in any phone
+  payload, too-close lies (case, accents, article, typo), replaced lie + rejoin, merged lies and
+  own-vote refusal, scoring and reveal order, streak / no time points, host skips, pause in both
+  stages + rejoin, kick, team averages, jokers: Copieur, copied own lie, 50/50, refused jokers),
+  persistence round trip + saved details (Postgres), shared schema + joker table, editor draft,
+  phone reducer; e2e `e2e/bluff.spec.ts` (3 phones: refused lie, own lie disabled, phone frames
+  without the truth, reveal, results, report). Checked with screenshots (host 1600×900, Pixel 7).
+- **Notes:** (1) A « Mytho ! » stays in `ANSWERING` for both stages (no new `GamePhase`): the
+  vote restarts the timer (`setPhase('ANSWERING', voteTimeSec)`), so pause / resume / rejoin /
+  host skip needed no special case. (2) Points don't depend on the speed (spec: +1000 / +500);
+  scaled by `basePoints` (2000 → +2000 / +1000, 0 → nothing). (3) A lie can be changed until
+  the vote starts. (4) The « too close » refusal tells the writer their lie looks like the truth
+  — inherent to the rule. (5) Fixed on the way: `enterReveal` filled the shape distribution
+  with any `choiceIndex` (a vote's index made a sparse array Prisma refused); now only real
+  choices are counted. (6) With 0 or 1 lie the vote is short (the truth alone / one lie); no
+  built-in decoys. (7) Docker Desktop was stopped: started it and ran `docker compose up -d`
+  (never `down`). **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on
+  real phones.
 
 ### Wave 6 coordination — T25 ‖ T27 run in parallel (read before starting)
 - **Only T25 implements jokers.** T27 doesn't add joker code; for T27's types the joker rules are
@@ -1445,3 +1485,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   Sablier, Copieur…) apply to them. Tests: `packages/shared/src/jokers.test.ts`, "Jokers on the
   T27 question types" in `Game.jokers.test.ts`. Note: both migrations share the timestamp
   `20261022200000_*` (applied in name order, independent — no drift).
+- 2026-10-24, T26 agent (additive, PLAN.md §3–§5): `QuestionType` gains `BLUFF` (+ `truth`,
+  `voteTimeSec`); `ErrorCode` gains `LIE_TOO_CLOSE`; `QuestionShowPayload.bluff?`,
+  `QuestionPromptPayload.bluff?`, `RevealDetails.bluff?`, `PlayerResultPayload.bluff?` (types
+  `BluffShow`, `BluffPrompt`, `BluffOption`); `jokerAvailability.BLUFF`. `ExtraQuestion` (server)
+  includes `BLUFF`; `extraPromptFields` / `judgeExtra` take an optional player id;
+  `Game.promptPayload(player)` is now per player; new `Game.finishAnswering()` replaces the calls
+  to `enterReveal()` that ended ANSWERING. `JokerContext.bluffLies?` + `Jokers.onBluffVote()`.
+  Prisma migration `20261024120000_bluff`.

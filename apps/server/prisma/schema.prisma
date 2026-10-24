@@ -79,6 +79,7 @@ enum QuestionType {
   PIN
   WHO_OF_US
   WORD_CLOUD
+  BLUFF
 }
 
 model Question {

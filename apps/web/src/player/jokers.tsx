@@ -16,7 +16,13 @@ import {
   resultLine,
 } from '../lib/jokers';
 import { sendAnswer, playJoker } from './playerStore';
-import { jokerEffects, myTeam, type PlayerScreen, type PlayerState } from './playerState';
+import {
+  bluffStage,
+  jokerEffects,
+  myTeam,
+  type PlayerScreen,
+  type PlayerState,
+} from './playerState';
 
 /** Phone, games with jokers: the hand at the bottom of the "get ready" / answer screens. */
 export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }) {
@@ -176,7 +182,8 @@ function JokerSheet({
 
 /** Gel: over the answer controls while the player is frozen (pauses excluded). */
 export function FrozenOverlay({ s }: { s: PlayerState }) {
-  const frozen = jokerEffects(s).frozen;
+  // « Mytho ! »: the Gel only blocks the vote, not the writing of the lie.
+  const frozen = bluffStage(s) === 'write' ? undefined : jokerEffects(s).frozen;
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!frozen) return;
