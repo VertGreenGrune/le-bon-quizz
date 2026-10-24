@@ -1287,7 +1287,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   random-event wheel). Don't implement.
 
 ### T31 — Game mode « Survie » (elimination with ghosts)
-- **Status:** todo
+- **Status:** in-progress (Claude, worktree ../lbq-T31, branch task/T31-survival)
 - **Depends on:** T27
 - New mode in the dialog (Solo / Équipes / **Survie**): everyone has **3 ❤️**; a wrong or missing
   answer costs a heart; at 0 the player becomes a **👻 fantôme**: still answers, and each correct
