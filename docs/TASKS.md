@@ -1339,7 +1339,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   ghost. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones.
 
 ### T28 — Buzzer round
-- **Status:** todo
+- **Status:** in-progress (T28 agent, worktree ../lbq-T28)
 - **Depends on:** T31
 - Question option « Buzzer »: the question is shown on the TV without choices; phones show one
   huge **BUZZ** button; the first to buzz (server timestamp) answers **out loud**; the host
