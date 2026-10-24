@@ -1354,6 +1354,50 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   guesses (reuse `matching.ts`, typo tolerance); points to the fastest guessers and to the drawer
   per correct guess. Word lists in the editor (or a built-in French list).
 
+### T33 — Showcase quiz « Harry Potter — niveau expert » (content, after T28)
+- **Status:** todo
+- **Depends on:** T28 merged (the buzzer must be in it). Content only — can run in parallel with
+  T30 (T30 then adds one `DRAW` question to this quiz, see below).
+- **Scope:** `content/quizzes/harry-potter/**` (`quiz.json`, freely licensed media, `CREDITS.md`,
+  `README.md`). Reuses the T23 import script (`quiz:import`); fix it only if a new question type
+  isn't supported, noted below.
+
+**User requirement (2026-10-24):** one quiz that **shows every feature of the app**, to present
+the game — on **Harry Potter, expert level**.
+
+**Design (decided):**
+- French, **~22 questions, expert level** (book-level details, not just film trivia: names,
+  spells, dates, objects, genealogy, chapters), every fact checked against reliable sources
+  (books / official Wizarding World / HP wiki cross-checked; list them in `CREDITS.md`). Varied
+  time limits and points (0 / 1000 / 2000), easy openers then harder, a big finale.
+- **Covers every feature at least once** (tick list in `README.md`, one line per feature with the
+  question number):
+  - question types: `MCQ` (incl. one with several right answers), `TRUE_FALSE`, `TYPE_ANSWER`
+    (with typo tolerance, e.g. a spell name), `POLL`, `SLIDER` (e.g. a year or a number with a
+    margin and a unit), `ORDER` (e.g. the 7 Horcruxes in the order they were destroyed, or the
+    books by UK publication), `PIN` (a freely licensed photo or map: e.g. Glenfinnan viaduct on a
+    map of Scotland, or a place in a King's Cross photo), `WHO_OF_US` (e.g. « Qui de nous serait
+    envoyé à Serpentard ? », with the majority bonus), `WORD_CLOUD` (e.g. « Ton sortilège
+    préféré »), `BLUFF` « Mytho ! » (an obscure true answer, e.g. a middle name);
+  - media: a sound clip during the question, a clip `audioOnReveal`, and the 3 picture effects
+    (blur, zoom, pixelate) + a cover image;
+  - the **Buzzer** option on at least one question (T28);
+  - an emoji rebus and a « Qui a dit ? » quote, like the Tim Burton quiz.
+- **Game modes** (Solo / Équipes / Survie, Jokers) are launch options, not quiz content:
+  `README.md` explains how to present them with this quiz (e.g. « Survie + Jokers » for a
+  demo evening, « Équipes » for a big group) and lists which jokers can be shown on which question.
+- **Copyright:** no film stills, posters, logos or soundtrack files from the web. Pictures only
+  from freely licensed sources (Wikimedia Commons: filming locations, actors at premieres, King's
+  Cross, Glenfinnan…), author + license in `CREDITS.md`. **Music = placeholders** like T23: the
+  question is fully written with `audio` pointing to `content/quizzes/harry-potter/audio/<name>.mp3`
+  (an `.gitignore` there keeps the user's files out of git), and `CREDITS.md` lists which excerpts
+  the user must add from their own copies (e.g. « Hedwig's Theme » 0:00–0:15).
+- **Import:** into the dev DB for `loicmoster@hotmail.fr` (private), then play it once with a
+  scripted socket game (host + 3 phones, every question type, the buzzer question validated by the
+  host) to check it works end to end; delete that test game afterwards.
+- **When T30 is merged:** add one `DRAW` « Dessine-moi » question (e.g. a magical object to draw)
+  and re-run the import — note it as a follow-up if T30 isn't done yet.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
