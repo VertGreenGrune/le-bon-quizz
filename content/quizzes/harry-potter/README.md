@@ -1,6 +1,6 @@
 # Harry Potter — niveau expert : le quiz vitrine
 
-22 questions en français pour présenter **tout ce que sait faire Le Bon Quizz**, sur Harry Potter,
+23 questions en français pour présenter **tout ce que sait faire Le Bon Quizz**, sur Harry Potter,
 niveau expert (détails des livres, pas seulement des films). Ouverture facile, montée en
 difficulté, grande finale à 2000 points. Durée : 20 à 25 minutes avec 6 joueurs.
 
@@ -35,7 +35,8 @@ pnpm --filter @lbq/server quiz:import content/quizzes/harry-potter <email de l'a
 | 19  | Curseur                 | L'année de la mort de Mimi Geignarde       | 25 s      | 1000   | marge ± 3                    |
 | 20  | QCM                     | Le legs de Dumbledore à Ron                | 20 s      | 1000   |                              |
 | 21  | Réponse libre           | Le nom complet de Voldemort                | 30 s      | 2000   |                              |
-| 22  | Remettre dans l'ordre   | Finale : les Horcruxes détruits            | 45 s      | 2000   | 6 éléments                   |
+| 22  | Dessine-moi             | Un objet magique à dessiner                | 90 s      | 1000   | ✏️ dessin en direct          |
+| 23  | Remettre dans l'ordre   | Finale : les Horcruxes détruits            | 45 s      | 2000   | 6 éléments                   |
 
 ## Toutes les fonctionnalités, avec le numéro de la question
 
@@ -44,7 +45,7 @@ pnpm --filter @lbq/server quiz:import content/quizzes/harry-potter <email de l'a
 - [x] **Réponse libre** avec tolérance des fautes — 7 (« Morsmordre »), 12, 21
 - [x] **Sondage** — 2
 - [x] **Curseur** avec marge et unité — 9 (± 20 points), 19 (± 3 ans)
-- [x] **Remettre dans l'ordre** — 22
+- [x] **Remettre dans l'ordre** — 23
 - [x] **Point sur l'image** — 10 (carte de l'Écosse)
 - [x] **« Qui de nous ? »** avec bonus de majorité — 8
 - [x] **Nuage de mots** — 15
@@ -55,8 +56,8 @@ pnpm --filter @lbq/server quiz:import content/quizzes/harry-potter <email de l'a
 - [x] **Effets sur l'image** : flou 6, zoom 12, pixelisé 17
 - [x] **Image de couverture** — le viaduc de Glenfinnan
 - [x] **Rébus emoji** — 1 ; **« Qui a dit ? »** — 11
-- [x] **Points variés** : 0 (2, 8, 15), 1000, 2000 (16, 21, 22)
-- [ ] « Dessine-moi » — à ajouter quand ce type de question existera
+- [x] **Points variés** : 0 (2, 8, 15), 1000, 2000 (16, 21, 23)
+- [x] **« Dessine-moi »** — 22 (un joueur dessine un objet magique en direct sur la TV, à tour de rôle)
 
 Les 3 musiques ne sont pas fournies : sans elles, les questions 3, 14 et 18 restent jouables (sans
 le son). Voir `CREDITS.md`.
@@ -76,8 +77,8 @@ quiz : le même quiz sert à tout montrer.
 - **Survie** (1 à 5 ❤️) — la soirée « démo » : une mauvaise réponse coûte un cœur, à 0 on
   devient 👻 fantôme et on hante les vivants (Gel / Brouilleur). Avec ce quiz expert, **2 ou 3
   cœurs** suffisent pour avoir des éliminations dès la moitié du quiz. Les questions sans bonne
-  réponse (2, 8, 15) ne coûtent rien ; au buzzer (14), seul un buzz raté coûte un cœur ; à l'ordre
-  (22), un ordre presque juste coûte quand même un cœur.
+  réponse (2, 8, 15) et le « Dessine-moi » (22) ne coûtent rien ; au buzzer (14), seul un buzz raté coûte un cœur ; à l'ordre
+  (23), un ordre presque juste coûte quand même un cœur.
 - **Conseil démo** : **Survie + Jokers** pour une soirée entre amis (le plus spectaculaire),
   **Équipes + Jokers** pour un grand groupe, **Solo sans jokers** pour un quiz « sérieux ».
 
@@ -89,15 +90,15 @@ réponses d'affilée. Où les montrer :
 | Joker              | Questions idéales                      | Pourquoi                                                                                  |
 | ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------- |
 | 🎯 50/50           | 5, 11, 20 (QCM) ; 9, 19 (curseur) ; 21 | QCM : cache des mauvaises réponses ; curseur : plage réduite ; réponse libre : 1re lettre |
-| 🦜 Copieur         | 21, 22                                 | copier le meilleur joueur sur les questions les plus dures                                |
+| 🦜 Copieur         | 21, 23                                 | copier le meilleur joueur sur les questions les plus dures                                |
 | 🥶 Gel             | avant 3, 14                            | 5 s bloqué au début ; au buzzer (14), il retarde le BUZZ                                  |
 | 🌀 Brouilleur      | avant 5, 6, 11, 17, 18, 20             | boutons gris et mélangés : il faut lire le texte à l'écran                                |
-| ✖️2 Double ou rien | 16, 21, 22 (2000 points)               | ×2 si juste, −500 si faux                                                                 |
+| ✖️2 Double ou rien | 16, 21, 23 (2000 points)               | ×2 si juste, −500 si faux                                                                 |
 | 🛡️ Bouclier        | n'importe quand                        | bloque la prochaine attaque et garde la série                                             |
 | 🦹 Voleur          | à partir de la question 10             | vole 10 % du score du leader                                                              |
 | ⏳ Sablier         | 7, 10, 12                              | les questions où l'on réfléchit longtemps                                                 |
 
-Pas de joker sur les questions 2, 8 et 15 (pas de bonne réponse) ni sur la question 14 (buzzer).
-Pas de 50/50 sur les vrai / faux (4, 16), le point sur l'image (10) et l'ordre (22). Pour le
+Pas de joker sur les questions 2, 8 et 15 (pas de bonne réponse) ni sur les questions 14 (buzzer, sauf le Gel) et 22 (« Dessine-moi »).
+Pas de 50/50 sur les vrai / faux (4, 16), le point sur l'image (10) et l'ordre (23). Pour le
 « Mytho ! » (13), le Copieur copie le vote et le 50/50 cache la moitié des mythos ; pas de
 Brouilleur ni de Sablier.

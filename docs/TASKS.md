@@ -1717,3 +1717,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   includes `DRAW`; `QuestionSetup.draw?`; `Game.answer()` now returns `{ guess? }` (the socket
   handler sends it in the ack); `GameSettings.random` also picks the words. Prisma migration
   `20261024230000_draw`.
+- 2026-10-24, main agent (post-merge T30 + T33): T33 follow-up (2) done — the Harry Potter quiz
+  gets a « Dessine-moi » question (22, 10 magical objects, 90 s), the Horcruxes finale becomes 23;
+  README (table, feature list, Survie / jokers sections) and CREDITS renumbered; re-imported for
+  loicmoster@hotmail.fr (updated in place, 23 questions, private). Music still to add (3 MP3s).
