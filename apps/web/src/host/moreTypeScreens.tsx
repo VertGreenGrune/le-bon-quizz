@@ -21,7 +21,9 @@ export function MoreTypeHint({
 }) {
   const hint =
     question.type === 'ORDER'
-      ? '📱 Remets dans l’ordre sur ton téléphone'
+      ? question.buzzer
+        ? '🔔 Buzzez, puis donnez l’ordre à voix haute (A, B, C…)'
+        : '📱 Remets dans l’ordre sur ton téléphone'
       : question.type === 'PIN'
         ? '📍 Touche l’image sur ton téléphone'
         : question.type === 'WHO_OF_US'

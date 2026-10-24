@@ -43,6 +43,8 @@ export const ErrorCode = z.enum([
   'FROZEN',
   /** « Mytho ! »: the lie is (almost) the real answer. */
   'LIE_TOO_CLOSE',
+  /** « Buzzer »: someone else has the hand (or buzzed first). */
+  'BUZZER_TAKEN',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -102,6 +104,8 @@ export const HostCreatePayload = z.object({
 export const HostActionPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
 export const HostKickPayload = HostActionPayload.extend({ playerId: z.string().min(1) });
 export const HostMovePlayerPayload = HostKickPayload.extend({ teamId: TeamId });
+/** « Buzzer »: the host judges the answer said out loud by the player who has the hand. */
+export const HostJudgePayload = HostActionPayload.extend({ correct: z.boolean() });
 
 /** `avatar` missing (older clients) → the server picks a random one. */
 export const PlayerJoinPayload = z.object({
@@ -144,6 +148,9 @@ export const PlayerAnswerPayload = z.union([
   z.strictObject({ ...answerTarget, playerId: z.string().min(1).max(64) }),
 ]);
 
+/** « Buzzer »: the player hits BUZZ on the current question. */
+export const PlayerBuzzPayload = z.object({ pin: Pin, questionIndex: z.number().int().min(0) });
+
 /** Plays a joker on the current question; `targetId` for Copieur, Gel, Brouilleur, Voleur. */
 export const PlayerJokerPayload = z.object({
   pin: Pin,
@@ -163,6 +170,8 @@ export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
 export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
 export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
+export type HostJudgePayload = z.infer<typeof HostJudgePayload>;
+export type PlayerBuzzPayload = z.infer<typeof PlayerBuzzPayload>;
 export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
 export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
 export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
@@ -212,6 +221,12 @@ export interface ClientToServerEvents {
    * question and the game resumes (after the usual 3-2-1 countdown). No-op when not paused.
    */
   'host:resume': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  /**
+   * « Buzzer »: ✅ / ❌ on the answer of the player who has the hand (allowed while paused).
+   * Right → REVEAL; wrong → that player is out for this question, the timer goes on.
+   * `INVALID_PAYLOAD` when nobody has the hand.
+   */
+  'host:judge': (p: HostJudgePayload, ack: (r: Ack) => void) => void;
 
   /**
    * In LOBBY: joins. In a started game: takes the place of the disconnected player with that
@@ -236,6 +251,12 @@ export interface ClientToServerEvents {
   /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack) => void) => void;
+  /**
+   * « Buzzer » question, ANSWERING: takes the hand (first one processed by the server wins),
+   * which freezes the timer until the host judges. `BUZZER_TAKEN` (someone has the hand),
+   * `ALREADY_ANSWERED` (out after a wrong answer), `FROZEN` (Gel), `GAME_PAUSED`, `NOT_ANSWERING`.
+   */
+  'player:buzz': (p: PlayerBuzzPayload, ack: (r: Ack) => void) => void;
   /**
    * Games with jokers: plays one joker of the hand on the current question (QUESTION_INTRO /
    * ANSWERING, before answering, not paused, one per question). `JOKER_REFUSED` otherwise (the
@@ -268,6 +289,16 @@ export interface GameStatePayload {
   paused?: GamePause;
   /** The game is played with jokers. */
   jokers?: true;
+  /**
+   * « Buzzer » question, ANSWERING: who has the hand (the timer is then frozen, `remainingMs` =
+   * frozen value) and who already answered wrong (out for this question).
+   */
+  buzzer?: BuzzerStatus;
+}
+
+export interface BuzzerStatus {
+  holder?: LobbyMember;
+  wrong: LobbyMember[];
 }
 
 /** « Survie », one player: hearts left (0 = 👻 ghost), haunts in stock. */
@@ -372,6 +403,11 @@ export interface QuestionShowPayload {
   items?: string[];
   /** WHO_OF_US: the players one can vote for (everyone in the game). */
   candidates?: LobbyMember[];
+  /**
+   * « Buzzer »: the question is played with the buzzer (`choices` then empty). `answer` = the
+   * right answer in words, for the host to judge (`buzzerAnswer`; the TV hides it until asked).
+   */
+  buzzer?: { answer: string[] };
 }
 
 /** To players only: never contains the question text or the correct answer. */
@@ -393,6 +429,8 @@ export interface QuestionPromptPayload {
   candidates?: LobbyMember[];
   /** BLUFF: writing or voting (a new prompt, with `timeLimitSec` = vote time, starts the vote). */
   bluff?: BluffPrompt;
+  /** « Buzzer »: one BUZZ button instead of the answer screen (no other field of the type). */
+  buzzer?: true;
 }
 
 export interface AnswerCountPayload {
@@ -438,6 +476,14 @@ export interface RevealDetails {
    * fooled the fewest players first, the truth last).
    */
   bluff?: { truth: string; options: BluffOption[] };
+  /** « Buzzer »: the right answer, who found it (absent: nobody) and who answered wrong, in order. */
+  buzzer?: BuzzerReveal;
+}
+
+export interface BuzzerReveal {
+  answer: string[];
+  winner?: LobbyMember;
+  wrong: LobbyMember[];
 }
 
 export interface PinMark extends PinPoint {
@@ -520,6 +566,11 @@ export interface PlayerResultPayload {
     fooledPoints: number;
     fellFor?: LobbyMember[];
   };
+  /**
+   * « Buzzer »: the right answer, `won` (this player found it), `wrong` (buzzed and answered
+   * wrong), `winner` (whoever found it, absent: nobody).
+   */
+  buzzer?: { answer: string[]; won: boolean; wrong: boolean; winner?: LobbyMember };
 }
 
 /** What a joker does to one phone's controls on the current question (that phone only). */
@@ -544,6 +595,8 @@ export interface PlayerJokersPayload {
   questionIndex: number;
   /** Its type, so the phone greys out the jokers it doesn't take (`jokerAvailability`). */
   questionType?: QuestionType;
+  /** The question is a « Buzzer » one: no joker (`jokerAvailability(type, true)`). */
+  buzzer?: true;
   hand: JokerType[];
   /** Joker played on `questionIndex`, with its target (Copieur, Gel, Brouilleur, Voleur). */
   played?: { joker: JokerType; target?: LobbyMember };

@@ -119,6 +119,8 @@ export interface JokerAvailability {
   unavailable: JokerType[];
   /** A pending Brouilleur hits on this type (otherwise it waits for the next one that does). */
   scramble: boolean;
+  /** A pending Gel hits here although the question takes no joker (« Buzzer »: BUZZ delayed). */
+  freeze?: true;
 }
 
 /**
@@ -143,12 +145,16 @@ const AVAILABILITY: Record<QuestionType, JokerAvailability> = {
 
 const NO_JOKERS: JokerAvailability = { jokers: false, unavailable: [], scramble: false };
 
-export function jokerAvailability(type: QuestionType): JokerAvailability {
+/** « Buzzer » questions (T28), whatever their type: no joker, but a pending Gel delays the BUZZ. */
+const BUZZER: JokerAvailability = { jokers: false, unavailable: [], scramble: false, freeze: true };
+
+export function jokerAvailability(type: QuestionType, buzzer = false): JokerAvailability {
+  if (buzzer) return BUZZER;
   return AVAILABILITY[type] ?? NO_JOKERS;
 }
 
-/** Can this joker be played on a question of this type? */
-export function jokerAllowed(type: QuestionType, joker: JokerType): boolean {
-  const a = jokerAvailability(type);
+/** Can this joker be played on a question of this type (`buzzer`: a « Buzzer » question)? */
+export function jokerAllowed(type: QuestionType, joker: JokerType, buzzer = false): boolean {
+  const a = jokerAvailability(type, buzzer);
   return a.jokers && !a.unavailable.includes(joker);
 }

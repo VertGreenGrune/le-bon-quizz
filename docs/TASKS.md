@@ -1339,12 +1339,50 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   ghost. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones.
 
 ### T28 — Buzzer round
-- **Status:** in-progress (T28 agent, worktree ../lbq-T28)
+- **Status:** done
 - **Depends on:** T31
 - Question option « Buzzer »: the question is shown on the TV without choices; phones show one
   huge **BUZZ** button; the first to buzz (server timestamp) answers **out loud**; the host
   presses ✅ / ❌ on the TV (or a host phone); wrong → that player is locked out and the others
   can buzz again; points to the winner only. Great for blind tests (T22 sound clips).
+- **Summary:** shared: `questionBase.buzzer?` + refinement (only `BUZZER_QUESTION_TYPES` = MCQ,
+  TRUE_FALSE, TYPE_ANSWER, SLIDER, ORDER; `buzzerAllowed`), `buzzerAnswer(q)` (the right answer in
+  words: correct choices, accepted answers, « 1789 (± 5) », numbered items);
+  `jokerAvailability(type, buzzer)` (buzzer → no joker, `freeze: true` = a pending Gel still
+  lands), `jokerAllowed(…, buzzer)`. Contract (additive, PLAN.md §3–§5): `player:buzz`,
+  `host:judge { correct }`, error `BUZZER_TAKEN`, `game:state.buzzer` (`BuzzerStatus`: holder,
+  wrong), `question:show.buzzer.answer` (host only), `question:prompt.buzzer`,
+  `RevealDetails.buzzer` (`BuzzerReveal`), `player:result.buzzer`, `joker:state.buzzer`. Server:
+  `game/buzzer.ts` (round state + payloads) and `Game.ts` hooks: `buzz()` takes the hand and
+  freezes the clock (`hold`, composes with the pause: a pause during a hold keeps it frozen after
+  the 3-2-1), `judge()` (✅ → `basePoints` + usual streak, REVEAL; ❌ → locked out, clock goes on,
+  REVEAL when everyone is out), Gel checked on clock time (`timerElapsedMs`), kick of the holder
+  frees the hand, « Survie » spares the players who didn't buzz, the buzzer status rides in
+  `game:state` so both resyncs (phone and host reload) get it for free. DB: migration
+  `20261024200000_buzzer` (`Question.buzzer`), mapped in `quizzes.service.ts`. Editor: « 🔔
+  Buzzer » checkbox (types that take it). TV (`host/buzzerScreens.tsx`): « Buzzez sur vos
+  téléphones ! », the holder's big card (avatar, « X a buzzé ! », ✅ / ❌, « 👁 Voir la réponse
+  (animateur) »), eliminated players, reveal (answer, « 🏆 X a trouvé ! » / « Personne n'a
+  trouvé… »); new CC0 `buzz.wav` on a new holder (not replayed after a reload), clock and clip
+  paused while someone answers. Phone (`player/buzzer.tsx`): huge BUZZ (fires on pointer-down),
+  « À toi ! », « X a la main… » (disabled), « Raté ! » lockout, frozen countdown, result titles
+  (« Bien joué ! » / « Raté ! » / « X a été plus rapide » neutral / « Personne n'a trouvé ») with
+  the answer; joker bar hidden. Reports: « 🔔 Buzzer » badge + card (answer, found by, wrong).
+  Tests: `Game.buzzer.test.ts` (18: prompt / show / no leak, first buzz wins, intro refused,
+  frozen timer, lockout + timer goes on, no winner, all wrong, judge without holder, streak bonus,
+  typed / slider, team average, Survie, jokers refused + Gel delays BUZZ, holder drop + judge while
+  paused, pause during a hold, host resync, phone rejoin, kick holder), persistence round trip
+  (Postgres), shared schema / `buzzerAnswer` / joker table, editor draft, host + phone reducers;
+  e2e `e2e/buzzer.spec.ts` (3 phones: Bob buzzes, frozen phone clock, host reload while he has the
+  hand, ❌, Alice ✅, no winner on the timer, phone frames without the answer, report). Checked
+  with screenshots (host 1600×900, Pixel 7).
+- **Deviations / notes:** (1) Not on every type: POLL / WHO_OF_US / WORD_CLOUD (no right
+  answer), PIN (a point on a picture) and BLUFF are refused by the schema (the editor hides the
+  option). (2) Judging is on the TV only (no host phone). (3) The answer for the host is sent in
+  `question:show` (host room only, never to phones) and hidden on the TV until « Voir la réponse ».
+  (4) Players who don't buzz follow the usual streak rule (no answer = streak reset). (5) « Passer »
+  during a hold reveals without a winner. **After merging, run `pnpm --filter @lbq/server
+  db:migrate`.** Not tried on real phones.
 
 ### T30 — « Dessine-moi » (Pictionary round)
 - **Status:** todo
@@ -1546,3 +1584,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   argument `withHands` and `haunt()`. `PlayerStanding` / `GameRecord` gain `hearts` /
   `eliminatedAt`. Prisma migration `20261024160000_survival`. Outside the code scope:
   `apps/web/scripts/generate-sounds.mjs` + `public/sounds/eliminated.wav` (CC0, in CREDITS.md).
+- 2026-10-24, T28 agent (additive, PLAN.md §3–§5): `Question.buzzer?` (+ `BUZZER_QUESTION_TYPES`,
+  `buzzerAllowed`, `buzzerAnswer`); `jokerAvailability` / `jokerAllowed` take an optional
+  `buzzer` flag and `JokerAvailability.freeze?`; events `player:buzz` (`PlayerBuzzPayload`),
+  `host:judge` (`HostJudgePayload`), error `BUZZER_TAKEN`; `GameStatePayload.buzzer?`
+  (`BuzzerStatus`), `QuestionShowPayload.buzzer?`, `QuestionPromptPayload.buzzer?`,
+  `RevealDetails.buzzer?` (`BuzzerReveal`), `PlayerResultPayload.buzzer?`,
+  `PlayerJokersPayload.buzzer?`. Prisma migration `20261024200000_buzzer`. Outside the code scope:
+  `generate-sounds.mjs` + `public/sounds/buzz.wav` (CC0, in CREDITS.md); phone countdown got a
+  `data-testid="countdown"`.

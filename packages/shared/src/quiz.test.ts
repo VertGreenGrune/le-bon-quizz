@@ -5,8 +5,47 @@ import {
   PlayerJoinPayload,
   QuestionSchema,
   QuizSchema,
+  buzzerAnswer,
   hasRightAnswer,
 } from './index.js';
+
+describe('« Buzzer » option (T28)', () => {
+  const mcq = {
+    type: 'MCQ',
+    text: 'Q ?',
+    choices: [
+      { text: 'A', isCorrect: true },
+      { text: 'B', isCorrect: false },
+    ],
+  };
+
+  it('is accepted on the types with an answer to say out loud, refused on the others', () => {
+    expect(QuestionSchema.parse({ ...mcq, buzzer: true })).toMatchObject({ buzzer: true });
+    expect(QuestionSchema.parse(mcq)).not.toHaveProperty('buzzer');
+    const poll = { type: 'POLL', text: 'Q ?', choices: [{ text: 'A' }, { text: 'B' }] };
+    expect(QuestionSchema.safeParse({ ...poll, buzzer: true }).success).toBe(false);
+    const bluff = { type: 'BLUFF', text: 'Q ?', truth: 'V', buzzer: true };
+    expect(QuestionSchema.safeParse(bluff).success).toBe(false);
+  });
+
+  it('buzzerAnswer: the right answer in words for the host', () => {
+    expect(buzzerAnswer(QuestionSchema.parse(mcq))).toEqual(['A']);
+    const typed = {
+      type: 'TYPE_ANSWER',
+      text: 'Q ?',
+      acceptedAnswers: ['Pacifique', 'Le Pacifique'],
+    };
+    expect(buzzerAnswer(QuestionSchema.parse(typed))).toEqual(['Pacifique', 'Le Pacifique']);
+    const slider = {
+      type: 'SLIDER',
+      text: 'Q ?',
+      slider: { min: 0, max: 10, step: 0.5, correct: 2.5, unit: 'km' },
+    };
+    expect(buzzerAnswer(QuestionSchema.parse(slider))).toEqual(['2,5 km']);
+    const order = { type: 'ORDER', text: 'Q ?', items: ['a', 'b', 'c'] };
+    expect(buzzerAnswer(QuestionSchema.parse(order))).toEqual(['1. a', '2. b', '3. c']);
+  });
+});
 
 describe('shared schemas', () => {
   it('demo quiz is valid', () => {

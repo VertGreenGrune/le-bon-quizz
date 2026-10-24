@@ -2,10 +2,12 @@ import type { Server, Socket } from 'socket.io';
 import {
   HostActionPayload,
   HostCreatePayload,
+  HostJudgePayload,
   HostKickPayload,
   HostMovePlayerPayload,
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
+  PlayerBuzzPayload,
   PlayerHauntPayload,
   PlayerJoinPayload,
   PlayerJokerPayload,
@@ -267,6 +269,14 @@ export function registerSocketHandlers(
     );
 
     socket.on(
+      'host:judge',
+      handler(socket, HostJudgePayload, ({ pin, hostToken, correct }) => {
+        asHost(pin, hostToken).judge(correct);
+        return {};
+      }),
+    );
+
+    socket.on(
       'host:end',
       handler(socket, HostActionPayload, ({ pin, hostToken }) => {
         asHost(pin, hostToken).end();
@@ -351,6 +361,15 @@ export function registerSocketHandlers(
       handler(socket, PlayerAnswerPayload, ({ pin, questionIndex, ...answer }) => {
         const { game, playerId } = asPlayer(pin);
         game.answer(playerId, questionIndex, answer);
+        return {};
+      }),
+    );
+
+    socket.on(
+      'player:buzz',
+      handler(socket, PlayerBuzzPayload, ({ pin, questionIndex }) => {
+        const { game, playerId } = asPlayer(pin);
+        game.buzz(playerId, questionIndex);
         return {};
       }),
     );

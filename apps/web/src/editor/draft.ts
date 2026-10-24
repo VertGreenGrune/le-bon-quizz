@@ -6,6 +6,7 @@ import {
   ORDER_MIN_ITEMS,
   QuizInput,
   SHAPES,
+  buzzerAllowed,
   hasRightAnswer,
   type Choice,
   type ImageEffect,
@@ -48,6 +49,8 @@ export interface DraftQuestion {
   audioOnReveal: boolean;
   /** Picture reveal effect; only sent with an image. */
   imageEffect: ImageEffect;
+  /** « Buzzer » (T28); only sent for the types that take it (`buzzerAllowed`). */
+  buzzer: boolean;
 }
 
 /**
@@ -101,6 +104,7 @@ export function newQuestion(): DraftQuestion {
     voteTimeSec: BLUFF_DEFAULT_VOTE_SEC,
     audioOnReveal: false,
     imageEffect: 'none',
+    buzzer: false,
   };
 }
 
@@ -117,6 +121,7 @@ export function toDraftQuestion(q: Question): DraftQuestion {
   if (q.audio) draft.audio = q.audio;
   draft.audioOnReveal = q.audioOnReveal ?? false;
   draft.imageEffect = q.imageEffect ?? 'none';
+  draft.buzzer = q.buzzer ?? false;
   switch (q.type) {
     case 'TYPE_ANSWER':
       return { ...draft, acceptedAnswers: q.acceptedAnswers, typoTolerance: q.typoTolerance };
@@ -186,6 +191,8 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
     // An effect without a picture (removed after choosing it) is dropped; PIN has none.
     imageEffect:
       q.imageUrl && q.imageEffect !== 'none' && q.type !== 'PIN' ? q.imageEffect : undefined,
+    // Kept in the draft when switching to a type without buzzer (and back), not saved there.
+    buzzer: q.buzzer && buzzerAllowed(q.type) ? true : undefined,
   };
   switch (q.type) {
     case 'TYPE_ANSWER':

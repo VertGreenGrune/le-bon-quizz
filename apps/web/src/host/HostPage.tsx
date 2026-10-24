@@ -79,16 +79,23 @@ export function HostPage() {
     state.resumeAt !== null ? Math.max(0, Math.ceil((state.resumeAt - now) / 1000)) : null;
   const offline = offlinePlayers(state);
 
+  const holder = state.buzzer?.holder ?? null;
   useHostSounds({
     phase: state.phase,
-    // Paused: the clock doesn't tick, the 3-2-1 countdown does.
-    remainingSec: state.paused ? null : remainingSec,
+    // Paused / someone answering out loud: the clock doesn't tick, the 3-2-1 countdown does.
+    remainingSec: state.paused || holder ? null : remainingSec,
     resumeCount,
     playerCount: state.players.length,
+    buzzerHolder: holder?.id ?? null,
   });
 
-  // Sound clip of the question (host screen only): paused with the game, until the 3-2-1 ends.
-  const clip = useQuestionClip(currentQuestion(state), state.phase, state.paused !== null);
+  // Sound clip of the question (host screen only): paused with the game, until the 3-2-1 ends,
+  // and while a player answers out loud (« Buzzer »).
+  const clip = useQuestionClip(
+    currentQuestion(state),
+    state.phase,
+    state.paused !== null || holder !== null,
+  );
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
   // entrance animations (podium reveal, re-ordering…) instead of replaying them.
@@ -182,6 +189,8 @@ export function HostPage() {
           reveal={phase === 'REVEAL' ? state.reveal : null}
           instant={instant}
           onReplay={clip.replay}
+          buzzer={state.buzzer}
+          onJudge={game.judge}
         />
       );
       primary =

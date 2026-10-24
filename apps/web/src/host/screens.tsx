@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   SHAPES,
+  type BuzzerStatus,
   type LobbyMember,
   type QuestionRevealPayload,
   type QuestionShowPayload,
@@ -18,6 +19,7 @@ import { formatValue } from '../lib/numbers';
 import { joinOrigins, joinUrl } from './joinUrl';
 import { MORE_TYPES, MoreTypeHint, MoreTypeReveal } from './moreTypeScreens';
 import { BluffHint, BluffReveal } from './bluffScreens';
+import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { TICK_FROM_SEC, useMuted } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -200,6 +202,8 @@ export function QuestionScreen({
   reveal,
   instant,
   onReplay,
+  buzzer = null,
+  onJudge = () => {},
 }: {
   question: QuestionShowPayload | null;
   remainingMs: number | null;
@@ -210,6 +214,10 @@ export function QuestionScreen({
   instant: boolean;
   /** « Rejouer » the question's sound clip. */
   onReplay: () => void;
+  /** « Buzzer » question: who has the hand / answered wrong (`game:state.buzzer`). */
+  buzzer?: BuzzerStatus | null;
+  /** « Buzzer »: ✅ / ❌ on the answer said out loud. */
+  onJudge?: (correct: boolean) => void;
 }) {
   if (!question) {
     return <p className="m-auto animate-pulse text-3xl">Chargement de la question…</p>;
@@ -253,7 +261,9 @@ export function QuestionScreen({
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 self-stretch">
           {reveal ? (
-            reveal.bluff ? (
+            reveal.buzzer ? (
+              <BuzzerRevealView reveal={reveal.buzzer} instant={instant} />
+            ) : reveal.bluff ? (
               <BluffReveal bluff={reveal.bluff} instant={instant} />
             ) : MORE_TYPES.includes(reveal.type) ? (
               <MoreTypeReveal reveal={reveal} instant={instant} questionIndex={question.index} />
@@ -282,14 +292,31 @@ export function QuestionScreen({
                 </motion.div>
               )}
               {listen}
-              <AnswerHint question={question} />
-              <MoreTypeHint question={question} instant={instant} />
-              <BluffHint question={question} instant={instant} />
+              {question.buzzer ? (
+                <>
+                  {/* Au buzzer, an ORDER question still shows its items (to say the order). */}
+                  <MoreTypeHint question={question} instant={instant} />
+                  <BuzzerPanel
+                    status={buzzer}
+                    answer={question.buzzer.answer}
+                    instant={instant}
+                    onJudge={onJudge}
+                  />
+                </>
+              ) : (
+                <>
+                  <AnswerHint question={question} />
+                  <MoreTypeHint question={question} instant={instant} />
+                  <BluffHint question={question} instant={instant} />
+                </>
+              )}
             </>
           )}
         </div>
 
-        <div className="flex w-32 shrink-0 flex-col items-center rounded-2xl bg-black/25 py-3">
+        <div
+          className={`flex w-32 shrink-0 flex-col items-center rounded-2xl bg-black/25 py-3 ${question.buzzer ? 'invisible' : ''}`}
+        >
           <motion.span
             key={answered}
             initial={answered > 0 ? { scale: 1.5 } : false}

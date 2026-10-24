@@ -107,6 +107,8 @@ model Question {
   audioOnReveal    Boolean?
   /// Picture reveal effect (only with `imageUrl`); null = none.
   imageEffect      ImageEffect?
+  /// « Buzzer » (T28): phones get a BUZZ button, the host judges the answer said out loud.
+  buzzer           Boolean      @default(false)
 
   @@unique([quizId, order])
 }

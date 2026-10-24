@@ -14,6 +14,7 @@ noise — no samples, no third-party recordings). They are dedicated to the publ
 | `podium.wav`     | Podium: drum roll (3rd → 2nd) then winner fanfare | generated (`generate-sounds`) | CC0 1.0 |
 | `joker.wav`      | A player plays a joker (announcement)             | generated (`generate-sounds`) | CC0 1.0 |
 | `eliminated.wav` | « Survie »: a player loses their last heart       | generated (`generate-sounds`) | CC0 1.0 |
+| `buzz.wav`       | « Buzzer »: a player takes the hand               | generated (`generate-sounds`) | CC0 1.0 |
 
 To regenerate (deterministic): `node apps/web/scripts/generate-sounds.mjs`.
 

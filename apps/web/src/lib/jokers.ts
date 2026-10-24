@@ -75,12 +75,12 @@ export function resultLine(r: JokerResult): string {
 
 /** Can this joker be played now (question type known)? Without a type: yes (server decides). */
 export function jokerPlayable(state: PlayerJokersPayload, joker: JokerType): boolean {
-  return !state.questionType || jokerAllowed(state.questionType, joker);
+  return !state.questionType || jokerAllowed(state.questionType, joker, !!state.buzzer);
 }
 
-/** The question takes no joker at all (e.g. a poll): the bar is hidden. */
+/** The question takes no joker at all (e.g. a poll, a « Buzzer » question): the bar is hidden. */
 export function noJokersHere(state: PlayerJokersPayload): boolean {
-  return !!state.questionType && !jokerAvailability(state.questionType).jokers;
+  return !!state.questionType && !jokerAvailability(state.questionType, !!state.buzzer).jokers;
 }
 
 /**

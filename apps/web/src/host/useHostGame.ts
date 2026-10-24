@@ -179,6 +179,11 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const a = auth();
     if (a) getSocket().emit('host:shuffle', a, handleAck);
   };
+  /** « Buzzer »: ✅ / ❌ on the answer said out loud by the player who has the hand. */
+  const judge = (correct: boolean) => {
+    const a = auth();
+    if (a) getSocket().emit('host:judge', { ...a, correct }, handleAck);
+  };
   /** « Continuer sans… » during a pause. */
   const resume = () => {
     const a = auth();
@@ -197,6 +202,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     movePlayer,
     shuffle,
     resume,
+    judge,
     clearError: () => setError(null),
   };
 }

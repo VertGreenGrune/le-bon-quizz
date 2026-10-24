@@ -193,6 +193,18 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect((await persistence.loadQuiz('demo', owner.id)).dbQuizId).toBe('demo');
   });
 
+  it('keeps the « Buzzer » option of a question', async () => {
+    const owner = await user('owner@test.fr');
+    const [first, ...rest] = demoInput.questions;
+    const q = await createQuiz(prisma, owner.id, {
+      ...demoInput,
+      questions: [{ ...first!, buzzer: true }, ...rest],
+    });
+    const { quiz } = await persistence.loadQuiz(q.id, owner.id);
+    expect(quiz.questions[0]).toMatchObject({ buzzer: true });
+    expect(quiz.questions[1]).not.toHaveProperty('buzzer');
+  });
+
   it("launches the host's own quizzes and public ones, not another host's private one", async () => {
     const owner = await user('owner@test.fr');
     const other = await user('other@test.fr');

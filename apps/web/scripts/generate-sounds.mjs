@@ -207,3 +207,22 @@ mkdirSync(OUT, { recursive: true });
   noiseBurst(buf, 0.7, 0.9, { vol: 0.07, decay: 0.4 });
   save('eliminated', buf);
 }
+
+// ---- buzz: game-show buzzer when a player takes the hand (« Buzzer » questions) ----
+{
+  const buf = buffer(0.75);
+  // Two detuned square waves a fifth apart, with a quick vibrato: the classic « BZZZ ».
+  for (const [freq, vol] of [
+    [hz('G3'), 0.11],
+    [hz('D4'), 0.08],
+    [hz('G3') * 1.01, 0.08],
+  ]) {
+    tone(buf, 0, 0.7, (t) => freq * (1 + 0.012 * Math.sin(2 * Math.PI * 28 * t)), {
+      wave: 'square',
+      vol,
+      attack: 0.01,
+    });
+  }
+  tone(buf, 0, 0.12, hz('G5'), { vol: 0.2, decay: 0.05 }); // bright attack
+  save('buzz', buf);
+}

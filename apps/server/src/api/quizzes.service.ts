@@ -48,6 +48,7 @@ function toQuestion(qu: QuestionRow): Question {
       ...(qu.audioOnReveal && { audioOnReveal: true }),
     }),
     ...(qu.imageEffect && qu.imageEffect !== 'none' && { imageEffect: qu.imageEffect }),
+    ...(qu.buzzer && { buzzer: true }),
   };
   const config = (qu.config ?? {}) as Partial<QuestionConfig>;
   switch (qu.type) {
@@ -129,6 +130,7 @@ const questionsCreate = (input: QuizInput) =>
       audioDurationSec: qu.audio?.durationSec ?? null,
       audioOnReveal: qu.audio && qu.audioOnReveal ? true : null,
       imageEffect: qu.imageUrl && qu.imageEffect !== 'none' ? (qu.imageEffect ?? null) : null,
+      buzzer: !!qu.buzzer,
       type: qu.type,
       timeLimitSec: qu.timeLimitSec,
       basePoints: qu.basePoints,

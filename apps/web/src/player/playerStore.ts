@@ -277,6 +277,26 @@ export function editLie() {
 }
 
 /**
+ * « Buzzer »: hits BUZZ on the current question; resolves with the French error message
+ * (someone was faster, Gel…), or null when the player has the hand (`game:state.buzzer`).
+ */
+export function sendBuzz(): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  vibrate(40);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:buzz', { pin: session.pin, questionIndex: state.questionIndex }, (err, res) => {
+        if (err) return resolve(errorMessage('TIMEOUT'));
+        if (!res.ok) return resolve(res.error.message);
+        vibrate([150, 80, 150]);
+        resolve(null);
+      });
+  });
+}
+
+/**
  * Plays a joker on the current question; resolves with the French error message, or null when
  * the server accepted it (it then sends `joker:state` / `joker:used`).
  */
