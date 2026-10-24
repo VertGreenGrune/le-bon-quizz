@@ -1,0 +1,239 @@
+{
+  "title": "Harry Potter — niveau expert",
+  "description": "Le quiz vitrine de Le Bon Quizz : 22 questions pour vrais sorciers, avec tous les types de questions, des blind tests, des photos à deviner, un « Mytho ! » et un buzzer.",
+  "coverImageUrl": "images/glenfinnan-viaduct.jpg",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Rébus 🎬 : 👑 + 🩸 + ½ = quel tome de Harry Potter ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Le Prince de Sang-Mêlé", "isCorrect": true },
+        { "text": "Les Reliques de la Mort", "isCorrect": false },
+        { "text": "L'Ordre du Phénix", "isCorrect": false },
+        { "text": "La Coupe de Feu", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "POLL",
+      "text": "Sondage 🗳️ Dans quelle maison le Choixpeau t'enverrait-il ?",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        { "text": "Gryffondor" },
+        { "text": "Serdaigle" },
+        { "text": "Poufsouffle" },
+        { "text": "Serpentard" }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Blind test 🎵 Comment s'appelle ce thème composé par John Williams ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/hedwigs-theme.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Hedwig's Theme", "isCorrect": true },
+        { "text": "Harry's Wondrous World", "isCorrect": false },
+        { "text": "Fawkes the Phoenix", "isCorrect": false },
+        { "text": "Buckbeak's Flight", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : la plume de phénix de la baguette de Harry vient de Fumseck, le phénix de Dumbledore.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Plusieurs réponses ✅ Lesquels de ces sorciers sont des Animagi ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Minerva McGonagall", "isCorrect": true },
+        { "text": "Nymphadora Tonks", "isCorrect": false },
+        { "text": "Rita Skeeter", "isCorrect": true },
+        { "text": "Peter Pettigrow", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Flou 🌫️ Ce château a servi de Poudlard dans les deux premiers films. Lequel est-ce ?",
+      "imageUrl": "images/alnwick-castle.jpg",
+      "imageEffect": "blur",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Château d'Édimbourg", "isCorrect": false },
+        { "text": "Château d'Alnwick", "isCorrect": true },
+        { "text": "Château de Stirling", "isCorrect": false },
+        { "text": "Château d'Eilean Donan", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle formule fait apparaître la Marque des Ténèbres dans le ciel ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Morsmordre"],
+      "typoTolerance": true
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous serait envoyé à Serpentard par le Choixpeau ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de points rapporte le Vif d'or à l'attrapeur qui le capture ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": { "min": 0, "max": 500, "step": 10, "correct": 150, "margin": 20, "unit": "points" }
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur la carte 📍 Où se trouve le viaduc de Glenfinnan, que traverse le Poudlard Express ?",
+      "imageUrl": "images/scotland-map.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "zone": { "x": 0.401, "y": 0.634, "radius": 0.05 }
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? « Il faut beaucoup de bravoure pour affronter ses ennemis, mais tout autant pour affronter ses amis. »",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Minerva McGonagall", "isCorrect": false },
+        { "text": "Rubeus Hagrid", "isCorrect": false },
+        { "text": "Albus Dumbledore", "isCorrect": true },
+        { "text": "Remus Lupin", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Zoom 🔍 Quel personnage cet acteur a-t-il incarné dans les huit films ?",
+      "imageUrl": "images/alan-rickman.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Severus Rogue", "Rogue", "Severus Snape"],
+      "typoTolerance": true
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel est le deuxième prénom de Ron Weasley ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Bilius",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 De quel film vient ce chœur aux paroles tirées de Macbeth ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/double-trouble.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": [
+        "Le Prisonnier d'Azkaban",
+        "Harry Potter et le Prisonnier d'Azkaban",
+        "Azkaban"
+      ],
+      "typoTolerance": true
+    },
+    {
+      "type": "WORD_CLOUD",
+      "text": "Nuage de mots ☁️ Ton sortilège préféré ?",
+      "timeLimitSec": 20,
+      "basePoints": 0
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Neville Londubat est né le 31 juillet 1980, le même jour que Harry.",
+      "timeLimitSec": 15,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Pixels 👾 Dans quelle gare londonienne se cache la voie 9 ¾ ?",
+      "imageUrl": "images/kings-cross.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Paddington", "isCorrect": false },
+        { "text": "St Pancras", "isCorrect": false },
+        { "text": "Euston", "isCorrect": false },
+        { "text": "King's Cross", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel groupe sorcier fait danser Poudlard au bal de Noël de La Coupe de Feu ? (écoutez à la révélation 🎵)",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/do-the-hippogriff.mp3", "startSec": 0, "durationSec": 20 },
+      "audioOnReveal": true,
+      "choices": [
+        { "text": "Les Lutins de Cornouailles", "isCorrect": false },
+        { "text": "Les Bizarr' Sisters", "isCorrect": true },
+        { "text": "Les Strangulots", "isCorrect": false },
+        { "text": "Les Hiboux Hurleurs", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année Tom Jedusor a-t-il ouvert la Chambre des secrets, tuant Mimi Geignarde ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 1900, "max": 2000, "step": 1, "correct": 1943, "margin": 3 }
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel objet Dumbledore lègue-t-il à Ron dans son testament ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Les Contes de Beedle le Barde", "isCorrect": false },
+        { "text": "Le Déluminateur", "isCorrect": true },
+        { "text": "Le premier Vif d'or de Harry", "isCorrect": false },
+        { "text": "L'épée de Gryffondor", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel est le nom complet de naissance de Voldemort (prénom, deuxième prénom et nom) ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Tom Elvis Jedusor", "Tom Marvolo Jedusor", "Tom Marvolo Riddle"],
+      "typoTolerance": true
+    },
+    {
+      "type": "ORDER",
+      "text": "Finale 🏆 Remets les Horcruxes dans l'ordre de leur destruction, du premier au dernier.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": [
+        "Le journal de Tom Jedusor",
+        "La bague d'Elvis Gaunt",
+        "Le médaillon de Serpentard",
+        "La coupe de Poufsouffle",
+        "Le diadème de Serdaigle",
+        "Nagini"
+      ]
+    }
+  ]
+}
