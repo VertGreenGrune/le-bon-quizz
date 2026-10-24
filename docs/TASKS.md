@@ -1721,3 +1721,14 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   gets a « Dessine-moi » question (22, 10 magical objects, 90 s), the Horcruxes finale becomes 23;
   README (table, feature list, Survie / jokers sections) and CREDITS renumbered; re-imported for
   loicmoster@hotmail.fr (updated in place, 23 questions, private). Music still to add (3 MP3s).
+- 2026-10-24, main agent (user feedback after a real game): (1) **PIN map missing on phones** —
+  uploaded media are saved with absolute `http://localhost:3001/uploads/…` URLs, unreachable from
+  a phone or a TV. New `apps/web/src/lib/mediaUrl.ts`: every `/uploads/` URL is rebuilt on the
+  server the page talks to; used by `RevealImage`, `PinPicture`, the clip player, the editor
+  previews and the quiz covers (`serverUrl.ts` now also exports a lazy `serverUrl()`). Use
+  `mediaUrl()` for any new place that displays an uploaded file. (2) **Buzzer rule changed (user
+  decision):** a wrong answer locks only that player, the question and its sound go on; when
+  everyone has answered wrong, the locks are lifted and everyone can buzz again — only a right
+  answer or the timer ends the question. `BuzzerRound.locked` (current locks) vs `wrong` (every
+  wrong answer, reveal / report); wrong answers are recorded at REVEAL (one heart / streak reset
+  at most); a locked player who drops doesn't pause the game. PLAN.md §3 updated; tests added.

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ImageEffect } from '@lbq/shared';
 import { effectFrame, zoomOrigin } from '../lib/imageEffect';
+import { mediaUrl } from '../lib/mediaUrl';
 
 /**
  * A question picture with its reveal effect (blur / zoom / pixelate) at `progress`
@@ -45,7 +46,7 @@ export function RevealImage({
     <div className={`relative max-w-full overflow-hidden ${className}`} data-testid="reveal-image">
       <img
         ref={img}
-        src={src}
+        src={mediaUrl(src)}
         alt=""
         draggable={false}
         onLoad={(e) =>

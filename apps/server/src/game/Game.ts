@@ -706,7 +706,8 @@ export class Game {
     if (this.phase !== 'ANSWERING' || questionIndex !== this.questionIndex || !round)
       throw new GameError('NOT_ANSWERING', 'Trop tard !');
     if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
-    if (player.answer) throw new GameError('ALREADY_ANSWERED', 'Tu as déjà répondu');
+    if (player.answer || round.locked.includes(player.id))
+      throw new GameError('ALREADY_ANSWERED', 'Tu t’es trompé : attends les autres');
     if (round.holder) {
       const holder = this.players.get(round.holder)?.nickname ?? 'Quelqu’un';
       throw new GameError('BUZZER_TAKEN', `${holder} a buzzé avant toi !`);
@@ -722,8 +723,9 @@ export class Game {
 
   /**
    * « Buzzer » (`host:judge`), allowed while paused: right → the player wins the question
-   * (REVEAL); wrong → they are out for this question and the timer goes on (REVEAL when nobody
-   * is left to buzz).
+   * (REVEAL); wrong → they can't buzz again and the question (timer, sound) goes on. When
+   * everyone has answered wrong, everyone can buzz again: only a right answer or the timer ends
+   * the question.
    */
   judge(correct: boolean): void {
     const round = this.buzzer;
@@ -731,17 +733,37 @@ export class Game {
     if (this.phase !== 'ANSWERING' || !round || !holder)
       throw new GameError('INVALID_PAYLOAD', 'Personne n’a la main');
     this.touch();
-    const question = this.currentQuestion!;
-    holder.answer = buzzerAnswerOf(correct, question.basePoints, this.timerElapsedMs());
     round.holder = null;
     if (correct) {
+      holder.answer = buzzerAnswerOf(true, this.currentQuestion!.basePoints, this.timerElapsedMs());
       round.winner = holder.id;
       return this.finishAnswering();
     }
-    round.wrong.push(holder.id);
+    // Wrong answers are recorded on the players at REVEAL (`recordBuzzerWrongs`), so they can
+    // buzz again after a reset.
+    if (!round.wrong.includes(holder.id)) round.wrong.push(holder.id);
+    round.locked.push(holder.id);
+    if (this.everyoneLockedOut(round)) round.locked = [];
     this.releaseHold();
     this.checkPause(); // an offline holder is no longer awaited
-    this.onAnswersChanged(); // nobody left to buzz → REVEAL
+    this.sendAnswerCount();
+  }
+
+  /** « Buzzer »: nobody who can still play is left to buzz (offline, excused ones aside). */
+  private everyoneLockedOut(round: BuzzerRound): boolean {
+    for (const p of this.players.values())
+      if (!round.locked.includes(p.id) && (p.socketId !== null || !this.excused.has(p.id)))
+        return false;
+    return true;
+  }
+
+  /** « Buzzer », at REVEAL: a wrong buzz counts as a wrong answer (streak, « Survie » heart). */
+  private recordBuzzerWrongs(round: BuzzerRound): void {
+    const basePoints = this.currentQuestion?.basePoints ?? 0;
+    for (const id of round.wrong) {
+      const p = this.players.get(id);
+      if (p && !p.answer) p.answer = buzzerAnswerOf(false, basePoints, this.timerElapsedMs());
+    }
   }
 
   /** « Buzzer »: the hand is free again — the frozen timer goes on (or stays paused). */
@@ -974,6 +996,7 @@ export class Game {
   private enterReveal(): void {
     const question = this.currentQuestion;
     if (this.phase !== 'ANSWERING' || !question) return;
+    if (this.buzzer) this.recordBuzzerWrongs(this.buzzer);
     this.setPhase('REVEAL', null);
 
     const choices = choiceTexts(question);
@@ -1201,6 +1224,16 @@ export class Game {
 
   private onAnswersChanged(): void {
     this.sendAnswerCount();
+    const round = this.buzzer;
+    if (round) {
+      // « Buzzer »: only a right answer or the timer ends it; nobody left to buzz (e.g. after a
+      // kick) → everyone can buzz again.
+      if (round.locked.length > 0 && this.everyoneLockedOut(round)) {
+        round.locked = [];
+        this.broadcastState();
+      }
+      return;
+    }
     if (this.allAnswered()) this.finishAnswering();
   }
 
@@ -1219,6 +1252,8 @@ export class Game {
     if (this.writingLies())
       return !this.setup.bluff!.lies.has(p.id) && (p.socketId !== null || !this.excused.has(p.id));
     if (this.phase === 'ANSWERING' && p.answer) return false;
+    // « Buzzer »: a player who answered wrong can't buzz for now (no pause for them).
+    if (this.buzzer?.locked.includes(p.id)) return false;
     // Copieur: answers when the target does (target gone / copy loop: nothing to wait for).
     const target = this.jokers?.copyTargetOf(p.id);
     if (target !== undefined) {

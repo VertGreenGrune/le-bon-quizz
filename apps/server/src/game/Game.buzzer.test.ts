@@ -231,14 +231,52 @@ describe('Game « Buzzer » questions', () => {
     expect(game.questionStats.at(-1)).toMatchObject({ correctCount: 0, answerCount: 1 });
   });
 
-  it('everyone answered wrong: the question ends right away', () => {
+  it('everyone answered wrong: the question goes on and everyone can buzz again', () => {
     const [alice, bob] = joinAll('Alice', 'Bob');
     toAnswering(1);
     game.buzz(alice!.id, 1);
     game.judge(false);
+    expect(lastState().buzzer?.wrong).toEqual([member(alice!)]);
     game.buzz(bob!.id, 1);
     game.judge(false);
+    // Nobody left to buzz: the locks are lifted, the question (timer, sound) goes on.
+    expect(game.phase).toBe('ANSWERING');
+    expect(lastState().buzzer?.wrong).toEqual([]);
+    game.buzz(alice!.id, 1); // Alice may try again…
+    game.judge(true); // …and win
     expect(game.phase).toBe('REVEAL');
+    expect(reveal().buzzer).toMatchObject({
+      winner: member(alice!),
+      wrong: [member(alice!), member(bob!)], // every wrong answer of the question, in order
+    });
+    expect(result(alice!)).toMatchObject({ correct: true, pointsEarned: 1000 });
+    expect(result(bob!)).toMatchObject({ correct: false, pointsEarned: 0, streak: 0 });
+  });
+
+  it('« Survie »: wrong twice on the same question still costs a single heart', () => {
+    create({ mode: 'survival', hearts: 3 });
+    const [alice, bob] = joinAll('Alice', 'Bob');
+    toAnswering(1); // nobody answered Q1 (classic): one heart lost each
+    for (let round = 0; round < 2; round++) {
+      game.buzz(alice!.id, 1);
+      game.judge(false);
+      game.buzz(bob!.id, 1);
+      game.judge(false);
+    }
+    vi.advanceTimersByTime(20_000);
+    expect(game.phase).toBe('REVEAL');
+    for (const p of [alice!, bob!])
+      expect(result(p).survival).toEqual({ hearts: 1, lostHeart: true });
+  });
+
+  it('a player locked out after a wrong answer who drops does not pause the game', () => {
+    const [alice] = joinAll('Alice', 'Bob');
+    toAnswering(1);
+    game.buzz(alice!.id, 1);
+    game.judge(false);
+    game.disconnect(alice!.socketId!);
+    vi.advanceTimersByTime(PAUSE_GRACE_MS + 100);
+    expect(lastState().paused).toBeUndefined();
   });
 
   it('judging needs someone with the hand', () => {

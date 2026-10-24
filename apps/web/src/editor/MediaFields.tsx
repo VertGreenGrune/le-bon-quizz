@@ -9,6 +9,7 @@ import {
 import { api } from '../api';
 import { RevealImage } from '../components/RevealImage';
 import { ACCEPTED_AUDIO, checkAudioFile } from './imageFile';
+import { mediaUrl } from '../lib/mediaUrl';
 
 const EFFECTS: { value: ImageEffect; label: string }[] = [
   { value: 'none', label: 'Aucun' },
@@ -219,7 +220,7 @@ export function AudioField({
       </div>
       <audio
         ref={player}
-        src={value.url}
+        src={mediaUrl(value.url)}
         controls
         preload="metadata"
         className="w-full"

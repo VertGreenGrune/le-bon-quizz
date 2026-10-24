@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { GamePhase, QuestionAudio, QuestionShowPayload } from '@lbq/shared';
 import { setDucked, useMuted } from './sounds';
+import { mediaUrl } from '../lib/mediaUrl';
 
 /** The part of `HTMLAudioElement` the clip player uses (a fake one in the unit tests). */
 export interface AudioLike {
@@ -83,7 +84,8 @@ export class ClipPlayer {
       });
       this.el = el;
     }
-    if (this.el.src !== clip.url) this.el.src = clip.url;
+    const src = mediaUrl(clip.url);
+    if (this.el.src !== src) this.el.src = src;
     this.el.currentTime = clip.startSec;
     this.finished = false;
   }

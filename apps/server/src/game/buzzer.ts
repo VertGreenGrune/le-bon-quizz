@@ -16,13 +16,23 @@ import type { Answer, Player } from './Game.js';
 export interface BuzzerRound {
   /** Who has the hand (timer frozen until the host judges). */
   holder: string | null;
-  /** Players who answered wrong, in order: out for this question. */
+  /** Every player who answered wrong during this question, in order (reveal, report, scoring). */
   wrong: string[];
+  /**
+   * Players who can't buzz right now (answered wrong). When nobody is left to buzz, it is
+   * emptied and everyone can buzz again: only a right answer or the timer ends the question.
+   */
+  locked: string[];
   /** Who found the answer (the question then ends). */
   winner: string | null;
 }
 
-export const newBuzzerRound = (): BuzzerRound => ({ holder: null, wrong: [], winner: null });
+export const newBuzzerRound = (): BuzzerRound => ({
+  holder: null,
+  wrong: [],
+  locked: [],
+  winner: null,
+});
 
 const member = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
 
@@ -46,13 +56,13 @@ function members(ids: string[], players: ReadonlyMap<string, Player>): LobbyMemb
   });
 }
 
-/** `game:state.buzzer`. */
+/** `game:state.buzzer` (`wrong` = who can't buzz right now). */
 export function buzzerStatus(
   round: BuzzerRound,
   players: ReadonlyMap<string, Player>,
 ): BuzzerStatus {
   const holder = round.holder ? players.get(round.holder) : undefined;
-  return { ...(holder && { holder: member(holder) }), wrong: members(round.wrong, players) };
+  return { ...(holder && { holder: member(holder) }), wrong: members(round.locked, players) };
 }
 
 /** `question:reveal.buzzer` (also saved in the report). */

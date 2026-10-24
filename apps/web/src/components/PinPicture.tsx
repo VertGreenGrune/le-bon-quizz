@@ -1,5 +1,6 @@
 import type { PointerEvent, ReactNode } from 'react';
 import type { PinPoint, PinZone } from '@lbq/shared';
+import { mediaUrl } from '../lib/mediaUrl';
 
 /**
  * PIN questions: a picture with marks placed on it in picture fractions (0–1 from the top left),
@@ -35,7 +36,7 @@ export function PinPicture({
       onPointerDown={onPick ? pick : undefined}
       data-testid="pin-picture"
     >
-      <img src={src} alt="" draggable={false} className={`block ${imgClassName}`} />
+      <img src={mediaUrl(src)} alt="" draggable={false} className={`block ${imgClassName}`} />
       {children}
     </div>
   );

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { api } from '../api';
 import { ACCEPTED_IMAGE_TYPES, checkImageFile } from './imageFile';
+import { mediaUrl } from '../lib/mediaUrl';
 
 /** Uploads an image to `/api/uploads/image` and stores its URL. */
 export function ImageField({
@@ -38,7 +39,7 @@ export function ImageField({
       <span className="text-sm font-bold text-gray-600">{label}</span>
       {value ? (
         <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50">
-          <img src={value} alt="" className="mx-auto max-h-40 object-contain" />
+          <img src={mediaUrl(value)} alt="" className="mx-auto max-h-40 object-contain" />
           <div className="absolute top-1 right-1 flex gap-1">
             <button
               type="button"

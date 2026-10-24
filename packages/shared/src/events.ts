@@ -242,7 +242,7 @@ export interface ClientToServerEvents {
   'host:resume': (p: HostActionPayload, ack: (r: Ack) => void) => void;
   /**
    * « Buzzer »: ✅ / ❌ on the answer of the player who has the hand (allowed while paused).
-   * Right → REVEAL; wrong → that player is out for this question, the timer goes on.
+   * Right → REVEAL; wrong → that player can't buzz again, the timer goes on (everyone wrong → all can buzz again).
    * `INVALID_PAYLOAD` when nobody has the hand.
    */
   'host:judge': (p: HostJudgePayload, ack: (r: Ack) => void) => void;
@@ -317,7 +317,7 @@ export interface GameStatePayload {
   jokers?: true;
   /**
    * « Buzzer » question, ANSWERING: who has the hand (the timer is then frozen, `remainingMs` =
-   * frozen value) and who already answered wrong (out for this question).
+   * frozen value) and who answered wrong and can't buzz right now (emptied when everyone has).
    */
   buzzer?: BuzzerStatus;
   /**

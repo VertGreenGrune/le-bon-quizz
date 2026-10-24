@@ -7,6 +7,7 @@ import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl } from '../lib/gameOptions';
 import { VisibilityBadge } from './visibility';
 import { playedLabel } from '../library/format';
+import { mediaUrl } from '../lib/mediaUrl';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -73,7 +74,7 @@ export function QuizListPage() {
             >
               {q.coverImageUrl ? (
                 <img
-                  src={q.coverImageUrl}
+                  src={mediaUrl(q.coverImageUrl)}
                   alt=""
                   className="h-16 w-24 shrink-0 rounded-lg object-cover"
                 />

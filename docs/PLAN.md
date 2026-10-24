@@ -201,9 +201,11 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   button. During `ANSWERING`, the first `player:buzz` the server processes takes the hand: the
   timer freezes (`game:state.buzzer.holder`, frozen `remainingMs`), the player answers out loud,
   the host judges with `host:judge { correct }` (allowed while paused). ✅ → that player's answer
-  is right, `basePoints` (no time factor) + the usual streak bonus, REVEAL. ❌ → the player is out
-  for this question (`ALREADY_ANSWERED` on a new buzz), the timer goes on from its frozen value;
-  REVEAL when everyone is out or the timer ends (nobody scores). Usual streak rules (not buzzing =
+  is right, `basePoints` (no time factor) + the usual streak bonus, REVEAL. ❌ → the player can't buzz
+  again (`ALREADY_ANSWERED`), the timer and the sound clip go on from where they stopped; when
+  everyone has answered wrong, the locks are lifted and everyone can buzz again (`game:state.buzzer.wrong`
+  = who is locked right now; the reveal lists every wrong answer). Only a right answer or the
+  timer ends the question (nobody scores); a wrong buzz counts once (streak, « Survie » heart). Usual streak rules (not buzzing =
   no answer = streak reset); team averages as usual; « Survie »: a wrong buzz costs a heart, not
   buzzing doesn't. Jokers: none can be played (`jokerAvailability(type, buzzer = true)`), but a
   pending Gel (or haunt) lands and refuses the BUZZ for 5 s of clock time (`FROZEN`); Brouilleur

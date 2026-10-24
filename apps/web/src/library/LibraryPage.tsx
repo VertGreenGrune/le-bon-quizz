@@ -6,6 +6,7 @@ import { EditorShell, btn } from '../editor/EditorShell';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl } from '../lib/gameOptions';
 import { playedLabel } from './format';
+import { mediaUrl } from '../lib/mediaUrl';
 
 const SORTS: { value: LibrarySort; label: string }[] = [
   { value: 'popular', label: 'Les plus joués' },
@@ -129,7 +130,7 @@ export function LibraryPage() {
           {quizzes?.map((q) => (
             <li key={q.id} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
               {q.coverImageUrl ? (
-                <img src={q.coverImageUrl} alt="" className="h-36 w-full object-cover" />
+                <img src={mediaUrl(q.coverImageUrl)} alt="" className="h-36 w-full object-cover" />
               ) : (
                 <div className="flex h-36 items-center justify-center bg-brand/10 text-5xl">
                   <span aria-hidden="true">🌐</span>
