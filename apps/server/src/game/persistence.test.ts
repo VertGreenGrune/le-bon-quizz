@@ -510,4 +510,56 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     // Truth (1000) + Bob fooled (500).
     expect(report.results[0]).toMatchObject({ nickname: 'Alice', score: 1500, correctCount: 1 });
   });
+
+  it('keeps a « Dessine-moi » question and saves the drawing as vector data', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Dessine-moi…',
+        type: 'DRAW',
+        words: ['Licorne'],
+        timeLimitSec: 60,
+        basePoints: 1000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Dessin', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop);
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next();
+    const strokes = [
+      { id: 0, color: 1, size: 2, points: [10, 20, 30, 40] },
+      { id: 1, color: 0, size: 0, erase: true as const, points: [50, 60] },
+    ];
+    game.draw(alice.id, 0, strokes);
+    game.answer(bob.id, 0, { text: 'licorne' });
+    game.next();
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({ type: 'DRAW', correctCount: 1, answerCount: 1 });
+    expect(report.questions[0]!.details).toEqual({
+      draw: {
+        word: 'Licorne',
+        drawer: { id: alice.id, nickname: 'Alice', avatar: 'batman' },
+        strokes,
+        found: [{ id: bob.id, nickname: 'Bob', avatar: 'robin', ms: expect.any(Number) }],
+      },
+    });
+    // Alice drew (+200 for Bob), Bob found it.
+    expect(report.results.map((r) => [r.nickname, r.score > 0])).toEqual([
+      ['Bob', true],
+      ['Alice', true],
+    ]);
+  });
 });

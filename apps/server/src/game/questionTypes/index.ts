@@ -29,18 +29,27 @@ import {
   newBluff,
   type BluffState,
 } from './bluff.js';
+import {
+  drawBonus,
+  drawPrompt,
+  drawResult,
+  drawReveal,
+  drawShow,
+  judgeGuess,
+  type DrawState,
+} from './draw.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
 
 /**
- * The question types of T27 (ORDER, PIN, WHO_OF_US, WORD_CLOUD) and T26 (BLUFF), kept out of
+ * The question types of T27 (ORDER, PIN, WHO_OF_US, WORD_CLOUD), T26 (BLUFF) and T30 (DRAW), kept out of
  * `Game.ts`: it calls these hooks for them, and its own code for the older types. Answers still
  * go through `Game.answer` and its scoring flow (time points, streak, team averages, pause).
  */
 export type ExtraQuestion = Extract<
   Question,
-  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' }
+  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' | 'DRAW' }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
 
@@ -50,7 +59,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'PIN' ||
     q.type === 'WHO_OF_US' ||
     q.type === 'WORD_CLOUD' ||
-    q.type === 'BLUFF'
+    q.type === 'BLUFF' ||
+    q.type === 'DRAW'
   );
 }
 
@@ -60,6 +70,8 @@ export interface QuestionSetup {
   display: number[];
   /** BLUFF: the lies, then the options of the vote. */
   bluff?: BluffState;
+  /** DRAW: the word, the drawer and the drawing (set by `Game`, which keeps the rotation). */
+  draw?: DrawState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -71,6 +83,8 @@ export function prepareQuestion(q: Question, random: () => number = Math.random)
 }
 
 const lobbyMember = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
+
+const byId = (players: Iterable<Player>) => new Map([...players].map((p) => [p.id, p]));
 
 /** Host-only extras of `question:show`. */
 export function extraShowFields(
@@ -84,6 +98,7 @@ export function extraShowFields(
     const bluff = bluffShow(setup.bluff!);
     return bluff.stage === 'vote' ? { bluff, timeLimitSec: q.voteTimeSec } : { bluff };
   }
+  if (q.type === 'DRAW' && setup.draw) return { draw: drawShow(setup.draw, byId(players)) };
   return {};
 }
 
@@ -92,7 +107,7 @@ export function extraPromptFields(
   q: ExtraQuestion,
   setup: QuestionSetup,
   players: Iterable<Player>,
-  /** BLUFF: the prompt is per player (own lie). */
+  /** BLUFF / DRAW: the prompt is per player (own lie, the word for the drawer). */
   playerId = '',
 ): Partial<QuestionPromptPayload> {
   switch (q.type) {
@@ -109,6 +124,8 @@ export function extraPromptFields(
       const bluff = bluffPrompt(setup.bluff!, playerId);
       return bluff.stage === 'vote' ? { bluff, timeLimitSec: q.voteTimeSec } : { bluff };
     }
+    case 'DRAW':
+      return setup.draw ? { draw: drawPrompt(setup.draw, byId(players), playerId) } : {};
   }
 }
 
@@ -155,17 +172,26 @@ export function judgeExtra(
         choiceIndex: given.choiceIndex,
         ...judgeVote(q, setup.bluff!, playerId, given.choiceIndex),
       };
+    case 'DRAW':
+      // `Game.answer` only records right guesses (and refuses the drawer's).
+      if (!('text' in given)) throw invalid('Cette question attend un mot');
+      return { ...none, ...judgeGuess(setup.draw!, given.text, timePoints) };
   }
 }
 
-/** Points that don't come from the player's own answer (BLUFF: players fooled by their lie). */
+/**
+ * Points that don't come from the player's own answer (BLUFF: players fooled by their lie; DRAW:
+ * the drawer's, per player who found the word).
+ */
 export function extraBonusPoints(
   q: ExtraQuestion,
   setup: QuestionSetup,
   player: Player,
   players: Iterable<Player>,
 ): number {
-  return q.type === 'BLUFF' ? bluffBonus(q, setup.bluff!, player, players) : 0;
+  if (q.type === 'BLUFF') return bluffBonus(q, setup.bluff!, player, players);
+  if (q.type === 'DRAW' && setup.draw) return drawBonus(q, setup.draw, player, players);
+  return 0;
 }
 
 /** Before scoring the reveal: WHO_OF_US majority bonus. */
@@ -223,10 +249,10 @@ export function extraRevealDetails(
       return { words: wordCloud(answers.flatMap(({ answer }) => answer.text ?? [])) };
     case 'BLUFF':
       return bluffReveal(q, setup.bluff!, byId(players));
+    case 'DRAW':
+      return setup.draw ? drawReveal(setup.draw, byId(players)) : {};
   }
 }
-
-const byId = (players: Iterable<Player>) => new Map([...players].map((p) => [p.id, p]));
 
 /** Type-specific part of a player's `player:result`. */
 export function extraResultFields(
@@ -237,6 +263,7 @@ export function extraResultFields(
 ): Partial<PlayerResultPayload> {
   const answer = player.answer;
   if (q.type === 'BLUFF') return bluffResult(q, setup.bluff!, player, byId(players));
+  if (q.type === 'DRAW' && setup.draw) return drawResult(setup.draw, player, byId(players));
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {

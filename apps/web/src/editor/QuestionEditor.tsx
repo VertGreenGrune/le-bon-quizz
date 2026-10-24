@@ -12,6 +12,7 @@ import { ImageField } from './ImageField';
 import { AudioField, ImageEffectField } from './MediaFields';
 import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './MoreTypeFields';
 import { BluffFields } from './BluffFields';
+import { DrawFields } from './DrawFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -147,19 +148,29 @@ export function QuestionEditor({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-        <ImageField
-          label={
-            q.type === 'PIN'
-              ? 'Image (obligatoire : les joueurs la touchent)'
-              : 'Image (facultative)'
-          }
-          value={q.imageUrl}
-          onChange={(imageUrl) => onChange({ ...q, imageUrl })}
-        />
+        {q.type === 'DRAW' ? (
+          <p className="self-center rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-600">
+            🎨 Pas d’image : l’écran affiche le dessin en direct.
+          </p>
+        ) : (
+          <ImageField
+            label={
+              q.type === 'PIN'
+                ? 'Image (obligatoire : les joueurs la touchent)'
+                : 'Image (facultative)'
+            }
+            value={q.imageUrl}
+            onChange={(imageUrl) => onChange({ ...q, imageUrl })}
+          />
+        )}
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-sm font-bold text-gray-600">
-              {q.type === 'BLUFF' ? 'Temps pour écrire' : 'Temps'}
+              {q.type === 'BLUFF'
+                ? 'Temps pour écrire'
+                : q.type === 'DRAW'
+                  ? 'Temps pour dessiner'
+                  : 'Temps'}
             </span>
             <select
               value={q.timeLimitSec}
@@ -231,7 +242,7 @@ export function QuestionEditor({
           onChange={(audio) => onChange({ ...q, audio })}
           onRevealChange={(audioOnReveal) => onChange({ ...q, audioOnReveal })}
         />
-        {q.imageUrl && q.type !== 'PIN' && (
+        {q.imageUrl && q.type !== 'PIN' && q.type !== 'DRAW' && (
           <ImageEffectField
             imageUrl={q.imageUrl}
             value={q.imageEffect}
@@ -254,6 +265,8 @@ export function QuestionEditor({
         <WordCloudHint />
       ) : q.type === 'BLUFF' ? (
         <BluffFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'DRAW' ? (
+        <DrawFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

@@ -99,6 +99,8 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const onPodium: ServerToClientEvents['podium'] = (p) => dispatch({ type: 'podium', ...p });
     const onSurvival: ServerToClientEvents['survival:state'] = (p) =>
       dispatch({ type: 'survival', payload: p });
+    const onDraw: ServerToClientEvents['draw:strokes'] = (p) =>
+      dispatch({ type: 'drawStrokes', payload: p });
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -112,6 +114,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     socket.on('leaderboard', onLeaderboard);
     socket.on('podium', onPodium);
     socket.on('survival:state', onSurvival);
+    socket.on('draw:strokes', onDraw);
     socket.on('error', setError);
     return () => {
       socket.off('connect', onConnect);
@@ -126,6 +129,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
       socket.off('leaderboard', onLeaderboard);
       socket.off('podium', onPodium);
       socket.off('survival:state', onSurvival);
+      socket.off('draw:strokes', onDraw);
       socket.off('error', setError);
     };
   }, []);

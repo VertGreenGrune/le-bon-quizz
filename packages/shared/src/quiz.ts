@@ -12,6 +12,8 @@ import { z } from 'zod';
  * - `WORD_CLOUD` (nuage de mots): players type a word or two; no right answer, 0 points.
  * - `BLUFF` (« Mytho ! »): players write a fake answer, then vote for the one they think is
  *   true among the lies and the real answer (`truth`).
+ * - `DRAW` (« Dessine-moi », T30): one player draws a secret word on their phone, live on the TV;
+ *   the others type guesses.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -24,6 +26,7 @@ export const QuestionType = z.enum([
   'WHO_OF_US',
   'WORD_CLOUD',
   'BLUFF',
+  'DRAW',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -58,6 +61,16 @@ export const BLUFF_DEFAULT_WRITE_SEC = 45;
 export const BLUFF_DEFAULT_VOTE_SEC = 20;
 /** « Mytho ! »: each player fooled by your lie earns you this share of `basePoints` (+500). */
 export const BLUFF_FOOL_SHARE = 0.5;
+/** « Dessine-moi »: words of the editor (one drawn at random; none = the built-in list). */
+export const DRAW_WORD_MAX_LENGTH = 30;
+export const DRAW_MAX_WORDS = 30;
+/** « Dessine-moi »: default drawing time (`timeLimitSec`). */
+export const DRAW_DEFAULT_SEC = 90;
+/**
+ * « Dessine-moi »: the drawer earns this share of `basePoints` per player who found the word
+ * (+200), up to `basePoints` (1000).
+ */
+export const DRAW_FINDER_SHARE = 0.2;
 /** A slider has at most this many positions ((max − min) / step). */
 export const SLIDER_MAX_STEPS = 100_000;
 
@@ -273,6 +286,26 @@ const BluffQuestion = z.object({
   voteTimeSec: z.number().int().min(5).max(120).default(BLUFF_DEFAULT_VOTE_SEC),
 });
 
+/**
+ * « Dessine-moi » (T30): the server picks one of `words` (or of the built-in `DRAW_WORDS` when
+ * empty) and a drawer; the TV shows the live drawing instead of a picture (no `imageUrl`).
+ * Guessers score the time-based points; the drawer `basePoints × DRAW_FINDER_SHARE` per finder.
+ */
+const DrawQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('DRAW'),
+    timeLimitSec: questionBase.timeLimitSec.default(DRAW_DEFAULT_SEC),
+    words: z
+      .array(z.string().trim().min(1).max(DRAW_WORD_MAX_LENGTH))
+      .max(DRAW_MAX_WORDS)
+      .default([]),
+  })
+  .refine((q) => !q.imageUrl, {
+    message: 'A drawing question has no picture',
+    path: ['imageUrl'],
+  });
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -288,6 +321,7 @@ export const QuestionSchema = z.preprocess(
       WhoOfUsQuestion,
       WordCloudQuestion,
       BluffQuestion,
+      DrawQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -306,6 +340,7 @@ export type OrderQuestion = Extract<Question, { type: 'ORDER' }>;
 export type PinQuestion = Extract<Question, { type: 'PIN' }>;
 export type WhoOfUsQuestion = Extract<Question, { type: 'WHO_OF_US' }>;
 export type BluffQuestion = Extract<Question, { type: 'BLUFF' }>;
+export type DrawQuestion = Extract<Question, { type: 'DRAW' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);

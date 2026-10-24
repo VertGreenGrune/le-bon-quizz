@@ -8,6 +8,7 @@ import {
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
   PlayerBuzzPayload,
+  PlayerDrawPayload,
   PlayerHauntPayload,
   PlayerJoinPayload,
   PlayerJokerPayload,
@@ -360,7 +361,15 @@ export function registerSocketHandlers(
       'player:answer',
       handler(socket, PlayerAnswerPayload, ({ pin, questionIndex, ...answer }) => {
         const { game, playerId } = asPlayer(pin);
-        game.answer(playerId, questionIndex, answer);
+        return game.answer(playerId, questionIndex, answer);
+      }),
+    );
+
+    socket.on(
+      'player:draw',
+      handler(socket, PlayerDrawPayload, ({ pin, questionIndex, strokes, clear }) => {
+        const { game, playerId } = asPlayer(pin);
+        game.draw(playerId, questionIndex, strokes, !!clear);
         return {};
       }),
     );

@@ -3,6 +3,7 @@ export * from './avatars.js';
 export * from './jokers.js';
 export * from './survival.js';
 export * from './quiz.js';
+export * from './draw.js';
 export * from './events.js';
 export * from './demo-quiz.js';
 export * from './api.js';

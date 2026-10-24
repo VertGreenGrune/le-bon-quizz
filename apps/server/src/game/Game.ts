@@ -17,6 +17,9 @@ import {
   randomAvatarId,
   type AnswerInput,
   type AvatarId,
+  type DrawGuess,
+  type DrawStroke,
+  type DrawStrokesPayload,
   type GameMode,
   type GamePause,
   type GamePhase,
@@ -52,6 +55,13 @@ import {
 } from './buzzer.js';
 import { GameError } from './errors.js';
 import { checkVote, otherLies, startVote, writeLie } from './questionTypes/bluff.js';
+import {
+  addStrokes,
+  checkGuess,
+  drawStatus,
+  newRotation,
+  startDraw,
+} from './questionTypes/draw.js';
 import { Jokers } from './jokers.js';
 import { matchesAnswer, normalizeAnswer } from './matching.js';
 import { Survival } from './survival.js';
@@ -195,7 +205,7 @@ export interface GameSettings {
   teamCount?: TeamCount;
   /** Jokers (power-ups, PLAN.md §3). */
   jokers?: boolean;
-  /** Random source of the jokers (tests). */
+  /** Random source of the jokers and of the « Dessine-moi » words (tests). */
   random?: () => number;
   /** Same fixed starting hand for every player (e2e tests, `E2E_JOKER_HAND`). */
   jokerHand?: JokerType[];
@@ -276,6 +286,10 @@ export class Game {
   readonly survival: Survival | null;
   /** > 0 while copied answers are being recorded (`recordAnswer`). */
   private recordingCopies = 0;
+  /** « Dessine-moi »: who drew how often, so everyone draws in turn (`questionTypes/draw.ts`). */
+  private readonly drawRotation = newRotation();
+  /** Random source (« Dessine-moi » words; tests can fix it). */
+  private readonly random: () => number;
 
   constructor(
     readonly pin: string,
@@ -285,6 +299,7 @@ export class Game {
     settings: GameSettings = { mode: 'solo' },
   ) {
     this.mode = settings.mode;
+    this.random = settings.random ?? Math.random;
     if (this.mode === 'teams') {
       const count = settings.teamCount ?? DEFAULT_TEAM_COUNT;
       this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
@@ -485,6 +500,7 @@ export class Game {
     const phase = this.phase;
     if (this.currentQuestion && phase !== 'PODIUM' && phase !== 'ENDED')
       send('question:show', this.showPayload());
+    if (phase === 'ANSWERING' && this.setup.draw) send('draw:strokes', this.drawingPayload());
     if (phase === 'ANSWERING' || phase === 'REVEAL') this.sendAnswerCount(send);
     if (phase === 'REVEAL' && this.reveal) send('question:reveal', this.reveal);
     if (phase === 'LEADERBOARD') send('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
@@ -583,6 +599,9 @@ export class Game {
     this.jokers?.sendState(player, send);
     if (this.phase === 'ANSWERING' && !player.answer) {
       this.transport.toSocket(sid, 'question:prompt', this.promptPayload(player));
+      // « Dessine-moi »: the drawer's phone gets its drawing back.
+      if (this.isDrawer(player))
+        this.transport.toSocket(sid, 'draw:strokes', this.drawingPayload());
     } else if (this.phase === 'REVEAL' && player.lastResult) {
       this.transport.toSocket(sid, 'player:result', this.resultPayload(player));
     } else if (this.phase === 'PODIUM') {
@@ -603,9 +622,14 @@ export class Game {
 
   /**
    * `input`: a choice index (shorthand for `{ choiceIndex }`), a typed text or a slider value;
-   * it must match the question type (`INVALID_PAYLOAD` otherwise).
+   * it must match the question type (`INVALID_PAYLOAD` otherwise). « Dessine-moi »: `guess` tells
+   * whether the word was found (wrong guesses aren't recorded).
    */
-  answer(playerId: string, questionIndex: number, input: number | AnswerInput): void {
+  answer(
+    playerId: string,
+    questionIndex: number,
+    input: number | AnswerInput,
+  ): { guess?: DrawGuess } {
     const player = this.players.get(playerId);
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
     const question = this.currentQuestion;
@@ -623,12 +647,52 @@ export class Game {
       if (!('text' in given)) throw new GameError('INVALID_PAYLOAD', 'Écris un mytho');
       writeLie(question, bluff, player.id, given.text);
       this.touch();
-      return this.onAnswersChanged();
+      this.onAnswersChanged();
+      return {};
     }
+    if (question.type === 'DRAW') return { guess: this.guess(player, given) };
     if (bluff && 'choiceIndex' in given) checkVote(bluff, player.id, given.choiceIndex);
     const responseMs = Date.now() - this.answeringStartedAt;
     this.jokers?.checkAnswer(player, responseMs);
     this.recordAnswer(player, given, responseMs);
+    return {};
+  }
+
+  /** « Dessine-moi »: a guess — recorded (and scored) only when right; a wrong one can be retried. */
+  private guess(player: Player, given: AnswerInput): DrawGuess {
+    const draw = this.setup.draw!;
+    if (this.isDrawer(player)) throw new GameError('INVALID_PAYLOAD', 'C’est toi qui dessines !');
+    if (!('text' in given)) throw new GameError('INVALID_PAYLOAD', 'Cette question attend un mot');
+    const guess = checkGuess(draw, given.text);
+    this.touch();
+    if (guess !== 'found') return guess;
+    const index = this.questionIndex;
+    this.recordAnswer(player, given, Date.now() - this.answeringStartedAt);
+    // Who found it (never what they typed), for the TV and the phones.
+    if (this.phase === 'ANSWERING' && this.questionIndex === index) this.broadcastState();
+    return guess;
+  }
+
+  /**
+   * « Dessine-moi » (`player:draw`): the drawer's new strokes, relayed to the TV. Refused while
+   * paused (the canvas freezes) and outside ANSWERING.
+   */
+  draw(playerId: string, questionIndex: number, strokes: DrawStroke[], clear = false): void {
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    const draw = this.setup.draw;
+    if (this.phase !== 'ANSWERING' || questionIndex !== this.questionIndex || !draw)
+      throw new GameError('NOT_ANSWERING', 'Trop tard !');
+    if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
+    if (!this.isDrawer(player))
+      throw new GameError('INVALID_PAYLOAD', 'Ce n’est pas toi qui dessines');
+    const added = addStrokes(draw, strokes, clear);
+    this.touch();
+    this.transport.toHost('draw:strokes', {
+      index: this.questionIndex,
+      ...(clear && { clear: true as const }),
+      strokes: added,
+    });
   }
 
   /**
@@ -822,6 +886,8 @@ export class Game {
     }
     if (this.phase === 'ANSWERING' && this.buzzer)
       state.buzzer = buzzerStatus(this.buzzer, this.players);
+    if (this.isTimedPhase() && this.setup.draw)
+      state.draw = drawStatus(this.setup.draw, this.players);
     return state;
   }
 
@@ -840,6 +906,12 @@ export class Game {
     this.questionIndex = index;
     this.reveal = null;
     this.setup = prepareQuestion(question);
+    // « Dessine-moi »: the next drawer in turn and a word (only their phone will get it).
+    if (question.type === 'DRAW') {
+      const players = [...this.players.values()];
+      const draw = startDraw(question, players, this.drawRotation, this.teamIds, this.random);
+      this.setup = { ...this.setup, draw };
+    }
     this.buzzer = question.buzzer ? newBuzzerRound() : null;
     this.excused.clear();
     for (const p of this.players.values()) {
@@ -920,8 +992,10 @@ export class Game {
       if (a?.choiceIndex != null && a.choiceIndex < distribution.length)
         distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
       const correct = a?.correct ?? false;
+      // « Dessine-moi »: the drawer had nothing to answer, their streak is left as it is.
+      const drew = this.isDrawer(p);
       // Bouclier: a wrong answer keeps the streak.
-      if (!poll && (correct || !this.jokers?.savesStreak(p.id)))
+      if (!poll && !drew && (correct || !this.jokers?.savesStreak(p.id)))
         p.streak = correct ? p.streak + 1 : 0;
       // A 0-point question awards nothing, streak bonus included (the streak still counts).
       const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
@@ -943,9 +1017,13 @@ export class Game {
     if (this.mode === 'teams') this.scoreTeams();
     // « Survie »: hearts lost, ghosts, haunts — before the results (they rank survivors first).
     // Excused (« Continuer sans ») and absent-for-the-whole-question players keep their hearts;
-    // « Buzzer »: only a wrong buzz costs one (not buzzing doesn't).
-    this.survival?.settle(question, this.questionIndex, (p) =>
-      buzzer ? !p.answer : this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer),
+    // « Buzzer »: only a wrong buzz costs one (not buzzing doesn't). « Dessine-moi »: never.
+    this.survival?.settle(
+      question,
+      this.questionIndex,
+      (p) =>
+        question.type === 'DRAW' ||
+        (buzzer ? !p.answer : this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer)),
     );
     const correctIndexes = correctChoiceIndexes(question);
     const details = this.revealDetails(question);
@@ -1151,10 +1229,18 @@ export class Game {
     return p.socketId !== null || !this.excused.has(p.id);
   }
 
-  /** Everyone answered, except the players the host continued without. */
+  /** Everyone answered, except the players the host continued without (and the drawer). */
   private allAnswered(): boolean {
-    for (const p of this.players.values()) if (this.isAwaited(p)) return false;
+    for (const p of this.players.values()) if (!this.isDrawer(p) && this.isAwaited(p)) return false;
     return true;
+  }
+
+  /**
+   * « Dessine-moi »: the drawer has nothing to answer (left out of « all answered » and of the
+   * answer count), but the game still waits for them when they drop (nobody could draw).
+   */
+  private isDrawer(p: Player): boolean {
+    return this.setup.draw?.drawerId === p.id;
   }
 
   // ---------- Pause ----------
@@ -1294,6 +1380,7 @@ export class Game {
     let answered = 0;
     let total = 0;
     for (const p of this.players.values()) {
+      if (this.isDrawer(p)) continue;
       const done = this.hasAnswered(p);
       if (done) answered++;
       if (done || this.isAwaited(p)) total++;
@@ -1381,6 +1468,11 @@ export class Game {
       ...(jokers && { jokers }),
       ...(this.survival && { survival: this.survival.resultFields(player.id) }),
     };
+  }
+
+  /** « Dessine-moi »: the whole drawing so far (rejoins). */
+  private drawingPayload(): DrawStrokesPayload {
+    return { index: this.questionIndex, clear: true, strokes: this.setup.draw?.strokes ?? [] };
   }
 
   private broadcastState(): void {
