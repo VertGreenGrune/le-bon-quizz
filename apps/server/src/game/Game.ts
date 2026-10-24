@@ -10,6 +10,7 @@ import {
   SURVIVAL_DEFAULT_HEARTS,
   TEAM_NAMES,
   TYPE_ANSWER_MAX_LENGTH,
+  buzzerAnswer,
   choiceTexts,
   correctChoiceIndexes,
   hasRightAnswer,
@@ -41,6 +42,14 @@ import {
   type TeamCount,
   type TeamId,
 } from '@lbq/shared';
+import {
+  buzzerAnswerOf,
+  buzzerResult,
+  buzzerReveal,
+  buzzerStatus,
+  newBuzzerRound,
+  type BuzzerRound,
+} from './buzzer.js';
 import { GameError } from './errors.js';
 import { checkVote, otherLies, startVote, writeLie } from './questionTypes/bluff.js';
 import { Jokers } from './jokers.js';
@@ -245,6 +254,10 @@ export class Game {
   private resumeTimer: ReturnType<typeof setTimeout> | null = null;
   /** Players the host continued without, for the current question only (absent, not awaited). */
   private readonly excused = new Set<string>();
+  /** « Buzzer » question: who has the hand, who answered wrong (`game/buzzer.ts`). */
+  private buzzer: BuzzerRound | null = null;
+  /** « Buzzer »: ANSWERING timer frozen while the player who has the hand answers out loud. */
+  private hold: { remainingMs: number } | null = null;
 
   readonly mode: GameMode;
   /** Team mode: the teams offered in the lobby, then (from the start) the ones that have players. */
@@ -382,6 +395,11 @@ export class Game {
     this.touch();
     this.players.delete(playerId);
     this.setup.bluff?.lies.delete(playerId); // « Mytho ! »: their lie goes with them
+    // « Buzzer »: the hand is free again, the timer goes on.
+    if (this.buzzer?.holder === playerId) {
+      this.buzzer.holder = null;
+      this.releaseHold();
+    }
     if (this.phase !== 'LOBBY') this.kicked.push(player);
     this.excused.delete(playerId);
     if (player.socketId) {
@@ -595,6 +613,8 @@ export class Game {
       throw new GameError('NOT_ANSWERING', 'Trop tard !');
     if (player.answer) throw new GameError('ALREADY_ANSWERED', 'Réponse déjà envoyée');
     if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
+    if (question.buzzer)
+      throw new GameError('INVALID_PAYLOAD', 'Question au buzzer : appuie sur BUZZ');
 
     const given = typeof input === 'number' ? { choiceIndex: input } : input;
     // « Mytho ! », stage 1: the lie is stored, not scored (nor copied); stage 2 is the vote.
@@ -609,6 +629,81 @@ export class Game {
     const responseMs = Date.now() - this.answeringStartedAt;
     this.jokers?.checkAnswer(player, responseMs);
     this.recordAnswer(player, given, responseMs);
+  }
+
+  /**
+   * « Buzzer » (`player:buzz`): the first player processed takes the hand and the timer freezes
+   * until the host judges their answer said out loud (`judge`).
+   */
+  buzz(playerId: string, questionIndex: number): void {
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    const round = this.buzzer;
+    if (this.phase !== 'ANSWERING' || questionIndex !== this.questionIndex || !round)
+      throw new GameError('NOT_ANSWERING', 'Trop tard !');
+    if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
+    if (player.answer) throw new GameError('ALREADY_ANSWERED', 'Tu as déjà répondu');
+    if (round.holder) {
+      const holder = this.players.get(round.holder)?.nickname ?? 'Quelqu’un';
+      throw new GameError('BUZZER_TAKEN', `${holder} a buzzé avant toi !`);
+    }
+    // Gel: the BUZZ is refused for its first seconds (clock time: pauses and holds excluded).
+    this.jokers?.checkAnswer(player, this.timerElapsedMs());
+    this.touch();
+    round.holder = player.id;
+    this.hold = { remainingMs: this.timerRemainingMs() };
+    this.clearTimer();
+    this.broadcastState();
+  }
+
+  /**
+   * « Buzzer » (`host:judge`), allowed while paused: right → the player wins the question
+   * (REVEAL); wrong → they are out for this question and the timer goes on (REVEAL when nobody
+   * is left to buzz).
+   */
+  judge(correct: boolean): void {
+    const round = this.buzzer;
+    const holder = round?.holder ? this.players.get(round.holder) : undefined;
+    if (this.phase !== 'ANSWERING' || !round || !holder)
+      throw new GameError('INVALID_PAYLOAD', 'Personne n’a la main');
+    this.touch();
+    const question = this.currentQuestion!;
+    holder.answer = buzzerAnswerOf(correct, question.basePoints, this.timerElapsedMs());
+    round.holder = null;
+    if (correct) {
+      round.winner = holder.id;
+      return this.finishAnswering();
+    }
+    round.wrong.push(holder.id);
+    this.releaseHold();
+    this.checkPause(); // an offline holder is no longer awaited
+    this.onAnswersChanged(); // nobody left to buzz → REVEAL
+  }
+
+  /** « Buzzer »: the hand is free again — the frozen timer goes on (or stays paused). */
+  private releaseHold(): void {
+    const hold = this.hold;
+    if (!hold) return;
+    this.hold = null;
+    if (this.pause) this.pause.remainingMs = hold.remainingMs;
+    else {
+      this.phaseEndsAt = Date.now() + hold.remainingMs;
+      this.timer = setTimeout(() => this.onPhaseTimeout(), hold.remainingMs);
+    }
+    this.broadcastState();
+  }
+
+  /** Time left on the clock of the timed phase: frozen while paused / while someone has the hand. */
+  private timerRemainingMs(): number {
+    if (this.pause) return this.pause.remainingMs;
+    if (this.hold) return this.hold.remainingMs;
+    return this.phaseEndsAt === null ? 0 : Math.max(0, this.phaseEndsAt - Date.now());
+  }
+
+  /** ANSWERING time used on the clock (pauses and buzzer holds excluded). */
+  private timerElapsedMs(): number {
+    const limitMs = (this.currentQuestion?.timeLimitSec ?? 0) * 1000;
+    return Math.max(0, limitMs - this.timerRemainingMs());
   }
 
   /** Plays a joker (games with jokers, `player:joker`). */
@@ -720,9 +815,13 @@ export class Game {
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;
       state.paused = this.pausePayload(this.pause);
+    } else if (this.hold) {
+      state.remainingMs = this.hold.remainingMs;
     } else if (this.phaseEndsAt !== null) {
       state.remainingMs = Math.max(0, this.phaseEndsAt - Date.now());
     }
+    if (this.phase === 'ANSWERING' && this.buzzer)
+      state.buzzer = buzzerStatus(this.buzzer, this.players);
     return state;
   }
 
@@ -741,6 +840,7 @@ export class Game {
     this.questionIndex = index;
     this.reveal = null;
     this.setup = prepareQuestion(question);
+    this.buzzer = question.buzzer ? newBuzzerRound() : null;
     this.excused.clear();
     for (const p of this.players.values()) {
       p.answer = null;
@@ -805,8 +905,10 @@ export class Game {
     this.setPhase('REVEAL', null);
 
     const choices = choiceTexts(question);
-    const distribution = choices.map(() => 0);
-    if (isExtraQuestion(question)) settleExtra(question, this.players.values());
+    // « Buzzer »: nobody tapped a shape, and the type's own rules don't apply.
+    const buzzer = !!question.buzzer;
+    const distribution = buzzer ? [] : choices.map(() => 0);
+    if (isExtraQuestion(question) && !buzzer) settleExtra(question, this.players.values());
     // A poll (or another type without a right answer) leaves the streak as it is.
     const poll = !hasRightAnswer(question.type);
     let correctCount = 0;
@@ -824,9 +926,10 @@ export class Game {
       // A 0-point question awards nothing, streak bonus included (the streak still counts).
       const bonus = correct && question.basePoints > 0 ? streakBonus(p.streak) : 0;
       // « Mytho ! »: + points for every player fooled by your lie, voted or not.
-      const others = isExtraQuestion(question)
-        ? extraBonusPoints(question, this.setup, p, this.players.values())
-        : 0;
+      const others =
+        isExtraQuestion(question) && !buzzer
+          ? extraBonusPoints(question, this.setup, p, this.players.values())
+          : 0;
       const questionPoints = (a?.points ?? 0) + bonus + others;
       const pointsEarned = this.jokers?.adjustPoints(p, correct, questionPoints) ?? questionPoints;
       p.totalScore += pointsEarned;
@@ -839,11 +942,10 @@ export class Game {
     this.jokers?.afterScoring(poll);
     if (this.mode === 'teams') this.scoreTeams();
     // « Survie »: hearts lost, ghosts, haunts — before the results (they rank survivors first).
-    // Excused (« Continuer sans ») and absent-for-the-whole-question players keep their hearts.
-    this.survival?.settle(
-      question,
-      this.questionIndex,
-      (p) => this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer),
+    // Excused (« Continuer sans ») and absent-for-the-whole-question players keep their hearts;
+    // « Buzzer »: only a wrong buzz costs one (not buzzing doesn't).
+    this.survival?.settle(question, this.questionIndex, (p) =>
+      buzzer ? !p.answer : this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer),
     );
     const correctIndexes = correctChoiceIndexes(question);
     const details = this.revealDetails(question);
@@ -877,6 +979,7 @@ export class Game {
 
   /** TYPE_ANSWER: accepted + most typed answers; SLIDER: settings, guesses, closest guess. */
   private revealDetails(question: Question): RevealDetails {
+    if (this.buzzer) return { buzzer: buzzerReveal(question, this.buzzer, this.players) };
     // Earliest answers first: the first typing names a group, the fastest wins a tie.
     const answers = [...this.players.values()]
       .flatMap((player) => (player.answer ? [{ player, answer: player.answer }] : []))
@@ -1110,7 +1213,8 @@ export class Game {
     this.pause = {
       since: now,
       frozenAt,
-      remainingMs: Math.max(0, (this.phaseEndsAt ?? now) - frozenAt),
+      // « Buzzer »: the clock was already frozen by the player who has the hand.
+      remainingMs: this.hold?.remainingMs ?? Math.max(0, (this.phaseEndsAt ?? now) - frozenAt),
       resumeAt: null,
     };
     this.broadcastState();
@@ -1132,6 +1236,11 @@ export class Game {
       this.answeringStartedAt += now - pause.frozenAt;
       // The game waited for them: everyone connected now had the whole question (team averages).
       for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
+    }
+    if (this.hold) {
+      // « Buzzer »: still answering out loud, the clock stays frozen until the host judges.
+      this.hold.remainingMs = pause.remainingMs;
+      return this.broadcastState();
     }
     this.phaseEndsAt = now + pause.remainingMs;
     this.timer = setTimeout(() => this.onPhaseTimeout(), pause.remainingMs);
@@ -1209,14 +1318,17 @@ export class Game {
       type: q.type,
       text: q.text,
       ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
-      choices: choiceTexts(q),
+      // « Buzzer »: the question without its choices, and the answer for the host to judge.
+      choices: q.buzzer ? [] : choiceTexts(q),
       timeLimitSec: q.timeLimitSec,
-      ...(q.type === 'SLIDER' && { slider: sliderPrompt(q.slider) }),
+      ...(q.buzzer && { buzzer: { answer: buzzerAnswer(q) } }),
+      ...(q.type === 'SLIDER' && !q.buzzer && { slider: sliderPrompt(q.slider) }),
       // Media are for the shared screen only: the prompt below never carries them.
       ...(q.audio && { audio: q.audio, ...(q.audioOnReveal && { audioOnReveal: true as const }) }),
       ...(q.imageUrl &&
         q.imageEffect &&
         q.imageEffect !== 'none' && { imageEffect: q.imageEffect }),
+      // ORDER au buzzer keeps its (shuffled) items: they are needed to say the order.
       ...(isExtraQuestion(q) && extraShowFields(q, this.setup, this.players.values())),
     };
   }
@@ -1229,7 +1341,8 @@ export class Game {
       type: q.type,
       timeLimitSec: q.timeLimitSec,
     };
-    if (q.type === 'SLIDER') prompt.slider = sliderPrompt(q.slider);
+    if (q.buzzer) prompt.buzzer = true;
+    else if (q.type === 'SLIDER') prompt.slider = sliderPrompt(q.slider);
     else if (q.type === 'TYPE_ANSWER') prompt.maxLength = TYPE_ANSWER_MAX_LENGTH;
     else if (isExtraQuestion(q))
       Object.assign(prompt, extraPromptFields(q, this.setup, this.players.values(), player.id));
@@ -1255,13 +1368,16 @@ export class Game {
       rank,
       ...(team && { team: { id: team.team.id, score: team.team.score, rank: team.rank } }),
       ...(q && !hasRightAnswer(q.type) && { poll: true as const }),
+      ...(q && this.buzzer && { buzzer: buzzerResult(q, this.buzzer, player, this.players) }),
       ...(q &&
         isExtraQuestion(q) &&
+        !q.buzzer &&
         extraResultFields(q, player, this.setup, this.players.values())),
-      ...(q?.type === 'SLIDER' && {
-        correctValue: q.slider.correct,
-        ...(player.answer?.value != null && { yourValue: player.answer.value }),
-      }),
+      ...(q?.type === 'SLIDER' &&
+        !q.buzzer && {
+          correctValue: q.slider.correct,
+          ...(player.answer?.value != null && { yourValue: player.answer.value }),
+        }),
       ...(jokers && { jokers }),
       ...(this.survival && { survival: this.survival.resultFields(player.id) }),
     };
@@ -1275,6 +1391,7 @@ export class Game {
   private setPhase(phase: GamePhase, durationMs: number | null): void {
     this.clearTimer();
     this.clearPause();
+    this.hold = null;
     this.phase = phase;
     this.phaseStartedAt = Date.now();
     this.phaseEndsAt = durationMs === null ? null : Date.now() + durationMs;

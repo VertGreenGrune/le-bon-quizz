@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { jokerAllowed, jokerAvailability } from './index.js';
 
+describe('jokerAvailability (T28 « Buzzer »)', () => {
+  it('no joker on a buzzer question, whatever its type; a pending Gel still lands', () => {
+    for (const type of ['MCQ', 'TYPE_ANSWER', 'SLIDER', 'ORDER'] as const) {
+      expect(jokerAvailability(type, true)).toEqual({
+        jokers: false,
+        unavailable: [],
+        scramble: false,
+        freeze: true,
+      });
+      expect(jokerAllowed(type, 'freeze', true)).toBe(false);
+      expect(jokerAllowed(type, 'freeze')).toBe(true);
+    }
+  });
+});
+
 describe('jokerAvailability (Wave 6: T27 question types)', () => {
   it('ordre / point: every joker except 50/50, no Brouilleur', () => {
     for (const type of ['ORDER', 'PIN'] as const) {

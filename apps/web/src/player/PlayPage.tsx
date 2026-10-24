@@ -28,6 +28,7 @@ import {
 } from './playerState';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
+import { BuzzerPad, buzzerResultTitle } from './buzzer';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
@@ -129,6 +130,8 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
         </Message>
       );
     case 'answer': {
+      // Remounted when the hand changes: an old « X a buzzé avant toi » goes away.
+      if (s.prompt?.buzzer) return <BuzzerPad key={s.buzzer?.holder?.id ?? 'open'} s={s} />;
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
       return <AnswerScreen prompt={s.prompt!} effects={jokerEffects(s)} />;
@@ -178,9 +181,7 @@ function TopBar({ s }: { s: PlayerState }) {
             {s.questionIndex + 1}/{s.totalQuestions}
           </span>
         )}
-        {s.phase === 'ANSWERING' && (
-          <Countdown endsAt={s.answeringEndsAt} frozenMs={s.paused ? s.frozenMs : null} />
-        )}
+        {s.phase === 'ANSWERING' && <Countdown endsAt={s.answeringEndsAt} frozenMs={s.frozenMs} />}
         <motion.span
           key={s.totalScore}
           initial={s.totalScore > 0 ? { scale: 1.5 } : false}
@@ -195,7 +196,7 @@ function TopBar({ s }: { s: PlayerState }) {
   );
 }
 
-/** `frozenMs`: paused game, the timer doesn't move. */
+/** `frozenMs`: paused game / someone answering out loud, the timer doesn't move. */
 function Countdown({ endsAt, frozenMs }: { endsAt: number | null; frozenMs: number | null }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -208,6 +209,7 @@ function Countdown({ endsAt, frozenMs }: { endsAt: number | null; frozenMs: numb
   return (
     <motion.span
       key={sec}
+      data-testid="countdown"
       initial={{ scale: sec <= 5 ? 1.5 : 1.2 }}
       animate={{ scale: 1 }}
       className={`flex size-8 items-center justify-center rounded-full tabular-nums ${
@@ -542,26 +544,37 @@ function Result({ s }: { s: PlayerState }) {
   const r = s.result!;
   const answered = s.myAnswer?.questionIndex === s.questionIndex;
   if (r.poll) return <PollThanks s={s} voted={answered} />;
+
   // Partial points (order, pin close to the zone): not right, but not for nothing.
   const partial = !r.correct && r.pointsEarned > 0;
-  const title = r.bluff
-    ? r.bluff.found
-      ? 'Vérité trouvée !'
-      : partial
-        ? 'Bien mythoné !'
-        : 'Piégé !'
-    : r.correct
-      ? 'Correct !'
-      : partial
-        ? 'Presque !'
-        : answered
-          ? 'Raté !'
-          : 'Temps écoulé !';
+  // « Buzzer »: not buzzing isn't a mistake (neutral screen).
+  const idle = !!r.buzzer && !r.buzzer.won && !r.buzzer.wrong;
+  const title = r.buzzer
+    ? buzzerResultTitle(r.buzzer)
+    : r.bluff
+      ? r.bluff.found
+        ? 'Vérité trouvée !'
+        : partial
+          ? 'Bien mythoné !'
+          : 'Piégé !'
+      : r.correct
+        ? 'Correct !'
+        : partial
+          ? 'Presque !'
+          : answered
+            ? 'Raté !'
+            : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
       className={`flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center ${
-        r.correct ? 'bg-answer-green' : partial ? 'bg-answer-yellow' : 'bg-answer-red'
+        r.correct
+          ? 'bg-answer-green'
+          : partial
+            ? 'bg-answer-yellow'
+            : idle
+              ? 'bg-black/20'
+              : 'bg-answer-red'
       }`}
     >
       <motion.div
@@ -571,9 +584,12 @@ function Result({ s }: { s: PlayerState }) {
         className="flex size-28 items-center justify-center rounded-full bg-white/20 text-7xl font-black"
         aria-hidden="true"
       >
-        {r.correct ? '✓' : partial ? '≈' : '✗'}
+        {r.correct ? '✓' : partial ? '≈' : idle ? '🔔' : '✗'}
       </motion.div>
       <h2 className="text-4xl font-black">{title}</h2>
+      {r.buzzer && r.buzzer.answer.length > 0 && (
+        <p className="font-bold">Bonne réponse : {r.buzzer.answer.join(' / ')}</p>
+      )}
       <motion.p
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

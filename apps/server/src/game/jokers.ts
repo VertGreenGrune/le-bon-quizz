@@ -126,7 +126,7 @@ export class Jokers {
   startQuestion(): void {
     this.attacked.clear();
     const q = this.ctx.question();
-    const availability = q ? jokerAvailability(q.type) : null;
+    const availability = q ? jokerAvailability(q.type, q.buzzer) : null;
     for (const h of this.hands.values()) {
       h.played = null;
       h.effects = {};
@@ -135,7 +135,8 @@ export class Jokers {
       h.given = null;
       h.hourglassExtra = 0;
       h.results = [];
-      if (!q || !availability?.jokers) continue;
+      // « Buzzer »: no joker, but a pending Gel still lands (it delays the BUZZ).
+      if (!q || !availability || !(availability.jokers || availability.freeze)) continue;
       if (h.pendingFreeze) {
         h.frozenMs = FREEZE_MS;
         h.effects.frozen = { ms: FREEZE_MS, by: h.pendingFreeze };
@@ -303,6 +304,7 @@ export class Jokers {
     if (player.answer) throw refuse('Tu as déjà répondu');
     if (h.played) throw refuse('Un seul joker par question');
     if (!h.hand.includes(joker)) throw refuse('Tu n’as pas ce joker');
+    if (q.buzzer) throw refuse('Pas de joker sur une question au buzzer');
     if (!jokerAvailability(q.type).jokers) throw refuse('Pas de joker sur un sondage');
     if (!jokerAllowed(q.type, joker)) throw refuse('Ce joker ne marche pas sur cette question');
 
@@ -477,6 +479,7 @@ export class Jokers {
     return {
       questionIndex: this.ctx.questionIndex(),
       ...(type && { questionType: type }),
+      ...(this.ctx.question()?.buzzer && { buzzer: true as const }),
       hand: [...h.hand],
       ...(h.played && {
         played: { joker: h.played.joker, ...(target && { target: member(target) }) },

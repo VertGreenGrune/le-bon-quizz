@@ -1,4 +1,5 @@
 import type {
+  BuzzerStatus,
   GameMode,
   GamePause,
   GamePhase,
@@ -32,6 +33,11 @@ export interface HostGameState {
   pausedSince: number | null;
   /** Local end of the 3-2-1 countdown before resuming (`game:resuming`). */
   resumeAt: number | null;
+  /**
+   * « Buzzer » question (`game:state.buzzer`): who has the hand — the timer is then frozen at
+   * `frozenMs` — and who answered wrong.
+   */
+  buzzer: BuzzerStatus | null;
   /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
   comebacks: (LobbyMember & { at: number })[];
   players: LobbyPlayersPayload['players'];
@@ -78,6 +84,7 @@ export const initialHostState: HostGameState = {
   frozenMs: null,
   pausedSince: null,
   resumeAt: null,
+  buzzer: null,
   comebacks: [],
   players: [],
   teams: [],
@@ -101,6 +108,9 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
       const newQuestion = questionIndex !== state.questionIndex;
       const paused = action.payload.paused ?? null;
       const waiting = paused && (paused.waitingFor.length > 0 || paused.hostMissing);
+      const buzzer = action.payload.buzzer ?? null;
+      // Paused, or a player answering out loud (« Buzzer »): the clock is frozen.
+      const frozen = !!paused || !!buzzer?.holder;
       return {
         ...state,
         phase,
@@ -108,9 +118,10 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         jokers: !!action.payload.jokers,
         questionIndex,
         totalQuestions,
-        deadline: remainingMs != null && !paused ? action.now + remainingMs : null,
+        deadline: remainingMs != null && !frozen ? action.now + remainingMs : null,
         paused,
-        frozenMs: paused ? (remainingMs ?? null) : null,
+        buzzer,
+        frozenMs: frozen ? (remainingMs ?? null) : null,
         pausedSince: paused ? action.now - paused.sinceMs : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,
         // Per-question data from the previous question must not leak into the next one.
@@ -168,9 +179,9 @@ export function offlinePlayers(state: Pick<HostGameState, 'players'>): LobbyMemb
   return state.players.filter((p) => p.offline);
 }
 
-/** Time left in the current timed phase: frozen while paused. */
+/** Time left in the current timed phase: frozen while paused / while someone has the hand. */
 export function remainingMsAt(state: HostGameState, now: number): number | null {
-  if (state.paused) return state.frozenMs;
+  if (state.paused || state.buzzer?.holder) return state.frozenMs;
   return state.deadline != null ? Math.max(0, state.deadline - now) : null;
 }
 

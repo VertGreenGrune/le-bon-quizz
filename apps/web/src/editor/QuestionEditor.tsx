@@ -1,4 +1,10 @@
-import { SHAPES, TYPE_ANSWER_MAX_LENGTH, hasRightAnswer, type Question } from '@lbq/shared';
+import {
+  SHAPES,
+  TYPE_ANSWER_MAX_LENGTH,
+  buzzerAllowed,
+  hasRightAnswer,
+  type Question,
+} from '@lbq/shared';
 import type { FieldErrors } from '../api/validation';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { btn } from './EditorShell';
@@ -191,6 +197,23 @@ export function QuestionEditor({
                   </option>
                 ))}
               </select>
+            </label>
+          )}
+          {buzzerAllowed(q.type) && (
+            <label className="flex max-w-60 items-start gap-2">
+              <input
+                type="checkbox"
+                checked={q.buzzer}
+                onChange={(e) => onChange({ ...q, buzzer: e.target.checked })}
+                className="mt-0.5 size-5 shrink-0 accent-brand"
+              />
+              <span className="text-sm">
+                <span className="font-bold">🔔 Buzzer</span>
+                <span className="block text-gray-500">
+                  Un seul gros bouton BUZZ sur les téléphones : le plus rapide répond à voix haute,
+                  vous validez ✅ / ❌ sur l'écran.
+                </span>
+              </span>
             </label>
           )}
         </div>

@@ -61,6 +61,22 @@ export const BLUFF_FOOL_SHARE = 0.5;
 /** A slider has at most this many positions ((max − min) / step). */
 export const SLIDER_MAX_STEPS = 100_000;
 
+/**
+ * Types that can be played « au buzzer »: those with a right answer one can say out loud (not a
+ * point on a picture, not a « Mytho ! »).
+ */
+export const BUZZER_QUESTION_TYPES = [
+  'MCQ',
+  'TRUE_FALSE',
+  'TYPE_ANSWER',
+  'SLIDER',
+  'ORDER',
+] as const satisfies readonly QuestionType[];
+
+export function buzzerAllowed(type: QuestionType): boolean {
+  return (BUZZER_QUESTION_TYPES as readonly string[]).includes(type);
+}
+
 export const BasePoints = z.union([z.literal(0), z.literal(1000), z.literal(2000)]);
 
 export const ChoiceSchema = z.object({
@@ -110,6 +126,11 @@ const questionBase = {
   /** Play the clip at REVEAL instead of during ANSWERING (e.g. "listen to the answer"). */
   audioOnReveal: z.boolean().optional(),
   imageEffect: ImageEffect.optional(),
+  /**
+   * « Buzzer » (T28): no answer screen on the phones, only a BUZZ button; the first player to buzz
+   * answers out loud and the host judges it (`BUZZER_QUESTION_TYPES` only).
+   */
+  buzzer: z.boolean().optional(),
 };
 
 const hasCorrectChoice: [
@@ -271,6 +292,10 @@ export const QuestionSchema = z.preprocess(
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
       path: ['imageEffect'],
+    })
+    .refine((q) => !q.buzzer || buzzerAllowed(q.type), {
+      message: 'This question type cannot be played with the buzzer',
+      path: ['buzzer'],
     }),
 );
 export type Question = z.infer<typeof QuestionSchema>;
@@ -295,6 +320,29 @@ export function choiceTexts(q: Question): string[] {
 export function correctChoiceIndexes(q: Question): number[] {
   if (q.type !== 'MCQ' && q.type !== 'TRUE_FALSE') return [];
   return q.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
+}
+
+/**
+ * « Buzzer »: the right answer in words, for the host to judge what is said out loud (TV only,
+ * and the phones at the reveal). One line per accepted answer / item.
+ */
+export function buzzerAnswer(q: Question): string[] {
+  switch (q.type) {
+    case 'MCQ':
+    case 'TRUE_FALSE':
+      return q.choices.filter((c) => c.isCorrect).map((c) => c.text);
+    case 'TYPE_ANSWER':
+      return [...q.acceptedAnswers];
+    case 'SLIDER': {
+      const { correct, margin, unit } = q.slider;
+      const value = `${String(correct).replace('.', ',')}${unit ? ` ${unit}` : ''}`;
+      return [margin > 0 ? `${value} (± ${String(margin).replace('.', ',')})` : value];
+    }
+    case 'ORDER':
+      return q.items.map((item, i) => `${i + 1}. ${item}`);
+    default:
+      return [];
+  }
 }
 
 /**

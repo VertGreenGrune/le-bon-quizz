@@ -2,7 +2,8 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { GamePhase } from '@lbq/shared';
 
 /** Host screen only — phones never play sounds. Files and licenses: `public/sounds/CREDITS.md`. */
-export type SoundName = 'lobby' | 'join' | 'tick' | 'reveal' | 'podium' | 'joker' | 'eliminated';
+export type SoundName =
+  'lobby' | 'join' | 'tick' | 'reveal' | 'podium' | 'joker' | 'eliminated' | 'buzz';
 
 const VOLUME: Record<SoundName, number> = {
   lobby: 0.45,
@@ -12,6 +13,7 @@ const VOLUME: Record<SoundName, number> = {
   podium: 0.9,
   joker: 0.7,
   eliminated: 0.8,
+  buzz: 0.8,
 };
 
 /** Volume factor of the game sounds while a question's sound clip plays. */
@@ -153,6 +155,14 @@ export function phaseSound(prev: GamePhase | null, next: GamePhase | null): Soun
   return null;
 }
 
+/**
+ * « Buzzer »: a player just took the hand (`prev` undefined = first state after a (re)load:
+ * no replay).
+ */
+export function shouldBuzz(prev: string | null | undefined, next: string | null): boolean {
+  return prev !== undefined && next !== null && next !== prev;
+}
+
 export function shouldTick(phase: GamePhase | null, remainingSec: number | null): boolean {
   return (
     phase === 'ANSWERING' &&
@@ -168,6 +178,7 @@ export function useHostSounds({
   remainingSec,
   resumeCount = null,
   playerCount,
+  buzzerHolder = null,
 }: {
   phase: GamePhase | null;
   /** null while paused: the frozen clock doesn't tick. */
@@ -175,9 +186,12 @@ export function useHostSounds({
   /** 3-2-1 countdown before a paused game resumes. */
   resumeCount?: number | null;
   playerCount: number;
+  /** « Buzzer »: id of the player who has the hand. */
+  buzzerHolder?: string | null;
 }) {
   const prevPhase = useRef<GamePhase | null>(null);
   const prevCount = useRef<number | null>(null);
+  const prevHolder = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     const sound = phaseSound(prevPhase.current, phase);
@@ -196,6 +210,11 @@ export function useHostSounds({
   useEffect(() => {
     if (shouldTick(phase, remainingSec)) playSound('tick');
   }, [phase, remainingSec]);
+
+  useEffect(() => {
+    if (shouldBuzz(prevHolder.current, buzzerHolder)) playSound('buzz');
+    if (phase !== null) prevHolder.current = buzzerHolder;
+  }, [phase, buzzerHolder]);
 
   useEffect(() => {
     if (resumeCount != null && resumeCount >= 1) playSound('tick');

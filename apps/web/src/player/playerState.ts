@@ -1,6 +1,7 @@
 import type {
   AnswerInput,
   AvatarId,
+  BuzzerStatus,
   ErrorCode,
   GameMode,
   GamePause,
@@ -34,6 +35,8 @@ export interface PlayerState {
   frozenMs: number | null;
   /** Local-clock end of the 3-2-1 countdown before resuming (`game:resuming`). */
   resumeAt: number | null;
+  /** « Buzzer » question: who has the hand (timer frozen meanwhile), who answered wrong. */
+  buzzer: BuzzerStatus | null;
   /** What the player answered (choice, text or slider value), for `questionIndex` only. */
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
@@ -97,6 +100,7 @@ export const initialPlayerState: PlayerState = {
   paused: null,
   frozenMs: null,
   resumeAt: null,
+  buzzer: null,
   myAnswer: null,
   result: null,
   nickname: '',
@@ -135,9 +139,12 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
     case 'state': {
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const paused = action.payload.paused ?? null;
+      const buzzer = action.payload.buzzer ?? null;
+      // Paused, or a player answering out loud (« Buzzer »): the timer doesn't move.
+      const frozen = !!paused || !!buzzer?.holder;
       const sameQuestion = questionIndex === state.questionIndex;
       let answeringEndsAt = sameQuestion ? state.answeringEndsAt : null;
-      if (phase === 'ANSWERING' && remainingMs !== undefined && !paused) {
+      if (phase === 'ANSWERING' && remainingMs !== undefined && !frozen) {
         answeringEndsAt = action.now + remainingMs;
       }
       // Someone (still / again) missing: no countdown. Everyone back: keep the countdown.
@@ -145,7 +152,8 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return {
         ...state,
         paused,
-        frozenMs: paused ? (remainingMs ?? null) : null,
+        buzzer,
+        frozenMs: frozen ? (remainingMs ?? null) : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
         mode,
@@ -172,7 +180,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         questionIndex: p.index,
         // `game:state` remainingMs is more accurate; fall back to the full time limit.
         answeringEndsAt:
-          isCurrent && (state.answeringEndsAt !== null || state.paused)
+          isCurrent && (state.answeringEndsAt !== null || state.frozenMs !== null)
             ? state.answeringEndsAt
             : action.now + p.timeLimitSec * 1000,
         myAnswer: state.myAnswer?.questionIndex === p.index ? state.myAnswer : null,
@@ -294,6 +302,18 @@ export function copyingTarget(s: PlayerState) {
   if (!j || j.questionIndex !== s.questionIndex || j.played?.joker !== 'copy') return null;
   if (bluffStage(s) === 'write') return null; // « Mytho ! »: the copier still writes its lie
   return j.effects.copied ? null : (j.played.target ?? null);
+}
+
+/**
+ * « Buzzer » question, while answering: `open` (BUZZ!), `mine` (this phone has the hand),
+ * `taken` (someone else has it), `out` (answered wrong). null: not a buzzer question.
+ */
+export function buzzerView(s: PlayerState): 'open' | 'mine' | 'taken' | 'out' | null {
+  if (s.prompt?.index !== s.questionIndex || !s.prompt.buzzer) return null;
+  const status = s.buzzer;
+  if (status?.wrong.some((p) => p.id === s.playerId)) return 'out';
+  if (!status?.holder) return 'open';
+  return status.holder.id === s.playerId ? 'mine' : 'taken';
 }
 
 /** « Mytho ! » stage of the current question (null for the other types). */
