@@ -1147,7 +1147,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   real phones.
 
 ### T26 — « Mytho ! » bluff question type (Fibbage-like) ⭐ the most "friends" feature
-- **Status:** todo
+- **Status:** in-progress (T26 agent, worktree ../lbq-T26, branch task/T26-bluff)
 - **Depends on:** T25 and T27 merged (bluff votes must work with jokers and the new answer path)
 - New type `BLUFF`: the editor gives a question with a surprising true answer ("Le premier film
   de Tim Burton s'appelle… ?"). Phase 1 (≈ 45 s): every phone **types a fake answer** meant to
