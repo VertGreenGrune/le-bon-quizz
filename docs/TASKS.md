@@ -1385,7 +1385,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   db:migrate`.** Not tried on real phones.
 
 ### T30 — « Dessine-moi » (Pictionary round)
-- **Status:** todo
+- **Status:** in-progress (Claude T30, worktree ../lbq-T30, branch task/T30-draw)
 - **Depends on:** T28
 - Question type `DRAW`: one player (rotating) gets a secret word on their phone and **draws** with
   the finger; strokes stream live to the TV (small vector messages, not images); the others type
