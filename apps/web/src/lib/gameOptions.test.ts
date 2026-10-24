@@ -33,4 +33,20 @@ describe('game options in the host URL', () => {
     });
     expect(parse('/host/new?jokers=0')).toEqual({ mode: 'solo' });
   });
+
+  it('carries the « Survie » mode and its hearts (1–5, default 3)', () => {
+    expect(hostUrl('abc', { mode: 'survival', hearts: 5, jokers: true })).toBe(
+      '/host/new?quizId=abc&mode=survival&hearts=5&jokers=1',
+    );
+    expect(parse(hostUrl(undefined, { mode: 'survival', hearts: 1 }))).toEqual({
+      mode: 'survival',
+      hearts: 1,
+    });
+    expect(parse('/host/new?mode=survival&hearts=9&jokers=1')).toEqual({
+      mode: 'survival',
+      hearts: 3,
+      jokers: true,
+    });
+    expect(parse('/host/new?mode=survival')).toEqual({ mode: 'survival', hearts: 3 });
+  });
 });

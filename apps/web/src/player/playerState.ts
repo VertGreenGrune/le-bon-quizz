@@ -13,6 +13,8 @@ import type {
   QuestionPromptPayload,
   RankedPlayer,
   RankedTeam,
+  SurvivalPlayer,
+  SurvivalStatePayload,
 } from '@lbq/shared';
 
 /** Everything the phone knows about the game. Pure data, driven by server events. */
@@ -56,6 +58,8 @@ export interface PlayerState {
   jokers: PlayerJokersPayload | null;
   /** Last joker played by anyone (toast), with the local time it arrived. */
   jokerNews: (JokerUsedPayload & { at: number }) | null;
+  /** « Survie »: everyone's hearts (`survival:state`). */
+  survival: SurvivalStatePayload | null;
 }
 
 export type PlayerAction =
@@ -79,7 +83,8 @@ export type PlayerAction =
   | { type: 'lost'; code: ErrorCode }
   | { type: 'lie'; questionIndex: number; text: string | null }
   | { type: 'jokers'; payload: PlayerJokersPayload }
-  | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number };
+  | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number }
+  | { type: 'survival'; payload: SurvivalStatePayload };
 
 export const initialPlayerState: PlayerState = {
   connected: false,
@@ -107,6 +112,7 @@ export const initialPlayerState: PlayerState = {
   lie: null,
   jokers: null,
   jokerNews: null,
+  survival: null,
 };
 
 export function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
@@ -221,7 +227,15 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
 
     case 'jokerUsed':
       return { ...state, jokerNews: { ...action.payload, at: action.now } };
+
+    case 'survival':
+      return { ...state, survival: action.payload };
   }
+}
+
+/** « Survie »: this player's hearts / haunts (null in the other modes). */
+export function mySurvival(s: PlayerState): SurvivalPlayer | null {
+  return s.survival?.players.find((p) => p.id === s.playerId) ?? null;
 }
 
 /** Team mode: the team the player is in, if any. */

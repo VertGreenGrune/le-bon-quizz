@@ -11,6 +11,7 @@ import type {
   RankedPlayer,
   RankedTeam,
   StandingsPayload,
+  SurvivalStatePayload,
 } from '@lbq/shared';
 
 /** Everything the shared screen knows about the game, folded from server events. */
@@ -50,6 +51,8 @@ export interface HostGameState {
   leaderboardTeams: RankedTeam[];
   podium: RankedPlayer[];
   podiumTeams: RankedTeam[];
+  /** « Survie »: everyone's hearts (`survival:state`). */
+  survival: SurvivalStatePayload | null;
 }
 
 export type HostAction =
@@ -61,7 +64,8 @@ export type HostAction =
   | { type: 'count'; answered: number; total: number }
   | { type: 'reveal'; payload: QuestionRevealPayload }
   | ({ type: 'leaderboard' } & StandingsPayload)
-  | ({ type: 'podium' } & StandingsPayload);
+  | ({ type: 'podium' } & StandingsPayload)
+  | { type: 'survival'; payload: SurvivalStatePayload };
 
 export const initialHostState: HostGameState = {
   phase: null,
@@ -87,6 +91,7 @@ export const initialHostState: HostGameState = {
   leaderboardTeams: [],
   podium: [],
   podiumTeams: [],
+  survival: null,
 };
 
 export function hostReducer(state: HostGameState, action: HostAction): HostGameState {
@@ -150,6 +155,8 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
       };
     case 'podium':
       return { ...state, podium: action.top, podiumTeams: action.teams ?? [] };
+    case 'survival':
+      return { ...state, survival: action.payload };
   }
 }
 
@@ -191,6 +198,7 @@ export function teamLobbyStatus(state: Pick<HostGameState, 'players' | 'teams'>)
   };
 }
 
+/** Last question played, or « Survie » over (one survivor left): the podium is next. */
 export function isLastQuestion(state: HostGameState): boolean {
-  return state.questionIndex >= state.totalQuestions - 1;
+  return state.questionIndex >= state.totalQuestions - 1 || !!state.survival?.finished;
 }

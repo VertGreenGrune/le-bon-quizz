@@ -13,6 +13,7 @@ import {
   type AnswerInput,
   type GameMode,
   type GamePhase,
+  type HauntType,
   type JokerEffects,
   type JokerResult,
   type JokerType,
@@ -93,6 +94,11 @@ export class Jokers {
     private readonly random: () => number = Math.random,
     /** Fixed starting hand for everyone instead of a random one (e2e tests). */
     private readonly startHand?: JokerType[],
+    /**
+     * false: « Survie » game without the Jokers option — nobody gets jokers, the engine only
+     * carries the ghosts' haunts (Gel / Brouilleur effects).
+     */
+    private readonly withHands = true,
   ) {}
 
   // ---------- Game hooks ----------
@@ -100,6 +106,10 @@ export class Jokers {
   /** Start of the game: JOKERS_AT_START different random jokers each. */
   deal(): void {
     for (const p of this.ctx.players().values()) {
+      if (!this.withHands) {
+        this.hands.set(p.id, newHand([]));
+        continue;
+      }
       if (this.startHand) {
         this.hands.set(p.id, newHand(this.startHand.slice(0, JOKERS_MAX)));
         continue;
@@ -235,7 +245,7 @@ export class Jokers {
         }
       }
     }
-    if (polled) return;
+    if (polled || !this.withHands) return;
     for (const [id, h] of this.hands) {
       const p = players.get(id);
       if (!p?.answer?.correct || p.streak === 0 || p.streak % JOKER_STREAK_STEP !== 0) continue;
@@ -343,6 +353,34 @@ export class Jokers {
       if (target.answer && given) this.copyNow(player, h, given, target.answer.responseMs);
     }
     this.sendStates();
+  }
+
+  /**
+   * « Survie »: a ghost's free Gel / Brouilleur on a living player. Lands on the target's next
+   * question like the attack jokers (a Bouclier blocks it). One pending haunt of each kind per
+   * target. Returns whether it was blocked.
+   */
+  haunt(by: Player, haunt: HauntType, target: Player): boolean {
+    const th = this.hands.get(target.id);
+    if (!th) throw refuse('Joueur introuvable');
+    if (haunt === 'freeze' ? th.pendingFreeze : th.pendingScramble)
+      throw refuse(
+        `${target.nickname} est déjà ${haunt === 'freeze' ? 'gelé' : 'brouillé'} pour sa prochaine question`,
+      );
+    const blocked = th.shield;
+    if (blocked) th.shield = false;
+    else if (haunt === 'freeze') th.pendingFreeze = member(by);
+    else th.pendingScramble = member(by);
+    this.ctx.transport.toAll('joker:used', {
+      questionIndex: Math.max(0, this.ctx.questionIndex()),
+      joker: haunt,
+      by: member(by),
+      target: member(target),
+      haunt: true,
+      ...(blocked && { blocked: true as const }),
+    });
+    if (blocked) this.sendState(target);
+    return blocked;
   }
 
   // ---------- Effects ----------

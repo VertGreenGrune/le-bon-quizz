@@ -34,6 +34,7 @@ const toSummary = (g: GameRow): GameSummary => ({
   winner: g.results[0]?.nickname ?? null,
   mode: g.mode,
   ...(g.jokers && { jokers: true as const }),
+  ...(g.mode === 'survival' && g.hearts !== null && { hearts: g.hearts }),
 });
 
 /** Joker ids are written by the game server only; anything unknown is dropped. */
@@ -42,6 +43,13 @@ const jokerIds = (ids: string[]): JokerType[] =>
     const parsed = JokerType.safeParse(id);
     return parsed.success ? [parsed.data] : [];
   });
+
+/** CSV « Survie » cell: hearts left, or the question where the player became a ghost. */
+const survivalLabel = (s: GameReport['results'][number]['survival']) => {
+  if (!s) return '';
+  if (s.eliminatedAt !== undefined) return `fantôme (question ${s.eliminatedAt + 1})`;
+  return `${s.hearts} cœur${s.hearts > 1 ? 's' : ''}`;
+};
 
 /** Team ids are written by the game server (0–3) only. */
 const asTeamId = (id: number) => id as TeamId;
@@ -60,7 +68,17 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
     return {
       ...toSummary(g),
       results: g.results.map(
-        ({ rank, nickname, avatar, score, correctCount, teamId, jokersUsed }) => {
+        ({
+          rank,
+          nickname,
+          avatar,
+          score,
+          correctCount,
+          teamId,
+          jokersUsed,
+          hearts,
+          eliminatedAt,
+        }) => {
           const jokers = jokerIds(jokersUsed);
           return {
             rank,
@@ -70,6 +88,9 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
             correctCount,
             teamId: teamId === null ? null : asTeamId(teamId),
             ...(jokers.length > 0 && { jokersUsed: jokers }),
+            ...(hearts !== null && {
+              survival: { hearts, ...(eliminatedAt !== null && { eliminatedAt }) },
+            }),
           };
         },
       ),
@@ -104,13 +125,16 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
 
   app.get<IdParams>('/games/:id/export.csv', async (request, reply) => {
     const report = await getReport(request.params.id, currentUser(request).id);
-    // Team games get a `team` column (team name), games with jokers a `jokers` column (names);
-    // classic solo exports are unchanged.
+    // Team games get a `team` column (team name), games with jokers a `jokers` column (names),
+    // « Survie » games a `survival` column; classic solo exports are unchanged.
     const teams = report.mode === 'teams';
+    const survival = report.mode === 'survival';
     const jokers = !!report.jokers;
     const teamCell = (id: TeamId | null) => (teams ? [id === null ? '' : TEAM_NAMES[id]] : []);
     const jokerCell = (used: JokerType[] = []) =>
       jokers ? [used.map((j) => JOKERS[j].name).join(', ')] : [];
+    const survivalCell = (s: GameReport['results'][number]['survival']) =>
+      survival ? [survivalLabel(s)] : [];
     const csv = toCsv([
       [
         'rank',
@@ -119,6 +143,7 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
         'correctCount',
         ...(teams ? ['team'] : []),
         ...(jokers ? ['jokers'] : []),
+        ...(survival ? ['survival'] : []),
       ],
       ...report.results.map((r) => [
         r.rank,
@@ -127,6 +152,7 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
         r.correctCount,
         ...teamCell(r.teamId),
         ...jokerCell(r.jokersUsed),
+        ...survivalCell(r.survival),
       ]),
     ]);
     const filename = `lebonquizz-${report.startedAt.slice(0, 10)}-${report.pin}.csv`;

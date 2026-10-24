@@ -1,14 +1,18 @@
 import { JOKERS, type GameMode, type JokerType } from '@lbq/shared';
 
-/** "Solo" / "Équipes" tag of a past game. */
-export function ModeBadge({ mode }: { mode: GameMode }) {
+const MODES: Record<GameMode, { label: string; className: string }> = {
+  solo: { label: 'Solo', className: 'bg-gray-100 text-gray-600' },
+  teams: { label: '👥 Équipes', className: 'bg-brand/15 text-brand' },
+  survival: { label: '💀 Survie', className: 'bg-purple-100 text-purple-800' },
+};
+
+/** "Solo" / "Équipes" / "Survie" tag of a past game (`hearts`: « Survie », hearts at start). */
+export function ModeBadge({ mode, hearts }: { mode: GameMode; hearts?: number }) {
+  const { label, className } = MODES[mode];
   return (
-    <span
-      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-        mode === 'teams' ? 'bg-brand/15 text-brand' : 'bg-gray-100 text-gray-600'
-      }`}
-    >
-      {mode === 'teams' ? '👥 Équipes' : 'Solo'}
+    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${className}`}>
+      {label}
+      {hearts !== undefined && ` · ${hearts} ❤️`}
     </span>
   );
 }

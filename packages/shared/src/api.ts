@@ -181,6 +181,8 @@ export interface GameSummary {
   mode: GameMode;
   /** Played with jokers (absent otherwise). */
   jokers?: true;
+  /** « Survie »: hearts each player started with (absent for the other modes). */
+  hearts?: number;
 }
 
 export interface GameReportRow {
@@ -194,6 +196,8 @@ export interface GameReportRow {
   teamId: TeamId | null;
   /** Games with jokers: the jokers the player played, in order (absent when none). */
   jokersUsed?: JokerType[];
+  /** « Survie »: hearts left at the end, and the question index of the elimination (ghosts). */
+  survival?: { hearts: number; eliminatedAt?: number };
 }
 
 /** Team mode: final standing of one team. */

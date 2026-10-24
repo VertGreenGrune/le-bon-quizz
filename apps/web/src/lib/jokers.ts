@@ -16,6 +16,13 @@ export function announcement(p: JokerUsedPayload): { title: string; detail: stri
   const name = JOKERS[p.joker].name;
   if (p.blocked)
     return { title: `🛡️ ${target} bloque le ${name} de ${by} !`, detail: 'Bouclier !' };
+  if (p.haunt)
+    return p.joker === 'freeze'
+      ? { title: `👻 ${by} hante ${target} : Gel !`, detail: 'Bloqué 5 s à sa prochaine question' }
+      : {
+          title: `👻 ${by} hante ${target} : Brouilleur !`,
+          detail: 'Boutons mélangés à sa prochaine question',
+        };
   switch (p.joker) {
     case 'fifty':
       return { title: `🎯 ${by} joue le 50/50 !`, detail: 'La moitié des pièges disparaît' };

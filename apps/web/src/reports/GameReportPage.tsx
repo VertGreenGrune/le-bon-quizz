@@ -22,6 +22,7 @@ import {
   percentCorrect,
 } from './reportStats';
 import { JokersBadge, JokersUsed, ModeBadge } from './ModeBadge';
+import { survivalLabel } from '../lib/survival';
 import { MoreTypeDetails } from './moreTypeCards';
 import { BluffDetails } from './bluffCard';
 
@@ -86,7 +87,7 @@ function Report({ report }: { report: GameReport }) {
     <>
       <h1 className="flex items-center gap-3 text-3xl font-black">
         {report.quizTitle}
-        <ModeBadge mode={report.mode} />
+        <ModeBadge mode={report.mode} hearts={report.hearts} />
         {report.jokers && <JokersBadge />}
       </h1>
       <p className="mb-6 text-gray-500">
@@ -104,7 +105,11 @@ function Report({ report }: { report: GameReport }) {
 
       <section className="mb-8">
         <h2 className="mb-3 text-xl font-black">
-          {report.teams.length > 0 ? 'Classement des joueurs' : 'Classement final'}
+          {report.teams.length > 0
+            ? 'Classement des joueurs'
+            : report.mode === 'survival'
+              ? 'Classement des survivants'
+              : 'Classement final'}
         </h2>
         {report.results.length === 0 ? (
           <p className="rounded-2xl bg-white p-6 text-gray-500 shadow-sm">Aucun joueur.</p>
@@ -117,6 +122,9 @@ function Report({ report }: { report: GameReport }) {
                   <th className="px-4 py-2 font-semibold">Joueur</th>
                   {report.mode === 'teams' && <th className="px-4 py-2 font-semibold">Équipe</th>}
                   {report.jokers && <th className="px-4 py-2 font-semibold">Jokers joués</th>}
+                  {report.mode === 'survival' && (
+                    <th className="px-4 py-2 font-semibold">Survie</th>
+                  )}
                   <th className="px-4 py-2 text-right font-semibold">Score</th>
                   <th className="px-4 py-2 text-right font-semibold">Bonnes réponses</th>
                 </tr>
@@ -149,6 +157,11 @@ function Report({ report }: { report: GameReport }) {
                     {report.jokers && (
                       <td className="px-4 py-2 text-xl">
                         <JokersUsed jokers={r.jokersUsed ?? []} />
+                      </td>
+                    )}
+                    {report.mode === 'survival' && (
+                      <td className="px-4 py-2 text-sm font-semibold" data-testid="report-survival">
+                        {r.survival ? survivalLabel(r.survival) : '—'}
                       </td>
                     )}
                     <td className="px-4 py-2 text-right tabular-nums">{r.score}</td>

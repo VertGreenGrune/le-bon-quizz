@@ -43,6 +43,7 @@ export function createGame(
   const payload = {
     quizId,
     ...(options.mode === 'teams' && { mode: options.mode, teamCount: options.teamCount }),
+    ...(options.mode === 'survival' && { mode: options.mode, hearts: options.hearts }),
     ...(options.jokers && { jokers: true }),
   };
   pendingCreate ??= new Promise((resolve, reject) => {
@@ -96,6 +97,8 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const onLeaderboard: ServerToClientEvents['leaderboard'] = (p) =>
       dispatch({ type: 'leaderboard', ...p });
     const onPodium: ServerToClientEvents['podium'] = (p) => dispatch({ type: 'podium', ...p });
+    const onSurvival: ServerToClientEvents['survival:state'] = (p) =>
+      dispatch({ type: 'survival', payload: p });
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -108,6 +111,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     socket.on('question:reveal', onReveal);
     socket.on('leaderboard', onLeaderboard);
     socket.on('podium', onPodium);
+    socket.on('survival:state', onSurvival);
     socket.on('error', setError);
     return () => {
       socket.off('connect', onConnect);
@@ -121,6 +125,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
       socket.off('question:reveal', onReveal);
       socket.off('leaderboard', onLeaderboard);
       socket.off('podium', onPodium);
+      socket.off('survival:state', onSurvival);
       socket.off('error', setError);
     };
   }, []);

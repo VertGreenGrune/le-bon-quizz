@@ -40,9 +40,10 @@ export const PAUSE_HINT_MS = 60_000;
 export const Pin = z.string().regex(new RegExp(`^\\d{${PIN_LENGTH}}$`), 'Invalid PIN');
 export const Nickname = z.string().trim().min(1).max(NICKNAME_MAX_LENGTH);
 
-// ---------- Team mode ----------
+// ---------- Game modes ----------
 
-export const GameMode = z.enum(['solo', 'teams']);
+/** `teams`: team mode (below); `survival`: « Survie », hearts and ghosts (`survival.ts`). */
+export const GameMode = z.enum(['solo', 'teams', 'survival']);
 export type GameMode = z.infer<typeof GameMode>;
 
 /** A team reuses an answer color/shape: team id = shape index (0 = red ▲ … 3 = green ■). */
