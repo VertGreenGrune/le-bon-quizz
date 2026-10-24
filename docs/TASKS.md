@@ -1439,7 +1439,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   drawing on iOS Safari, canvas performance on low-end phones).
 
 ### T33 — Showcase quiz « Harry Potter — niveau expert » (content, after T28)
-- **Status:** in-progress (T33 agent, worktree ../lbq-T33)
+- **Status:** done
 - **Depends on:** T28 merged (the buzzer must be in it). Content only — can run in parallel with
   T30 (T30 then adds one `DRAW` question to this quiz, see below).
 - **Scope:** `content/quizzes/harry-potter/**` (`quiz.json`, freely licensed media, `CREDITS.md`,
@@ -1481,6 +1481,31 @@ the game — on **Harry Potter, expert level**.
   host) to check it works end to end; delete that test game afterwards.
 - **When T30 is merged:** add one `DRAW` « Dessine-moi » question (e.g. a magical object to draw)
   and re-run the import — note it as a follow-up if T30 isn't done yet.
+
+- **Summary:** `content/quizzes/harry-potter/` — `quiz.json` « Harry Potter — niveau expert », 22
+  questions (book-level details, easy opener → 2000-point finale): 8 MCQ (one with 3 right
+  answers), 2 vrai / faux (one true, one false), 4 réponses libres (typo tolerance), 1 sondage,
+  2 curseurs (± 20 « points », ± 3 years), 1 ordre (the 6 Horcruxes, finale), 1 point sur l'image
+  (Glenfinnan viaduct on a Commons relief map of Scotland, zone computed from the Wikipedia
+  location-map bounds and checked on the picture), 1 « Qui de nous ? » (majority bonus), 1 nuage de
+  mots, 1 « Mytho ! » (Ron's middle name), **buzzer** on a blind test (Q14, réponse libre + sound);
+  sound during the question (3, 14), `audioOnReveal` (18), blur (6) / zoom (12) / pixelate (17),
+  cover, emoji rebus (1), « Qui a dit ? » (11); 0 / 1000 / 2000 points, 15–45 s. `README.md`:
+  question table, feature tick list with question numbers, how to present Solo / Équipes / Survie
+  (+ hearts advice) and where to show each joker (from `jokerAvailability`). `CREDITS.md`: every
+  fact with its source (HP wiki FR/EN citing the book chapters, Wikipedia, Wikiquote), the 5
+  Commons pictures (author + CC BY / CC BY-SA licence, 960 px thumbnails), the 3 music files to add
+  (`audio/.gitignore` keeps them out of git). No app code changed (the T23 import script handled
+  every type). Imported into the dev DB for loicmoster@hotmail.fr (private) and played once with a
+  scripted socket game on :3033 (host + 3 phones, all 22 questions to the podium, with generated
+  test tones in place of the music: right / wrong / typo / partial PIN and ORDER results as
+  expected, too-close lie and own-lie vote refused, buzzer ❌ then ✅ judged by the host, phone
+  prompts without answers / media, report saved with 22 questions) — then the test game, its
+  temporary host session and the test tones were deleted and the quiz re-imported without sound.
+- **Follow-ups:** (1) add the 3 MP3s listed in `CREDITS.md` and re-run the import (the blind tests
+  are playable without sound meanwhile). (2) When T30 is merged: add one « Dessine-moi » question
+  (e.g. a magical object to draw) and re-import. (3) Portraits / photos are CC BY-SA: keep the
+  credits if the quiz is ever made public.
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
