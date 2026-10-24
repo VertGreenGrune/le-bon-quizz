@@ -13,6 +13,7 @@ import {
 } from './hostReducer';
 import { ComebackToasts, PauseOverlay, nicknameList } from './pauseScreens';
 import { TeamLobby, TeamPodiumScreen } from './teamScreens';
+import { EliminationMoment, SurvivalBadge } from './survivalScreens';
 import { useQuestionClip } from './clipPlayer';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -36,6 +37,7 @@ export function HostPage() {
   const quizId = searchParams.get('quizId') ?? undefined;
   const mode = searchParams.get('mode');
   const teams = searchParams.get('teams');
+  const hearts = searchParams.get('hearts');
   const jokers = searchParams.get('jokers');
   const isNew = pinParam === 'new';
   const pin = isNew ? undefined : pinParam;
@@ -49,7 +51,12 @@ export function HostPage() {
     if (!isNew) return;
     let cancelled = false;
     const options = parseGameOptions(
-      new URLSearchParams({ mode: mode ?? '', teams: teams ?? '', jokers: jokers ?? '' }),
+      new URLSearchParams({
+        mode: mode ?? '',
+        teams: teams ?? '',
+        hearts: hearts ?? '',
+        jokers: jokers ?? '',
+      }),
     );
     createGame(quizId, options).then(
       (res) => {
@@ -62,7 +69,7 @@ export function HostPage() {
     return () => {
       cancelled = true;
     };
-  }, [isNew, quizId, mode, teams, jokers, navigate]);
+  }, [isNew, quizId, mode, teams, hearts, jokers, navigate]);
 
   const timed = state.deadline != null;
   const now = useNow(timed || state.paused !== null || state.comebacks.length > 0);
@@ -122,6 +129,7 @@ export function HostPage() {
   const phase = state.phase ?? 'LOBBY';
   const question = currentQuestion(state);
   const teamMode = state.mode === 'teams';
+  const survival = state.survival;
 
   let screen: ReactNode;
   let primary: { label: string; onClick: () => void; disabled?: boolean } | null = null;
@@ -133,6 +141,7 @@ export function HostPage() {
           pin={pin}
           players={state.players}
           onKick={game.kick}
+          hearts={survival?.hearts}
           teamLobby={
             teamMode ? (
               <TeamLobby
@@ -187,6 +196,8 @@ export function HostPage() {
           previous={state.previousLeaderboard}
           instant={instant}
           teams={state.leaderboardTeams}
+          survival={survival}
+          questionIndex={state.questionIndex}
         />
       );
       primary = {
@@ -200,7 +211,7 @@ export function HostPage() {
         state.podiumTeams.length > 0 ? (
           <TeamPodiumScreen teams={state.podiumTeams} top={state.podium} instant={instant} />
         ) : (
-          <PodiumScreen top={state.podium} instant={instant} />
+          <PodiumScreen top={state.podium} instant={instant} maxHearts={survival?.hearts} />
         );
       if (phase === 'PODIUM') primary = { label: 'Terminer la partie', onClick: game.end };
       break;
@@ -214,6 +225,7 @@ export function HostPage() {
             Le Bon Quizz
           </Link>
           {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
+          {survival && <SurvivalBadge survival={survival} />}
           {state.jokers && (
             <span className="rounded bg-white/15 px-2" title="Partie avec jokers">
               🃏 Jokers
@@ -266,7 +278,10 @@ export function HostPage() {
           )}
         </AnimatePresence>
         <ComebackToasts state={state} now={now} />
-        {state.jokers && <JokerAnnouncements />}
+        {(state.jokers || state.mode === 'survival') && <JokerAnnouncements />}
+        {phase === 'LEADERBOARD' && survival && !instant && (
+          <EliminationMoment survival={survival} questionIndex={state.questionIndex} />
+        )}
 
         <footer className="flex min-h-20 items-center justify-end gap-4 px-6 pb-6">
           {game.error && (

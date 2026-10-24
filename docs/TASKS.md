@@ -1287,13 +1287,56 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   random-event wheel). Don't implement.
 
 ### T31 — Game mode « Survie » (elimination with ghosts)
-- **Status:** in-progress (Claude, worktree ../lbq-T31, branch task/T31-survival)
+- **Status:** done
 - **Depends on:** T27
 - New mode in the dialog (Solo / Équipes / **Survie**): everyone has **3 ❤️**; a wrong or missing
   answer costs a heart; at 0 the player becomes a **👻 fantôme**: still answers, and each correct
   ghost answer lets them **haunt** a living player (Gel or Brouilleur from T25). Last survivor
   wins (ties → most points). Survie ends early when one player is left; host can set the hearts
   (1–5). Inspired by Jackbox Trivia Murder Party.
+- **Summary:** shared: `GameMode` gains `survival`; new `survival.ts` (`SURVIVAL_MIN/MAX/DEFAULT_HEARTS`,
+  zod `SurvivalHearts`, `HauntType` = `freeze` | `scramble`, `HAUNTS` French names); contract
+  (additive, PLAN.md §3–§7): `host:create.hearts?`, `player:haunt { pin, haunt, targetId }`,
+  `survival:state` (`SurvivalStatePayload`: hearts at start, per player hearts / eliminatedAt /
+  lastLoss / haunts, `finished?`), `RankedPlayer.survival?`, `player:result.survival?`,
+  `joker:used.haunt?`; REST `GameSummary.hearts?`, `GameReportRow.survival?`. Server: all rules in
+  `game/survival.ts` (`Survival`: lives, `settle` at REVEAL — only `answer.correct` counts, so
+  ORDER / PIN partial points and a BLUFF vote for a lie lose a heart; no loss on questions without a
+  right answer, for excused or absent-all-question players —, haunts earned by correct ghost
+  answers, `haunt`, `finished`, survivor ranking, payloads); `Game.ts` hooks only (start, intro,
+  reveal, kick, join, both resyncs, `next()` → PODIUM once finished, `ranked()` for standings /
+  leaderboard / results, `haunt()`). Haunts reuse the T25 engine: every « Survie » game has a
+  `Jokers` instance, without hands when the option is off (`withHands`, `Game.withJokers` now
+  drives `game:state.jokers`, joker play, reports); `Jokers.haunt()` sets the pending Gel /
+  Brouilleur (Bouclier blocks it, one pending per kind) and announces `joker:used { haunt }`.
+  Socket `player:haunt`. DB: migration `20261024160000_survival` (enum value, `GameSession.hearts`,
+  `PlayerResult.hearts` / `eliminatedAt`), saved by `persistence.ts`; report + CSV `survival`
+  column. Web: start dialog « 💀 Survie » + 1–5 hearts (`lib/gameOptions.ts`: `mode=survival&hearts=`);
+  TV (`host/survivalScreens.tsx`): « 💀 Survie · n en vie » header, lobby rules + hearts per player,
+  « Survivants » leaderboard with hearts / 👻 (ghost rows dimmed, 💔 when one was just lost), the
+  « 💀 Éliminé ! » moment over the leaderboard (avatars turn grey, ghost flies off, new CC0
+  `eliminated.wav`) then « 🏆 X est le dernier survivant ! », « Voir le podium » as soon as it's
+  over, « Podium des survivants »; haunt announcements through `JokerAnnouncements`. Phone
+  (`player/survival.tsx`): hearts in the header (« 👻 Fantôme »), result line (💔 / toujours en
+  vie / haunt earned), full-screen « 💀 Éliminé ! Tu deviens un fantôme » (long vibration), « 👻
+  Hanter un vivant » bar + sheet (Gel / Brouilleur, living targets), toasts, survivor podium.
+  Reports: « 💀 Survie · n ❤️ » badge, « Classement des survivants » + Survie column. Tests:
+  `Game.survival.test.ts` (29: start hearts, loss per type incl. ORDER / PIN partial, polls, BLUFF,
+  ghosts, haunt earned / not on a poll, Gel / Brouilleur landing, refusals, stacking + Bouclier,
+  game without jokers, early end, nobody left, last survivor with fewer points, ties, survivors at
+  the end, alone, kick, saved record, « Continuer sans », mid-question drop, phone + host resync,
+  solo untouched), persistence + report + CSV (Postgres), shared schemas, web helpers / reducers /
+  URL options; e2e `e2e/survival.spec.ts` (3 phones, 1 heart: dialog, ghost, haunt Gel on the TV
+  and the frozen phone, last survivor, podium after question 3 of 7). Checked with screenshots.
+- **Deviations / notes:** (1) Ties → points (as specified), hearts left are not a tie-breaker; if
+  every remaining player is eliminated on the same question they share the survivor group and are
+  ranked by points, and the game ends (« Plus aucun survivant ! »). (2) A player absent for the
+  whole question (offline at ANSWERING start, never answered, e.g. host skipped the pause) keeps
+  their hearts like an excused one; one who drops mid-question loses one. (3) Haunts can be used
+  from REVEAL to the next questions (not in LOBBY / PODIUM, not paused); a Bouclier blocks them,
+  and it doesn't save a heart. (4) The early end happens after that question's leaderboard (the
+  host still sees the « éliminé » moment). (5) The game started alone ends when that player is a
+  ghost. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones.
 
 ### T28 — Buzzer round
 - **Status:** todo
@@ -1493,3 +1536,13 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `Game.promptPayload(player)` is now per player; new `Game.finishAnswering()` replaces the calls
   to `enterReveal()` that ended ANSWERING. `JokerContext.bluffLies?` + `Jokers.onBluffVote()`.
   Prisma migration `20261024120000_bluff`.
+- 2026-10-24, T31 agent (additive, PLAN.md §3–§7): `GameMode` gains `'survival'` (code switching
+  on the mode must handle it; `ModeBadge` does); new `packages/shared/src/survival.ts`;
+  `HostCreatePayload.hearts?`, `PlayerHauntPayload` + `player:haunt`, `survival:state`
+  (`SurvivalStatePayload`, `SurvivalPlayer`), `RankedPlayer.survival?`,
+  `PlayerResultPayload.survival?`, `JokerUsedPayload.haunt?`; `GameSummary.hearts?`,
+  `GameReportRow.survival?`. `Game.jokers` is now also set in « Survie » games without the Jokers
+  option — use `Game.withJokers` for "players have jokers"; `Jokers` gains a 4th constructor
+  argument `withHands` and `haunt()`. `PlayerStanding` / `GameRecord` gain `hearts` /
+  `eliminatedAt`. Prisma migration `20261024160000_survival`. Outside the code scope:
+  `apps/web/scripts/generate-sounds.mjs` + `public/sounds/eliminated.wav` (CC0, in CREDITS.md).

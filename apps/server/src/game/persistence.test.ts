@@ -23,7 +23,7 @@ import { createSession } from '../auth/session.js';
 import { createPrisma, type PrismaClient } from '../db.js';
 import { GameError } from './errors.js';
 import { Game, type GameTransport } from './Game.js';
-import { rightAnswer } from './testing.js';
+import { rightAnswer, wrongAnswer } from './testing.js';
 import {
   createPrismaPersistence,
   demoOnlyPersistence,
@@ -323,6 +323,37 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const csv = await app.inject({ url: `/api/games/${summary!.id}/export.csv`, headers });
     expect(csv.body).toContain('rank,nickname,score,correctCount,jokers\r\n');
     expect(csv.body).toContain(',Double ou rien\r\n');
+  });
+
+  it('saves a « Survie » game: hearts, ghosts, survivor ranking, CSV column', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const game = new Game('444444', DEMO_QUIZ, noop, {}, { mode: 'survival', hearts: 1 });
+    const alice = game.join('Alice', 's1');
+    const bob = game.join('Bob', 's2');
+    game.start();
+    game.next(); // → ANSWERING
+    game.answer(alice.id, 0, wrongAnswer(DEMO_QUIZ.questions[0]!));
+    game.answer(bob.id, 0, wrongAnswer(DEMO_QUIZ.questions[0]!)); // → REVEAL
+    game.next();
+    game.next(); // nobody alive: podium
+    expect(game.phase).toBe('PODIUM');
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, null)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    expect(summary).toMatchObject({ mode: 'survival', hearts: 1 });
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.results.map((r) => [r.nickname, r.rank, r.survival])).toEqual([
+      ['Alice', 1, { hearts: 0, eliminatedAt: 0 }],
+      ['Bob', 1, { hearts: 0, eliminatedAt: 0 }],
+    ]);
+    const csv = await app.inject({ url: `/api/games/${summary!.id}/export.csv`, headers });
+    expect(csv.body).toContain('rank,nickname,score,correctCount,survival\r\n');
+    expect(csv.body).toContain(',fantôme (question 1)\r\n');
   });
 
   it('keeps the history when the quiz was deleted during the game', async () => {

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { AvatarId } from './avatars.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import { JokerType } from './jokers.js';
+import { HauntType, SurvivalHearts } from './survival.js';
 import {
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -60,6 +61,8 @@ export interface RankedPlayer {
   score: number;
   /** `leaderboard` of a game with jokers: the player's hand and the joker played last question. */
   jokers?: { hand: JokerType[]; used?: JokerType };
+  /** « Survie »: hearts left (0 = ghost) and the question index they were eliminated at. */
+  survival?: { hearts: number; eliminatedAt?: number };
 }
 
 /** A player as listed in the lobby / team columns. */
@@ -93,6 +96,8 @@ export const HostCreatePayload = z.object({
   teamCount: TeamCount.optional(),
   /** Jokers (power-ups, PLAN.md §3). Default off (the start dialog turns them on). */
   jokers: z.boolean().optional(),
+  /** « Survie » only: hearts per player, 1–5 (default 3). */
+  hearts: SurvivalHearts.optional(),
 });
 export const HostActionPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
 export const HostKickPayload = HostActionPayload.extend({ playerId: z.string().min(1) });
@@ -147,6 +152,13 @@ export const PlayerJokerPayload = z.object({
   targetId: z.string().min(1).optional(),
 });
 
+/** « Survie »: a ghost uses a haunt earned by a correct answer on a living player. */
+export const PlayerHauntPayload = z.object({
+  pin: Pin,
+  haunt: HauntType,
+  targetId: z.string().min(1),
+});
+
 export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
 export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
@@ -157,6 +169,7 @@ export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
 export type PlayerAvatarsPayload = z.infer<typeof PlayerAvatarsPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
 export type PlayerJokerPayload = z.infer<typeof PlayerJokerPayload>;
+export type PlayerHauntPayload = z.infer<typeof PlayerHauntPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput =
   | { choiceIndex: number }
@@ -229,6 +242,13 @@ export interface ClientToServerEvents {
    * joker stays in hand). The server then sends `joker:used` to everyone and `joker:state`.
    */
   'player:joker': (p: PlayerJokerPayload, ack: (r: Ack) => void) => void;
+  /**
+   * « Survie »: a ghost with a haunt in stock gives a living player a Gel / Brouilleur for their
+   * next question (any time between the start and the podium, not while paused). `JOKER_REFUSED`
+   * otherwise (no haunt, target a ghost / oneself / already haunted that way), `GAME_PAUSED`.
+   * The server then sends `joker:used` (`haunt: true`) and `survival:state`.
+   */
+  'player:haunt': (p: PlayerHauntPayload, ack: (r: Ack) => void) => void;
 }
 
 // ---------- Server → client payloads ----------
@@ -248,6 +268,29 @@ export interface GameStatePayload {
   paused?: GamePause;
   /** The game is played with jokers. */
   jokers?: true;
+}
+
+/** « Survie », one player: hearts left (0 = 👻 ghost), haunts in stock. */
+export interface SurvivalPlayer extends LobbyMember {
+  hearts: number;
+  /** Question index where the player lost their last heart (absent while alive). */
+  eliminatedAt?: number;
+  /** Question index where the player last lost a heart (absent if never). */
+  lastLoss?: number;
+  /** Ghost: haunts earned by correct answers and not used yet. */
+  haunts?: number;
+}
+
+/**
+ * « Survie », to everyone: hearts of every player (lobby included), re-sent after each reveal,
+ * haunt, join, kick and in the rejoin resyncs.
+ */
+export interface SurvivalStatePayload {
+  /** Hearts each player started with. */
+  hearts: number;
+  players: SurvivalPlayer[];
+  /** Only one player (or nobody) is left alive: the next `host:next` after LEADERBOARD = PODIUM. */
+  finished?: true;
 }
 
 export interface GamePause {
@@ -451,6 +494,17 @@ export interface PlayerResultPayload {
    * points: `pointsEarned` can be > 0 with `correct` false.
    */
   placed?: { correct: number; total: number };
+  /**
+   * « Survie »: hearts left after this question, whether one was lost, `eliminated` = the last
+   * one was lost just now (the player is now a ghost), `hauntEarned` = a ghost's correct answer.
+   */
+  survival?: {
+    hearts: number;
+    lostHeart: boolean;
+    eliminated?: true;
+    ghost?: true;
+    hauntEarned?: true;
+  };
   /** WHO_OF_US: votes the player got, and whether they voted for the most voted player. */
   votesReceived?: number;
   withMajority?: boolean;
@@ -511,6 +565,8 @@ export interface JokerUsedPayload {
   target?: LobbyMember;
   /** The target's Bouclier blocked this attack. */
   blocked?: true;
+  /** « Survie »: a ghost's free Gel / Brouilleur (not taken from a hand). */
+  haunt?: true;
 }
 
 /** What jokers changed for one player at the reveal (`player:result.jokers`). */
@@ -539,7 +595,8 @@ export interface ServerToClientEvents {
   podium: (p: StandingsPayload) => void; // all
   'player:kicked': (p: Record<string, never>) => void; // that player
   'joker:state': (p: PlayerJokersPayload) => void; // each player (games with jokers)
-  'joker:used': (p: JokerUsedPayload) => void; // all (games with jokers)
+  'joker:used': (p: JokerUsedPayload) => void; // all (games with jokers, « Survie » haunts)
+  'survival:state': (p: SurvivalStatePayload) => void; // all (« Survie »)
   error: (p: ErrorPayload) => void; // sender
 }
 

@@ -158,6 +158,23 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   Team averages use the points after the jokers (a negative member pulls the average down; a
   team score never goes below 0). Order at REVEAL: question points + streak bonus → Double →
   Voleur → new jokers for streaks.
+- **Survie** (T31; `host:create` with `mode: 'survival'`, `hearts` 1–5, default 3 — the start
+  dialog's « 💀 Survie », exclusive with Équipes, compatible with the Jokers option; code
+  `apps/server/src/game/survival.ts`, hooks in `Game.ts`, constants `packages/shared/src/survival.ts`).
+  Everyone starts with `hearts` ❤️. At REVEAL, a living player whose answer isn't `correct`
+  (wrong or missing) loses one — so ORDER / PIN partial points count as wrong, and for BLUFF not
+  voting for the truth costs one. Never on POLL / WHO_OF_US / WORD_CLOUD (`hasRightAnswer`), nor
+  for a player excused with « Continuer sans » or absent for the whole question (not present, no
+  answer — same "present" as the team averages). At 0 the player becomes a 👻 **fantôme**: keeps
+  answering and scoring, and each correct ghost answer earns one **haunt**: `player:haunt` gives
+  a living player a free Gel or Brouilleur (the T25 effects, through the joker engine — which every
+  « Survie » game has, without hands when the Jokers option is off) landing on their next
+  question; a Bouclier blocks it; one pending haunt of each kind per target; usable from the
+  start to the podium, not while paused. Points are scored as usual. **End:** when at most one
+  player is alive (none, for a game started alone) after a REVEAL, `host:next` on that
+  LEADERBOARD goes to PODIUM (`survival:state.finished`); kicks count. **Ranking:** the living
+  first, then the ghosts eliminated last; ties in the same group by points (then competition
+  ranks). Bouclier doesn't save a heart (only the streak).
 
 ## 4. Socket protocol (source of truth = `packages/shared/src/events.ts`)
 
@@ -169,7 +186,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams', teamCount?: 2 \| 3 \| 4, jokers?: boolean }` | default solo / 2 teams / no jokers; ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5 }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -187,6 +204,7 @@ Every client → server event takes an ack callback receiving
 | `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, avatar, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
 | `player:joker` | `{ pin, questionIndex, joker, targetId? }` | games with jokers (§3 "Jokers"): `joker` = `fifty` \| `copy` \| `freeze` \| `scramble` \| `double` \| `shield` \| `thief` \| `hourglass`, `targetId` for copy / freeze / scramble / thief; then `joker:used` + `joker:state`. `JOKER_REFUSED` (not in hand, one per question, already answered, wrong target / phase / question type), `GAME_PAUSED` |
+| `player:haunt` | `{ pin, haunt: 'freeze' \| 'scramble', targetId }` | « Survie » (§3): a ghost with a haunt in stock, on a living player (not oneself); then `joker:used` (`haunt: true`) + `survival:state`. `JOKER_REFUSED` (alive, no haunt, target a ghost / already haunted that way, LOBBY / PODIUM / ENDED), `GAME_PAUSED` |
 | `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `text` \| `value` \| `order` \| `point` \| `playerId` | accepted once, only during ANSWERING (`FROZEN` during a Gel, `ALREADY_ANSWERED` for a Copieur); `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER and WORD_CLOUD (cut at 20), `value` (in [min, max]) for SLIDER, `order` (permutation of the shown item indexes) for ORDER, `point { x, y }` (0–1) for PIN, `playerId` (a player of the game) for WHO_OF_US — another kind → `INVALID_PAYLOAD` |
 
 ### Server → clients
@@ -200,12 +218,13 @@ Every client → server event takes an ack callback receiving
 | `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) / `20` (WORD_CLOUD) \| `items` (ORDER, shuffled — never in the right order) \| `imageUrl` (PIN only — never the zone) \| `candidates: LobbyMember[]` (WHO_OF_US) \| `bluff` (BLUFF, per phone: `{ stage: 'write', maxLength: 40, lie? }`, then a new prompt `{ stage: 'vote', options, own? }` with `timeLimitSec` = `voteTimeSec` — never which option is true) — no text, no answer, no sound, no picture except PIN! |
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars); ORDER `order: { items (right order), placed: number[] (players with the right item at each position) }`; PIN `pin: { imageUrl, zone, pins: { x, y, nickname, avatar, correct }[] }`; WHO_OF_US `votes: { nickname, avatar, count }[]` (most voted first) + `majorityBonus?: true`; WORD_CLOUD `words: { text, count }[]` (top 40); BLUFF `bluff: { truth, options: { text, truth, authors, voters }[] }` (lies that fooled the fewest first, truth last — the TV reveals them one by one) (`RevealDetails`) |
-| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL, WHO_OF_US, WORD_CLOUD: `correct` false; 0 points except the WHO_OF_US majority bonus) + SLIDER `yourValue?` (absent without an answer), `correctValue` + ORDER `placed?: { correct, total }` (partial points: `pointsEarned` > 0 with `correct` false, also for PIN near the zone) + WHO_OF_US `votesReceived`, `withMajority?` (absent without a vote) + BLUFF `bluff: { truth, found, lie?, fooled, fooledPoints, fellFor? }` + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) |
-| `leaderboard` | host | `{ top: { nickname, avatar, score, jokers? }[], teams? }` (everyone, up to 15; `jokers` = `{ hand, used? }` in games with jokers; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
-| `podium` | all | `{ top: { nickname, avatar, score }[], teams? }` (top 3 players; all teams in team mode) |
+| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL, WHO_OF_US, WORD_CLOUD: `correct` false; 0 points except the WHO_OF_US majority bonus) + SLIDER `yourValue?` (absent without an answer), `correctValue` + ORDER `placed?: { correct, total }` (partial points: `pointsEarned` > 0 with `correct` false, also for PIN near the zone) + WHO_OF_US `votesReceived`, `withMajority?` (absent without a vote) + BLUFF `bluff: { truth, found, lie?, fooled, fooledPoints, fellFor? }` + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) + « Survie » `survival: { hearts, lostHeart, eliminated?, ghost?, hauntEarned? }` (`rank` = survivor ranking) |
+| `leaderboard` | host | `{ top: { nickname, avatar, score, jokers?, survival? }[], teams? }` (everyone, up to 15; `jokers` = `{ hand, used? }` in games with jokers; `survival` = `{ hearts, eliminatedAt? }` in « Survie », ordered by the survivor ranking; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
+| `podium` | all | `{ top: { nickname, avatar, score, survival? }[], teams? }` (top 3 players; all teams in team mode) |
+| `survival:state` | all | « Survie » only, from the lobby on, re-sent after each REVEAL, haunt, join, kick and in both rejoin resyncs: `{ hearts (at start), players: { id, nickname, avatar, hearts, eliminatedAt?, lastLoss?, haunts? }[], finished? }` |
 | `player:kicked` | that player | `{}` |
 | `joker:state` | each player | games with jokers, sent at the start, each question, each joker played, REVEAL, kick and in the rejoin resync: `{ questionIndex, questionType?, hand, played?: { joker, target? }, shield?, others: { id, nickname, avatar, teamId? }[], attacked: string[], effects }` — `effects` (this phone only) = `hiddenChoices?`, `sliderRange?`, `firstLetter?`, `frozen?: { ms, by }`, `scrambled?: { by, choices: { index, text }[] }`, `copied?` |
-| `joker:used` | all | `{ questionIndex, joker, by, target?, blocked? }` (TV announcement; no `target` for Copieur; never re-sent) |
+| `joker:used` | all | `{ questionIndex, joker, by, target?, blocked?, haunt? }` (TV announcement; no `target` for Copieur; `haunt: true` = a « Survie » ghost's Gel / Brouilleur; never re-sent) |
 | `error` | sender | `{ code, message }` |
 
 Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow ●`, `3 = green ■`.
@@ -228,8 +247,9 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `Choice` — id, questionId, order (0–3), text, isCorrect (MCQ / TRUE_FALSE / POLL; always false
   for a poll)
 - `GameSession` — id, quizId? (null once the quiz is deleted), quizTitle (snapshot), hostId, pin,
-  mode (`solo` | `teams`), jokers (bool, default false), startedAt, endedAt
-- `PlayerResult` — id, gameSessionId, nickname, avatar? (null for games saved before avatars), score, correctCount, rank, teamId? (team mode), jokersUsed (`String[]`, default empty: joker ids played, in order)
+  mode (`solo` | `teams` | `survival`), jokers (bool, default false), hearts? (« Survie »: hearts
+  at start), startedAt, endedAt
+- `PlayerResult` — id, gameSessionId, nickname, avatar? (null for games saved before avatars), score, correctCount, rank, teamId? (team mode), jokersUsed (`String[]`, default empty: joker ids played, in order), hearts? / eliminatedAt? (« Survie »: hearts left, question index of the elimination — null for a survivor)
 - `TeamResult` — id, gameSessionId, teamId, name, score, playerCount, rank (team mode)
 - `QuestionResult` — id, gameSessionId, index, type (default MCQ), text, choices[],
   correctIndexes[], distribution[], playerCount, correctCount, answerCount? (null for older games
@@ -280,11 +300,12 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
   bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later).
   `POST /uploads/audio`: same, MP3/OGG/M4A/AAC/WAV ≤ 10 MB (`AUDIO_UPLOAD_MAX_BYTES`)
-- `GET /games` (history, `GameSummary` with `winner`, `mode`, `jokers?: true`), `GET /games/:id` (report: ranking
+- `GET /games` (history, `GameSummary` with `winner`, `mode`, `jokers?: true`, `hearts?` for « Survie »), `GET /games/:id` (report: ranking
   with `teamId`, `avatar` (null before T20) + per-question `questions` with `type`, `answerCount`, `details`, empty for games
   saved before T12, + `teams` ranking,
   empty for solo games), `GET /games/:id/export.csv` (team games get a `team` column, games with jokers a `jokers`
-  column = names of the jokers played; report rows have `jokersUsed?`)
+  column = names of the jokers played, « Survie » games a `survival` column = hearts left or « fantôme (question n) »;
+  report rows have `jokersUsed?`, `survival?: { hearts, eliminatedAt? }`)
   (UTF-8 BOM, formula-injection-safe)
 
 ## 7. Web routes (`apps/web`)
@@ -292,9 +313,10 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/` landing → "Join a game" / "Host"
 - `/join?pin=123456` → phone join screen (QR code points here)
 - `/play` → phone controller
-- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1` creates a
-  game (opened by the Solo / Équipes + Jokers dialog of the editor and of the home page; no
-  `quizId` = demo, no `mode` = solo, no `jokers` = classic game)
+- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1` (or
+  `mode=survival&hearts=<n>`) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
+  of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic
+  game)
 - `/login`, `/register` → host account (`?next=` = page to return to)
 - `/forgot-password` (« Mot de passe oublié ? » on `/login`), `/reset-password?token=` (link of
   the e-mail: new password ×2 → logged in → `/editor`), `/account` « Mon compte » (change

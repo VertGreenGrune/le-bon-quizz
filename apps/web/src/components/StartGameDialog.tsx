@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
-import { SHAPES, TEAM_NAMES, type TeamCount } from '@lbq/shared';
+import {
+  SHAPES,
+  SURVIVAL_DEFAULT_HEARTS,
+  SURVIVAL_MAX_HEARTS,
+  SURVIVAL_MIN_HEARTS,
+  TEAM_NAMES,
+  type TeamCount,
+} from '@lbq/shared';
 import type { GameOptions } from '../lib/gameOptions';
 import { ShapeIcon, shapeBg } from './shapes';
 
 const TEAM_COUNTS: TeamCount[] = [2, 3, 4];
+const HEARTS = Array.from(
+  { length: SURVIVAL_MAX_HEARTS - SURVIVAL_MIN_HEARTS + 1 },
+  (_, i) => SURVIVAL_MIN_HEARTS + i,
+);
 
-/** "Solo" or "Équipes" (+ number of teams) before creating a game. */
+/** "Solo", "Équipes" (+ number of teams) or "Survie" (+ hearts) before creating a game. */
 export function StartGameDialog({
   onStart,
   onClose,
@@ -15,6 +26,7 @@ export function StartGameDialog({
 }) {
   const [mode, setMode] = useState<GameOptions['mode']>('solo');
   const [teamCount, setTeamCount] = useState<TeamCount>(2);
+  const [hearts, setHearts] = useState(SURVIVAL_DEFAULT_HEARTS);
   // Jokers are the selling point: on by default.
   const [jokers, setJokers] = useState(true);
 
@@ -25,7 +37,7 @@ export function StartGameDialog({
   }, [onClose]);
 
   const choice = (selected: boolean) =>
-    `flex flex-1 flex-col items-center gap-1 rounded-xl border-2 p-4 text-center ${
+    `flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl border-2 p-3 text-center ${
       selected ? 'border-brand bg-brand/10' : 'border-gray-200 hover:border-brand/50'
     }`;
 
@@ -69,7 +81,49 @@ export function StartGameDialog({
             <span className="text-lg font-black">Équipes</span>
             <span className="text-sm text-gray-500">Les joueurs choisissent leur équipe</span>
           </button>
+          <button
+            type="button"
+            className={choice(mode === 'survival')}
+            aria-pressed={mode === 'survival'}
+            onClick={() => setMode('survival')}
+          >
+            <span className="text-3xl" aria-hidden="true">
+              💀
+            </span>
+            <span className="text-lg font-black">Survie</span>
+            <span className="text-sm text-gray-500">Le dernier en vie gagne</span>
+          </button>
         </div>
+
+        {mode === 'survival' && (
+          <fieldset className="mb-4">
+            <legend className="mb-2 font-bold">Cœurs par joueur</legend>
+            <div className="flex gap-2">
+              {HEARTS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-pressed={hearts === n}
+                  aria-label={`${n} cœur${n > 1 ? 's' : ''}`}
+                  onClick={() => setHearts(n)}
+                  className={`flex-1 rounded-lg border-2 py-2 text-xl font-black ${
+                    hearts === n ? 'border-brand bg-brand text-white' : 'border-gray-200'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-center text-2xl" aria-hidden="true">
+              {'❤️'.repeat(hearts)}
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              Une mauvaise réponse (ou pas de réponse) coûte un cœur. À zéro, on devient un 👻
+              fantôme : on continue à jouer et chaque bonne réponse permet de hanter un vivant (Gel
+              ou Brouilleur). Le dernier survivant gagne.
+            </p>
+          </fieldset>
+        )}
 
         {mode === 'teams' && (
           <fieldset className="mb-4">
@@ -135,7 +189,11 @@ export function StartGameDialog({
             type="button"
             onClick={() =>
               onStart({
-                ...(mode === 'teams' ? { mode, teamCount } : { mode }),
+                ...(mode === 'teams'
+                  ? { mode, teamCount }
+                  : mode === 'survival'
+                    ? { mode, hearts }
+                    : { mode }),
                 ...(jokers && { jokers: true }),
               })
             }

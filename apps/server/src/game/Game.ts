@@ -7,6 +7,7 @@ import {
   PODIUM_SIZE,
   QUESTION_INTRO_MS,
   RESUME_COUNTDOWN_MS,
+  SURVIVAL_DEFAULT_HEARTS,
   TEAM_NAMES,
   TYPE_ANSWER_MAX_LENGTH,
   choiceTexts,
@@ -19,6 +20,7 @@ import {
   type GamePause,
   type GamePhase,
   type GameStatePayload,
+  type HauntType,
   type JokerType,
   type LobbyMember,
   type LobbyTeamsPayload,
@@ -28,6 +30,7 @@ import {
   type QuestionPromptPayload,
   type QuestionRevealPayload,
   type QuestionShowPayload,
+  type RankedPlayer,
   type RevealDetails,
   type Quiz,
   type RankedTeam,
@@ -42,6 +45,7 @@ import { GameError } from './errors.js';
 import { checkVote, otherLies, startVote, writeLie } from './questionTypes/bluff.js';
 import { Jokers } from './jokers.js';
 import { matchesAnswer, normalizeAnswer } from './matching.js';
+import { Survival } from './survival.js';
 import {
   NO_SETUP,
   extraBonusPoints,
@@ -63,7 +67,6 @@ import {
   rankTeams,
   streakBonus,
   teamQuestionPoints,
-  topPlayers,
 } from './scoring.js';
 
 type ServerEvent = keyof ServerToClientEvents;
@@ -137,6 +140,9 @@ export interface PlayerStanding {
   teamId: TeamId | null;
   /** Games with jokers: the jokers played during the game. */
   jokersUsed?: JokerType[];
+  /** « Survie »: hearts left, and the question index of the elimination (null: survivor). */
+  hearts?: number;
+  eliminatedAt?: number | null;
 }
 
 /** Final standing of one team, as saved in `TeamResult`. */
@@ -184,6 +190,8 @@ export interface GameSettings {
   random?: () => number;
   /** Same fixed starting hand for every player (e2e tests, `E2E_JOKER_HAND`). */
   jokerHand?: JokerType[];
+  /** « Survie »: hearts per player (default SURVIVAL_DEFAULT_HEARTS). */
+  hearts?: number;
 }
 
 export interface GameHooks {
@@ -244,8 +252,15 @@ export class Game {
   private readonly teamScores = new Map<TeamId, number>();
   /** Players connected when the current ANSWERING phase started (team averages). */
   private readonly presentIds = new Set<string>();
-  /** Games with jokers only (`game/jokers.ts`). */
+  /**
+   * Joker engine (`game/jokers.ts`): games with jokers, and « Survie » games (the ghosts' haunts
+   * reuse its Gel / Brouilleur) — without hands when the Jokers option is off.
+   */
   readonly jokers: Jokers | null;
+  /** The Jokers option: players get jokers. */
+  readonly withJokers: boolean;
+  /** « Survie » mode only (`game/survival.ts`). */
+  readonly survival: Survival | null;
   /** > 0 while copied answers are being recorded (`recordAnswer`). */
   private recordingCopies = 0;
 
@@ -262,27 +277,43 @@ export class Game {
       this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
       for (const id of this.teamIds) this.teamScores.set(id, 0);
     }
-    this.jokers = settings.jokers
-      ? new Jokers(
-          {
-            mode: this.mode,
-            phase: () => this.phase,
-            questionIndex: () => this.questionIndex,
-            question: () => this.currentQuestion,
-            paused: () => this.paused,
-            players: () => this.players,
-            elapsedMs: () =>
-              this.phase === 'ANSWERING' ? Date.now() - this.answeringStartedAt : 0,
-            recordAnswer: (player, given, responseMs) =>
-              this.recordAnswer(player, given, responseMs),
-            bluffLies: (playerId) =>
-              this.setup.bluff?.stage === 'vote' ? otherLies(this.setup.bluff, playerId) : null,
-            transport,
-          },
-          settings.random,
-          settings.jokerHand,
-        )
-      : null;
+    this.withJokers = !!settings.jokers;
+    this.jokers =
+      this.withJokers || this.mode === 'survival'
+        ? new Jokers(
+            {
+              mode: this.mode,
+              phase: () => this.phase,
+              questionIndex: () => this.questionIndex,
+              question: () => this.currentQuestion,
+              paused: () => this.paused,
+              players: () => this.players,
+              elapsedMs: () =>
+                this.phase === 'ANSWERING' ? Date.now() - this.answeringStartedAt : 0,
+              recordAnswer: (player, given, responseMs) =>
+                this.recordAnswer(player, given, responseMs),
+              bluffLies: (playerId) =>
+                this.setup.bluff?.stage === 'vote' ? otherLies(this.setup.bluff, playerId) : null,
+              transport,
+            },
+            settings.random,
+            settings.jokerHand,
+            this.withJokers,
+          )
+        : null;
+    this.survival =
+      this.mode === 'survival' && this.jokers
+        ? new Survival(
+            {
+              phase: () => this.phase,
+              paused: () => this.paused,
+              players: () => this.players,
+              jokers: this.jokers,
+              transport,
+            },
+            settings.hearts ?? SURVIVAL_DEFAULT_HEARTS,
+          )
+        : null;
   }
 
   get totalQuestions(): number {
@@ -308,6 +339,8 @@ export class Game {
     if (this.mode === 'teams') this.startTeams();
     this.touch();
     this.jokers?.deal();
+    this.survival?.start();
+    this.sendSurvival();
     this.enterQuestionIntro(0);
   }
 
@@ -324,7 +357,8 @@ export class Game {
       case 'REVEAL':
         return this.enterLeaderboard();
       case 'LEADERBOARD':
-        return this.questionIndex + 1 < this.totalQuestions
+        // « Survie »: one survivor left (or nobody) → straight to the podium.
+        return this.questionIndex + 1 < this.totalQuestions && !this.survival?.finished()
           ? this.enterQuestionIntro(this.questionIndex + 1)
           : this.enterPodium();
       case 'PODIUM':
@@ -357,6 +391,7 @@ export class Game {
     }
     this.sendLobbyPlayers();
     this.sendTeams();
+    this.sendSurvival();
     this.jokers?.onKick();
     this.checkPause();
     if (this.phase === 'ANSWERING' && !this.pause) this.onAnswersChanged();
@@ -428,6 +463,7 @@ export class Game {
     this.sendResuming(send);
     this.sendLobbyPlayers(send);
     this.sendTeams(send);
+    this.sendSurvival(send);
     const phase = this.phase;
     if (this.currentQuestion && phase !== 'PODIUM' && phase !== 'ENDED')
       send('question:show', this.showPayload());
@@ -469,6 +505,7 @@ export class Game {
     this.players.set(player.id, player);
     this.sendLobbyPlayers();
     this.sendTeams();
+    this.sendSurvival();
     return player;
   }
 
@@ -524,6 +561,7 @@ export class Game {
     send('game:state', this.statePayload());
     this.sendResuming(send);
     this.sendTeams(send);
+    this.sendSurvival(send);
     this.jokers?.sendState(player, send);
     if (this.phase === 'ANSWERING' && !player.answer) {
       this.transport.toSocket(sid, 'question:prompt', this.promptPayload(player));
@@ -577,9 +615,19 @@ export class Game {
   useJoker(playerId: string, questionIndex: number, joker: JokerType, targetId?: string): void {
     const player = this.players.get(playerId);
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
-    if (!this.jokers) throw new GameError('JOKER_REFUSED', 'Pas de jokers dans cette partie');
+    if (!this.jokers || !this.withJokers)
+      throw new GameError('JOKER_REFUSED', 'Pas de jokers dans cette partie');
     this.touch();
     this.jokers.use(player, questionIndex, joker, targetId);
+  }
+
+  /** « Survie »: a ghost haunts a living player (`player:haunt`). */
+  haunt(playerId: string, haunt: HauntType, targetId: string): void {
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    if (!this.survival) throw new GameError('JOKER_REFUSED', 'Pas une partie « Survie »');
+    this.touch();
+    this.survival.haunt(player, haunt, targetId);
   }
 
   /** Judges and stores an answer (sent by the player, or copied with a Copieur). */
@@ -628,12 +676,21 @@ export class Game {
         correctCount: player.correctCount,
         rank: rank + offset,
         teamId: player.teamId,
-        ...(this.jokers && { jokersUsed: this.jokers.usedBy(player.id) }),
+        ...(this.withJokers && this.jokers && { jokersUsed: this.jokers.usedBy(player.id) }),
+        ...(this.survival && {
+          hearts: this.survival.info(player.id).hearts,
+          eliminatedAt: this.survival.info(player.id).eliminatedAt ?? null,
+        }),
       });
     return [
-      ...rankPlayers(this.players.values()).map(standing(0)),
-      ...rankPlayers(this.kicked).map(standing(this.players.size)),
+      ...this.ranked(this.players.values()).map(standing(0)),
+      ...this.ranked(this.kicked).map(standing(this.players.size)),
     ];
+  }
+
+  /** Competition ranking: by score, or the survivor ranking in « Survie ». */
+  private ranked(players: Iterable<Player>): { player: Player; rank: number }[] {
+    return this.survival ? this.survival.rank(players) : rankPlayers(players);
   }
 
   /** Team mode: the teams in play, best first (empty in solo mode). */
@@ -658,7 +715,7 @@ export class Game {
       mode: this.mode,
       questionIndex: this.questionIndex,
       totalQuestions: this.totalQuestions,
-      ...(this.jokers && { jokers: true as const }),
+      ...(this.withJokers && { jokers: true as const }),
     };
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;
@@ -693,6 +750,7 @@ export class Game {
     this.broadcastState();
     this.transport.toHost('question:show', this.showPayload());
     this.jokers?.startQuestion();
+    this.survival?.startQuestion();
     // Someone still offline from the previous phases: the question starts paused.
     this.checkPause({ immediate: true });
   }
@@ -780,6 +838,13 @@ export class Game {
     }
     this.jokers?.afterScoring(poll);
     if (this.mode === 'teams') this.scoreTeams();
+    // « Survie »: hearts lost, ghosts, haunts — before the results (they rank survivors first).
+    // Excused (« Continuer sans ») and absent-for-the-whole-question players keep their hearts.
+    this.survival?.settle(
+      question,
+      this.questionIndex,
+      (p) => this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer),
+    );
     const correctIndexes = correctChoiceIndexes(question);
     const details = this.revealDetails(question);
     this.questionStats.push({
@@ -796,6 +861,7 @@ export class Game {
     });
 
     this.broadcastState();
+    this.sendSurvival();
     this.reveal = {
       type: question.type,
       correctIndexes,
@@ -915,16 +981,26 @@ export class Game {
   }
 
   private standingsPayload(size: number): StandingsPayload {
-    let top = topPlayers(this.players.values(), size);
-    const jokers = this.jokers;
-    if (jokers && size === LEADERBOARD_SIZE) {
-      const byName = new Map([...this.players.values()].map((p) => [p.nickname, p.id]));
-      top = top.map((r) => {
-        const info = jokers.leaderboardInfo(byName.get(r.nickname) ?? '');
-        return info ? { ...r, jokers: info } : r;
+    const jokers = this.withJokers && size === LEADERBOARD_SIZE ? this.jokers : null;
+    const survival = this.survival;
+    const top = this.ranked(this.players.values())
+      .slice(0, size)
+      .map(({ player }): RankedPlayer => {
+        const info = jokers?.leaderboardInfo(player.id);
+        return {
+          nickname: player.nickname,
+          avatar: player.avatar,
+          score: player.totalScore,
+          ...(info && { jokers: info }),
+          ...(survival && { survival: survival.info(player.id) }),
+        };
       });
-    }
     return this.mode === 'teams' ? { top, teams: this.rankedTeams() } : { top };
+  }
+
+  /** « Survie » only: everyone's hearts, to everyone by default. */
+  private sendSurvival(send?: Send): void {
+    this.survival?.send(send);
   }
 
   /** Team mode only: teams + members, to everyone by default. */
@@ -1163,7 +1239,7 @@ export class Game {
 
   private resultPayload(player: Player): PlayerResultPayload {
     const q = this.currentQuestion;
-    const ranked = rankPlayers(this.players.values());
+    const ranked = this.ranked(this.players.values());
     const rank = ranked.find((r) => r.player === player)?.rank ?? ranked.length;
     const team =
       player.teamId === null
@@ -1187,6 +1263,7 @@ export class Game {
         ...(player.answer?.value != null && { yourValue: player.answer.value }),
       }),
       ...(jokers && { jokers }),
+      ...(this.survival && { survival: this.survival.resultFields(player.id) }),
     };
   }
 

@@ -8,6 +8,7 @@ import {
   type QuestionShowPayload,
   type RankedPlayer,
   type RankedTeam,
+  type SurvivalStatePayload,
 } from '@lbq/shared';
 import { Avatar, type AvatarSize } from '../components/Avatar';
 import { Confetti, CountUp } from '../components/motion';
@@ -20,6 +21,8 @@ import { BluffHint, BluffReveal } from './bluffScreens';
 import { TICK_FROM_SEC, useMuted } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
+import { Hearts } from './survivalScreens';
+import { heartsText, survivalLabel } from '../lib/survival';
 
 // ---------- Lobby ----------
 
@@ -28,12 +31,15 @@ export function LobbyScreen({
   players,
   onKick,
   teamLobby,
+  hearts,
 }: {
   pin: string;
   players: LobbyMember[];
   onKick: (playerId: string) => void;
   /** Team mode: team columns, shown instead of the player list. */
   teamLobby?: ReactNode;
+  /** « Survie »: hearts each player starts with. */
+  hearts?: number;
 }) {
   const origins = useMemo(() => joinOrigins(), []);
   const [originIndex, setOriginIndex] = useState(0);
@@ -86,6 +92,16 @@ export function LobbyScreen({
         {players.length > 1 ? 'joueurs' : 'joueur'}
       </div>
 
+      {hearts !== undefined && (
+        <p
+          className="rounded-2xl bg-black/25 px-8 py-3 text-center text-2xl font-bold"
+          data-testid="survival-rules"
+        >
+          💀 Survie : {heartsText(hearts, hearts)} chacun · une erreur = un cœur en moins · le
+          dernier en vie gagne
+        </p>
+      )}
+
       {players.length === 0 && (
         <p className="animate-pulse text-2xl opacity-80">En attente des joueurs…</p>
       )}
@@ -117,6 +133,9 @@ export function LobbyScreen({
                       <Avatar id={p.avatar} size="lg" />
                     </motion.span>
                     {p.nickname}
+                    {hearts !== undefined && (
+                      <Hearts hearts={hearts} max={hearts} className="text-xl" />
+                    )}
                   </button>
                 </motion.li>
               ))}
@@ -645,6 +664,8 @@ export function LeaderboardScreen({
   previous,
   instant,
   teams = [],
+  survival = null,
+  questionIndex = -1,
 }: {
   top: RankedPlayer[];
   /** Standings after the previous question ([] for the first one or after a reload). */
@@ -652,6 +673,9 @@ export function LeaderboardScreen({
   instant: boolean;
   /** Team mode: team ranking, shown first; the individual ranking goes beside it. */
   teams?: RankedTeam[];
+  /** « Survie »: hearts of everyone (who lost one on `questionIndex`). */
+  survival?: SurvivalStatePayload | null;
+  questionIndex?: number;
 }) {
   const reorder = !instant && previous.length > 0;
   const [showNew, setShowNew] = useState(!reorder);
@@ -666,6 +690,11 @@ export function LeaderboardScreen({
   const rows = showNew ? top : previous;
   const withTeams = teams.length > 0;
   const [rowSize, avatarSize] = leaderboardRow(Math.max(rows.length, top.length), withTeams);
+  const lostNow = new Set(
+    survival?.players.filter((p) => p.lastLoss === questionIndex).map((p) => p.nickname),
+  );
+  // The new rows carry the hearts after this question: the previous ones show them too.
+  const heartsOf = new Map(top.map((p) => [p.nickname, p.survival]));
 
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
@@ -674,7 +703,7 @@ export function LeaderboardScreen({
         animate={{ y: 0, opacity: 1 }}
         className="rounded-2xl bg-white px-10 py-4 text-5xl font-black text-brand"
       >
-        Classement
+        {survival ? 'Survivants' : 'Classement'}
       </motion.h2>
       <div
         className={`flex w-full items-start gap-8 ${withTeams ? 'max-w-7xl' : 'max-w-4xl justify-center'}`}
@@ -686,32 +715,44 @@ export function LeaderboardScreen({
         )}
         <ol className={`flex w-full flex-col ${withTeams ? 'flex-[2] gap-1.5' : 'gap-3'}`}>
           <AnimatePresence initial={!instant}>
-            {rows.map((p, i) => (
-              <motion.li
-                key={p.nickname}
-                layout
-                initial={{ x: -60, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: 60, opacity: 0 }}
-                transition={{
-                  layout: { type: 'spring', stiffness: 200, damping: 24 },
-                  delay: showNew && reorder ? 0 : i * 0.12,
-                }}
-                className={`flex items-center rounded-xl font-bold shadow-lg transition-colors duration-500 ${rowSize} ${i === 0 ? 'bg-white text-brand' : 'bg-black/25'}`}
-              >
-                <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
-                <Avatar id={p.avatar} size={avatarSize} />
-                <span className="flex-1 truncate">{p.nickname}</span>
-                {p.jokers && <JokerIcons jokers={p.jokers} />}
-                <span className="tabular-nums">
-                  {showNew && reorder ? (
-                    <CountUp value={p.score} from={prevScore.get(p.nickname) ?? 0} />
-                  ) : (
-                    p.score
+            {rows.map((p, i) => {
+              const life = heartsOf.get(p.nickname) ?? p.survival;
+              const ghost = life !== undefined && life.hearts === 0;
+              return (
+                <motion.li
+                  key={p.nickname}
+                  layout
+                  initial={{ x: -60, opacity: 0 }}
+                  animate={{ x: 0, opacity: ghost && showNew ? 0.55 : 1 }}
+                  exit={{ x: 60, opacity: 0 }}
+                  transition={{
+                    layout: { type: 'spring', stiffness: 200, damping: 24 },
+                    delay: showNew && reorder ? 0 : i * 0.12,
+                  }}
+                  className={`flex items-center rounded-xl font-bold shadow-lg transition-colors duration-500 ${rowSize} ${i === 0 ? 'bg-white text-brand' : 'bg-black/25'}`}
+                >
+                  <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
+                  <Avatar id={p.avatar} size={avatarSize} />
+                  <span className="flex-1 truncate">{p.nickname}</span>
+                  {life && survival && (
+                    <Hearts
+                      hearts={showNew ? life.hearts : (p.survival?.hearts ?? life.hearts)}
+                      max={survival.hearts}
+                      lostNow={showNew && lostNow.has(p.nickname)}
+                      className="text-[0.7em]"
+                    />
                   )}
-                </span>
-              </motion.li>
-            ))}
+                  {p.jokers && <JokerIcons jokers={p.jokers} />}
+                  <span className="tabular-nums">
+                    {showNew && reorder ? (
+                      <CountUp value={p.score} from={prevScore.get(p.nickname) ?? 0} />
+                    ) : (
+                      p.score
+                    )}
+                  </span>
+                </motion.li>
+              );
+            })}
           </AnimatePresence>
           {top.length === 0 && <p className="text-center text-2xl opacity-80">Aucun joueur</p>}
         </ol>
@@ -730,10 +771,21 @@ const PODIUM_SLOTS = [
 ] as const;
 const WINNER_DELAY = 3.2;
 
-export function PodiumScreen({ top, instant }: { top: RankedPlayer[]; instant: boolean }) {
+export function PodiumScreen({
+  top,
+  instant,
+  maxHearts,
+}: {
+  top: RankedPlayer[];
+  instant: boolean;
+  /** « Survie »: survivors' podium (hearts left, or when each one was eliminated). */
+  maxHearts?: number;
+}) {
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-8">
-      <h2 className="text-6xl font-black">Podium</h2>
+      <h2 className="text-6xl font-black">
+        {maxHearts !== undefined ? 'Podium des survivants' : 'Podium'}
+      </h2>
       <div className="flex flex-1 items-end gap-6">
         {PODIUM_SLOTS.map(({ rank, height, bg, delay }) => {
           const p = top[rank];
@@ -760,6 +812,13 @@ export function PodiumScreen({ top, instant }: { top: RankedPlayer[]; instant: b
               <Avatar id={p.avatar} size="xl" className="shadow-xl ring-4 ring-white" />
               <span className="w-full truncate text-center text-4xl font-black">{p.nickname}</span>
               <span className="text-2xl font-bold tabular-nums">{p.score} pts</span>
+              {p.survival && (
+                <span className="text-xl font-bold" data-testid="podium-survival">
+                  {rank === 0 && p.survival.hearts > 0
+                    ? `🏆 Dernier survivant · ${heartsText(p.survival.hearts, maxHearts ?? p.survival.hearts)}`
+                    : survivalLabel(p.survival)}
+                </span>
+              )}
               <div
                 className={`flex w-full items-start justify-center rounded-t-2xl pt-6 text-8xl font-black text-brand shadow-2xl ${height} ${bg}`}
               >

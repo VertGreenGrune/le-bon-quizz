@@ -141,6 +141,8 @@ model GameSession {
   mode      GameMode         @default(solo)
   /// Played with jokers (T25).
   jokers    Boolean          @default(false)
+  /// « Survie » (T31): hearts each player started with; null for the other modes.
+  hearts    Int?
   startedAt DateTime         @default(now())
   endedAt   DateTime?
   results   PlayerResult[]
@@ -164,6 +166,10 @@ model PlayerResult {
   teamId        Int?
   /// Jokers played during the game (JokerType ids, in order); empty without jokers.
   jokersUsed    String[]    @default([])
+  /// « Survie » (T31): hearts left at the end (0 = ghost); null for the other modes.
+  hearts        Int?
+  /// « Survie »: question index where the player lost their last heart (null: survivor).
+  eliminatedAt  Int?
 
   @@index([gameSessionId, rank])
 }
@@ -171,6 +177,7 @@ model PlayerResult {
 enum GameMode {
   solo
   teams
+  survival
 }
 
 /// Team mode: final standing of one team (score = sum of per-question averages, PLAN.md §3).

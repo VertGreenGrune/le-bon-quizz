@@ -6,6 +6,7 @@ import {
   HostMovePlayerPayload,
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
+  PlayerHauntPayload,
   PlayerJoinPayload,
   PlayerJokerPayload,
   PlayerRejoinPayload,
@@ -183,7 +184,7 @@ export function registerSocketHandlers(
       handler(
         socket,
         HostCreatePayload,
-        async ({ quizId, mode = 'solo', teamCount, jokers }) => {
+        async ({ quizId, mode = 'solo', teamCount, jokers, hearts }) => {
           const token = handshakeToken(socket);
           const hostId = token ? await persistence.authenticate(token) : null;
           const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
@@ -191,7 +192,7 @@ export function registerSocketHandlers(
             quiz,
             (pin) => makeTransport(io, pin),
             { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount, jokers, jokerHand },
+            { mode, teamCount, jokers, jokerHand, hearts },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
@@ -359,6 +360,15 @@ export function registerSocketHandlers(
       handler(socket, PlayerJokerPayload, ({ pin, questionIndex, joker, targetId }) => {
         const { game, playerId } = asPlayer(pin);
         game.useJoker(playerId, questionIndex, joker, targetId);
+        return {};
+      }),
+    );
+
+    socket.on(
+      'player:haunt',
+      handler(socket, PlayerHauntPayload, ({ pin, haunt, targetId }) => {
+        const { game, playerId } = asPlayer(pin);
+        game.haunt(playerId, haunt, targetId);
         return {};
       }),
     );

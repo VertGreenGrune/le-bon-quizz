@@ -190,3 +190,20 @@ mkdirSync(OUT, { recursive: true });
   });
   save('joker', buf);
 }
+
+// ---- eliminated: « dun dun duuun » + a low rumble when a player loses their last heart ----
+{
+  const buf = buffer(2.2);
+  [
+    ['D3', 0, 0.28],
+    ['D3', 0.34, 0.28],
+    ['A2', 0.7, 1.4],
+  ].forEach(([n, start, dur]) => {
+    tone(buf, start, dur, hz(n), { wave: 'square', vol: 0.09, decay: dur * 0.8 });
+    tone(buf, start, dur, hz(n) / 2, { wave: 'triangle', vol: 0.25, decay: dur * 0.8 });
+  });
+  // The last note slides down, like a ghost leaving.
+  tone(buf, 0.7, 1.4, (t) => hz('A3') * 2 ** (-t / 1.4), { vol: 0.08, decay: 0.8 });
+  noiseBurst(buf, 0.7, 0.9, { vol: 0.07, decay: 0.4 });
+  save('eliminated', buf);
+}

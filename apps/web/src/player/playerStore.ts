@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { AnswerInput, AvatarId, ErrorCode, JokerType, TeamId } from '@lbq/shared';
+import type { AnswerInput, AvatarId, ErrorCode, HauntType, JokerType, TeamId } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import {
   errorMessage,
@@ -66,7 +66,14 @@ function attach() {
   });
   socket.on('player:result', (payload) => {
     dispatch({ type: 'result', payload });
-    vibrate(payload.correct ? [80, 60, 80] : 300);
+    // « Survie »: a long buzz for the last heart lost.
+    vibrate(
+      payload.survival?.eliminated
+        ? [400, 100, 400, 100, 800]
+        : payload.correct
+          ? [80, 60, 80]
+          : 300,
+    );
   });
   socket.on('lobby:teams', (payload) => dispatch({ type: 'teams', payload }));
   socket.on('joker:state', (payload) => dispatch({ type: 'jokers', payload }));
@@ -75,6 +82,7 @@ function attach() {
     if (payload.target?.id === state.playerId) vibrate([200, 80, 200]); // attacked!
   });
   socket.on('podium', ({ top, teams }) => dispatch({ type: 'podium', top, teams }));
+  socket.on('survival:state', (payload) => dispatch({ type: 'survival', payload }));
   socket.on('player:kicked', () => {
     clearSession();
     boundSocketId = undefined;
@@ -287,6 +295,24 @@ export function playJoker(joker: JokerType, targetId?: string): Promise<string |
           else resolve(res.ok ? null : res.error.message);
         },
       );
+  });
+}
+
+/**
+ * « Survie »: a ghost haunts a living player; resolves with the French error message, or null
+ * when the server accepted it (it then sends `joker:used` / `survival:state`).
+ */
+export function hauntPlayer(haunt: HauntType, targetId: string): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  vibrate(40);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:haunt', { pin: session.pin, haunt, targetId }, (err, res) => {
+        if (err) resolve(errorMessage('TIMEOUT'));
+        else resolve(res.ok ? null : res.error.message);
+      });
   });
 }
 

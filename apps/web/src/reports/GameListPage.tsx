@@ -53,7 +53,7 @@ export function GameListPage() {
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 text-lg font-bold">
                       <span className="truncate">{g.quizTitle}</span>
-                      <ModeBadge mode={g.mode} />
+                      <ModeBadge mode={g.mode} hearts={g.hearts} />
                       {g.jokers && <JokersBadge />}
                     </p>
                     <p className="text-sm text-gray-500">

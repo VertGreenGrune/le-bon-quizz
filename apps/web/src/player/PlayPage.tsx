@@ -30,6 +30,8 @@ import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswe
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
+import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
+import { heartsText, survivalLabel } from '../lib/survival';
 import {
   CopyWaiting,
   FrozenOverlay,
@@ -65,7 +67,9 @@ export function PlayPage() {
           </motion.section>
         </AnimatePresence>
         <JokerBar s={s} screen={screen} />
+        <HauntBar s={s} screen={screen} />
         <FrozenOverlay s={s} />
+        <EliminatedOverlay s={s} />
         <JokerToast s={s} />
         {!s.connected && screen !== 'kicked' && screen !== 'lost' && (
           <div className="bg-black/70 py-2 text-center text-sm font-bold">Reconnexion…</div>
@@ -87,6 +91,12 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           title="Tu es dans la partie !"
           subtitle="Ton pseudo apparaît sur l'écran. On attend les autres…"
         >
+          {s.survival && (
+            <p className="rounded-2xl bg-black/25 px-4 py-2 font-bold">
+              💀 Survie : {heartsText(s.survival.hearts, s.survival.hearts)} — une erreur coûte un
+              cœur, le dernier en vie gagne !
+            </p>
+          )}
           {s.avatar && (
             <motion.span
               initial={{ scale: 0, rotate: -40 }}
@@ -160,6 +170,7 @@ function TopBar({ s }: { s: PlayerState }) {
           {s.nickname}
           {team && <span className="opacity-85"> · {team.name}</span>}
         </span>
+        <HeartsBadge s={s} />
       </span>
       <span className="flex items-center gap-3">
         {inQuestion && s.totalQuestions > 0 && (
@@ -592,6 +603,7 @@ function Result({ s }: { s: PlayerState }) {
       ) : (
         answered && answerLabel(s) && <p className="font-bold">Ta réponse : {answerLabel(s)}</p>
       )}
+      {r.survival && <SurvivalResultLine survival={r.survival} max={s.survival?.hearts ?? 0} />}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
       {r.bluff && <BluffResultLines bluff={r.bluff} />}
       {r.jokers && <JokerResultLines results={r.jokers} />}
@@ -640,6 +652,9 @@ function PollThanks({ s, voted }: { s: PlayerState; voted: boolean }) {
         <p className="rounded-lg bg-black/25 px-5 py-2 text-xl font-black tabular-nums">
           + {r.pointsEarned} pts : tu as voté comme la majorité !
         </p>
+      )}
+      {r.survival?.ghost && (
+        <SurvivalResultLine survival={r.survival} max={s.survival?.hearts ?? 0} />
       )}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={0} />}
       <p className="text-lg font-bold">Tu es {formatRank(r.rank)}</p>
@@ -757,6 +772,13 @@ function Standings({ s }: { s: PlayerState }) {
         {s.totalScore} pts
       </motion.p>
       {s.result?.team && <TeamLine {...s.result.team} />}
+      {s.result?.survival && s.survival && (
+        <p className="text-2xl font-black">
+          {s.result.survival.hearts > 0
+            ? heartsText(s.result.survival.hearts, s.survival.hearts)
+            : '👻 Fantôme'}
+        </p>
+      )}
     </Message>
   );
 }
@@ -766,8 +788,10 @@ const medals = ['🥇', '🥈', '🥉'];
 function Podium({ s }: { s: PlayerState }) {
   if (s.podiumTeams.length > 0) return <TeamPodium s={s} />;
   const myPlace = s.podium?.findIndex((p) => p.nickname === s.nickname) ?? -1;
-  const title =
-    myPlace >= 0
+  const survivor = myPlace === 0 && (s.podium?.[0]?.survival?.hearts ?? 0) > 0;
+  const title = survivor
+    ? '🏆 Tu es le dernier survivant !'
+    : myPlace >= 0
       ? `${medals[myPlace]} Bravo, tu es ${formatRank(myPlace + 1)} !`
       : s.result
         ? `Tu termines ${formatRank(s.result.rank)}`
@@ -790,7 +814,14 @@ function Podium({ s }: { s: PlayerState }) {
               <span className="flex min-w-0 items-center gap-2">
                 {medals[i]}
                 <Avatar id={p.avatar} size="sm" />
-                <span className="truncate">{p.nickname}</span>
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate">{p.nickname}</span>
+                  {p.survival && (
+                    <span className="text-xs font-semibold opacity-80">
+                      {survivalLabel(p.survival)}
+                    </span>
+                  )}
+                </span>
               </span>
               <span className="tabular-nums">{p.score}</span>
             </motion.li>
