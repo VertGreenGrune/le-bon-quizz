@@ -1385,12 +1385,58 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   db:migrate`.** Not tried on real phones.
 
 ### T30 — « Dessine-moi » (Pictionary round)
-- **Status:** in-progress (Claude T30, worktree ../lbq-T30, branch task/T30-draw)
+- **Status:** done
 - **Depends on:** T28
 - Question type `DRAW`: one player (rotating) gets a secret word on their phone and **draws** with
   the finger; strokes stream live to the TV (small vector messages, not images); the others type
   guesses (reuse `matching.ts`, typo tolerance); points to the fastest guessers and to the drawer
   per correct guess. Word lists in the editor (or a built-in French list).
+- **Summary:** shared: `DRAW` in the question union (`words` 0–30 × ≤ 30 chars, empty = built-in
+  list; `timeLimitSec` default 90; no `imageUrl`), constants `DRAW_FINDER_SHARE` (0.2),
+  `DRAW_DEFAULT_SEC`…; new `draw.ts` (1000 × 750 drawing space, palette of 8 colors, 3 sizes,
+  eraser, limits, zod `DrawStrokeSchema`, `mergeStrokes`, `strokeStyle`, `wordHint`, `DRAW_WORDS`
+  = 156 easy French words); `jokerAvailability.DRAW` = no joker; not in `BUZZER_QUESTION_TYPES`.
+  Contract (additive, PLAN.md §3–§5): `player:draw` (`PlayerDrawPayload`), `draw:strokes`
+  (`DrawStrokesPayload`), `player:answer` ack `guess?` (`DrawGuess` = found / close / wrong),
+  `game:state.draw` (`DrawStatus`: drawer, found), `question:show.draw` (drawer + blanks),
+  `question:prompt.draw` (`DrawPrompt`, `word` for the drawer only), `RevealDetails.draw`
+  (`DrawReveal`: word, drawer, strokes, finders with times), `player:result.draw`. Server:
+  `game/questionTypes/draw.ts` (rotation `pickDrawer` — fewest turns among the connected players,
+  join order, teams take turns —, `pickWord` without repeats, `addStrokes` with limits,
+  `checkGuess`, drawer points, payloads), `isNearMiss` in `matching.ts` (« Presque ! »: one typo
+  more than accepted, or a word of the answer); `Game.ts` hooks: drawer + word at the intro,
+  `guess()` (wrong guesses not recorded, a right one through `recordAnswer` + `game:state`
+  broadcast), `draw()` (ANSWERING only, refused while paused, relayed to the host room), drawer
+  left out of « all answered » / the answer count but awaited for the pause, drawer's streak
+  untouched, « Survie » spares every heart on DRAW, both resyncs re-send the drawing. Migration
+  `20261024230000_draw` (enum value; `words` in `Question.config`). Editor: « Dessine-moi » type
+  (`editor/DrawFields.tsx`: words one per line, built-in list hint; « Temps pour dessiner », 90 s
+  on switching; no picture). Phone (`player/draw.tsx`): drawer pad (word, 4:3 canvas with pointer
+  capture, 8 colors, 3 sizes, 🧽 gomme, 🗑️ tout effacer, chunks flushed every 60 ms, redrawn from
+  the server's drawing after a reload), guess field with « Non, pas … » / « Presque ! » feedback,
+  « Trouvé ! » screen (also after a reload, from `game:state.draw.found`), get-ready line « X va
+  dessiner », results (« Bien dessiné ! », « Le mot était … », finders). TV
+  (`host/drawScreens.tsx`, `components/Drawing.tsx` SVG): « X va dessiner » on the intro, live
+  board + drawer + blanks + finders (no guesses shown), the word at the reveal with the drawing
+  kept. Reports: `reports/drawCard.tsx` (drawing from the saved vectors, word, drawer, finders with
+  times). Tests: `Game.draw.test.ts` (20: rotation solo / offline / teams, built-in words, word
+  secrecy in every payload, hint, guesses wrong / close / found / drawer / kind, near misses,
+  scoring + cap + 0 points, timer, alone, team averages, Survie + haunt, strokes relay / clear /
+  limits, pause, rejoin TV + drawer + finder, no joker), persistence round trip with the drawing
+  (Postgres), shared `draw.test.ts`, web `playerState.draw.test.ts` (phone + TV reducers, SVG
+  path), `draft.draw.test.ts`; e2e `e2e/draw.spec.ts` (3 phones: live strokes on the TV, wrong /
+  « Presque ! » / found, word never in the guessers' frames, reveal, TV + drawer reloads
+  mid-drawing, nobody finds, report with the drawing). Checked with screenshots (host 1600×900,
+  Pixel 7).
+- **Notes:** (1) Drawer points scale with `basePoints` (1000 → +200 per finder, max 1000; 2000 →
+  +400, max 2000; 0 → nothing). (2) The guessers' phones show no drawing (they look at the TV);
+  only the host room gets `draw:strokes` (+ the drawer on rejoin). (3) Wrong guesses are neither
+  stored nor shown anywhere. (4) A game alone reveals at once (nobody to guess). (5) Strokes sent
+  while paused are dropped (the pause overlay covers the pad anyway); the server's drawing wins
+  after a reload. (6) The drawer counts in `playerCount` of the report (% found includes them).
+  (7) No change to `content/` (T33 can add a DRAW question to the Harry Potter quiz now).
+  **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones (finger
+  drawing on iOS Safari, canvas performance on low-end phones).
 
 ### T33 — Showcase quiz « Harry Potter — niveau expert » (content, after T28)
 - **Status:** in-progress (T33 agent, worktree ../lbq-T33)
@@ -1637,3 +1683,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `PlayerJokersPayload.buzzer?`. Prisma migration `20261024200000_buzzer`. Outside the code scope:
   `generate-sounds.mjs` + `public/sounds/buzz.wav` (CC0, in CREDITS.md); phone countdown got a
   `data-testid="countdown"`.
+- 2026-10-24, T30 agent (additive, PLAN.md §3–§5): `QuestionType` gains `DRAW` (+ `words`); new
+  `packages/shared/src/draw.ts` (exported); events `player:draw` (`PlayerDrawPayload`) and
+  `draw:strokes` (`DrawStrokesPayload`); the `player:answer` ack type is now
+  `Ack<{ guess?: DrawGuess }>`; `GameStatePayload.draw?` (`DrawStatus`),
+  `QuestionShowPayload.draw?`, `QuestionPromptPayload.draw?` (`DrawPrompt`), `RevealDetails.draw?`
+  (`DrawReveal`), `PlayerResultPayload.draw?`; `jokerAvailability.DRAW`. Server: `ExtraQuestion`
+  includes `DRAW`; `QuestionSetup.draw?`; `Game.answer()` now returns `{ guess? }` (the socket
+  handler sends it in the ack); `GameSettings.random` also picks the words. Prisma migration
+  `20261024230000_draw`.

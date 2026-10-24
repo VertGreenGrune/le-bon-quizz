@@ -1,6 +1,7 @@
 import {
   BLUFF_DEFAULT_VOTE_SEC,
   BLUFF_DEFAULT_WRITE_SEC,
+  DRAW_DEFAULT_SEC,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -44,6 +45,8 @@ export interface DraftQuestion {
   /** BLUFF: the real answer, and the voting time (`timeLimitSec` = writing time). */
   truth: string;
   voteTimeSec: number;
+  /** DRAW: words to draw, one picked at random (none = the built-in list). */
+  words: string[];
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -81,6 +84,7 @@ export const QUESTION_TYPES: { type: QuestionType; label: string }[] = [
   { type: 'WHO_OF_US', label: 'Qui de nous ?' },
   { type: 'WORD_CLOUD', label: 'Nuage de mots' },
   { type: 'BLUFF', label: 'Mytho !' },
+  { type: 'DRAW', label: 'Dessine-moi' },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -102,6 +106,7 @@ export function newQuestion(): DraftQuestion {
     majorityBonus: false,
     truth: '',
     voteTimeSec: BLUFF_DEFAULT_VOTE_SEC,
+    words: [],
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -139,6 +144,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       return draft;
     case 'BLUFF':
       return { ...draft, truth: q.truth, voteTimeSec: q.voteTimeSec };
+    case 'DRAW':
+      return { ...draft, words: [...q.words] };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -175,22 +182,30 @@ function keptItems(q: DraftQuestion): number[] {
   return kept.length >= ORDER_MIN_ITEMS ? kept : q.items.map((_, i) => i);
 }
 
-type Kept = { choices: number[]; acceptedAnswers: number[]; items: number[] };
+/** Indexes of the DRAW words sent: empty lines are dropped (none left = the built-in list). */
+function keptWords(q: DraftQuestion): number[] {
+  return q.words.flatMap((w, i) => (w.trim() ? [i] : []));
+}
+
+type Kept = { choices: number[]; acceptedAnswers: number[]; items: number[]; words: number[] };
 
 /** The API body of one question: only the fields of its type. */
 function questionBody(q: DraftQuestion, kept: Kept): unknown {
   const { choices, acceptedAnswers: answers } = kept;
   const base = {
     text: q.text,
-    imageUrl: q.imageUrl || undefined,
+    // « Dessine-moi »: the TV shows the drawing, a picture kept in the draft isn't sent.
+    imageUrl: (q.type !== 'DRAW' && q.imageUrl) || undefined,
     type: q.type,
     timeLimitSec: q.timeLimitSec,
     basePoints: q.basePoints,
     audio: q.audio,
     audioOnReveal: q.audio && q.audioOnReveal ? true : undefined,
-    // An effect without a picture (removed after choosing it) is dropped; PIN has none.
+    // An effect without a picture (removed after choosing it) is dropped; PIN / DRAW have none.
     imageEffect:
-      q.imageUrl && q.imageEffect !== 'none' && q.type !== 'PIN' ? q.imageEffect : undefined,
+      q.imageUrl && q.imageEffect !== 'none' && q.type !== 'PIN' && q.type !== 'DRAW'
+        ? q.imageEffect
+        : undefined,
     // Kept in the draft when switching to a type without buzzer (and back), not saved there.
     buzzer: q.buzzer && buzzerAllowed(q.type) ? true : undefined,
   };
@@ -215,6 +230,8 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
       return base;
     case 'BLUFF':
       return { ...base, truth: q.truth, voteTimeSec: q.voteTimeSec };
+    case 'DRAW':
+      return { ...base, words: kept.words.map((i) => q.words[i]) };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
   }
@@ -231,6 +248,7 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
     choices: keptChoices(q),
     acceptedAnswers: keptAnswers(q),
     items: keptItems(q),
+    words: keptWords(q),
   }));
   const result = validate(QuizInput, {
     ...draft,
@@ -240,7 +258,7 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
   if (result.ok) return result;
   const errors: FieldErrors = {};
   for (const [key, message] of Object.entries(result.errors)) {
-    const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items)\.(\d+)(.*)$/.exec(key);
+    const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items|words)\.(\d+)(.*)$/.exec(key);
     const list = m ? kept[Number(m[1])]?.[m[2] as keyof Kept] : undefined;
     const original = m ? `questions.${m[1]}.${m[2]}.${list?.[Number(m[3])] ?? m[3]}${m[4]}` : key;
     errors[original] = message;
@@ -250,7 +268,10 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
 
 /** The quiz shares uploaded pictures or sounds (copyright warning when it is made public). */
 export function hasMedia(draft: QuizDraft): boolean {
-  return !!draft.coverImageUrl || draft.questions.some((q) => q.imageUrl || q.audio);
+  return (
+    !!draft.coverImageUrl ||
+    draft.questions.some((q) => (q.imageUrl && q.type !== 'DRAW') || q.audio)
+  );
 }
 
 /** Number of errors of question `index` (for the sidebar badges). */
@@ -290,6 +311,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     acceptedAnswers: [...q.acceptedAnswers],
     slider: { ...q.slider },
     items: [...q.items],
+    words: [...q.words],
   });
   return { ...draft, questions };
 }
@@ -330,6 +352,8 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
   // « Mytho ! »: writing a good lie takes time (the default 20 s becomes 45 s).
   if (type === 'BLUFF' && q.timeLimitSec === 20)
     q = { ...q, timeLimitSec: BLUFF_DEFAULT_WRITE_SEC };
+  // « Dessine-moi »: drawing takes time too.
+  if (type === 'DRAW' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: DRAW_DEFAULT_SEC };
   // Leaving a type without a right answer: back to the standard points.
   const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
   return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };

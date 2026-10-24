@@ -26,6 +26,7 @@ import { survivalLabel } from '../lib/survival';
 import { MoreTypeDetails } from './moreTypeCards';
 import { BluffDetails } from './bluffCard';
 import { BuzzerDetails } from './buzzerCard';
+import { DrawDetails } from './drawCard';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -296,13 +297,15 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
       </div>
       <p className="mb-3 text-sm text-gray-500">
         {scored
-          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'BLUFF' ? 'trouvé la vérité' : 'bien répondu'}`
+          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'BLUFF' ? 'trouvé la vérité' : q.type === 'DRAW' ? 'trouvé le mot' : 'bien répondu'}`
           : `${q.answerCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'WORD_CLOUD' ? 'répondu' : 'voté'} — pas de bonne réponse`}
       </p>
       {q.details.buzzer ? (
         <BuzzerDetails q={q} />
       ) : q.type === 'BLUFF' ? (
         <BluffDetails q={q} noAnswer={noAnswer} />
+      ) : q.type === 'DRAW' ? (
+        <DrawDetails q={q} />
       ) : MORE_TYPES.includes(q.type) ? (
         <MoreTypeDetails q={q} noAnswer={noAnswer} />
       ) : q.type === 'TYPE_ANSWER' ? (

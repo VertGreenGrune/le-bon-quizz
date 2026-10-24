@@ -1,21 +1,25 @@
-import type {
-  AnswerInput,
-  AvatarId,
-  BuzzerStatus,
-  ErrorCode,
-  GameMode,
-  GamePause,
-  GamePhase,
-  GameStatePayload,
-  JokerUsedPayload,
-  LobbyTeamsPayload,
-  PlayerJokersPayload,
-  PlayerResultPayload,
-  QuestionPromptPayload,
-  RankedPlayer,
-  RankedTeam,
-  SurvivalPlayer,
-  SurvivalStatePayload,
+import {
+  mergeStrokes,
+  type AnswerInput,
+  type AvatarId,
+  type BuzzerStatus,
+  type DrawStatus,
+  type DrawStroke,
+  type DrawStrokesPayload,
+  type ErrorCode,
+  type GameMode,
+  type GamePause,
+  type GamePhase,
+  type GameStatePayload,
+  type JokerUsedPayload,
+  type LobbyTeamsPayload,
+  type PlayerJokersPayload,
+  type PlayerResultPayload,
+  type QuestionPromptPayload,
+  type RankedPlayer,
+  type RankedTeam,
+  type SurvivalPlayer,
+  type SurvivalStatePayload,
 } from '@lbq/shared';
 
 /** Everything the phone knows about the game. Pure data, driven by server events. */
@@ -37,6 +41,13 @@ export interface PlayerState {
   resumeAt: number | null;
   /** « Buzzer » question: who has the hand (timer frozen meanwhile), who answered wrong. */
   buzzer: BuzzerStatus | null;
+  /** « Dessine-moi » question: who draws, who already found the word (`game:state.draw`). */
+  draw: DrawStatus | null;
+  /**
+   * « Dessine-moi », the drawer: the drawing the server has (sent back on rejoin), with a
+   * counter that changes on every full re-send so the canvas redraws it.
+   */
+  drawing: { index: number; strokes: DrawStroke[]; version: number } | null;
   /** What the player answered (choice, text or slider value), for `questionIndex` only. */
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
@@ -87,7 +98,8 @@ export type PlayerAction =
   | { type: 'lie'; questionIndex: number; text: string | null }
   | { type: 'jokers'; payload: PlayerJokersPayload }
   | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number }
-  | { type: 'survival'; payload: SurvivalStatePayload };
+  | { type: 'survival'; payload: SurvivalStatePayload }
+  | { type: 'drawStrokes'; payload: DrawStrokesPayload };
 
 export const initialPlayerState: PlayerState = {
   connected: false,
@@ -101,6 +113,8 @@ export const initialPlayerState: PlayerState = {
   frozenMs: null,
   resumeAt: null,
   buzzer: null,
+  draw: null,
+  drawing: null,
   myAnswer: null,
   result: null,
   nickname: '',
@@ -153,6 +167,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         ...state,
         paused,
         buzzer,
+        draw: action.payload.draw ?? null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
@@ -238,7 +253,33 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
 
     case 'survival':
       return { ...state, survival: action.payload };
+
+    case 'drawStrokes': {
+      const { index, clear, strokes } = action.payload;
+      const prev = state.drawing;
+      const fresh = clear || prev?.index !== index;
+      return {
+        ...state,
+        drawing: {
+          index,
+          strokes: mergeStrokes(fresh ? [] : prev!.strokes, strokes),
+          version: (prev?.version ?? 0) + (fresh ? 1 : 0),
+        },
+      };
+    }
   }
+}
+
+/** « Dessine-moi » question: `drawer` (this phone draws), `guesser`, or null (another type). */
+export function drawRole(s: PlayerState): 'drawer' | 'guesser' | null {
+  const draw = s.prompt?.index === s.questionIndex ? s.prompt.draw : undefined;
+  if (!draw) return null;
+  return draw.word !== undefined ? 'drawer' : 'guesser';
+}
+
+/** « Dessine-moi »: this player found the word of the current question (also after a reload). */
+export function foundTheWord(s: PlayerState): boolean {
+  return !!s.draw?.found.some((p) => p.id === s.playerId);
 }
 
 /** « Survie »: this player's hearts / haunts (null in the other modes). */
@@ -277,7 +318,7 @@ export function playerScreen(s: PlayerState): PlayerScreen {
     case 'QUESTION_INTRO':
       return 'getReady';
     case 'ANSWERING':
-      if (s.myAnswer?.questionIndex === s.questionIndex) return 'answered';
+      if (s.myAnswer?.questionIndex === s.questionIndex || foundTheWord(s)) return 'answered';
       if (bluffStage(s) === 'write' && s.lie?.questionIndex === s.questionIndex) return 'answered';
       return s.prompt?.index === s.questionIndex ? 'answer' : 'getReady';
     case 'REVEAL':

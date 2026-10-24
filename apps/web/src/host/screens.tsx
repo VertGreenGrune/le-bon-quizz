@@ -4,6 +4,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   SHAPES,
   type BuzzerStatus,
+  type DrawStatus,
+  type DrawStroke,
   type LobbyMember,
   type QuestionRevealPayload,
   type QuestionShowPayload,
@@ -20,6 +22,7 @@ import { joinOrigins, joinUrl } from './joinUrl';
 import { MORE_TYPES, MoreTypeHint, MoreTypeReveal } from './moreTypeScreens';
 import { BluffHint, BluffReveal } from './bluffScreens';
 import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
+import { DrawIntroLine, DrawStage } from './drawScreens';
 import { TICK_FROM_SEC, useMuted } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -180,6 +183,7 @@ export function QuestionIntroScreen({
       >
         {question?.text ?? '…'}
       </motion.h2>
+      <DrawIntroLine question={question} />
       {progress != null && (
         <div className="h-3 w-full max-w-3xl overflow-hidden rounded-full bg-black/25">
           <div
@@ -204,6 +208,8 @@ export function QuestionScreen({
   onReplay,
   buzzer = null,
   onJudge = () => {},
+  draw = null,
+  drawing = [],
 }: {
   question: QuestionShowPayload | null;
   remainingMs: number | null;
@@ -218,6 +224,9 @@ export function QuestionScreen({
   buzzer?: BuzzerStatus | null;
   /** « Buzzer »: ✅ / ❌ on the answer said out loud. */
   onJudge?: (correct: boolean) => void;
+  /** « Dessine-moi »: who draws / found it (`game:state.draw`) and the live drawing. */
+  draw?: DrawStatus | null;
+  drawing?: readonly DrawStroke[];
 }) {
   if (!question) {
     return <p className="m-auto animate-pulse text-3xl">Chargement de la question…</p>;
@@ -260,7 +269,15 @@ export function QuestionScreen({
         )}
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 self-stretch">
-          {reveal ? (
+          {question.type === 'DRAW' ? (
+            <DrawStage
+              question={question}
+              status={draw}
+              strokes={drawing}
+              reveal={reveal}
+              instant={instant}
+            />
+          ) : reveal ? (
             reveal.buzzer ? (
               <BuzzerRevealView reveal={reveal.buzzer} instant={instant} />
             ) : reveal.bluff ? (
@@ -327,7 +344,8 @@ export function QuestionScreen({
             {answered}
           </motion.span>
           <span className="text-lg font-semibold">
-            réponse{answered > 1 ? 's' : ''}
+            {question.type === 'DRAW' ? 'trouvé' : 'réponse'}
+            {answered > 1 ? 's' : ''}
             {answerTotal > 0 && <span className="opacity-70"> / {answerTotal}</span>}
           </span>
         </div>

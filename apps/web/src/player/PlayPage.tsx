@@ -18,7 +18,9 @@ import { formatValue, snapToStep } from '../lib/numbers';
 import { competitionRanks } from '../lib/ranks';
 import {
   copyingTarget,
+  drawRole,
   errorMessage,
+  foundTheWord,
   formatRank,
   jokerEffects,
   myTeam,
@@ -29,6 +31,14 @@ import {
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { BuzzerPad, buzzerResultTitle } from './buzzer';
+import {
+  DrawFound,
+  DrawGetReady,
+  DrawResultLines,
+  DrawerPad,
+  GuessPad,
+  drawResultTitle,
+} from './draw';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
@@ -126,12 +136,16 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           >
             {s.questionIndex + 1}
           </motion.p>
+          <DrawGetReady s={s} />
           <BouncingShapes />
         </Message>
       );
     case 'answer': {
       // Remounted when the hand changes: an old « X a buzzé avant toi » goes away.
       if (s.prompt?.buzzer) return <BuzzerPad key={s.buzzer?.holder?.id ?? 'open'} s={s} />;
+      const role = drawRole(s);
+      if (role === 'drawer') return <DrawerPad s={s} />;
+      if (role === 'guesser') return <GuessPad s={s} />;
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
       return <AnswerScreen prompt={s.prompt!} effects={jokerEffects(s)} />;
@@ -492,6 +506,7 @@ function answerLabel(s: PlayerState): string | null {
 
 function Answered({ s }: { s: PlayerState }) {
   if (s.prompt?.type === 'BLUFF') return <BluffAnswered s={s} />;
+  if (s.prompt?.type === 'DRAW' || foundTheWord(s)) return <DrawFound s={s} />;
   const more = s.myAnswer && !('choiceIndex' in s.myAnswer) && <MoreAnswered s={s} />;
   if (more) {
     return (
@@ -547,28 +562,32 @@ function Result({ s }: { s: PlayerState }) {
 
   // Partial points (order, pin close to the zone): not right, but not for nothing.
   const partial = !r.correct && r.pointsEarned > 0;
+  // « Dessine-moi »: the drawer had nothing to answer (green when the drawing was found).
+  const drew = !!r.draw?.drew;
   // « Buzzer »: not buzzing isn't a mistake (neutral screen).
-  const idle = !!r.buzzer && !r.buzzer.won && !r.buzzer.wrong;
+  const idle = (!!r.buzzer && !r.buzzer.won && !r.buzzer.wrong) || (drew && !r.draw!.finders);
   const title = r.buzzer
     ? buzzerResultTitle(r.buzzer)
-    : r.bluff
-      ? r.bluff.found
-        ? 'Vérité trouvée !'
-        : partial
-          ? 'Bien mythoné !'
-          : 'Piégé !'
-      : r.correct
-        ? 'Correct !'
-        : partial
-          ? 'Presque !'
-          : answered
-            ? 'Raté !'
-            : 'Temps écoulé !';
+    : r.draw
+      ? drawResultTitle(r.draw)
+      : r.bluff
+        ? r.bluff.found
+          ? 'Vérité trouvée !'
+          : partial
+            ? 'Bien mythoné !'
+            : 'Piégé !'
+        : r.correct
+          ? 'Correct !'
+          : partial
+            ? 'Presque !'
+            : answered
+              ? 'Raté !'
+              : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
       className={`flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center ${
-        r.correct
+        r.correct || (drew && !idle)
           ? 'bg-answer-green'
           : partial
             ? 'bg-answer-yellow'
@@ -584,7 +603,7 @@ function Result({ s }: { s: PlayerState }) {
         className="flex size-28 items-center justify-center rounded-full bg-white/20 text-7xl font-black"
         aria-hidden="true"
       >
-        {r.correct ? '✓' : partial ? '≈' : idle ? '🔔' : '✗'}
+        {drew ? '🎨' : r.correct ? '✓' : partial ? '≈' : idle ? '🔔' : '✗'}
       </motion.div>
       <h2 className="text-4xl font-black">{title}</h2>
       {r.buzzer && r.buzzer.answer.length > 0 && (
@@ -622,6 +641,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.survival && <SurvivalResultLine survival={r.survival} max={s.survival?.hearts ?? 0} />}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
       {r.bluff && <BluffResultLines bluff={r.bluff} />}
+      {r.draw && <DrawResultLines draw={r.draw} />}
       {r.jokers && <JokerResultLines results={r.jokers} />}
       <motion.p
         initial={{ opacity: 0 }}

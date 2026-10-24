@@ -1,18 +1,22 @@
-import type {
-  BuzzerStatus,
-  GameMode,
-  GamePause,
-  GamePhase,
-  LobbyMember,
-  GameStatePayload,
-  LobbyPlayersPayload,
-  LobbyTeamsPayload,
-  QuestionRevealPayload,
-  QuestionShowPayload,
-  RankedPlayer,
-  RankedTeam,
-  StandingsPayload,
-  SurvivalStatePayload,
+import {
+  mergeStrokes,
+  type BuzzerStatus,
+  type DrawStatus,
+  type DrawStroke,
+  type DrawStrokesPayload,
+  type GameMode,
+  type GamePause,
+  type GamePhase,
+  type LobbyMember,
+  type GameStatePayload,
+  type LobbyPlayersPayload,
+  type LobbyTeamsPayload,
+  type QuestionRevealPayload,
+  type QuestionShowPayload,
+  type RankedPlayer,
+  type RankedTeam,
+  type StandingsPayload,
+  type SurvivalStatePayload,
 } from '@lbq/shared';
 
 /** Everything the shared screen knows about the game, folded from server events. */
@@ -38,6 +42,10 @@ export interface HostGameState {
    * `frozenMs` — and who answered wrong.
    */
   buzzer: BuzzerStatus | null;
+  /** « Dessine-moi » question (`game:state.draw`): who draws, who already found the word. */
+  draw: DrawStatus | null;
+  /** « Dessine-moi »: the live drawing of question `index` (`draw:strokes`). */
+  drawing: { index: number; strokes: DrawStroke[] };
   /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
   comebacks: (LobbyMember & { at: number })[];
   players: LobbyPlayersPayload['players'];
@@ -71,7 +79,8 @@ export type HostAction =
   | { type: 'reveal'; payload: QuestionRevealPayload }
   | ({ type: 'leaderboard' } & StandingsPayload)
   | ({ type: 'podium' } & StandingsPayload)
-  | { type: 'survival'; payload: SurvivalStatePayload };
+  | { type: 'survival'; payload: SurvivalStatePayload }
+  | { type: 'drawStrokes'; payload: DrawStrokesPayload };
 
 export const initialHostState: HostGameState = {
   phase: null,
@@ -85,6 +94,8 @@ export const initialHostState: HostGameState = {
   pausedSince: null,
   resumeAt: null,
   buzzer: null,
+  draw: null,
+  drawing: { index: -1, strokes: [] },
   comebacks: [],
   players: [],
   teams: [],
@@ -121,6 +132,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         deadline: remainingMs != null && !frozen ? action.now + remainingMs : null,
         paused,
         buzzer,
+        draw: action.payload.draw ?? null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         pausedSince: paused ? action.now - paused.sinceMs : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,
@@ -168,7 +180,18 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
       return { ...state, podium: action.top, podiumTeams: action.teams ?? [] };
     case 'survival':
       return { ...state, survival: action.payload };
+    case 'drawStrokes': {
+      const { index, clear, strokes } = action.payload;
+      // Another question's drawing, or a full re-send (rejoin / « Effacer »): start over.
+      const base = clear || index !== state.drawing.index ? [] : state.drawing.strokes;
+      return { ...state, drawing: { index, strokes: mergeStrokes(base, strokes) } };
+    }
   }
+}
+
+/** « Dessine-moi »: the drawing of the current question so far. */
+export function currentDrawing(state: HostGameState): DrawStroke[] {
+  return state.drawing.index === state.questionIndex ? state.drawing.strokes : [];
 }
 
 /** How long « <pseudo> est de retour ! » stays on the host screen. */

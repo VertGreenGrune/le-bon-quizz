@@ -141,6 +141,8 @@ const AVAILABILITY: Record<QuestionType, JokerAvailability> = {
   // « Mytho ! » (T26): Copieur copies the vote, 50/50 hides half of the lies; points don't
   // depend on the speed (no Sablier); no buttons to scramble.
   BLUFF: { jokers: true, unavailable: ['scramble', 'hourglass'], scramble: false },
+  // « Dessine-moi » (T30): no joker (one player draws, the others guess); a pending attack waits.
+  DRAW: { jokers: false, unavailable: [], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = { jokers: false, unavailable: [], scramble: false };

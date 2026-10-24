@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { AvatarId } from './avatars.js';
+import { DRAW_MAX_CHUNKS, DrawStrokeSchema, type DrawStroke } from './draw.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import { JokerType } from './jokers.js';
 import { HauntType, SurvivalHearts } from './survival.js';
@@ -151,6 +152,17 @@ export const PlayerAnswerPayload = z.union([
 /** « Buzzer »: the player hits BUZZ on the current question. */
 export const PlayerBuzzPayload = z.object({ pin: Pin, questionIndex: z.number().int().min(0) });
 
+/**
+ * « Dessine-moi », the drawer only, ANSWERING: new stroke chunks (throttled by the phone);
+ * `clear` empties the drawing first.
+ */
+export const PlayerDrawPayload = z.object({
+  pin: Pin,
+  questionIndex: z.number().int().min(0),
+  clear: z.literal(true).optional(),
+  strokes: z.array(DrawStrokeSchema).max(DRAW_MAX_CHUNKS),
+});
+
 /** Plays a joker on the current question; `targetId` for Copieur, Gel, Brouilleur, Voleur. */
 export const PlayerJokerPayload = z.object({
   pin: Pin,
@@ -172,6 +184,7 @@ export type HostKickPayload = z.infer<typeof HostKickPayload>;
 export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
 export type HostJudgePayload = z.infer<typeof HostJudgePayload>;
 export type PlayerBuzzPayload = z.infer<typeof PlayerBuzzPayload>;
+export type PlayerDrawPayload = z.infer<typeof PlayerDrawPayload>;
 export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
 export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
 export type PlayerRejoinPayload = z.infer<typeof PlayerRejoinPayload>;
@@ -187,6 +200,12 @@ export type AnswerInput =
   | { order: number[] }
   | { point: PinPoint }
   | { playerId: string };
+
+/**
+ * « Dessine-moi », `player:answer` ack: `found` (the guess is right — recorded, scored), `close`
+ * (« Presque ! ») or `wrong` (not recorded: the player can try again).
+ */
+export type DrawGuess = 'found' | 'close' | 'wrong';
 
 export interface PlayerJoinAck {
   playerId: string;
@@ -250,7 +269,14 @@ export interface ClientToServerEvents {
   ) => void;
   /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
-  'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack) => void) => void;
+  /** « Dessine-moi »: a guess (`text`); the ack tells whether it is right (`guess`). */
+  'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack<{ guess?: DrawGuess }>) => void) => void;
+  /**
+   * « Dessine-moi », the drawer during ANSWERING: stroke chunks, relayed to the TV
+   * (`draw:strokes`). `GAME_PAUSED` while paused (the canvas freezes), `INVALID_PAYLOAD` for the
+   * other players or a drawing over DRAW_MAX_STROKES / DRAW_MAX_POINTS.
+   */
+  'player:draw': (p: PlayerDrawPayload, ack: (r: Ack) => void) => void;
   /**
    * « Buzzer » question, ANSWERING: takes the hand (first one processed by the server wins),
    * which freezes the timer until the host judges. `BUZZER_TAKEN` (someone has the hand),
@@ -294,6 +320,17 @@ export interface GameStatePayload {
    * frozen value) and who already answered wrong (out for this question).
    */
   buzzer?: BuzzerStatus;
+  /**
+   * « Dessine-moi » question (QUESTION_INTRO / ANSWERING): who draws and who already found the
+   * word, in order (never what they typed).
+   */
+  draw?: DrawStatus;
+}
+
+export interface DrawStatus {
+  /** Absent only when nobody could draw (no player left). */
+  drawer?: LobbyMember;
+  found: LobbyMember[];
 }
 
 export interface BuzzerStatus {
@@ -408,6 +445,30 @@ export interface QuestionShowPayload {
    * right answer in words, for the host to judge (`buzzerAnswer`; the TV hides it until asked).
    */
   buzzer?: { answer: string[] };
+  /** DRAW: who draws, and the word as blanks (`wordHint`) — never the word itself. */
+  draw?: { drawer?: LobbyMember; hint: string };
+}
+
+/**
+ * « Dessine-moi » on a phone: `word` for the drawer only (the others get the blanks), `maxLength`
+ * of a guess.
+ */
+export interface DrawPrompt {
+  drawer?: LobbyMember;
+  word?: string;
+  hint: string;
+  maxLength: number;
+}
+
+/**
+ * « Dessine-moi », to the host room (live) and to the drawer's phone (on rejoin): new stroke
+ * chunks of question `index` (`mergeStrokes`); `clear` = start from an empty drawing (also used
+ * to re-send the whole drawing).
+ */
+export interface DrawStrokesPayload {
+  index: number;
+  clear?: true;
+  strokes: DrawStroke[];
 }
 
 /** To players only: never contains the question text or the correct answer. */
@@ -431,6 +492,8 @@ export interface QuestionPromptPayload {
   bluff?: BluffPrompt;
   /** « Buzzer »: one BUZZ button instead of the answer screen (no other field of the type). */
   buzzer?: true;
+  /** DRAW: the canvas + the word (drawer), or the guess field (the others). */
+  draw?: DrawPrompt;
 }
 
 export interface AnswerCountPayload {
@@ -478,6 +541,16 @@ export interface RevealDetails {
   bluff?: { truth: string; options: BluffOption[] };
   /** « Buzzer »: the right answer, who found it (absent: nobody) and who answered wrong, in order. */
   buzzer?: BuzzerReveal;
+  /** DRAW: the word, the drawer, the whole drawing (vector) and who found it, fastest first. */
+  draw?: DrawReveal;
+}
+
+export interface DrawReveal {
+  word: string;
+  drawer?: LobbyMember;
+  strokes: DrawStroke[];
+  /** `ms` = time taken to find (pauses excluded). */
+  found: (LobbyMember & { ms: number })[];
 }
 
 export interface BuzzerReveal {
@@ -571,6 +644,11 @@ export interface PlayerResultPayload {
    * wrong), `winner` (whoever found it, absent: nobody).
    */
   buzzer?: { answer: string[]; won: boolean; wrong: boolean; winner?: LobbyMember };
+  /**
+   * DRAW: the word; `drew` = this player was the drawer (streak unchanged; `pointsEarned` =
+   * DRAW_FINDER_SHARE × basePoints per finder); `finders` = players who found it.
+   */
+  draw?: { word: string; drawer?: LobbyMember; drew: boolean; found: boolean; finders: number };
 }
 
 /** What a joker does to one phone's controls on the current question (that phone only). */
@@ -650,6 +728,7 @@ export interface ServerToClientEvents {
   'joker:state': (p: PlayerJokersPayload) => void; // each player (games with jokers)
   'joker:used': (p: JokerUsedPayload) => void; // all (games with jokers, « Survie » haunts)
   'survival:state': (p: SurvivalStatePayload) => void; // all (« Survie »)
+  'draw:strokes': (p: DrawStrokesPayload) => void; // host (+ the drawer on rejoin)
   error: (p: ErrorPayload) => void; // sender
 }
 

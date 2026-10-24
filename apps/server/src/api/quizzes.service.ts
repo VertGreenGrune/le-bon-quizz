@@ -31,7 +31,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'ORDER' }>, 'items'> &
   Pick<Extract<Question, { type: 'PIN' }>, 'zone'> &
   Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'> &
-  Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'>;
+  Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'> &
+  Pick<Extract<Question, { type: 'DRAW' }>, 'words'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -76,6 +77,8 @@ function toQuestion(qu: QuestionRow): Question {
         truth: config.truth ?? '',
         voteTimeSec: config.voteTimeSec ?? BLUFF_DEFAULT_VOTE_SEC,
       };
+    case 'DRAW':
+      return { ...base, type: qu.type, words: config.words ?? [] };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -95,6 +98,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'PIN') return { zone: qu.zone };
   if (qu.type === 'WHO_OF_US') return { majorityBonus: qu.majorityBonus };
   if (qu.type === 'BLUFF') return { truth: qu.truth, voteTimeSec: qu.voteTimeSec };
+  if (qu.type === 'DRAW') return { words: qu.words };
   return undefined;
 }
 

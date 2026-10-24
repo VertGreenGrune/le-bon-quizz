@@ -1,5 +1,14 @@
 import { useSyncExternalStore } from 'react';
-import type { AnswerInput, AvatarId, ErrorCode, HauntType, JokerType, TeamId } from '@lbq/shared';
+import type {
+  AnswerInput,
+  AvatarId,
+  DrawGuess,
+  DrawStroke,
+  ErrorCode,
+  HauntType,
+  JokerType,
+  TeamId,
+} from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import {
   errorMessage,
@@ -83,6 +92,7 @@ function attach() {
   });
   socket.on('podium', ({ top, teams }) => dispatch({ type: 'podium', top, teams }));
   socket.on('survival:state', (payload) => dispatch({ type: 'survival', payload }));
+  socket.on('draw:strokes', (payload) => dispatch({ type: 'drawStrokes', payload }));
   socket.on('player:kicked', () => {
     clearSession();
     boundSocketId = undefined;
@@ -269,6 +279,51 @@ export function sendLie(text: string): Promise<string | null> {
         resolve(null);
       });
   });
+}
+
+/**
+ * « Dessine-moi », a guesser: sends a guess; resolves with `found` (then shown as the answer),
+ * `close` / `wrong` (try again), or the French error message.
+ */
+export function sendGuess(text: string): Promise<{ guess: DrawGuess } | { error: string }> {
+  const session = loadSession();
+  if (!session) return Promise.resolve({ error: 'Session introuvable' });
+  const { questionIndex } = state;
+  vibrate(30);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:answer', { pin: session.pin, questionIndex, text }, (err, res) => {
+        if (err) return resolve({ error: errorMessage('TIMEOUT') });
+        if (!res.ok) return resolve({ error: res.error.message });
+        const guess = res.guess ?? 'wrong';
+        if (guess === 'found') {
+          vibrate([80, 60, 80]);
+          dispatch({ type: 'answer', questionIndex, answer: { text } });
+        }
+        resolve({ guess });
+      });
+  });
+}
+
+/**
+ * « Dessine-moi », the drawer: new stroke chunks (`clear` = the drawing was erased first). Sent
+ * as they come (the pad throttles them); a refused message (pause) is simply dropped — the
+ * server sends its drawing back on rejoin.
+ */
+export function sendStrokes(strokes: DrawStroke[], clear = false) {
+  const session = loadSession();
+  if (!session) return;
+  getSocket().emit(
+    'player:draw',
+    {
+      pin: session.pin,
+      questionIndex: state.questionIndex,
+      ...(clear && { clear: true as const }),
+      strokes,
+    },
+    () => {},
+  );
 }
 
 /** « Mytho ! »: back to the text field to write another lie (until the vote starts). */

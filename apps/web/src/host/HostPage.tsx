@@ -5,6 +5,7 @@ import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } fro
 import { parseGameOptions } from '../lib/gameOptions';
 import { JokerAnnouncements } from './jokerScreens';
 import {
+  currentDrawing,
   currentQuestion,
   isLastQuestion,
   offlinePlayers,
@@ -191,6 +192,8 @@ export function HostPage() {
           onReplay={clip.replay}
           buzzer={state.buzzer}
           onJudge={game.judge}
+          draw={state.draw}
+          drawing={currentDrawing(state)}
         />
       );
       primary =

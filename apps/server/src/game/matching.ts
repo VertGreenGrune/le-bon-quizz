@@ -58,3 +58,20 @@ export function matchesAnswer(
     return levenshtein(guess, accepted) <= allowedTypos(accepted.length);
   });
 }
+
+/**
+ * « Presque ! » (« Dessine-moi »): a guess that doesn't match but is close — one more typo than
+ * `matchesAnswer` accepts, or one of the words of a longer answer (« tour » for « tour Eiffel »).
+ * Answers with a digit never are.
+ */
+export function isNearMiss(typed: string, answer: string): boolean {
+  const guess = normalizeAnswer(typed);
+  const accepted = normalizeAnswer(answer);
+  if (!guess || !accepted || guess === accepted || /\d/.test(guess + accepted)) return false;
+  if (levenshtein(guess, accepted) <= allowedTypos(accepted.length) + 1) return true;
+  const words = (s: string) => s.split(' ').filter((w) => w.length >= 3);
+  const inside = (part: string, whole: string) => ` ${whole} `.includes(` ${part} `);
+  return (
+    words(guess).some((w) => inside(w, accepted)) || words(accepted).some((w) => inside(w, guess))
+  );
+}

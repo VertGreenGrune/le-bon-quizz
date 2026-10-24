@@ -80,6 +80,7 @@ enum QuestionType {
   WHO_OF_US
   WORD_CLOUD
   BLUFF
+  DRAW
 }
 
 model Question {
