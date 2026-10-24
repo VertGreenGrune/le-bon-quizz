@@ -1,4 +1,6 @@
 import {
+  BLUFF_DEFAULT_VOTE_SEC,
+  BLUFF_DEFAULT_WRITE_SEC,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -38,6 +40,9 @@ export interface DraftQuestion {
   zone: PinZone;
   /** WHO_OF_US: points for the players who vote like the majority. */
   majorityBonus: boolean;
+  /** BLUFF: the real answer, and the voting time (`timeLimitSec` = writing time). */
+  truth: string;
+  voteTimeSec: number;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -72,7 +77,10 @@ export const QUESTION_TYPES: { type: QuestionType; label: string }[] = [
   { type: 'PIN', label: 'Point sur l’image' },
   { type: 'WHO_OF_US', label: 'Qui de nous ?' },
   { type: 'WORD_CLOUD', label: 'Nuage de mots' },
+  { type: 'BLUFF', label: 'Mytho !' },
 ];
+
+export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
 
 export const DEFAULT_PIN_ZONE: PinZone = { x: 0.5, y: 0.5, radius: 0.1 };
 
@@ -89,6 +97,8 @@ export function newQuestion(): DraftQuestion {
     items: Array.from({ length: ORDER_MIN_ITEMS }, () => ''),
     zone: DEFAULT_PIN_ZONE,
     majorityBonus: false,
+    truth: '',
+    voteTimeSec: BLUFF_DEFAULT_VOTE_SEC,
     audioOnReveal: false,
     imageEffect: 'none',
   };
@@ -122,6 +132,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       return { ...draft, majorityBonus: q.majorityBonus };
     case 'WORD_CLOUD':
       return draft;
+    case 'BLUFF':
+      return { ...draft, truth: q.truth, voteTimeSec: q.voteTimeSec };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -194,6 +206,8 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
       return { ...base, majorityBonus: q.majorityBonus };
     case 'WORD_CLOUD':
       return base;
+    case 'BLUFF':
+      return { ...base, truth: q.truth, voteTimeSec: q.voteTimeSec };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
   }
@@ -306,6 +320,9 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
     };
   }
   if (!hasRightAnswer(type)) return { ...q, type, basePoints: 0 };
+  // « Mytho ! »: writing a good lie takes time (the default 20 s becomes 45 s).
+  if (type === 'BLUFF' && q.timeLimitSec === 20)
+    q = { ...q, timeLimitSec: BLUFF_DEFAULT_WRITE_SEC };
   // Leaving a type without a right answer: back to the standard points.
   const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
   return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };

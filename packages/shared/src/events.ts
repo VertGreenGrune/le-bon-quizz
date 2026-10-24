@@ -40,6 +40,8 @@ export const ErrorCode = z.enum([
   'JOKER_REFUSED',
   /** Gel: this player's answers are refused for the first seconds of the question. */
   'FROZEN',
+  /** « Mytho ! »: the lie is (almost) the real answer. */
+  'LIE_TOO_CLOSE',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -281,6 +283,29 @@ export interface LobbyTeamsPayload {
 /** What a phone needs to draw a slider: never the correct value nor the margin. */
 export type SliderPrompt = Pick<SliderSettings, 'min' | 'max' | 'step' | 'unit'>;
 
+/**
+ * « Mytho ! » on the TV: writing the lies, then voting among `options` (lies + the real answer,
+ * shuffled — which one is true is only told at the reveal).
+ */
+export type BluffShow = { stage: 'write' } | { stage: 'vote'; options: string[] };
+
+/**
+ * « Mytho ! » on a phone. `write`: type a lie (`lie` = the one already sent, after a rejoin).
+ * `vote`: tap one of `options` (same order as on the TV), never `own` (this player's lie).
+ */
+export type BluffPrompt =
+  | { stage: 'write'; maxLength: number; lie?: string }
+  | { stage: 'vote'; options: string[]; own?: number };
+
+/** « Mytho ! » reveal: every answer offered, who wrote it and who voted for it. */
+export interface BluffOption {
+  text: string;
+  truth: boolean;
+  /** Players who wrote this lie (merged when they typed the same thing); empty for the truth. */
+  authors: LobbyMember[];
+  voters: LobbyMember[];
+}
+
 /** To the host only: full question (but not the answer, revealed by `question:reveal`). */
 export interface QuestionShowPayload {
   index: number;
@@ -298,6 +323,8 @@ export interface QuestionShowPayload {
   audioOnReveal?: true;
   /** Picture reveal effect (only with `imageUrl`; absent = none). */
   imageEffect?: Exclude<ImageEffect, 'none'>;
+  /** BLUFF: current stage (re-sent when the vote starts). */
+  bluff?: BluffShow;
   /** ORDER: the items, shuffled (never in the right order), as shown on the phones. */
   items?: string[];
   /** WHO_OF_US: the players one can vote for (everyone in the game). */
@@ -321,6 +348,8 @@ export interface QuestionPromptPayload {
   imageUrl?: string;
   /** WHO_OF_US: the players one can vote for (everyone in the game, oneself included). */
   candidates?: LobbyMember[];
+  /** BLUFF: writing or voting (a new prompt, with `timeLimitSec` = vote time, starts the vote). */
+  bluff?: BluffPrompt;
 }
 
 export interface AnswerCountPayload {
@@ -361,6 +390,11 @@ export interface RevealDetails {
   majorityBonus?: true;
   /** WORD_CLOUD: the words typed (grouped after normalization), most frequent first (top 40). */
   words?: { text: string; count: number }[];
+  /**
+   * BLUFF: the real answer and every option, in the order they will be revealed (the lies that
+   * fooled the fewest players first, the truth last).
+   */
+  bluff?: { truth: string; options: BluffOption[] };
 }
 
 export interface PinMark extends PinPoint {
@@ -420,6 +454,18 @@ export interface PlayerResultPayload {
   /** WHO_OF_US: votes the player got, and whether they voted for the most voted player. */
   votesReceived?: number;
   withMajority?: boolean;
+  /**
+   * BLUFF: `found` the truth; the players `fooled` by your lie and the points they earned you
+   * (included in `pointsEarned`); `fellFor` = authors of the lie you voted for.
+   */
+  bluff?: {
+    truth: string;
+    found: boolean;
+    lie?: string;
+    fooled: LobbyMember[];
+    fooledPoints: number;
+    fellFor?: LobbyMember[];
+  };
 }
 
 /** What a joker does to one phone's controls on the current question (that phone only). */

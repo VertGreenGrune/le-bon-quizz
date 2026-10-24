@@ -27,6 +27,7 @@ import {
   type PlayerState,
 } from './playerState';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
+import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 import {
@@ -300,6 +301,12 @@ function AnswerScreen({
   if (prompt.type === 'PIN' && prompt.imageUrl) return <PinAnswer imageUrl={prompt.imageUrl} />;
   if (prompt.type === 'WHO_OF_US' && prompt.candidates)
     return <WhoOfUsAnswer candidates={prompt.candidates} />;
+  if (prompt.type === 'BLUFF' && prompt.bluff)
+    return prompt.bluff.stage === 'write' ? (
+      <BluffWrite maxLength={prompt.bluff.maxLength} />
+    ) : (
+      <BluffVote prompt={prompt.bluff} hidden={effects.hiddenChoices ?? []} />
+    );
   if (effects.scrambled)
     return (
       <ScrambledButtons
@@ -471,6 +478,7 @@ function answerLabel(s: PlayerState): string | null {
 }
 
 function Answered({ s }: { s: PlayerState }) {
+  if (s.prompt?.type === 'BLUFF') return <BluffAnswered s={s} />;
   const more = s.myAnswer && !('choiceIndex' in s.myAnswer) && <MoreAnswered s={s} />;
   if (more) {
     return (
@@ -525,13 +533,19 @@ function Result({ s }: { s: PlayerState }) {
   if (r.poll) return <PollThanks s={s} voted={answered} />;
   // Partial points (order, pin close to the zone): not right, but not for nothing.
   const partial = !r.correct && r.pointsEarned > 0;
-  const title = r.correct
-    ? 'Correct !'
-    : partial
-      ? 'Presque !'
-      : answered
-        ? 'Raté !'
-        : 'Temps écoulé !';
+  const title = r.bluff
+    ? r.bluff.found
+      ? 'Vérité trouvée !'
+      : partial
+        ? 'Bien mythoné !'
+        : 'Piégé !'
+    : r.correct
+      ? 'Correct !'
+      : partial
+        ? 'Presque !'
+        : answered
+          ? 'Raté !'
+          : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
@@ -579,6 +593,7 @@ function Result({ s }: { s: PlayerState }) {
         answered && answerLabel(s) && <p className="font-bold">Ta réponse : {answerLabel(s)}</p>
       )}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
+      {r.bluff && <BluffResultLines bluff={r.bluff} />}
       {r.jokers && <JokerResultLines results={r.jokers} />}
       <motion.p
         initial={{ opacity: 0 }}

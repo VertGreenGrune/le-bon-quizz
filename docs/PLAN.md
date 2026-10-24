@@ -97,8 +97,23 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     voted player(s) (ties included) get +200 (`WHO_OF_US_MAJORITY_BONUS`), else 0.
   - `WORD_CLOUD` (nuage de mots, T27): free text ≤ 20 characters, grouped after normalization like
     typed answers; no right answer, 0 points, streak unchanged.
+  - `BLUFF` (« Mytho ! », T26, Fibbage-like): `truth` (≤ 40 characters) + `voteTimeSec` (5–120,
+    default 20; `timeLimitSec` default 45 = writing time). `ANSWERING` has two **stages** (same
+    phase, new timer — the pause, the 3-2-1 and the rejoin work as usual): **write** — each phone
+    sends a lie (`player:answer { text }`, stored, not scored, a new one replaces it; refused
+    with `LIE_TOO_CLOSE` when `matchesAnswer(lie, [truth], typoTolerance = true)`); ends when
+    every awaited player wrote one, on the timer or on `host:next` → **vote** — the lies (merged
+    after normalization, first spelling kept) + the truth, shuffled once, are the options; each
+    phone votes `{ choiceIndex }` (the scored answer, through `recordAnswer`), never for its own
+    lie (`INVALID_PAYLOAD`). Finding the truth = `basePoints` (correct, streak); each player who
+    voted for your lie = `basePoints × BLUFF_FOOL_SHARE` (+500), added at the reveal even without
+    a vote. No time points. Phones never get which option is true before the reveal. A kicked
+    player's lie is dropped while writing. Jokers: Copieur copies the vote (a copied vote for
+    one's own lie scores nothing), 50/50 hides half of the others' lies once the vote starts, Gel
+    blocks the first 5 s of the vote, no Brouilleur nor Sablier
+    (`apps/server/src/game/questionTypes/bluff.ts`).
   `POLL`, `WHO_OF_US` and `WORD_CLOUD` are the types without a right answer
-  (`NO_RIGHT_ANSWER_TYPES` / `hasRightAnswer`); the logic of the T27 types lives in
+  (`NO_RIGHT_ANSWER_TYPES` / `hasRightAnswer`); the logic of the T27 / T26 types lives in
   `apps/server/src/game/questionTypes/` (hooks in `Game.ts`).
   Team averages (below) apply to every type (a poll adds 0 to every team).
 - **Team mode** (`host:create` with `mode: 'teams'`, 2–4 teams = the first answer colors:
@@ -181,11 +196,11 @@ Every client → server event takes an ack callback receiving
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
-| `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider?, audio?, audioOnReveal?, imageEffect? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer; media of §3 "Media": `audio` = `{ url, startSec, durationSec }`, `audioOnReveal: true`, `imageEffect` = `blur` \| `zoom` \| `pixelate`, absent = none; ORDER `items` (shuffled, as on the phones), WHO_OF_US `candidates: LobbyMember[]`) |
-| `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) / `20` (WORD_CLOUD) \| `items` (ORDER, shuffled — never in the right order) \| `imageUrl` (PIN only — never the zone) \| `candidates: LobbyMember[]` (WHO_OF_US) — no text, no answer, no sound, no picture except PIN! |
+| `question:show` | host | `{ index, type, text, imageUrl?, choices: string[], timeLimitSec, slider?, audio?, audioOnReveal?, imageEffect? }` (`choices` empty for TYPE_ANSWER / SLIDER; `slider` = `{ min, max, step, unit? }`, never the answer; media of §3 "Media": `audio` = `{ url, startSec, durationSec }`, `audioOnReveal: true`, `imageEffect` = `blur` \| `zoom` \| `pixelate`, absent = none; ORDER `items` (shuffled, as on the phones), WHO_OF_US `candidates: LobbyMember[]`; BLUFF `bluff` = `{ stage: 'write' }` \| `{ stage: 'vote', options }` — re-sent when the vote starts, then with `timeLimitSec` = `voteTimeSec`) |
+| `question:prompt` | players | `{ index, type, timeLimitSec }` + `choiceCount` (choice types) \| `slider: { min, max, step, unit? }` \| `maxLength: 40` (TYPE_ANSWER) / `20` (WORD_CLOUD) \| `items` (ORDER, shuffled — never in the right order) \| `imageUrl` (PIN only — never the zone) \| `candidates: LobbyMember[]` (WHO_OF_US) \| `bluff` (BLUFF, per phone: `{ stage: 'write', maxLength: 40, lie? }`, then a new prompt `{ stage: 'vote', options, own? }` with `timeLimitSec` = `voteTimeSec` — never which option is true) — no text, no answer, no sound, no picture except PIN! |
 | `answer:count` | host | `{ answered, total }` |
-| `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars); ORDER `order: { items (right order), placed: number[] (players with the right item at each position) }`; PIN `pin: { imageUrl, zone, pins: { x, y, nickname, avatar, correct }[] }`; WHO_OF_US `votes: { nickname, avatar, count }[]` (most voted first) + `majorityBonus?: true`; WORD_CLOUD `words: { text, count }[]` (top 40) (`RevealDetails`) |
-| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL, WHO_OF_US, WORD_CLOUD: `correct` false; 0 points except the WHO_OF_US majority bonus) + SLIDER `yourValue?` (absent without an answer), `correctValue` + ORDER `placed?: { correct, total }` (partial points: `pointsEarned` > 0 with `correct` false, also for PIN near the zone) + WHO_OF_US `votesReceived`, `withMajority?` (absent without a vote) + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) |
+| `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars); ORDER `order: { items (right order), placed: number[] (players with the right item at each position) }`; PIN `pin: { imageUrl, zone, pins: { x, y, nickname, avatar, correct }[] }`; WHO_OF_US `votes: { nickname, avatar, count }[]` (most voted first) + `majorityBonus?: true`; WORD_CLOUD `words: { text, count }[]` (top 40); BLUFF `bluff: { truth, options: { text, truth, authors, voters }[] }` (lies that fooled the fewest first, truth last — the TV reveals them one by one) (`RevealDetails`) |
+| `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL, WHO_OF_US, WORD_CLOUD: `correct` false; 0 points except the WHO_OF_US majority bonus) + SLIDER `yourValue?` (absent without an answer), `correctValue` + ORDER `placed?: { correct, total }` (partial points: `pointsEarned` > 0 with `correct` false, also for PIN near the zone) + WHO_OF_US `votesReceived`, `withMajority?` (absent without a vote) + BLUFF `bluff: { truth, found, lie?, fooled, fooledPoints, fellFor? }` + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) |
 | `leaderboard` | host | `{ top: { nickname, avatar, score, jokers? }[], teams? }` (everyone, up to 15; `jokers` = `{ hand, used? }` in games with jokers; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
 | `podium` | all | `{ top: { nickname, avatar, score }[], teams? }` (top 3 players; all teams in team mode) |
 | `player:kicked` | that player | `{}` |
@@ -205,9 +220,9 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), createdAt, updatedAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
-  `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD`), timeLimitSec (default 20),
+  `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD` | `BLUFF`), timeLimitSec (default 20),
   basePoints (default 1000), config? (JSON: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
-  SLIDER `{ slider }`, ORDER `{ items }`, PIN `{ zone }`, WHO_OF_US `{ majorityBonus }`), audioUrl?, audioStartSec?,
+  SLIDER `{ slider }`, ORDER `{ items }`, PIN `{ zone }`, WHO_OF_US `{ majorityBonus }`, BLUFF `{ truth, voteTimeSec }`), audioUrl?, audioStartSec?,
   audioDurationSec?, audioOnReveal? (null = false), imageEffect? (`none` | `blur` | `zoom` |
   `pixelate`, null = none)
 - `Choice` — id, questionId, order (0–3), text, isCorrect (MCQ / TRUE_FALSE / POLL; always false
@@ -219,7 +234,7 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `QuestionResult` — id, gameSessionId, index, type (default MCQ), text, choices[],
   correctIndexes[], distribution[], playerCount, correctCount, answerCount? (null for older games
   = sum of distribution), details? (JSON `RevealDetails`: typed answers / slider guesses / order /
-  pins / votes / words)
+  pins / votes / words / lies)
   (snapshot of each revealed question, for the game report)
 
 Live game state stays in memory (`Map<pin, Game>`) in a single server process (small games: ~6 players, 15 max).

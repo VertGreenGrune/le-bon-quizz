@@ -12,6 +12,7 @@ import {
   type GameReport,
   type GameSummary,
   type QuestionPromptPayload,
+  type QuestionShowPayload,
   type Question,
   type Quiz,
   type RevealDetails,
@@ -406,5 +407,64 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     );
     // Order + pin right (1000 each, +100 streak bonus) + majority bonus (200).
     expect(report.results[0]).toMatchObject({ nickname: 'Alice', score: 2300, correctCount: 2 });
+  });
+
+  it('keeps a « Mytho ! » question and saves its lies, authors and voters', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Le premier court-métrage de Tim Burton ?',
+        type: 'BLUFF',
+        truth: 'Vincent',
+        timeLimitSec: 45,
+        voteTimeSec: 15,
+        basePoints: 1000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Mytho', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    let options: string[] = [];
+    const game = new Game('123456', quiz, {
+      ...noop,
+      toHost: (event, payload) => {
+        const show = payload as QuestionShowPayload;
+        if (event === 'question:show' && show.bluff?.stage === 'vote') options = show.bluff.options;
+      },
+    });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next();
+    game.answer(alice.id, 0, { text: 'Frankenweenie' });
+    game.answer(bob.id, 0, { text: 'Le Cavalier' });
+    game.answer(alice.id, 0, { choiceIndex: options.indexOf('Vincent') });
+    game.answer(bob.id, 0, { choiceIndex: options.indexOf('Frankenweenie') });
+    game.next();
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    const alicePlayer = { id: alice.id, nickname: 'Alice', avatar: 'batman' };
+    const bobPlayer = { id: bob.id, nickname: 'Bob', avatar: 'robin' };
+    expect(report.questions[0]).toMatchObject({ type: 'BLUFF', correctCount: 1, answerCount: 2 });
+    expect(report.questions[0]!.details).toEqual({
+      bluff: {
+        truth: 'Vincent',
+        options: [
+          { text: 'Le Cavalier', truth: false, authors: [bobPlayer], voters: [] },
+          { text: 'Frankenweenie', truth: false, authors: [alicePlayer], voters: [bobPlayer] },
+          { text: 'Vincent', truth: true, authors: [], voters: [alicePlayer] },
+        ],
+      },
+    });
+    // Truth (1000) + Bob fooled (500).
+    expect(report.results[0]).toMatchObject({ nickname: 'Alice', score: 1500, correctCount: 1 });
   });
 });

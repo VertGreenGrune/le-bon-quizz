@@ -18,3 +18,15 @@ describe('jokerAvailability (Wave 6: T27 question types)', () => {
     }
   });
 });
+
+describe('jokerAvailability (T26 « Mytho ! »)', () => {
+  it('Copieur, 50/50, Double ou rien… but no Brouilleur nor Sablier', () => {
+    expect(jokerAvailability('BLUFF')).toEqual({
+      jokers: true,
+      unavailable: ['scramble', 'hourglass'],
+      scramble: false,
+    });
+    for (const joker of ['copy', 'fifty', 'double', 'freeze', 'shield', 'thief'] as const)
+      expect(jokerAllowed('BLUFF', joker)).toBe(true);
+  });
+});

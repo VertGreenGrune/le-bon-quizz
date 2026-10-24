@@ -136,6 +136,9 @@ const AVAILABILITY: Record<QuestionType, JokerAvailability> = {
   PIN: { jokers: true, unavailable: ['fifty'], scramble: false },
   WHO_OF_US: { jokers: false, unavailable: [], scramble: false },
   WORD_CLOUD: { jokers: false, unavailable: [], scramble: false },
+  // « Mytho ! » (T26): Copieur copies the vote, 50/50 hides half of the lies; points don't
+  // depend on the speed (no Sablier); no buttons to scramble.
+  BLUFF: { jokers: true, unavailable: ['scramble', 'hourglass'], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = { jokers: false, unavailable: [], scramble: false };

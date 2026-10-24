@@ -19,24 +19,38 @@ import {
   shownItems,
   shuffleOrder,
 } from './order.js';
+import {
+  bluffBonus,
+  bluffPrompt,
+  bluffResult,
+  bluffReveal,
+  bluffShow,
+  judgeVote,
+  newBluff,
+  type BluffState,
+} from './bluff.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
 
 /**
- * The question types of T27 (ORDER, PIN, WHO_OF_US, WORD_CLOUD), kept out of `Game.ts`: it calls
- * these hooks for them, and its own code for the older types. Answers still go through
- * `Game.answer` and its scoring flow (time points, streak, team averages, pause).
+ * The question types of T27 (ORDER, PIN, WHO_OF_US, WORD_CLOUD) and T26 (BLUFF), kept out of
+ * `Game.ts`: it calls these hooks for them, and its own code for the older types. Answers still
+ * go through `Game.answer` and its scoring flow (time points, streak, team averages, pause).
  */
 export type ExtraQuestion = Extract<
   Question,
-  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' }
+  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
 
 export function isExtraQuestion(q: Question): q is ExtraQuestion {
   return (
-    q.type === 'ORDER' || q.type === 'PIN' || q.type === 'WHO_OF_US' || q.type === 'WORD_CLOUD'
+    q.type === 'ORDER' ||
+    q.type === 'PIN' ||
+    q.type === 'WHO_OF_US' ||
+    q.type === 'WORD_CLOUD' ||
+    q.type === 'BLUFF'
   );
 }
 
@@ -44,12 +58,16 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
 export interface QuestionSetup {
   /** ORDER: `display[shown index]` = index in the right order. Empty for the other types. */
   display: number[];
+  /** BLUFF: the lies, then the options of the vote. */
+  bluff?: BluffState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
 
 export function prepareQuestion(q: Question, random: () => number = Math.random): QuestionSetup {
-  return q.type === 'ORDER' ? { display: shuffleOrder(q.items.length, random) } : NO_SETUP;
+  if (q.type === 'ORDER') return { display: shuffleOrder(q.items.length, random) };
+  if (q.type === 'BLUFF') return { display: [], bluff: newBluff() };
+  return NO_SETUP;
 }
 
 const lobbyMember = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
@@ -62,6 +80,10 @@ export function extraShowFields(
 ): Partial<QuestionShowPayload> {
   if (q.type === 'ORDER') return { items: shownItems(q, setup.display) };
   if (q.type === 'WHO_OF_US') return { candidates: [...players].map(lobbyMember) };
+  if (q.type === 'BLUFF') {
+    const bluff = bluffShow(setup.bluff!);
+    return bluff.stage === 'vote' ? { bluff, timeLimitSec: q.voteTimeSec } : { bluff };
+  }
   return {};
 }
 
@@ -70,6 +92,8 @@ export function extraPromptFields(
   q: ExtraQuestion,
   setup: QuestionSetup,
   players: Iterable<Player>,
+  /** BLUFF: the prompt is per player (own lie). */
+  playerId = '',
 ): Partial<QuestionPromptPayload> {
   switch (q.type) {
     case 'ORDER':
@@ -80,6 +104,11 @@ export function extraPromptFields(
       return { candidates: [...players].map(lobbyMember) };
     case 'WORD_CLOUD':
       return { maxLength: WORD_CLOUD_MAX_LENGTH };
+    case 'BLUFF': {
+      // The vote has its own time limit: the phone's countdown and Gel are computed from it.
+      const bluff = bluffPrompt(setup.bluff!, playerId);
+      return bluff.stage === 'vote' ? { bluff, timeLimitSec: q.voteTimeSec } : { bluff };
+    }
   }
 }
 
@@ -90,6 +119,7 @@ export function judgeExtra(
   timePoints: number,
   setup: QuestionSetup,
   players: ReadonlyMap<string, Player>,
+  playerId = '',
 ): Omit<Answer, 'responseMs'> {
   const none = { choiceIndex: null, text: null, value: null };
   const invalid = (message: string) => new GameError('INVALID_PAYLOAD', message);
@@ -117,7 +147,25 @@ export function judgeExtra(
       const text = given.text.trim().slice(0, WORD_CLOUD_MAX_LENGTH);
       return { ...none, text, correct: false, points: 0 };
     }
+    case 'BLUFF':
+      // The lies are stored by `Game.answer` (stage 1); this is the vote (stage 2).
+      if (!('choiceIndex' in given)) throw invalid('Vote pour une des réponses');
+      return {
+        ...none,
+        choiceIndex: given.choiceIndex,
+        ...judgeVote(q, setup.bluff!, playerId, given.choiceIndex),
+      };
   }
+}
+
+/** Points that don't come from the player's own answer (BLUFF: players fooled by their lie). */
+export function extraBonusPoints(
+  q: ExtraQuestion,
+  setup: QuestionSetup,
+  player: Player,
+  players: Iterable<Player>,
+): number {
+  return q.type === 'BLUFF' ? bluffBonus(q, setup.bluff!, player, players) : 0;
 }
 
 /** Before scoring the reveal: WHO_OF_US majority bonus. */
@@ -173,8 +221,12 @@ export function extraRevealDetails(
     }
     case 'WORD_CLOUD':
       return { words: wordCloud(answers.flatMap(({ answer }) => answer.text ?? [])) };
+    case 'BLUFF':
+      return bluffReveal(q, setup.bluff!, byId(players));
   }
 }
+
+const byId = (players: Iterable<Player>) => new Map([...players].map((p) => [p.id, p]));
 
 /** Type-specific part of a player's `player:result`. */
 export function extraResultFields(
@@ -184,6 +236,7 @@ export function extraResultFields(
   players: Iterable<Player>,
 ): Partial<PlayerResultPayload> {
   const answer = player.answer;
+  if (q.type === 'BLUFF') return bluffResult(q, setup.bluff!, player, byId(players));
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {
