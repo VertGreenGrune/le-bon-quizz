@@ -1393,7 +1393,7 @@ Ports: server `30<nn>` / web `52<nn>` with `nn` = task number (e.g. T25 → 3025
   per correct guess. Word lists in the editor (or a built-in French list).
 
 ### T33 — Showcase quiz « Harry Potter — niveau expert » (content, after T28)
-- **Status:** todo
+- **Status:** in-progress (T33 agent, worktree ../lbq-T33)
 - **Depends on:** T28 merged (the buzzer must be in it). Content only — can run in parallel with
   T30 (T30 then adds one `DRAW` question to this quiz, see below).
 - **Scope:** `content/quizzes/harry-potter/**` (`quiz.json`, freely licensed media, `CREDITS.md`,
