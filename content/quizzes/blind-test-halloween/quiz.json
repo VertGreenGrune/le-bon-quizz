@@ -64,7 +64,7 @@
       "text": "🎵 Dans la version originale, qui prête sa voix chantée au héros de ce film ?",
       "timeLimitSec": 30,
       "basePoints": 1000,
-      "audio": { "url": "audio/06-etrange-noel.mp3", "startSec": 5, "durationSec": 20 },
+      "audio": { "url": "audio/06-etrange-noel.mp3", "startSec": 0, "durationSec": 20 },
       "acceptedAnswers": ["Danny Elfman", "Elfman"],
       "typoTolerance": true
     },
