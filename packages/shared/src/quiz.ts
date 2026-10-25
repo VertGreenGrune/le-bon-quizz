@@ -53,7 +53,7 @@ export const WHO_OF_US_MAJORITY_BONUS = 200;
 /** Smallest / largest PIN zone radius, as a fraction of the picture (see `PinZoneSchema`). */
 export const PIN_MIN_RADIUS = 0.02;
 export const PIN_MAX_RADIUS = 0.5;
-export const MAX_ACCEPTED_ANSWERS = 3;
+export const MAX_ACCEPTED_ANSWERS = 10;
 /** « Mytho ! »: length of the true answer and of the lies. */
 export const BLUFF_MAX_LENGTH = 40;
 /** « Mytho ! »: default writing time (`timeLimitSec`) and voting time (`voteTimeSec`). */

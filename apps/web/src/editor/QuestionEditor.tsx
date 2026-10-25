@@ -364,12 +364,15 @@ function ChoicesField({ q, err, onChange }: FieldProps) {
   );
 }
 
-/** Réponse libre: 1–3 accepted answers + typo tolerance. */
+/** Réponse libre: 1 to `MAX_ACCEPTED_ANSWERS` accepted answers + typo tolerance. */
 function AcceptedAnswersField({ q, err, onChange }: FieldProps) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-bold text-gray-600">
         Réponses acceptées{' '}
+        <span className="font-normal text-gray-400">
+          ({q.acceptedAnswers.length} / {MAX_ACCEPTED_ANSWERS})
+        </span>{' '}
         <span className="font-normal text-gray-400">
           — majuscules, accents, ponctuation et article (le, la, l’…) ne comptent pas
         </span>
@@ -403,7 +406,7 @@ function AcceptedAnswersField({ q, err, onChange }: FieldProps) {
           </div>
         );
       })}
-      {q.acceptedAnswers.length < MAX_ACCEPTED_ANSWERS && (
+      {q.acceptedAnswers.length < MAX_ACCEPTED_ANSWERS ? (
         <button
           type="button"
           className={`${btn.ghost} self-start`}
@@ -411,6 +414,10 @@ function AcceptedAnswersField({ q, err, onChange }: FieldProps) {
         >
           + Ajouter une variante
         </button>
+      ) : (
+        <p className="text-sm text-gray-500">
+          Maximum atteint : {MAX_ACCEPTED_ANSWERS} réponses acceptées.
+        </p>
       )}
       <FieldError message={err('.acceptedAnswers')} />
       <label className="flex items-center gap-2 self-start font-semibold">

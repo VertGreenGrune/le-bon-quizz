@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_QUIZ } from '@lbq/shared';
+import { DEMO_QUIZ, MAX_ACCEPTED_ANSWERS } from '@lbq/shared';
 import {
   addAcceptedAnswer,
   addChoice,
@@ -161,7 +161,9 @@ describe('new question types', () => {
       acceptedAnswers: ['Pacifique'],
       typoTolerance: true,
     });
-    expect(addAcceptedAnswer(typed)).toBe(typed); // 3 at most
+    let full = typed;
+    while (full.acceptedAnswers.length < MAX_ACCEPTED_ANSWERS) full = addAcceptedAnswer(full);
+    expect(addAcceptedAnswer(full)).toBe(full); // MAX_ACCEPTED_ANSWERS at most
 
     const tooLong = updateAcceptedAnswer(typed, 2, 'x'.repeat(41));
     const res = validateDraft(draftWith(tooLong));

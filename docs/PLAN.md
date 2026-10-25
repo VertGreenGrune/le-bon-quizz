@@ -72,7 +72,7 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
 - **Question types** (`Question.type`): `MCQ` and `TRUE_FALSE` (shape buttons, ≥ 1 correct
   choice), plus:
   - `TYPE_ANSWER` (réponse libre): players type ≤ 40 characters; correct if it matches one of the
-    1–3 `acceptedAnswers` after normalizing both sides (trim, lower case, no accents /
+    1–10 `acceptedAnswers` (`MAX_ACCEPTED_ANSWERS`) after normalizing both sides (trim, lower case, no accents /
     punctuation / extra spaces, leading article le/la/les/l'/un/une/des ignored). With
     `typoTolerance` (default on) a Levenshtein distance of 1 is accepted for normalized answers
     of 5–9 characters, 2 for 10+; answers containing a digit must match exactly

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEMO_QUIZ,
+  MAX_ACCEPTED_ANSWERS,
   PlayerAnswerPayload,
   PlayerJoinPayload,
   QuestionSchema,
@@ -85,13 +86,15 @@ describe('shared schemas', () => {
     expect(q.type).toBe('MCQ');
   });
 
-  it('validates typed answers: 1–3 accepted answers of 40 characters max, tolerance on by default', () => {
+  it('validates typed answers: 1–10 accepted answers of 40 characters max, tolerance on by default', () => {
     const typed = (acceptedAnswers: string[]) =>
       QuestionSchema.safeParse({ text: 'Q', type: 'TYPE_ANSWER', acceptedAnswers });
     const ok = typed(['Pacifique']);
     expect(ok.success && ok.data.type === 'TYPE_ANSWER' && ok.data.typoTolerance).toBe(true);
     expect(typed([]).success).toBe(false);
-    expect(typed(['a', 'b', 'c', 'd']).success).toBe(false);
+    const many = (n: number) => Array.from({ length: n }, (_, i) => `réponse ${i + 1}`);
+    expect(typed(many(MAX_ACCEPTED_ANSWERS)).success).toBe(true);
+    expect(typed(many(MAX_ACCEPTED_ANSWERS + 1)).success).toBe(false);
     expect(typed(['  ']).success).toBe(false);
     expect(typed(['x'.repeat(41)]).success).toBe(false);
   });
