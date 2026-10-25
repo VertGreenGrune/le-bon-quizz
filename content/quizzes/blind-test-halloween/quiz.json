@@ -1,0 +1,272 @@
+{
+  "title": "Blind test d'Halloween",
+  "description": "25 musiques de films de sorcières, de fantômes et de monstres : buzzer, choix multiples, réponses libres et une carte du monde. Ouvrez grand les oreilles !",
+  "coverImageUrl": "images/world-map.jpg",
+  "questions": [
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 Buzzez et nommez ce film d'animation !",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/01-hotel-transylvanie.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Hôtel Transylvanie", "Hotel Transylvania", "Hôtel Transylvania"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Blind test au buzzer 🔔 Dans la scène de cette chanson, on fête la mort d'une sorcière. Laquelle ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/02-magicien-d-oz.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "La Méchante Sorcière de l'Est", "isCorrect": true },
+        { "text": "La Méchante Sorcière de l'Ouest", "isCorrect": false },
+        { "text": "Glinda, la Bonne Sorcière du Nord", "isCorrect": false },
+        { "text": "La Sorcière blanche de Narnia", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "🎵 Qui a écrit la musique et les paroles de cette chanson de comédie musicale ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/03-wicked.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Stephen Schwartz", "Schwartz"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 En quelle année ce film culte est-il sorti au cinéma ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/04-rocky-horror.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "1973", "isCorrect": false },
+        { "text": "1975", "isCorrect": true },
+        { "text": "1978", "isCorrect": false },
+        { "text": "1981", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 Qui interprète ce morceau, récompensé… par un Razzie Award ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/05-famille-addams.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["MC Hammer", "Hammer", "M C Hammer"],
+      "typoTolerance": true
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "🎵 Dans la version originale, qui prête sa voix chantée au héros de ce film ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/06-etrange-noel.mp3", "startSec": 5, "durationSec": 20 },
+      "acceptedAnswers": ["Danny Elfman", "Elfman"],
+      "typoTolerance": true
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "🎵 Ce film d'animation a mis des images sur une œuvre classique. Qui en est le compositeur ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/07-fantasia.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Moussorgski", "Modeste Moussorgski", "Mussorgsky"],
+      "typoTolerance": true
+    },
+    {
+      "type": "PIN",
+      "text": "📍 Écoutez ! Dans quel pays se déroule ce film ? Touchez-le sur la carte.",
+      "imageUrl": "images/world-map.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/08-coco.mp3", "startSec": 0, "durationSec": 20 },
+      "zone": { "x": 0.2153, "y": 0.3694, "radius": 0.04 }
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 Buzzez et nommez le film !",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/09-casper.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Casper"],
+      "typoTolerance": true
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 Buzzez et nommez le compositeur de cette musique !",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/10-fantome-de-l-opera.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Andrew Lloyd Webber", "Lloyd Webber"],
+      "typoTolerance": true
+    },
+    {
+      "type": "PIN",
+      "text": "📍 Écoutez ! Dans quelle ville se déroule ce film ? Touchez-la sur la carte.",
+      "imageUrl": "images/world-map.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/11-hocus-pocus.mp3", "startSec": 0, "durationSec": 20 },
+      "zone": { "x": 0.3031, "y": 0.2638, "radius": 0.03 }
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 De quel film de la saga vient ce morceau joué à la flûte à bec ?",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "audio": { "url": "audio/12-harry-potter-azkaban.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Harry Potter à l'école des sorciers", "isCorrect": false },
+        { "text": "Harry Potter et la Chambre des secrets", "isCorrect": false },
+        { "text": "Harry Potter et le Prisonnier d'Azkaban", "isCorrect": true },
+        { "text": "Harry Potter et la Coupe de feu", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 Ce thème accompagne l'arrivée de l'héroïne dans une ville au bord de la mer. Quel métier y exerce-t-elle ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "audio": { "url": "audio/13-kiki.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Elle livre des colis sur son balai", "isCorrect": true },
+        { "text": "Elle tient une boulangerie", "isCorrect": false },
+        { "text": "Elle vend des potions au marché", "isCorrect": false },
+        { "text": "Elle est apprentie horlogère", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 Quelle actrice joue la Grande Sorcière dans ce film ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "audio": { "url": "audio/14-les-sorcieres.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Anjelica Huston", "isCorrect": true },
+        { "text": "Meryl Streep", "isCorrect": false },
+        { "text": "Bette Midler", "isCorrect": false },
+        { "text": "Glenn Close", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 Buzzez et nommez le film !",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/15-chateau-ambulant.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Le Château ambulant", "Château ambulant", "Howl's Moving Castle"],
+      "typoTolerance": true
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "🎵 Qui a réalisé le film dont voici le générique ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "audio": { "url": "audio/16-sleepy-hollow.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Tim Burton", "Burton"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 Cette musique de film d'animation est signée par un compositeur français. Lequel ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "audio": { "url": "audio/17-coraline.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Alexandre Desplat", "isCorrect": false },
+        { "text": "Bruno Coulais", "isCorrect": true },
+        { "text": "Éric Serra", "isCorrect": false },
+        { "text": "Michel Legrand", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 Quel compositeur, deux fois oscarisé, signe cette musique ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "audio": { "url": "audio/18-legende-de-manolo.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Michael Giacchino", "isCorrect": false },
+        { "text": "Alan Silvestri", "isCorrect": false },
+        { "text": "Gustavo Santaolalla", "isCorrect": true },
+        { "text": "Hans Zimmer", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "PIN",
+      "text": "📍 Écoutez cette berceuse ! Dans quelle région se déroule ce film ? Touchez-la sur la carte.",
+      "imageUrl": "images/world-map.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/19-frankenstein-junior.mp3", "startSec": 0, "durationSec": 20 },
+      "zone": { "x": 0.5681, "y": 0.2417, "radius": 0.025 }
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "🎵 Qui a réalisé ce film ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/20-dracula.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Francis Ford Coppola", "Coppola"],
+      "typoTolerance": true
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "🎵 Ce dessin animé Disney de 1949 est raconté et chanté par un célèbre crooner. Lequel ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "audio": { "url": "audio/21-crapaud-maitre-d-ecole.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Bing Crosby", "Crosby"],
+      "typoTolerance": true
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 De quelle bande dessinée viennent les personnages de ce dessin animé ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": { "url": "audio/22-grande-citrouille.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Peanuts", "Snoopy", "Charlie Brown"],
+      "typoTolerance": true
+    },
+    {
+      "type": "PIN",
+      "text": "📍 Écoutez ! Dans quel pays se déroule ce film ? Touchez-le sur la carte.",
+      "imageUrl": "images/world-map.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "audio": { "url": "audio/23-la-momie.mp3", "startSec": 0, "durationSec": 20 },
+      "zone": { "x": 0.5856, "y": 0.3511, "radius": 0.03 }
+    },
+    {
+      "type": "MCQ",
+      "text": "🎵 Dans quel État américain se déroule ce film ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "audio": { "url": "audio/24-twilight.mp3", "startSec": 0, "durationSec": 20 },
+      "choices": [
+        { "text": "Oregon", "isCorrect": false },
+        { "text": "Washington", "isCorrect": true },
+        { "text": "Maine", "isCorrect": false },
+        { "text": "Alaska", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Grande finale au buzzer 🔔 Buzzez et nommez le film !",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "buzzer": true,
+      "audio": { "url": "audio/25-labyrinthe.mp3", "startSec": 0, "durationSec": 20 },
+      "acceptedAnswers": ["Labyrinthe", "Labyrinth"],
+      "typoTolerance": true
+    }
+  ]
+}

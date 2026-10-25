@@ -1605,7 +1605,7 @@ l'image** (a picture with many characters, find a precise one), **« Mytho ! »*
   the picture —, the bluffs and the drawings), then delete that test game.
 
 ### T36 — Content: « Blind test d'Halloween » (25 film excerpts)
-- **Status:** in-progress (claude-T36, worktree ../lbq-T36)
+- **Status:** done
 - **Depends on:** — Content only; can run in parallel with T34 / T35 (separate folder, ports
   3036 / 5236, different title).
 - **Scope:** `content/quizzes/blind-test-halloween/**` (`quiz.json`, map picture, `CREDITS.md`,
@@ -1677,6 +1677,35 @@ these question types only: **Buzzer, choix multiple, réponse libre, point sur l
   map), generate short **test tones** in place of the missing MP3s (like T33), then delete the test
   game and the test tones and **re-import without sound**, so the user's own files are used once
   they add them.
+
+- **Summary:** `content/quizzes/blind-test-halloween/` — `quiz.json` « Blind test d'Halloween »,
+  exactly 25 questions, one per excerpt in the spec's order, each with its sound during the
+  question (`audio/NN-slug.mp3`, 20 s, looped): **8 buzzer** (1, 2, 5, 9, 10, 15, 22, 25 — 7 réponse
+  libre + 1 choix multiple; 25 = 2000-point finale), **7 choix multiple** (4, 12, 13, 14, 17, 18,
+  24), **6 réponse libre** (3, 6, 7, 16, 20, 21; typo tolerance, French + original spellings),
+  **4 point sur l'image** on one world map (8 Coco → Mexique, 11 Hocus Pocus → Salem, 19
+  Frankenstein Junior → Transylvanie, 23 La Momie → Égypte). What is asked varies: film, composer,
+  performer / singer, director, year (Rocky Horror 1975 vs the 1973 stage show), character (which
+  witch died), the heroine's job, the actress, a US state (Twilight: Washington vs Oregon where it
+  was filmed), country / city; no text gives the answer. 1000 points, 2000 for 12, 17, 18, 21, 25;
+  20–30 s. Map: Commons « World location map (equirectangular 180) » (TUBS, CC BY-SA 3.0, borders,
+  no names), 1600 × 800 JPEG, also the cover; zones computed from lon / lat and checked drawn on the
+  picture. `README.md`: question table, the 25 files with their recommended excerpts (before the
+  sung title for Time Warp, Defying Gravity, Addams Groove, Magic Dance, organ intro for the
+  Phantom…), how to adjust `startSec`, import, how to play. `CREDITS.md`: the files + excerpts, the
+  map credit + zone maths, every answer with its source (Wikipedia film / soundtrack pages,
+  AFI, Sony, Classic FM, Tampa Bay Times for the Razzie…). `audio/.gitignore` keeps the user's
+  music out of git. No app code changed. Imported for loicmoster@hotmail.fr (private) with 25
+  generated test tones, played once with a scripted socket game on :3036 (host + 3 phones, all 25
+  questions to the podium: every buzzer judged ❌ then ✅ with `BUZZER_TAKEN` checked, typed answers
+  with a missing letter / lower case without accents accepted, map pins in / near (partial) / far,
+  phones got the map URL and never an answer, zone or sound, report saved with 25 questions) — then
+  the test game, its temporary session, the tones and their uploaded copies were deleted and the
+  quiz re-imported without sound (25 questions, 0 sounds).
+- **Follow-ups:** (1) add the 25 MP3s listed in `README.md` and re-run the import; check the
+  excerpt starts (`startSec`, all 0 except Jack's Lament at 5 s — best effort, depends on the
+  version) so no sung title gives the answer away. (2) The map is CC BY-SA: keep the credit if the
+  quiz is ever made public.
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
