@@ -231,6 +231,8 @@ export interface GameQuestionReport {
   answerCount: number;
   /** TYPE_ANSWER / SLIDER: same as in `question:reveal` (accepted answers, guesses…). */
   details: RevealDetails;
+  /** « 💡 Le saviez-vous ? » (absent: none, or a game saved before explanations existed). */
+  explanation?: string;
 }
 
 /** `questions` is empty for games saved before per-question results existed. */

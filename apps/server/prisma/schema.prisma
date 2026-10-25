@@ -110,6 +110,8 @@ model Question {
   imageEffect      ImageEffect?
   /// « Buzzer » (T28): phones get a BUZZ button, the host judges the answer said out loud.
   buzzer           Boolean      @default(false)
+  /// « 💡 Le saviez-vous ? » (T37): shown from the reveal on; null = none.
+  explanation      String?
 
   @@unique([quizId, order])
 }
@@ -219,6 +221,8 @@ model QuestionResult {
   /// Type-specific reveal details (`RevealDetails` in @lbq/shared: typed answers, slider
   /// guesses, order, pins, votes, words); null otherwise.
   details        Json?
+  /// The question's explanation when it was played (T37); null = none / older games.
+  explanation    String?
 
   @@unique([gameSessionId, index])
 }

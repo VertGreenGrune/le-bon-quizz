@@ -1762,7 +1762,7 @@ these question types only: **Buzzer, choix multiple, réponse libre, point sur l
   quiz is ever made public.
 
 ### T37 — Answer explanations + « select all » multiple-answer questions (run alone)
-- **Status:** in-progress (claude-T37, worktree ../lbq-T37)
+- **Status:** done
 - **Depends on:** — (everything merged). Touches shared, server, editor, TV, phones, reports, DB.
 - **Ports:** server 3037 / web 5237, test DB `lbq_test_t37`, e2e DB `lbq_e2e_t37`.
 
@@ -1812,6 +1812,43 @@ jokers 50/50 + Copieur + Brouilleur, team / Survie, rejoin), editor draft (expla
 hint), phone reducer (toggles, validate); e2e: a multiple-answer question where one phone selects
 the exact set (correct) and another a subset (wrong), then the explanation on the TV, the phones and
 the report.
+
+- **Summary:** shared (`quiz.ts`): `questionBase.explanation?` (≤ `EXPLANATION_MAX_LENGTH` 300,
+  trimmed), helpers `questionExplanation(q)` (blank = none) and `isMultipleAnswer(q)` (MCQ with 2+
+  right choices, not au buzzer). Contract (`events.ts`, additive): `player:answer` /
+  `AnswerInput` gain `choiceIndexes` (1–4 indexes), `question:prompt.multiple?` and
+  `question:show.multiple?`, `question:reveal.explanation?`, `RevealDetails.multiple { allFound }`,
+  `player:result.multiple { correctIndexes, yours? }` + `explanation?`; `api.ts`
+  `GameQuestionReport.explanation?`. Server (`Game.ts`): `judgeMultiple` (exact set → time points,
+  else 0; duplicates / unknown index / single `choiceIndex` → `INVALID_PAYLOAD`, `choiceIndexes`
+  on another question → `INVALID_PAYLOAD`), `Answer.choiceIndexes`, every ticked choice counted in
+  `distribution`, explanation only in the reveal / results (both resyncs re-send them) and in
+  `QuestionStats.explanation`. Jokers needed no change (50/50 hides wrong choices, Copieur replays
+  the `AnswerInput`, Brouilleur effect unchanged). DB: migration `20261025120000_explanations`
+  (`Question.explanation`, `QuestionResult.explanation`), mapped in `quizzes.service.ts` (so the
+  import script, copies, duplicates and the library keep it) and returned by `/api/games/:id`.
+  Editor: « 💡 Explication (affichée après la réponse) » textarea with a counter under the
+  question, « ☑️ Plusieurs bonnes réponses : les joueurs devront toutes les cocher pour marquer »
+  hint (`isMultipleAnswerDraft`). Phone (`player/multiAnswer.tsx`): toggles with ✓ + white ring
+  (grey text buttons with a Brouilleur, 50/50 empty slots), « Plusieurs réponses possibles — coche
+  toutes les bonnes », « Valider (n) » disabled until one is ticked (reducer `toggleChoice` /
+  `selectedChoices`, store `toggleChoice` / `validateChoices`), « Réponse envoyée ! » with the
+  ticked shapes, result « Il fallait cocher : … » and « 💡 Le saviez-vous ? » (result screens now
+  scroll). TV: « ☑️ Plusieurs réponses possibles » while answering, « n joueurs ont tout trouvé »
+  under the bars, « 💡 Le saviez-vous ? » card after the reveal animation (instant after a reload,
+  every type). Reports: explanation on each question card, « n joueur(s) ont tout coché juste ».
+  PLAN.md §3–§5. Tests: `Game.multiple.test.ts` (13: no explanation before the reveal / in reveal,
+  result, stats, typed type, host resync; prompt / show `multiple`; exact / subset / superset /
+  wrong; refused payloads; speed points from the validation + streak; rejoin; teams; Survie;
+  50/50, Copieur, Brouilleur), persistence (explanations round trip + saved report with the
+  « select all » count, Postgres), shared schema tests, `draft.explanation.test.ts`,
+  `playerState.multiple.test.ts`; e2e `e2e/explanations.spec.ts` (editor field + hint, Alice exact
+  set → correct, Bob a subset → wrong, no explanation in phone frames before the reveal, TV /
+  phones / host reload / report). Checked with screenshots (host 1600×900, Pixel 7).
+- **Notes:** (1) The TV gets `multiple` in `question:show` too (for its hint). (2) A refused
+  « Valider » keeps the ticks; a reload loses them (as specified). (3) CSV unchanged (it only
+  lists the ranking). **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on
+  real phones.
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
@@ -2046,3 +2083,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   tappable); a tap (< 8 px of movement) places the pin, a drag never does; the pin is measured on
   the picture as displayed (its bounding box includes the zoom), so the answer is the same picture
   fraction; the mark keeps its size. `e2e/question-types.spec.ts` drags, zooms and lands in the zone.
+- 2026-10-25, T37 agent (additive, PLAN.md §3–§5): `Question.explanation?` +
+  `EXPLANATION_MAX_LENGTH`, `questionExplanation`, `isMultipleAnswer`; `PlayerAnswerPayload` /
+  `AnswerInput` gain `{ choiceIndexes }` (code switching on the answer kind must handle it);
+  `QuestionPromptPayload.multiple?`, `QuestionShowPayload.multiple?`,
+  `QuestionRevealPayload.explanation?`, `RevealDetails.multiple?`,
+  `PlayerResultPayload.multiple?` / `explanation?`, `GameQuestionReport.explanation?`.
+  `QuestionStats` (server) gains `explanation` (**required**, null = none). Prisma migration
+  `20261025120000_explanations`. `testing.ts` `rightAnswer` / `wrongAnswer` return `choiceIndexes`
+  for a « select all » MCQ.

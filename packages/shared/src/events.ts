@@ -120,13 +120,18 @@ export const PlayerRejoinPayload = z.object({ pin: Pin, sessionToken: z.string()
 export const PlayerTeamPayload = z.object({ pin: Pin, teamId: TeamId });
 const answerTarget = { pin: Pin, questionIndex: z.number().int().min(0) };
 /**
- * Exactly one of `choiceIndex` (MCQ, TRUE_FALSE, POLL), `text` (TYPE_ANSWER, WORD_CLOUD), `value`
+ * Exactly one of `choiceIndex` (MCQ, TRUE_FALSE, POLL), `choiceIndexes` (MCQ with
+ * `question:prompt.multiple`: every choice the player ticked), `text` (TYPE_ANSWER, WORD_CLOUD), `value`
  * (SLIDER), `order` (ORDER: indexes of `question:prompt.items`, first to last), `point` (PIN:
  * picture fractions) or `playerId` (WHO_OF_US: the player voted for). The server answers
  * `INVALID_PAYLOAD` if the kind doesn't match the question.
  */
 export const PlayerAnswerPayload = z.union([
   z.strictObject({ ...answerTarget, choiceIndex: z.number().int().min(0).max(3) }),
+  z.strictObject({
+    ...answerTarget,
+    choiceIndexes: z.array(z.number().int().min(0).max(3)).min(1).max(4),
+  }),
   z.strictObject({
     ...answerTarget,
     text: z.string().trim().min(1).max(TYPE_ANSWER_MAX_LENGTH),
@@ -195,6 +200,7 @@ export type PlayerHauntPayload = z.infer<typeof PlayerHauntPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput =
   | { choiceIndex: number }
+  | { choiceIndexes: number[] }
   | { text: string }
   | { value: number }
   | { order: number[] }
@@ -428,6 +434,8 @@ export interface QuestionShowPayload {
   timeLimitSec: number;
   /** SLIDER: the range shown during the question. */
   slider?: SliderPrompt;
+  /** MCQ with 2+ right choices: « Plusieurs réponses possibles » (like the phones' prompt). */
+  multiple?: true;
   /** Sound clip played by the host screen (never sent to the phones). */
   audio?: QuestionAudio;
   /** Play `audio` at REVEAL instead of during ANSWERING. */
@@ -478,6 +486,11 @@ export interface QuestionPromptPayload {
   timeLimitSec: number;
   /** Choice types (MCQ, TRUE_FALSE, POLL): number of shape buttons. */
   choiceCount?: number;
+  /**
+   * MCQ with 2+ right choices (« select all », `isMultipleAnswer`): the shapes are toggles and the
+   * answer is sent with « Valider » as `choiceIndexes` — never which ones nor how many are right.
+   */
+  multiple?: true;
   /** SLIDER: range of the slider. */
   slider?: SliderPrompt;
   /** TYPE_ANSWER / WORD_CLOUD: max length of the typed answer. */
@@ -543,6 +556,8 @@ export interface RevealDetails {
   buzzer?: BuzzerReveal;
   /** DRAW: the word, the drawer, the whole drawing (vector) and who found it, fastest first. */
   draw?: DrawReveal;
+  /** « Select all » MCQ: how many players ticked exactly the right choices. */
+  multiple?: { allFound: number };
 }
 
 export interface DrawReveal {
@@ -576,8 +591,13 @@ export interface QuestionRevealPayload extends RevealDetails {
   type: QuestionType;
   /** Correct choice indexes (empty for POLL, TYPE_ANSWER and SLIDER). */
   correctIndexes: number[];
-  /** Number of players who picked each choice index (empty for TYPE_ANSWER / SLIDER). */
+  /**
+   * Number of players who picked each choice index (empty for TYPE_ANSWER / SLIDER). « Select
+   * all »: every ticked choice counts (a player can be in several bars).
+   */
   distribution: number[];
+  /** « 💡 Le saviez-vous ? »: the question's explanation (never sent before the reveal). */
+  explanation?: string;
   /** SLIDER: same as `slider.correct` / `slider.margin`. */
   correct?: number;
   margin?: number;
@@ -649,6 +669,13 @@ export interface PlayerResultPayload {
    * DRAW_FINDER_SHARE × basePoints per finder); `finders` = players who found it.
    */
   draw?: { word: string; drawer?: LobbyMember; drew: boolean; found: boolean; finders: number };
+  /**
+   * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks
+   * (absent without an answer).
+   */
+  multiple?: { correctIndexes: number[]; yours?: number[] };
+  /** « 💡 Le saviez-vous ? »: the question's explanation. */
+  explanation?: string;
 }
 
 /** What a joker does to one phone's controls on the current question (that phone only). */

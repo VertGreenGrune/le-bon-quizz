@@ -1,4 +1,5 @@
 import {
+  EXPLANATION_MAX_LENGTH,
   SHAPES,
   TYPE_ANSWER_MAX_LENGTH,
   buzzerAllowed,
@@ -23,6 +24,7 @@ import {
   addAcceptedAnswer,
   addChoice,
   duplicateQuestion,
+  isMultipleAnswerDraft,
   moveQuestion,
   removeAcceptedAnswer,
   removeChoice,
@@ -155,6 +157,26 @@ export function QuestionEditor({
           className={`resize-none rounded-lg border-2 px-3 py-2 text-center text-xl font-bold outline-none focus:border-brand ${err('.text') ? 'border-answer-red' : 'border-gray-300'}`}
         />
         <FieldError message={err('.text')} />
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="flex justify-between text-sm font-bold text-gray-600">
+          💡 Explication (affichée après la réponse)
+          <span className="font-normal text-gray-400">
+            {q.explanation.length} / {EXPLANATION_MAX_LENGTH}
+          </span>
+        </span>
+        <textarea
+          value={q.explanation}
+          maxLength={EXPLANATION_MAX_LENGTH}
+          rows={2}
+          placeholder="Facultatif : une anecdote, le pourquoi de la réponse… (« Le saviez-vous ? » sur l'écran et les téléphones)"
+          onChange={(e) => onChange({ ...q, explanation: e.target.value })}
+          aria-label="Explication"
+          aria-invalid={!!err('.explanation')}
+          className={`resize-none rounded-lg border-2 px-3 py-2 text-sm outline-none focus:border-brand ${err('.explanation') ? 'border-answer-red' : 'border-gray-300'}`}
+        />
+        <FieldError message={err('.explanation')} />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
@@ -350,6 +372,14 @@ function ChoicesField({ q, err, onChange }: FieldProps) {
           );
         })}
       </div>
+      {isMultipleAnswerDraft(q) && (
+        <p
+          className="rounded-lg bg-brand/10 px-3 py-2 text-sm font-semibold text-brand"
+          data-testid="multiple-hint"
+        >
+          ☑️ Plusieurs bonnes réponses : les joueurs devront toutes les cocher pour marquer
+        </p>
+      )}
       {!isTF && q.choices.length < MAX_CHOICES && (
         <button
           type="button"

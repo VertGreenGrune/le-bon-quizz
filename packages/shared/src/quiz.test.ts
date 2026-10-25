@@ -6,8 +6,11 @@ import {
   PlayerJoinPayload,
   QuestionSchema,
   QuizSchema,
+  EXPLANATION_MAX_LENGTH,
   buzzerAnswer,
   hasRightAnswer,
+  isMultipleAnswer,
+  questionExplanation,
 } from './index.js';
 
 describe('« Buzzer » option (T28)', () => {
@@ -269,5 +272,68 @@ describe('« Mytho ! » question schema', () => {
     expect(
       QuestionSchema.safeParse({ type: 'BLUFF', text: 'Q ?', truth: 'V', voteTimeSec: 2 }).success,
     ).toBe(false);
+  });
+});
+
+describe('explanations and « select all » (T37)', () => {
+  const mcq = (correct: boolean[], extra: object = {}) =>
+    QuestionSchema.parse({
+      type: 'MCQ',
+      text: 'Q ?',
+      choices: correct.map((isCorrect, i) => ({ text: `C${i}`, isCorrect })),
+      ...extra,
+    });
+
+  it('explanation: optional on every type, trimmed, at most 300 characters', () => {
+    expect(mcq([true, false])).not.toHaveProperty('explanation');
+    expect(mcq([true, false], { explanation: '  Parce que.  ' }).explanation).toBe('Parce que.');
+    const long = 'x'.repeat(EXPLANATION_MAX_LENGTH + 1);
+    expect(
+      QuestionSchema.safeParse({
+        type: 'WORD_CLOUD',
+        text: 'Q',
+        explanation: long,
+      }).success,
+    ).toBe(false);
+    expect(
+      QuestionSchema.safeParse({
+        type: 'SLIDER',
+        text: 'Q',
+        slider: { min: 0, max: 10, correct: 5 },
+        explanation: 'x'.repeat(EXPLANATION_MAX_LENGTH),
+      }).success,
+    ).toBe(true);
+    expect(
+      QuestionSchema.safeParse({ type: 'WORD_CLOUD', text: 'Q', explanation: 'x'.repeat(300) })
+        .success,
+    ).toBe(true);
+    expect(questionExplanation(mcq([true, false], { explanation: '   ' }))).toBeUndefined();
+    expect(questionExplanation(mcq([true, false], { explanation: 'Oui' }))).toBe('Oui');
+  });
+
+  it('« select all » = an MCQ with 2+ right choices, not played with the buzzer', () => {
+    expect(isMultipleAnswer(mcq([true, false, true]))).toBe(true);
+    expect(isMultipleAnswer(mcq([true, false, false]))).toBe(false);
+    expect(isMultipleAnswer(mcq([true, true], { buzzer: true }))).toBe(false);
+    const tf = QuestionSchema.parse({
+      type: 'TRUE_FALSE',
+      text: 'Q',
+      choices: [
+        { text: 'Vrai', isCorrect: true },
+        { text: 'Faux', isCorrect: true },
+      ],
+    });
+    expect(isMultipleAnswer(tf)).toBe(false);
+  });
+
+  it('player:answer takes choiceIndexes (1–4 shape indexes), alone', () => {
+    const valid = (a: object) =>
+      PlayerAnswerPayload.safeParse({ pin: '123456', questionIndex: 0, ...a }).success;
+    expect(valid({ choiceIndexes: [0, 2] })).toBe(true);
+    expect(valid({ choiceIndexes: [3] })).toBe(true);
+    expect(valid({ choiceIndexes: [] })).toBe(false);
+    expect(valid({ choiceIndexes: [4] })).toBe(false);
+    expect(valid({ choiceIndexes: [0, 1, 2, 3, 0] })).toBe(false);
+    expect(valid({ choiceIndexes: [0], choiceIndex: 0 })).toBe(false);
   });
 });
