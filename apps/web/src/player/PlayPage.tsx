@@ -41,6 +41,7 @@ import {
 } from './draw';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
+import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
 import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
 import { heartsText, survivalLabel } from '../lib/survival';
 import {
@@ -148,7 +149,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
       if (role === 'guesser') return <GuessPad s={s} />;
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
-      return <AnswerScreen prompt={s.prompt!} effects={jokerEffects(s)} />;
+      return <AnswerScreen s={s} prompt={s.prompt!} effects={jokerEffects(s)} />;
     }
     case 'answered':
       return <Answered s={s} />;
@@ -293,9 +294,11 @@ function PauseOverlay({ s }: { s: PlayerState }) {
  * (50/50 hides choices / narrows the slider / gives a first letter, Brouilleur scrambles).
  */
 function AnswerScreen({
+  s,
   prompt,
   effects = {},
 }: {
+  s: PlayerState;
   prompt: QuestionPromptPayload;
   effects?: JokerEffects;
 }) {
@@ -333,6 +336,16 @@ function AnswerScreen({
       <BluffWrite maxLength={prompt.bluff.maxLength} />
     ) : (
       <BluffVote prompt={prompt.bluff} hidden={effects.hiddenChoices ?? []} />
+    );
+  // « Select all »: toggles + « Valider » (grey and scrambled with a Brouilleur).
+  if (prompt.multiple)
+    return (
+      <MultiAnswerButtons
+        s={s}
+        choiceCount={prompt.choiceCount ?? 4}
+        hidden={effects.hiddenChoices ?? []}
+        scrambled={effects.scrambled}
+      />
     );
   if (effects.scrambled)
     return (
@@ -507,6 +520,13 @@ function answerLabel(s: PlayerState): string | null {
 function Answered({ s }: { s: PlayerState }) {
   if (s.prompt?.type === 'BLUFF') return <BluffAnswered s={s} />;
   if (s.prompt?.type === 'DRAW' || foundTheWord(s)) return <DrawFound s={s} />;
+  if (s.myAnswer && 'choiceIndexes' in s.myAnswer) {
+    return (
+      <Message title="Réponse envoyée !" subtitle="On attend les autres…">
+        <ShapeList indexes={s.myAnswer.choiceIndexes} />
+      </Message>
+    );
+  }
   const more = s.myAnswer && !('choiceIndex' in s.myAnswer) && <MoreAnswered s={s} />;
   if (more) {
     return (
@@ -586,7 +606,7 @@ function Result({ s }: { s: PlayerState }) {
   const unit = s.prompt?.slider?.unit;
   return (
     <div
-      className={`flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center ${
+      className={`flex min-h-0 flex-1 flex-col items-center justify-center-safe gap-4 overflow-y-auto p-6 text-center ${
         r.correct || (drew && !idle)
           ? 'bg-answer-green'
           : partial
@@ -625,6 +645,9 @@ function Result({ s }: { s: PlayerState }) {
           '+ 0 pt'
         )}
       </motion.p>
+      {r.multiple && !r.correct && (
+        <MultipleResultLine correctIndexes={r.multiple.correctIndexes} />
+      )}
       {r.placed && (
         <p className="font-bold">
           {r.placed.correct} / {r.placed.total} bien placé{r.placed.correct > 1 ? 's' : ''}
@@ -652,6 +675,7 @@ function Result({ s }: { s: PlayerState }) {
         Tu es {formatRank(r.rank)}
       </motion.p>
       {r.team && <TeamLine {...r.team} />}
+      {r.explanation && <ExplanationNote text={r.explanation} />}
     </div>
   );
 }
@@ -695,6 +719,7 @@ function PollThanks({ s, voted }: { s: PlayerState; voted: boolean }) {
       {r.streak >= 2 && <Streak streak={r.streak} bonus={0} />}
       <p className="text-lg font-bold">Tu es {formatRank(r.rank)}</p>
       {r.team && <TeamLine {...r.team} />}
+      {r.explanation && <ExplanationNote text={r.explanation} />}
     </Message>
   );
 }
@@ -940,7 +965,7 @@ function Message({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center-safe gap-6 overflow-y-auto p-6 text-center">
       <h2 className="text-3xl font-black leading-tight">{title}</h2>
       {subtitle && <p className="text-lg font-semibold opacity-85">{subtitle}</p>}
       {children}

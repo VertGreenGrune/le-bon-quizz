@@ -1,5 +1,12 @@
 /** Test helpers (not used by the app). */
-import { DEMO_QUIZ, type AnswerInput, type Question, type Quiz } from '@lbq/shared';
+import {
+  DEMO_QUIZ,
+  correctChoiceIndexes,
+  isMultipleAnswer,
+  type AnswerInput,
+  type Question,
+  type Quiz,
+} from '@lbq/shared';
 import { isExtraQuestion } from './questionTypes/index.js';
 
 type ClassicQuestion = Extract<Question, { type: 'MCQ' | 'TRUE_FALSE' }>;
@@ -26,6 +33,7 @@ export function rightAnswer(q: Question): AnswerInput {
     case 'POLL':
       return { choiceIndex: 0 };
     default:
+      if (isMultipleAnswer(q)) return { choiceIndexes: correctChoiceIndexes(q) };
       return { choiceIndex: q.choices.findIndex((c) => c.isCorrect) };
   }
 }
@@ -43,6 +51,7 @@ export function wrongAnswer(q: Question): AnswerInput {
     case 'POLL':
       return { choiceIndex: q.choices.length - 1 };
     default:
+      if (isMultipleAnswer(q)) return { choiceIndexes: [q.choices.findIndex((c) => !c.isCorrect)] };
       return { choiceIndex: q.choices.findIndex((c) => !c.isCorrect) };
   }
 }

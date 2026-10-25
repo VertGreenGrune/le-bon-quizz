@@ -71,6 +71,8 @@ export const DRAW_DEFAULT_SEC = 90;
  * (+200), up to `basePoints` (1000).
  */
 export const DRAW_FINDER_SHARE = 0.2;
+/** Explanation shown from the reveal on (TV, phones, report), every question type. */
+export const EXPLANATION_MAX_LENGTH = 300;
 /** A slider has at most this many positions ((max − min) / step). */
 export const SLIDER_MAX_STEPS = 100_000;
 
@@ -144,6 +146,11 @@ const questionBase = {
    * answers out loud and the host judges it (`BUZZER_QUESTION_TYPES` only).
    */
   buzzer: z.boolean().optional(),
+  /**
+   * « 💡 Le saviez-vous ? » (T37): more about the answer, shown from REVEAL on only (it usually
+   * gives the answer away). Empty = none.
+   */
+  explanation: z.string().trim().max(EXPLANATION_MAX_LENGTH).optional(),
 };
 
 const hasCorrectChoice: [
@@ -355,6 +362,19 @@ export function choiceTexts(q: Question): string[] {
 export function correctChoiceIndexes(q: Question): number[] {
   if (q.type !== 'MCQ' && q.type !== 'TRUE_FALSE') return [];
   return q.choices.flatMap((c, i) => (c.isCorrect ? [i] : []));
+}
+
+/**
+ * « Select all » (T37): an MCQ with 2 or more right choices (not played with the buzzer). The
+ * phones toggle the shapes and validate; only the exact set of right choices is correct.
+ */
+export function isMultipleAnswer(q: Question): boolean {
+  return q.type === 'MCQ' && !q.buzzer && q.choices.filter((c) => c.isCorrect).length >= 2;
+}
+
+/** The question's explanation, or undefined when it has none (empty / blank). */
+export function questionExplanation(q: Question): string | undefined {
+  return q.explanation?.trim() || undefined;
 }
 
 /**

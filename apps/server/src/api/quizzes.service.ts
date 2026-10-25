@@ -50,6 +50,7 @@ function toQuestion(qu: QuestionRow): Question {
     }),
     ...(qu.imageEffect && qu.imageEffect !== 'none' && { imageEffect: qu.imageEffect }),
     ...(qu.buzzer && { buzzer: true }),
+    ...(qu.explanation && { explanation: qu.explanation }),
   };
   const config = (qu.config ?? {}) as Partial<QuestionConfig>;
   switch (qu.type) {
@@ -135,6 +136,7 @@ const questionsCreate = (input: QuizInput) =>
       audioOnReveal: qu.audio && qu.audioOnReveal ? true : null,
       imageEffect: qu.imageUrl && qu.imageEffect !== 'none' ? (qu.imageEffect ?? null) : null,
       buzzer: !!qu.buzzer,
+      explanation: qu.explanation?.trim() || null,
       type: qu.type,
       timeLimitSec: qu.timeLimitSec,
       basePoints: qu.basePoints,

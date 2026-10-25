@@ -48,6 +48,11 @@ export interface PlayerState {
    * counter that changes on every full re-send so the canvas redraws it.
    */
   drawing: { index: number; strokes: DrawStroke[]; version: number } | null;
+  /**
+   * « Select all » question (`prompt.multiple`): the shapes ticked so far (sorted), for
+   * `questionIndex` only; sent with « Valider ».
+   */
+  selection: { questionIndex: number; indexes: number[] } | null;
   /** What the player answered (choice, text or slider value), for `questionIndex` only. */
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
@@ -89,6 +94,7 @@ export type PlayerAction =
   | { type: 'state'; payload: GameStatePayload; now: number }
   | { type: 'resuming'; inMs: number; now: number }
   | { type: 'prompt'; payload: QuestionPromptPayload; now: number }
+  | { type: 'toggleChoice'; questionIndex: number; choiceIndex: number }
   | { type: 'answer'; questionIndex: number; answer: AnswerInput }
   | { type: 'answerRejected'; questionIndex: number }
   | { type: 'result'; payload: PlayerResultPayload }
@@ -115,6 +121,7 @@ export const initialPlayerState: PlayerState = {
   buzzer: null,
   draw: null,
   drawing: null,
+  selection: null,
   myAnswer: null,
   result: null,
   nickname: '',
@@ -178,6 +185,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         answeringEndsAt,
         prompt: state.prompt?.index === questionIndex ? state.prompt : null,
         myAnswer: state.myAnswer?.questionIndex === questionIndex ? state.myAnswer : null,
+        selection: state.selection?.questionIndex === questionIndex ? state.selection : null,
         // Keep the last result through LEADERBOARD / PODIUM; drop it once a new question starts.
         result: sameQuestion || phase === 'PODIUM' || phase === 'ENDED' ? state.result : null,
       };
@@ -199,6 +207,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
             ? state.answeringEndsAt
             : action.now + p.timeLimitSec * 1000,
         myAnswer: state.myAnswer?.questionIndex === p.index ? state.myAnswer : null,
+        selection: state.selection?.questionIndex === p.index ? state.selection : null,
         result: isCurrent ? state.result : null,
         // « Mytho ! »: after a rejoin the server tells which lie it already has.
         lie:
@@ -216,6 +225,16 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         lie:
           action.text === null ? null : { questionIndex: action.questionIndex, text: action.text },
       };
+
+    case 'toggleChoice': {
+      if (state.myAnswer?.questionIndex === action.questionIndex) return state; // already sent
+      const current =
+        state.selection?.questionIndex === action.questionIndex ? state.selection.indexes : [];
+      const indexes = current.includes(action.choiceIndex)
+        ? current.filter((i) => i !== action.choiceIndex)
+        : [...current, action.choiceIndex].sort((a, b) => a - b);
+      return { ...state, selection: { questionIndex: action.questionIndex, indexes } };
+    }
 
     case 'answer':
       if (state.myAnswer?.questionIndex === action.questionIndex) return state; // one answer only
@@ -355,6 +374,11 @@ export function buzzerView(s: PlayerState): 'open' | 'mine' | 'taken' | 'out' | 
   if (status?.wrong.some((p) => p.id === s.playerId)) return 'out';
   if (!status?.holder) return 'open';
   return status.holder.id === s.playerId ? 'mine' : 'taken';
+}
+
+/** « Select all » question: the shapes ticked on the current question (empty when none). */
+export function selectedChoices(s: PlayerState): number[] {
+  return s.selection?.questionIndex === s.questionIndex ? s.selection.indexes : [];
 }
 
 /** « Mytho ! » stage of the current question (null for the other types). */

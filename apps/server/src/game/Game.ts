@@ -14,6 +14,8 @@ import {
   choiceTexts,
   correctChoiceIndexes,
   hasRightAnswer,
+  isMultipleAnswer,
+  questionExplanation,
   randomAvatarId,
   type AnswerInput,
   type AvatarId,
@@ -115,6 +117,8 @@ type Send = GameTransport['toAll'];
  */
 export interface Answer {
   choiceIndex: number | null;
+  /** « Select all » MCQ: every ticked choice (sorted). */
+  choiceIndexes?: number[];
   text: string | null;
   value: number | null;
   order?: number[];
@@ -185,6 +189,8 @@ export interface QuestionStats {
   correctCount: number;
   answerCount: number;
   details: RevealDetails;
+  /** « 💡 Le saviez-vous ? » (null: none). */
+  explanation: string | null;
 }
 
 /** A paused timed phase (QUESTION_INTRO / ANSWERING). */
@@ -1011,9 +1017,10 @@ export class Game {
     for (const p of this.players.values()) {
       const a = p.answer;
       if (a) answerCount++;
-      // Shape choices only (a « Mytho ! » vote is a `choiceIndex` too, among its own options).
-      if (a?.choiceIndex != null && a.choiceIndex < distribution.length)
-        distribution[a.choiceIndex] = (distribution[a.choiceIndex] ?? 0) + 1;
+      // Shape choices only (a « Mytho ! » vote is a `choiceIndex` too, among its own options);
+      // « select all »: every ticked choice counts.
+      for (const i of a?.choiceIndexes ?? (a?.choiceIndex != null ? [a.choiceIndex] : []))
+        if (i < distribution.length) distribution[i] = (distribution[i] ?? 0) + 1;
       const correct = a?.correct ?? false;
       // « Dessine-moi »: the drawer had nothing to answer, their streak is left as it is.
       const drew = this.isDrawer(p);
@@ -1050,6 +1057,8 @@ export class Game {
     );
     const correctIndexes = correctChoiceIndexes(question);
     const details = this.revealDetails(question);
+    if (isMultipleAnswer(question)) details.multiple = { allFound: correctCount };
+    const explanation = questionExplanation(question);
     this.questionStats.push({
       index: this.questionIndex,
       type: question.type,
@@ -1061,6 +1070,7 @@ export class Game {
       correctCount,
       answerCount,
       details,
+      explanation: explanation ?? null,
     });
 
     this.broadcastState();
@@ -1071,6 +1081,7 @@ export class Game {
       distribution,
       ...details,
       ...(details.slider && { correct: details.slider.correct, margin: details.slider.margin }),
+      ...(explanation && { explanation }),
     };
     this.transport.toHost('question:reveal', this.reveal);
     for (const p of this.players.values()) {
@@ -1445,6 +1456,8 @@ export class Game {
       timeLimitSec: q.timeLimitSec,
       ...(q.buzzer && { buzzer: { answer: buzzerAnswer(q) } }),
       ...(q.type === 'SLIDER' && !q.buzzer && { slider: sliderPrompt(q.slider) }),
+      ...(isMultipleAnswer(q) && { multiple: true as const }),
+      // The explanation gives the answer away: only in `question:reveal`.
       // Media are for the shared screen only: the prompt below never carries them.
       ...(q.audio && { audio: q.audio, ...(q.audioOnReveal && { audioOnReveal: true as const }) }),
       ...(q.imageUrl &&
@@ -1468,7 +1481,10 @@ export class Game {
     else if (q.type === 'TYPE_ANSWER') prompt.maxLength = TYPE_ANSWER_MAX_LENGTH;
     else if (isExtraQuestion(q))
       Object.assign(prompt, extraPromptFields(q, this.setup, this.players.values(), player.id));
-    else prompt.choiceCount = q.choices.length;
+    else {
+      prompt.choiceCount = q.choices.length;
+      if (isMultipleAnswer(q)) prompt.multiple = true;
+    }
     return prompt;
   }
 
@@ -1481,6 +1497,7 @@ export class Game {
         ? undefined
         : rankTeams(this.rankedTeams()).find((t) => t.team.id === player.teamId);
     const jokers = this.jokers?.results(player.id);
+    const explanation = q && questionExplanation(q);
     return {
       correct: player.lastResult?.correct ?? false,
       pointsEarned: player.lastResult?.pointsEarned ?? 0,
@@ -1500,8 +1517,16 @@ export class Game {
           correctValue: q.slider.correct,
           ...(player.answer?.value != null && { yourValue: player.answer.value }),
         }),
+      ...(q &&
+        isMultipleAnswer(q) && {
+          multiple: {
+            correctIndexes: correctChoiceIndexes(q),
+            ...(player.answer?.choiceIndexes && { yours: player.answer.choiceIndexes }),
+          },
+        }),
       ...(jokers && { jokers }),
       ...(this.survival && { survival: this.survival.resultFields(player.id) }),
+      ...(explanation && { explanation }),
     };
   }
 
@@ -1556,6 +1581,8 @@ function judgeAnswer(
     case 'MCQ':
     case 'TRUE_FALSE':
     case 'POLL': {
+      if (q.type === 'MCQ' && isMultipleAnswer(q)) return judgeMultiple(q, given, timePoints);
+      if ('choiceIndexes' in given) throw invalid('Une seule réponse possible ici');
       if (!('choiceIndex' in given)) throw invalid('Cette question attend un choix');
       const i = given.choiceIndex;
       if (!q.choices[i]) throw invalid('Choix invalide');
@@ -1579,4 +1606,30 @@ function judgeAnswer(
       };
     }
   }
+}
+
+/**
+ * « Select all » MCQ: `choiceIndexes` (every ticked choice); right only when it is exactly the set
+ * of right choices — no partial points.
+ */
+function judgeMultiple(
+  q: Extract<Question, { type: 'MCQ' }>,
+  given: AnswerInput,
+  timePoints: number,
+): Omit<Answer, 'responseMs'> {
+  if (!('choiceIndexes' in given))
+    throw new GameError('INVALID_PAYLOAD', 'Coche tes réponses puis valide');
+  const ticked = [...new Set(given.choiceIndexes)].sort((a, b) => a - b);
+  if (ticked.length !== given.choiceIndexes.length || ticked.some((i) => !q.choices[i]))
+    throw new GameError('INVALID_PAYLOAD', 'Choix invalide');
+  const right = correctChoiceIndexes(q);
+  const correct = ticked.length === right.length && ticked.every((i, k) => i === right[k]);
+  return {
+    choiceIndex: null,
+    choiceIndexes: ticked,
+    text: null,
+    value: null,
+    correct,
+    points: correct ? timePoints : 0,
+  };
 }

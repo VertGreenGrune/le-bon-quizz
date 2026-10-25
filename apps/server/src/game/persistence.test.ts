@@ -112,6 +112,7 @@ describe('gameRecord', () => {
         correctCount: q.type === 'POLL' ? 0 : 1,
         answerCount: 1,
         details: aliceOnlyDetails(q),
+        explanation: null,
       });
     });
   });
@@ -203,6 +204,50 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const { quiz } = await persistence.loadQuiz(q.id, owner.id);
     expect(quiz.questions[0]).toMatchObject({ buzzer: true });
     expect(quiz.questions[1]).not.toHaveProperty('buzzer');
+  });
+
+  it('keeps the explanations, saves them with the « select all » counts in the report', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const [first, ...rest] = demoInput.questions;
+    const multiple: Question = {
+      text: 'Lesquelles sont des couleurs du drapeau français ?',
+      type: 'MCQ',
+      timeLimitSec: 20,
+      basePoints: 1000,
+      choices: [
+        { text: 'Bleu', isCorrect: true },
+        { text: 'Vert', isCorrect: false },
+        { text: 'Rouge', isCorrect: true },
+      ],
+      explanation: '',
+    };
+    const created = await createQuiz(prisma, host.id, {
+      ...demoInput,
+      questions: [
+        { ...first!, explanation: '  Paris est la capitale depuis 987.  ' },
+        multiple,
+        ...rest,
+      ],
+    });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(created.id, host.id);
+    expect(quiz.questions[0]).toMatchObject({ explanation: 'Paris est la capitale depuis 987.' });
+    // Empty = none.
+    expect(quiz.questions[1]).not.toHaveProperty('explanation');
+    await persistence.saveGame(gameRecord(playedGame(quiz), host.id, dbQuizId)!);
+
+    const [game] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${game!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]!.explanation).toBe('Paris est la capitale depuis 987.');
+    expect(report.questions[1]).not.toHaveProperty('explanation');
+    // Alice ticked both right choices: each one counts in its bar.
+    expect(report.questions[1]).toMatchObject({
+      correctCount: 1,
+      distribution: [1, 0, 1],
+      details: { multiple: { allFound: 1 } },
+    });
   });
 
   it("launches the host's own quizzes and public ones, not another host's private one", async () => {

@@ -94,12 +94,15 @@ export async function gameRoutes(app: FastifyInstance, { prisma }: ApiDeps) {
           };
         },
       ),
-      questions: g.questions.map(({ id: _id, gameSessionId: _g, answerCount, details, ...q }) => ({
-        ...q,
-        // Games saved before question types: every answer was a choice.
-        answerCount: answerCount ?? q.distribution.reduce((sum, n) => sum + n, 0),
-        details: (details ?? {}) as RevealDetails,
-      })),
+      questions: g.questions.map(
+        ({ id: _id, gameSessionId: _g, answerCount, details, explanation, ...q }) => ({
+          ...q,
+          // Games saved before question types: every answer was a choice.
+          answerCount: answerCount ?? q.distribution.reduce((sum, n) => sum + n, 0),
+          details: (details ?? {}) as RevealDetails,
+          ...(explanation && { explanation }),
+        }),
+      ),
       teams: g.teams.map(({ teamId, name, score, playerCount, rank }) => ({
         teamId: asTeamId(teamId),
         name,

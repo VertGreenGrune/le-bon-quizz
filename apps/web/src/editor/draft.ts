@@ -54,6 +54,8 @@ export interface DraftQuestion {
   imageEffect: ImageEffect;
   /** « Buzzer » (T28); only sent for the types that take it (`buzzerAllowed`). */
   buzzer: boolean;
+  /** « 💡 Le saviez-vous ? » (T37), any type; empty = none. */
+  explanation: string;
 }
 
 /**
@@ -165,6 +167,7 @@ export function newQuestion(): DraftQuestion {
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
+    explanation: '',
   };
 }
 
@@ -182,6 +185,7 @@ export function toDraftQuestion(q: Question): DraftQuestion {
   draft.audioOnReveal = q.audioOnReveal ?? false;
   draft.imageEffect = q.imageEffect ?? 'none';
   draft.buzzer = q.buzzer ?? false;
+  draft.explanation = q.explanation ?? '';
   switch (q.type) {
     case 'TYPE_ANSWER':
       return { ...draft, acceptedAnswers: q.acceptedAnswers, typoTolerance: q.typoTolerance };
@@ -263,6 +267,7 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         : undefined,
     // Kept in the draft when switching to a type without buzzer (and back), not saved there.
     buzzer: q.buzzer && buzzerAllowed(q.type) ? true : undefined,
+    explanation: q.explanation.trim() || undefined,
   };
   switch (q.type) {
     case 'TYPE_ANSWER':
@@ -491,4 +496,12 @@ export function moveItem(q: DraftQuestion, from: number, to: number): DraftQuest
   const [item] = items.splice(from, 1);
   items.splice(to, 0, item!);
   return { ...q, items };
+}
+
+/**
+ * « Select all » (T37): an MCQ with 2+ right answers, not played with the buzzer — the players
+ * must tick them all to score (the editor shows a hint).
+ */
+export function isMultipleAnswerDraft(q: DraftQuestion): boolean {
+  return q.type === 'MCQ' && !q.buzzer && q.choices.filter((c) => c.isCorrect).length >= 2;
 }

@@ -315,6 +315,20 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
       ) : (
         <ChoiceBars q={q} noAnswer={noAnswer} />
       )}
+      {q.details.multiple && (
+        <p className="mt-2 text-sm font-semibold text-gray-600">
+          ☑️ Plusieurs bonnes réponses : {q.details.multiple.allFound} joueur
+          {q.details.multiple.allFound > 1 ? 's ont' : ' a'} tout coché juste
+        </p>
+      )}
+      {q.explanation && (
+        <p
+          className="mt-3 rounded-lg bg-answer-yellow/15 px-3 py-2 text-sm whitespace-pre-line text-gray-700"
+          data-testid="report-explanation"
+        >
+          <span className="font-bold">💡 Le saviez-vous ?</span> {q.explanation}
+        </p>
+      )}
     </li>
   );
 }

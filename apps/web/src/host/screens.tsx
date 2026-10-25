@@ -289,13 +289,16 @@ export function QuestionScreen({
             ) : reveal.type === 'SLIDER' ? (
               <SliderReveal reveal={reveal} instant={instant} />
             ) : (
-              <DistributionChart
-                distribution={reveal.distribution}
-                correct={reveal.correctIndexes}
-                count={question.choices.length}
-                poll={reveal.type === 'POLL'}
-                instant={instant}
-              />
+              <>
+                <DistributionChart
+                  distribution={reveal.distribution}
+                  correct={reveal.correctIndexes}
+                  count={question.choices.length}
+                  poll={reveal.type === 'POLL'}
+                  instant={instant}
+                />
+                {reveal.multiple && <AllFound count={reveal.multiple.allFound} instant={instant} />}
+              </>
             )
           ) : (
             <>
@@ -359,7 +362,46 @@ export function QuestionScreen({
           instant={instant}
         />
       )}
+      {reveal?.explanation && <ExplanationCard text={reveal.explanation} instant={instant} />}
     </div>
+  );
+}
+
+/** « Select all » reveal: how many players ticked exactly the right choices. */
+function AllFound({ count, instant }: { count: number; instant: boolean }) {
+  return (
+    <motion.p
+      initial={instant ? false : { y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: instant ? 0 : 1.2 }}
+      className="rounded-2xl bg-black/25 px-6 py-2 text-2xl font-black"
+      data-testid="all-found"
+    >
+      {count === 0
+        ? 'Personne n’a tout trouvé'
+        : `${count} joueur${count > 1 ? 's ont' : ' a'} tout trouvé`}
+    </motion.p>
+  );
+}
+
+/** « 💡 Le saviez-vous ? »: the question's explanation, after the reveal animation. */
+function ExplanationCard({ text, instant }: { text: string; instant: boolean }) {
+  return (
+    <motion.div
+      initial={instant ? false : { y: 30, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: instant ? 0 : 1.8, type: 'spring', stiffness: 200, damping: 20 }}
+      className="flex items-start gap-4 rounded-2xl bg-white px-6 py-4 text-black shadow-lg"
+      data-testid="explanation"
+    >
+      <span className="text-4xl" aria-hidden="true">
+        💡
+      </span>
+      <div className="min-w-0">
+        <p className="text-xl font-black text-brand">Le saviez-vous ?</p>
+        <p className="text-2xl leading-snug font-semibold whitespace-pre-line">{text}</p>
+      </div>
+    </motion.div>
   );
 }
 
@@ -413,7 +455,9 @@ function AnswerHint({ question }: { question: QuestionShowPayload }) {
         ? `🎚️ Entre ${formatValue(slider.min, slider.unit)} et ${formatValue(slider.max, slider.unit)}`
         : question.type === 'POLL'
           ? '🗳️ Sondage : pas de bonne réponse !'
-          : null;
+          : question.multiple
+            ? '☑️ Plusieurs réponses possibles'
+            : null;
   if (!hint) return null;
   return (
     <motion.p

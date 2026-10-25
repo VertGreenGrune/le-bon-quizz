@@ -14,6 +14,7 @@ import {
   errorMessage,
   initialPlayerState,
   playerReducer,
+  selectedChoices,
   type PlayerAction,
   type PlayerState,
 } from './playerState';
@@ -258,6 +259,18 @@ export function sendAnswer(answer: AnswerInput) {
         dispatch({ type: 'answerRejected', questionIndex });
       }
     });
+}
+
+/** « Select all » question: ticks / unticks a shape (sent later with `validateChoices`). */
+export function toggleChoice(choiceIndex: number) {
+  vibrate(20);
+  dispatch({ type: 'toggleChoice', questionIndex: state.questionIndex, choiceIndex });
+}
+
+/** « Select all » question, « Valider »: sends every ticked shape (speed points from now). */
+export function validateChoices() {
+  const indexes = selectedChoices(state);
+  if (indexes.length > 0) sendAnswer({ choiceIndexes: indexes });
 }
 
 /**
