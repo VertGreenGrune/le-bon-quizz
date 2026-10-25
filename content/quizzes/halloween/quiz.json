@@ -1,0 +1,380 @@
+{
+  "title": "Halloween — les secrets les mieux gardés",
+  "description": "25 questions très difficiles sur ce qu'on ne sait pas d'Halloween : fêtes des morts du monde entier, légendes et fantômes, vraies chasses aux sorcières. Avec deux « Mytho ! », deux dessins et un tableau de Bruegel à fouiller.",
+  "coverImageUrl": "images/triomphe-de-la-mort.jpg",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Rébus 🧩 : 🔥 + ⭕ = ? Indice : les trois sorcières de Macbeth y jettent un œil de triton.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Chaudron",
+          "isCorrect": true
+        },
+        {
+          "text": "Balai",
+          "isCorrect": false
+        },
+        {
+          "text": "Grimoire",
+          "isCorrect": false
+        },
+        {
+          "text": "Chandelier",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Légende irlandaise 🎃 : dans quel légume Stingy Jack loge-t-il la braise du diable pour s'éclairer ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Navet", "Rutabaga"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Lesquelles de ces fêtes accueillent les esprits des morts ? (plusieurs réponses)",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Obon (Japon)",
+          "isCorrect": true
+        },
+        {
+          "text": "Zhongyuan, fête des fantômes (Chine)",
+          "isCorrect": true
+        },
+        {
+          "text": "Fèt Gede (Haïti)",
+          "isCorrect": true
+        },
+        {
+          "text": "Holi (Inde)",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Au Mexique, quel nom porte la fleur orange qui guide les morts jusqu'aux autels ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Cempasúchil",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "SLIDER",
+      "text": "La fête chinoise des fantômes affamés tombe le 15e jour de quel mois lunaire ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1,
+        "max": 12,
+        "step": 1,
+        "correct": 7,
+        "margin": 0
+      }
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur l'image 📍 « Le Triomphe de la Mort » (Bruegel, vers 1562) : trouvez le squelette qui joue de la vielle à roue.",
+      "imageUrl": "images/triomphe-de-la-mort.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "zone": {
+        "x": 0.12,
+        "y": 0.655,
+        "radius": 0.045
+      }
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? 🗣️ « Nature les fait sorcières. — C'est le génie propre à la femme et son tempérament. »",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Jules Michelet",
+          "isCorrect": true
+        },
+        {
+          "text": "Victor Hugo",
+          "isCorrect": false
+        },
+        {
+          "text": "Voltaire",
+          "isCorrect": false
+        },
+        {
+          "text": "George Sand",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "ORDER",
+      "text": "De la Toussaint à Halloween : remettez ces événements dans l'ordre, du plus ancien au plus récent.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "items": [
+        "Boniface IV dédie le Panthéon à tous les martyrs",
+        "Grégoire III dédie un oratoire à tous les saints",
+        "Odilon de Cluny fixe le jour des morts au 2 novembre",
+        "Robert Burns écrit son poème « Halloween »",
+        "« Trick or treat » apparaît pour la première fois dans un journal"
+      ]
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un joueur dessine en secret une créature de la nuit, les autres devinent en l'écrivant !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Chauve-souris",
+        "Fantôme",
+        "Squelette",
+        "Chat noir",
+        "Momie",
+        "Vampire",
+        "Loup-garou",
+        "Araignée",
+        "Hibou",
+        "Zombie",
+        "Sorcière"
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel est le nom du traité de chasse aux sorcières publié en 1486 par l'inquisiteur Heinrich Kramer ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Malleus Maleficarum", "Le Marteau des sorcières", "Malleus"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "À Singapour, pendant le mois des fantômes, quelles places reste-t-il vides aux spectacles de getai ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Le premier rang",
+          "isCorrect": true
+        },
+        {
+          "text": "Le dernier rang",
+          "isCorrect": false
+        },
+        {
+          "text": "Les places près de la sortie",
+          "isCorrect": false
+        },
+        {
+          "text": "Une place sur deux",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de personnes ont été pendues pour sorcellerie à Salem en 1692 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "correct": 19,
+        "margin": 2,
+        "unit": "pendus"
+      }
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 En Bretagne, selon Anatole Le Braz, qui devient l'Ankou de la paroisse pour l'année suivante ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Le dernier mort de l'année",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "MCQ",
+      "text": "En Autriche et en Bavière, quelle brioche tressée les parrains offrent-ils à leurs filleuls à la Toussaint ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Allerheiligenstriezel",
+          "isCorrect": true
+        },
+        {
+          "text": "Christstollen",
+          "isCorrect": false
+        },
+        {
+          "text": "Lebkuchen",
+          "isCorrect": false
+        },
+        {
+          "text": "Bretzel",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Haïti 💀 Chef des Guédé, en haut-de-forme et lunettes noires, il règne sur la Fèt Gede. Quel est ce lwa ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Baron Samedi", "Bawon Samdi", "Baron Samdi"],
+      "typoTolerance": true
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces nuits et fêtes dans l'ordre du calendrier, de janvier à décembre.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "Nuit de Walpurgis",
+        "Lémuries romaines",
+        "Día de Muertos",
+        "Andrzejki, la Saint-André polonaise",
+        "Krampusnacht"
+      ]
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur l'image 📍 Même tableau : trouvez l'homme en habit à damier rouge et blanc caché sous la table.",
+      "imageUrl": "images/triomphe-de-la-mort.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "zone": {
+        "x": 0.794,
+        "y": 0.858,
+        "radius": 0.05
+      }
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel poète a tiré des « Dziady », la fête slave des ancêtres, un grand drame romantique ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Adam Mickiewicz",
+          "isCorrect": true
+        },
+        {
+          "text": "Juliusz Słowacki",
+          "isCorrect": false
+        },
+        {
+          "text": "Alexandre Pouchkine",
+          "isCorrect": false
+        },
+        {
+          "text": "Taras Chevtchenko",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel dramaturge a tiré des procès de 1692 la pièce « Les Sorcières de Salem » (The Crucible, 1953) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Arthur Miller", "Miller"],
+      "typoTolerance": true
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Cette fois, un objet d'Halloween à faire deviner !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Citrouille",
+        "Balai",
+        "Chaudron",
+        "Chapeau de sorcière",
+        "Toile d'araignée",
+        "Cercueil",
+        "Crâne en sucre",
+        "Bougie",
+        "Pierre tombale",
+        "Grimoire",
+        "Bonbon"
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année l'illusionniste Harry Houdini est-il mort… un 31 octobre ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1850,
+        "max": 2000,
+        "step": 1,
+        "correct": 1926,
+        "margin": 3
+      }
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Écrasé sous des pierres à Salem en 1692, Giles Corey n'aurait répondu que trois mots. Lesquels ?",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "truth": "Plus de poids",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "MCQ",
+      "text": "En 1609, quel magistrat bordelais mène une chasse aux sorcières sanglante dans le Labourd basque ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Pierre de Lancre",
+          "isCorrect": true
+        },
+        {
+          "text": "Jean Bodin",
+          "isCorrect": false
+        },
+        {
+          "text": "Henri Boguet",
+          "isCorrect": false
+        },
+        {
+          "text": "Nicolas Rémy",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel fantôme du folklore mexicain erre au bord des rivières en gémissant « ¡Ay, mis hijos! » ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["La Llorona", "Llorona", "La Pleureuse"],
+      "typoTolerance": true
+    },
+    {
+      "type": "ORDER",
+      "text": "Finale 🏆 Remettez ces procès de sorcellerie dans l'ordre chronologique.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": [
+        "Autodafé de Logroño (sorcières de Zugarramurdi)",
+        "Procès des sorcières de Pendle (Lancashire)",
+        "Urbain Grandier brûlé à Loudun",
+        "Procès de Salem (Massachusetts)",
+        "Anna Göldi décapitée à Glaris"
+      ]
+    }
+  ]
+}

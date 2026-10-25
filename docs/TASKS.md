@@ -1586,7 +1586,7 @@ libre, curseur, ordre, point sur l'image** (a picture with many characters, find
   for private games. (3) Not tried on real phones.
 
 ### T35 — Content: « Halloween — les secrets les mieux gardés » (very hard, 25 questions)
-- **Status:** in-progress (claude-T35, worktree ../lbq-T35)
+- **Status:** done
 - **Depends on:** — Content only; **runs in parallel with T34** (separate folder, different
   ports, different quiz title; both only add a section to this file).
 - **Scope:** `content/quizzes/halloween/**` (`quiz.json`, media, `CREDITS.md`, `README.md`,
@@ -1631,6 +1631,32 @@ l'image** (a picture with many characters, find a precise one), **« Mytho ! »*
 - **Import:** into the dev DB for `loicmoster@hotmail.fr` (private), then play it once with a
   scripted socket game (host + 3 phones: every type incl. the PIN on a phone — the phone prompt has
   the picture —, the bluffs and the drawings), then delete that test game.
+
+- **Summary:** `content/quizzes/halloween/` — `quiz.json` « Halloween — les secrets les mieux
+  gardés », exactly 25 questions, only the 7 allowed types: 7 QCM (rébus 🔥 + ⭕, « Qui a dit ? »
+  Michelet, one with 3 right answers), 5 réponses libres (typo tolerance, 2–3 accepted spellings),
+  3 curseurs (lunar month, 19 hanged at Salem ± 2, Houdini 1926 ± 3), 3 ordres (Toussaint →
+  « trick or treat », festivals in the calendar, finale: 5 witch trials 1610 → 1782), 2 points sur
+  l'image, 3 « Mytho ! » (cempasúchil, the Ankou, Giles Corey's « Plus de poids »), 2 « Dessine-moi »
+  (11 creatures / 11 objects); 1000 / 2000 points (4 × 2000 incl. the finale), 20–90 s. No user
+  picture was in `images/`, so the PIN picture (and cover) is Bruegel's _Le Triomphe de la Mort_
+  (Prado, Commons `PD-Art` / `PD-old-100-expired`, resized to 1600 px): the hurdy-gurdy skeleton on
+  the cart of skulls and the man in red-and-white checks under the table — both zones drawn and
+  checked on the picture. `images/.gitignore` keeps any other picture out of git. `CREDITS.md`:
+  the painting's credit and one source per answer (Wikipedia en/fr/de articles, Wikisource for
+  Michelet, Folger for Macbeth, AFP/Africanews for the Fèt Gede); disputed facts avoided or
+  reworded (Coligny calendar dropped; trick-or-treat's first print use is 1917, not 1927; Salem
+  = 19 hanged; Logroño day not given). `README.md`: question table, the picture and how to swap
+  it, how to play (Équipes for a party, Survie + Jokers with 3–4 hearts, where jokers work). No
+  app code changed. Imported into the dev DB for loicmoster@hotmail.fr (private, 25 questions,
+  media in the main checkout's `apps/server/uploads`, base URL :3001) and played once with a
+  scripted socket game on :3035 (host + 3 phones, all 25 questions to the podium: right / wrong /
+  typo / slider edge / partial PIN and ORDER results as expected, truth-as-lie refused
+  `LIE_TOO_CLOSE`, own-lie vote refused, drawings relayed to the TV and guessed, both PIN prompts
+  carried the picture, no answer, zone or right order in any phone prompt, report saved with 25
+  questions) — then the test game and its temporary host session were deleted.
+- **Notes:** the PIN zones are in picture fractions (the painting isn't square, so they are
+  ellipses), re-check them if the picture is swapped. Not tried on real phones.
 
 ### T36 — Content: « Blind test d'Halloween » (25 film excerpts)
 - **Status:** in-progress (claude-T36, worktree ../lbq-T36)
