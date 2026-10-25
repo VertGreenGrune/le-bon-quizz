@@ -1605,7 +1605,7 @@ l'image** (a picture with many characters, find a precise one), **« Mytho ! »*
   the picture —, the bluffs and the drawings), then delete that test game.
 
 ### T36 — Content: « Blind test d'Halloween » (25 film excerpts)
-- **Status:** todo
+- **Status:** in-progress (claude-T36, worktree ../lbq-T36)
 - **Depends on:** — Content only; can run in parallel with T34 / T35 (separate folder, ports
   3036 / 5236, different title).
 - **Scope:** `content/quizzes/blind-test-halloween/**` (`quiz.json`, map picture, `CREDITS.md`,
