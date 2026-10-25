@@ -1,0 +1,6 @@
+# Your own crowd picture (e.g. foule.jpg, Warner Bros / DC characters) stays on your disk:
+# never committed or pushed. Only the generated mosaic and its script are in git.
+*
+!.gitignore
+!mosaique.jpg
+!make-mosaic.ps1

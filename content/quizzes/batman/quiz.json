@@ -1,0 +1,267 @@
+{
+  "title": "Batman, la série animée — niveau expert",
+  "description": "25 questions pour vrais habitants de Gotham : Batman, la série animée (1992), ses suites et ses films. Doublage, coulisses, méchants, bluffs, dessins et une foule à fouiller.",
+  "coverImageUrl": "images/mosaique.jpg",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Rébus 🎬 : 🎭 + 👻 = quel film de l'univers de la série ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Batman contre le fantôme masqué (Mask of the Phantasm)", "isCorrect": true },
+        { "text": "Batman et Mr. Freeze : SubZero", "isCorrect": false },
+        { "text": "La Mystérieuse Batwoman (Mystery of the Batwoman)", "isCorrect": false },
+        { "text": "Le Retour du Joker (Return of the Joker)", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Le générique de la série reprend le thème du film Batman de 1989. Qui l'a composé ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Shirley Walker", "isCorrect": false },
+        { "text": "Danny Elfman", "isCorrect": true },
+        { "text": "Hans Zimmer", "isCorrect": false },
+        { "text": "John Williams", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel comédien, aussi voix française de Buzz l'Éclair, double Batman en VF dans la série ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Richard Darbois", "Darbois"],
+      "typoTolerance": true
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien d'épisodes compte Batman, la série animée (1992–1995), sans les « New Batman Adventures » ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": { "min": 20, "max": 200, "step": 1, "correct": 85, "margin": 5, "unit": "épisodes" }
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un joueur dessine en secret un objet de Gotham, les autres devinent en l'écrivant !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Batmobile",
+        "Batarang",
+        "Bat-signal",
+        "Carte du Joker",
+        "Parapluie du Pingouin",
+        "Pièce de Double-Face",
+        "Point d'interrogation",
+        "Ceinture utilitaire",
+        "Grappin",
+        "Masque de Batman"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Dans quel épisode Harley Quinn apparaît-elle pour la toute première fois (septembre 1992) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Harley and Ivy", "isCorrect": false },
+        { "text": "Mad Love", "isCorrect": false },
+        { "text": "Joker's Favor (« Chantage à crédit »)", "isCorrect": true },
+        { "text": "Harlequinade", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Avant de tomber sous le charme du Joker, Harley Quinn était psychiatre à Arkham. Quel est son vrai nom ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Harleen Quinzel", "Quinzel", "Harleen Frances Quinzel"],
+      "typoTolerance": true
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Comment s'appellent les deux hyènes de Harley Quinn ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Bud et Lou",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur l'image 📍 Trouve le méchant dont l'épisode « Amour on Ice » a valu un Emmy à son scénariste.",
+      "imageUrl": "images/mosaique.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "zone": { "x": 0.698, "y": 0.376, "radius": 0.085 }
+    },
+    {
+      "type": "MCQ",
+      "text": "Le style « Dark Deco » de la série : sur quoi les décors étaient-ils peints ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Du papier blanc", "isCorrect": false },
+        { "text": "Du celluloïd bleu", "isCorrect": false },
+        { "text": "Du papier kraft", "isCorrect": false },
+        { "text": "Du papier noir", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets ces séries dans l'ordre de leur première diffusion aux États-Unis, de la plus ancienne à la plus récente.",
+      "timeLimitSec": 35,
+      "basePoints": 1000,
+      "items": [
+        "Batman, la série animée",
+        "Superman, la série animée",
+        "The New Batman Adventures",
+        "Batman, la relève (Batman Beyond)",
+        "La Ligue des justiciers (Justice League)"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? « Je suis la vengeance ! Je suis la nuit ! Je suis Batman ! » — Batman, mais drogué par quel méchant ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Le Chapelier fou", "isCorrect": false },
+        { "text": "L'Épouvantail", "isCorrect": true },
+        { "text": "Poison Ivy", "isCorrect": false },
+        { "text": "Le Joker", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quels sont le prénom et le nom du Pingouin ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Oswald Cobblepot", "Cobblepot", "Oswald Chesterfield Cobblepot"],
+      "typoTolerance": true
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel est le vrai nom du Ventriloque, le maître de la marionnette Scarface ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Arnold Wesker",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "MCQ",
+      "text": "Plusieurs réponses ✅ Lesquels de ces personnages ont été créés pour la série (et non dans les comics) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Harley Quinn", "isCorrect": true },
+        { "text": "Killer Croc", "isCorrect": false },
+        { "text": "Renee Montoya", "isCorrect": true },
+        { "text": "Lock-Up (Double Tour)", "isCorrect": true }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année « Batman contre le fantôme masqué » est-il sorti au cinéma aux États-Unis ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": { "min": 1985, "max": 2005, "step": 1, "correct": 1993, "margin": 1 }
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Dans « Batman contre le fantôme masqué », qui est l'ancienne fiancée de Bruce Wayne (prénom et nom) ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Andrea Beaumont", "Beaumont", "Andrea"],
+      "typoTolerance": true
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets ces films dans l'ordre de leur sortie, du plus ancien au plus récent.",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "items": [
+        "Batman contre le fantôme masqué",
+        "Batman et Mr. Freeze : SubZero",
+        "Batman, la relève : Le Retour du Joker",
+        "La Mystérieuse Batwoman"
+      ]
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur l'image 📍 Trouve la policière créée pour la série par Bruce Timm, Paul Dini et Mitch Brian.",
+      "imageUrl": "images/mosaique.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "zone": { "x": 0.302, "y": 0.624, "radius": 0.085 }
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Cette fois, un lieu ou une créature de Gotham. À tes crayons !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Batcave",
+        "Asile d'Arkham",
+        "Manoir Wayne",
+        "Chauve-souris",
+        "Hyène",
+        "Plante carnivore",
+        "Gargouille",
+        "Dirigeable",
+        "Pingouin",
+        "Gratte-ciel"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui prête sa voix (VO) à Mr. Freeze dans la série ?",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Ron Perlman", "isCorrect": false },
+        { "text": "Roddy McDowall", "isCorrect": false },
+        { "text": "Michael Ansara", "isCorrect": true },
+        { "text": "John Glover", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Dans la VF de la série, quel est le nom français de Clayface, l'homme d'argile ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Gueule d'argile"],
+      "typoTolerance": true
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel est le vrai nom de Lock-Up (Double Tour), le gardien d'Arkham devenu justicier ?",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "truth": "Lyle Bolton",
+      "voteTimeSec": 20
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de minutes dure « Batman contre le fantôme masqué » ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": { "min": 40, "max": 150, "step": 1, "correct": 76, "margin": 4, "unit": "min" }
+    },
+    {
+      "type": "ORDER",
+      "text": "Finale 🏆 Remets la chronologie de la Bat-famille dans l'ordre, du plus ancien au plus récent.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": [
+        "Les parents de Bruce Wayne sont assassinés",
+        "Dick Grayson devient Robin",
+        "Dick Grayson rend le costume de Robin",
+        "Tim Drake devient Robin",
+        "Le Joker enlève Tim Drake",
+        "Terry McGinnis devient Batman"
+      ]
+    }
+  ]
+}
