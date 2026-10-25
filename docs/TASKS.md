@@ -1761,6 +1761,58 @@ these question types only: **Buzzer, choix multiple, réponse libre, point sur l
   version) so no sung title gives the answer away. (2) The map is CC BY-SA: keep the credit if the
   quiz is ever made public.
 
+### T37 — Answer explanations + « select all » multiple-answer questions (run alone)
+- **Status:** todo
+- **Depends on:** — (everything merged). Touches shared, server, editor, TV, phones, reports, DB.
+- **Ports:** server 3037 / web 5237, test DB `lbq_test_t37`, e2e DB `lbq_e2e_t37`.
+
+**User requirements (2026-10-25):** (1) when the answer is revealed, show **more information /
+an explanation** about it. (2) For a choix multiple with **several right answers**, the player
+must **select every answer they think is right, then validate**; only the **exact set of right
+answers** wins the points, anything else is wrong (no points).
+
+**Design (decided — note any deviation below):**
+- **Explanation** — optional `explanation` (≤ 300 characters, trimmed; empty = none) on **every
+  question type** (`questionBase`). Editor: a textarea « 💡 Explication (affichée après la
+  réponse) » under the question, with a counter. Shown **only from REVEAL**: in `question:reveal`
+  (TV) and `player:result` (phones) — **never** in `question:show` / `question:prompt` (it usually
+  gives the answer away). TV: a « 💡 Le saviez-vous ? » card under the revealed answer (readable from
+  the sofa, appears after the reveal animation; also after a host reload in REVEAL). Phone: the
+  same text, smaller, on the result screen (scrollable if long). Saved in the report
+  (`QuestionResult`) and shown on each question card of `/reports/:gameId`. Prisma: nullable
+  column on `Question` + snapshot on `QuestionResult` (migration). Works with the import script
+  (`quiz.json` field), copies / duplicates and the library.
+- **« Select all » multiple answers** — applies automatically to an MCQ with **2 or more correct
+  choices** (no new editor option; single-answer MCQ, TRUE_FALSE and POLL are unchanged: one tap
+  answers). Editor: a hint when 2+ choices are ticked: « Plusieurs bonnes réponses : les joueurs
+  devront toutes les cocher pour marquer ». Phone: the shape buttons become **toggles** (selected =
+  check mark + outline), a hint « Plusieurs réponses possibles — coche toutes les bonnes », and a
+  « Valider » button (disabled until at least one is selected); the answer is sent on « Valider »
+  (speed points from that moment). Contract: `question:prompt.multiple?: true` (tells the phone to
+  toggle — it reveals that there are 2+ right answers, like Kahoot's « select all », but never which
+  ones nor how many); `player:answer` gains `choiceIndexes: number[]` (MCQ with `multiple` only; a
+  single `choiceIndex` → `INVALID_PAYLOAD` there, and `choiceIndexes` on another question →
+  `INVALID_PAYLOAD`). Scoring: correct **only if the selected set equals the set of correct
+  choices** (no partial points), then the usual time points, streak, team averages, « Survie »
+  heart. Reveal: `distribution` counts every selected choice (a player can count in several bars);
+  the TV also shows « n joueurs ont tout trouvé ». Phone result: « Il fallait cocher : … » with the
+  right shapes when wrong. TV during ANSWERING: « Plusieurs réponses possibles » under the question.
+- **Interactions:** Jokers — 🎯 50/50 hides wrong choices as usual (still ≥ 1 left); 🦜 Copieur
+  copies the whole selection; 🌀 Brouilleur's grey scrambled buttons become toggles too; ✖️2 Double
+  ou rien / ⏳ Sablier as usual. Buzzer — unchanged (answer said out loud, host judges). Pause /
+  rejoin — a phone that reloads gets `multiple` again (selection not kept, fine). Reports / CSV:
+  the selection is counted in the distribution like the TV.
+- **Docs:** PLAN.md §3 (scoring rule), §4 (contract), §5 (DB). The 3 existing multiple-answer
+  questions (Harry Potter Q5, Halloween Q3, Batman Q15) switch to the new rule automatically.
+
+**Tests:** shared schema (explanation length / optional, `choiceIndexes`), server (explanation
+never in show / prompt, present in reveal + result + saved stats; multiple: exact set right,
+subset / superset / wrong → 0, single `choiceIndex` refused, speed points from the validation,
+jokers 50/50 + Copieur + Brouilleur, team / Survie, rejoin), editor draft (explanation round trip,
+hint), phone reducer (toggles, validate); e2e: a multiple-answer question where one phone selects
+the exact set (correct) and another a subset (wrong), then the explanation on the TV, the phones and
+the report.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
