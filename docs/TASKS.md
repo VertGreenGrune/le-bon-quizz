@@ -1558,7 +1558,7 @@ libre, curseur, ordre, point sur l'image** (a picture with many characters, find
   prompt has the picture — the bluffs and the drawings), then delete that test game.
 
 ### T35 — Content: « Halloween — les secrets les mieux gardés » (very hard, 25 questions)
-- **Status:** todo
+- **Status:** in-progress (claude-T35, worktree ../lbq-T35)
 - **Depends on:** — Content only; **runs in parallel with T34** (separate folder, different
   ports, different quiz title; both only add a section to this file).
 - **Scope:** `content/quizzes/halloween/**` (`quiz.json`, media, `CREDITS.md`, `README.md`,
