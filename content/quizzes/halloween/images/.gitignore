@@ -1,0 +1,5 @@
+# Your own pictures (e.g. a crowd picture to replace the painting) stay on your disk, never in git.
+# Only the public-domain Bruegel reproduction is committed.
+*
+!.gitignore
+!triomphe-de-la-mort.jpg
