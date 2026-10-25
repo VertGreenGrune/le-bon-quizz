@@ -1762,7 +1762,7 @@ these question types only: **Buzzer, choix multiple, réponse libre, point sur l
   quiz is ever made public.
 
 ### T37 — Answer explanations + « select all » multiple-answer questions (run alone)
-- **Status:** todo
+- **Status:** in-progress (claude-T37, worktree ../lbq-T37)
 - **Depends on:** — (everything merged). Touches shared, server, editor, TV, phones, reports, DB.
 - **Ports:** server 3037 / web 5237, test DB `lbq_test_t37`, e2e DB `lbq_e2e_t37`.
 
