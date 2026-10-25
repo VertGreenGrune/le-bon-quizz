@@ -73,18 +73,73 @@ export const POINTS_OPTIONS = [
   { value: 0, label: 'Aucun point' },
 ] as const;
 
-export const QUESTION_TYPES: { type: QuestionType; label: string }[] = [
-  { type: 'MCQ', label: 'Choix multiple' },
-  { type: 'TRUE_FALSE', label: 'Vrai ou faux' },
-  { type: 'TYPE_ANSWER', label: 'Réponse libre' },
-  { type: 'SLIDER', label: 'Curseur' },
-  { type: 'POLL', label: 'Sondage' },
-  { type: 'ORDER', label: 'Ordre' },
-  { type: 'PIN', label: 'Point sur l’image' },
-  { type: 'WHO_OF_US', label: 'Qui de nous ?' },
-  { type: 'WORD_CLOUD', label: 'Nuage de mots' },
-  { type: 'BLUFF', label: 'Mytho !' },
-  { type: 'DRAW', label: 'Dessine-moi' },
+/** The types of the editor's selector; `description` is shown on hover. */
+export const QUESTION_TYPES: { type: QuestionType; label: string; description: string }[] = [
+  {
+    type: 'MCQ',
+    label: 'Choix multiple',
+    description:
+      'Les joueurs choisissent parmi 2 à 4 réponses, dont une ou plusieurs bonnes. Plus ils répondent vite, plus ils marquent de points.',
+  },
+  {
+    type: 'TRUE_FALSE',
+    label: 'Vrai ou faux',
+    description: 'Les joueurs doivent choisir entre les réponses « Vrai » et « Faux ».',
+  },
+  {
+    type: 'TYPE_ANSWER',
+    label: 'Réponse libre',
+    description:
+      'Les joueurs écrivent leur réponse sur leur téléphone. Les petites fautes d’orthographe peuvent être tolérées.',
+  },
+  {
+    type: 'SLIDER',
+    label: 'Curseur',
+    description:
+      'Les joueurs devinent un nombre avec un curseur. Une marge accepte les réponses proches : plus on est près, plus on marque.',
+  },
+  {
+    type: 'POLL',
+    label: 'Sondage',
+    description:
+      'Les joueurs votent pour la réponse de leur choix. Il n’y a pas de bonne réponse et aucun point n’est gagné.',
+  },
+  {
+    type: 'ORDER',
+    label: 'Ordre',
+    description:
+      'Les joueurs remettent 3 à 6 éléments dans le bon ordre. Chaque élément bien placé rapporte une partie des points.',
+  },
+  {
+    type: 'PIN',
+    label: 'Point sur l’image',
+    description:
+      'Les joueurs touchent l’image sur leur téléphone pour placer un point. Plus ils sont près de la zone à trouver, plus ils marquent.',
+  },
+  {
+    type: 'WHO_OF_US',
+    label: 'Qui de nous ?',
+    description:
+      'Les joueurs votent pour l’un d’entre eux. Pas de bonne réponse ; un bonus peut récompenser ceux qui votent comme la majorité.',
+  },
+  {
+    type: 'WORD_CLOUD',
+    label: 'Nuage de mots',
+    description:
+      'Chaque joueur écrit un mot ou deux : les réponses forment un nuage de mots à l’écran. Aucun point n’est gagné.',
+  },
+  {
+    type: 'BLUFF',
+    label: 'Mytho !',
+    description:
+      'Chaque joueur invente une fausse réponse crédible, puis tous votent pour celle qu’ils croient vraie. On marque en trouvant la vérité et en piégeant les autres.',
+  },
+  {
+    type: 'DRAW',
+    label: 'Dessine-moi',
+    description:
+      'Un joueur dessine un mot secret sur son téléphone, en direct à l’écran ; les autres le devinent en l’écrivant. Le dessinateur change à chaque question.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;

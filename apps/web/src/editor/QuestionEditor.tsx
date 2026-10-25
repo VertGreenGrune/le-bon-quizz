@@ -116,17 +116,27 @@ export function QuestionEditor({
         role="radiogroup"
         aria-label="Type"
       >
-        {QUESTION_TYPES.map(({ type, label }) => (
-          <button
-            key={type}
-            type="button"
-            role="radio"
-            aria-checked={q.type === type}
-            onClick={() => onChange(setQuestionType(q, type))}
-            className={`rounded-md px-3 py-1 text-sm font-bold ${q.type === type ? 'bg-white text-brand shadow-sm' : 'text-gray-500'}`}
-          >
-            {label}
-          </button>
+        {QUESTION_TYPES.map(({ type, label, description }) => (
+          <span key={type} className="group relative">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={q.type === type}
+              aria-describedby={`type-help-${type}`}
+              onClick={() => onChange(setQuestionType(q, type))}
+              className={`rounded-md px-3 py-1 text-sm font-bold ${q.type === type ? 'bg-white text-brand shadow-sm' : 'text-gray-500'}`}
+            >
+              {label}
+            </button>
+            {/* Shown on hover (after a short delay) and on keyboard focus. */}
+            <span
+              id={`type-help-${type}`}
+              role="tooltip"
+              className="pointer-events-none invisible absolute top-full left-1/2 z-20 mt-2 w-64 -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-xs leading-snug font-normal text-white opacity-0 shadow-lg transition-opacity delay-0 group-hover:visible group-hover:opacity-100 group-hover:delay-300 group-has-[:focus-visible]:visible group-has-[:focus-visible]:opacity-100"
+            >
+              {description}
+            </span>
+          </span>
         ))}
       </div>
 
