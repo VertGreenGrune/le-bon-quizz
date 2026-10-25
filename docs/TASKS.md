@@ -1604,6 +1604,80 @@ l'image** (a picture with many characters, find a precise one), **« Mytho ! »*
   scripted socket game (host + 3 phones: every type incl. the PIN on a phone — the phone prompt has
   the picture —, the bluffs and the drawings), then delete that test game.
 
+### T36 — Content: « Blind test d'Halloween » (25 film excerpts)
+- **Status:** todo
+- **Depends on:** — Content only; can run in parallel with T34 / T35 (separate folder, ports
+  3036 / 5236, different title).
+- **Scope:** `content/quizzes/blind-test-halloween/**` (`quiz.json`, map picture, `CREDITS.md`,
+  `README.md`, `audio/.gitignore`). Reuses `quiz:import`; app code untouched.
+
+**User requirement (2026-10-25):** a blind test of **25 film music excerpts**, Halloween-themed
+(witches, ghosts, monsters, Day of the Dead, autumn — not slasher horror), fairly hard, with
+these question types only: **Buzzer, choix multiple, réponse libre, point sur l'image**.
+
+**The 25 excerpts (chosen with the user — keep this list and this order):**
+1. Hôtel Transylvanie (2012) — main theme — Mark Mothersbaugh
+2. Le Magicien d'Oz (1939) — Ding-Dong! The Witch Is Dead — Harold Arlen & Yip Harburg
+3. Wicked (2024) — Defying Gravity — Stephen Schwartz
+4. The Rocky Horror Picture Show (1975) — Time Warp — Richard O'Brien
+5. La Famille Addams (1991) — Addams Groove — MC Hammer
+6. L'Étrange Noël de Monsieur Jack (1993) — Jack's Lament — Danny Elfman
+7. Fantasia (1940) — Une nuit sur le mont Chauve — Moussorgski
+8. Coco (2017) — Remember Me — Kristen Anderson-Lopez & Robert Lopez
+9. Casper (1995) — Casper's Lullaby — James Horner
+10. Le Fantôme de l'Opéra (2004) — The Phantom of the Opera — Andrew Lloyd Webber
+11. Hocus Pocus (1993) — Main Title (score) — John Debney
+12. Harry Potter et le Prisonnier d'Azkaban (2004) — A Window to the Past — John Williams
+13. Kiki la petite sorcière (1989) — A Town with an Ocean View — Joe Hisaishi
+14. Les Sorcières (1990) — Main Title — Stanley Myers
+15. Le Château ambulant (2004) — Merry-Go-Round of Life — Joe Hisaishi
+16. Sleepy Hollow (1999) — Main Titles — Danny Elfman
+17. Coraline (2009) — Exploration — Bruno Coulais
+18. La Légende de Manolo (2014) — main theme — Gustavo Santaolalla
+19. Frankenstein Junior (1974) — Transylvanian Lullaby — John Morris
+20. Dracula (1992) — Vampire Hunters — Wojciech Kilar
+21. Le Crapaud et le Maître d'école (Disney, 1949) — The Headless Horseman — Bing Crosby
+22. It's the Great Pumpkin, Charlie Brown (1966) — The Great Pumpkin Waltz — Vince Guaraldi
+23. La Momie (1999) — main theme — Jerry Goldsmith
+24. Twilight (2008) — Bella's Lullaby — Carter Burwell
+25. Labyrinthe (1986) — Magic Dance — David Bowie
+
+**Design (decided):**
+- **One question per excerpt**, the sound playing during the question (`audio`, ~20 s, looped).
+  Vary what is asked so it isn't 25 × « quel film ? »: the film, the composer / performer, the
+  year (as a choice), the character, the country where the film takes place… Every fact checked
+  (film credits, Wikipedia / official sources), listed in `CREDITS.md`.
+- **Mix (25), only these types:** ~8 **Buzzer** (on réponse libre or choix multiple: « Buzzez et
+  nommez le film ! » — best for the well-known excerpts), ~7 **choix multiple** (4 plausible
+  choices: same era / same genre, so it stays hard), ~6 **réponse libre** (typo tolerance on,
+  several accepted spellings: French and original titles, e.g. « Hôtel Transylvanie » /
+  « Hotel Transylvania »), **4 point sur l'image** on **one world map** (« Écoutez ! Dans quel pays
+  se déroule ce film ? »: e.g. Coco / Manolo → Mexique, Dracula / Frankenstein Junior →
+  Transylvanie (Roumanie), La Momie → Égypte, Sleepy Hollow → État de New York; generous zones;
+  only films with an unambiguous real place). Buzzer only on types that take it
+  (`BUZZER_QUESTION_TYPES`), never on PIN. 1000 points, 2000 for the 5 hardest; 20–30 s.
+- **Question texts never give the answer away**, and the excerpts must not either: for songs whose
+  lyrics say the title (Ding-Dong!, Time Warp, Remember Me, Defying Gravity, Addams Groove,
+  Magic Dance…), recommend an excerpt **before / without the title line**, or ask something else
+  than the title for them (composer, performer, year, country).
+- **Map:** a freely licensed world map from Wikimedia Commons (public domain or CC, credited in
+  `CREDITS.md`), ≤ 1600 px wide, with no country names printed if possible (or the question must
+  still be hard); zones computed and **checked on the picture**.
+- **Music = placeholders** (copyright, like T23 / T33): `audio/01-hotel-transylvanie.mp3` …
+  `audio/25-labyrinthe.mp3` (two-digit number + slug), `audio/.gitignore` keeps the user's files
+  out of git. `CREDITS.md` + `README.md` list, for each file: the track, and a **recommended
+  excerpt** (start time, ~20 s, avoiding the title lyrics). In `quiz.json`, `startSec` = that
+  recommended start (best effort; the README explains: give full tracks and adjust `startSec` in
+  `quiz.json` before re-importing, or give pre-cut excerpts and set `startSec` to 0).
+- **README.md:** the question table (number, excerpt, type, what is asked, points), the list of
+  the 25 MP3 files to add with their recommended excerpts, how to import, and how to play
+  (e.g. « Équipes », buzzer judged by the host on the TV).
+- **Import + test:** import for `loicmoster@hotmail.fr` (private). For the scripted test game
+  (host + 3 phones: buzzer judged ❌ then ✅, typed answers, map pins — check the phones get the
+  map), generate short **test tones** in place of the missing MP3s (like T33), then delete the test
+  game and the test tones and **re-import without sound**, so the user's own files are used once
+  they add them.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
