@@ -1557,6 +1557,53 @@ libre, curseur, ordre, point sur l'image** (a picture with many characters, find
   scripted socket game (host + 3 phones: every type incl. the PIN on a phone — check the phone
   prompt has the picture — the bluffs and the drawings), then delete that test game.
 
+### T35 — Content: « Halloween — les secrets les mieux gardés » (very hard, 25 questions)
+- **Status:** todo
+- **Depends on:** — Content only; **runs in parallel with T34** (separate folder, different
+  ports, different quiz title; both only add a section to this file).
+- **Scope:** `content/quizzes/halloween/**` (`quiz.json`, media, `CREDITS.md`, `README.md`,
+  `images/.gitignore` for a user picture). Reuses `quiz:import`; app code untouched.
+
+**User requirement (2026-10-25):** a **really hard** quiz of **little-known facts** about
+Halloween: **cultural traditions across the world, mysterious stories, witches**. **25
+questions**, only these types: **choix multiple, réponse libre, curseur, ordre, point sur
+l'image** (a picture with many characters, find a precise one), **« Mytho ! »**, **« Dessine-moi »**.
+
+**Design (decided):**
+- French, **very hard / little-known** (no « what do children say at the door »): origins
+  (Samhain, Celtic and Christian calendars, the turnip lanterns before pumpkins, Stingy Jack),
+  **the same night around the world** (Día de Muertos, Hungry Ghost Festival, Obon, Fèt Gede in
+  Haiti, Pangangaluluwa, Allerheiligen, Kalan Goañv in Brittany, Dziady…), **mysterious stories
+  and legends** (La Llorona, Baba Yaga, haunted places, famous hoaxes and unsolved cases),
+  **witches** (Malleus Maleficarum, Salem, Pendle, Zugarramurdi, the last executions in Europe,
+  real numbers of trials, the herbs and objects). Every fact checked against **reliable sources**
+  (encyclopedias, museums, historians, academic or national sources — not listicles), listed in
+  `CREDITS.md`; when sources disagree, ask about something they agree on. Fun tone despite the
+  difficulty: a rebus, a « Qui a dit ? » (a historical or literary quote), a lighter question now
+  and then.
+- **Mix (25):** ~7 choix multiple (incl. one with several right answers), ~5 réponse libre (typo
+  tolerance on, several accepted spellings), ~3 curseur (a year, a number of trials / victims, a
+  weight…, with margin + unit), ~3 ordre (e.g. festivals by date in the year, witch trials in
+  chronological order, traditions from oldest to newest), **2 point sur l'image** (same picture,
+  two different characters to find), ~3 « Mytho ! » (obscure true answers), **2 « Dessine-moi »**
+  (Halloween word lists: citrouille, chauve-souris, balai, chaudron, fantôme, squelette, toile
+  d'araignée, chat noir, cercueil, crâne en sucre, chapeau de sorcière, momie…, ≥ 8 words each).
+  Varied time limits and points (1000 / 2000), hard all along, a 2000-point finale.
+- **The crowd picture (PIN):** use, in this order: (1) the **user's own picture** if they put
+  one in `content/quizzes/halloween/images/` (kept out of git); (2) otherwise a **public-domain
+  painting full of figures from Wikimedia Commons**, e.g. Pieter Bruegel the Elder, *The Triumph
+  of Death* (c. 1562), Goya, *El Aquelarre* (1798), or a Bosch — reproduction of a 2D public
+  domain work, check the Commons licence tag, credit it in `CREDITS.md`; a ≤ 1600 px wide copy is
+  enough. The two characters to find must be precise and unambiguous (e.g. « le squelette qui
+  joue de la vielle », « la chauve-souris »); compute and **check on the picture** that each one is
+  inside its zone (`{ x, y, radius }` in picture fractions). The question text can tell the story
+  of the painting.
+- **README.md:** the question table (number, type, theme, time, points), the picture used and how
+  to swap it, and a suggested way to play (e.g. « Équipes » for a Halloween party).
+- **Import:** into the dev DB for `loicmoster@hotmail.fr` (private), then play it once with a
+  scripted socket game (host + 3 phones: every type incl. the PIN on a phone — the phone prompt has
+  the picture —, the bluffs and the drawings), then delete that test game.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
