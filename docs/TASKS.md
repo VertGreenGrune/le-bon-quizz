@@ -1508,7 +1508,7 @@ the game — on **Harry Potter, expert level**.
   credits if the quiz is ever made public.
 
 ### T34 — Content: « Batman, la série animée — niveau expert » (25 questions)
-- **Status:** todo
+- **Status:** in-progress (claude-T34, worktree ../lbq-T34)
 - **Depends on:** — (all question types exist). Content only, like T23 / T33.
 - **Scope:** `content/quizzes/batman/**` (`quiz.json`, media, `CREDITS.md`, `README.md`,
   `images/.gitignore`). Reuses `quiz:import`; app code untouched (fix the import script only if
