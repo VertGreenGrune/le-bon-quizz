@@ -147,7 +147,23 @@ test('ordre, point sur l’image, « Qui de nous ? » and word cloud, up to the 
   // ---- 2. Point sur l'image: Alice taps the zone, Bob far away ----
   await expect(host.getByText('📍 Touche l’image sur ton téléphone')).toBeVisible();
   await expect(alice.getByRole('heading', { name: 'Touche l’image' })).toBeVisible();
-  await tapPicture(alice, 0.25, 0.5);
+  // Zoom: a drag only moves the picture (no pin), ＋ zooms, the wheel zooms around the cursor;
+  // the pin is still measured on the picture as shown, so Alice lands in the zone when zoomed.
+  const viewport = alice.getByTestId('pin-viewport');
+  await expect.poll(async () => (await viewport.boundingBox())?.width ?? 0).toBeGreaterThan(100);
+  const vp = (await viewport.boundingBox())!;
+  await alice.getByRole('button', { name: 'Zoomer', exact: true }).click();
+  await alice.mouse.move(vp.x + vp.width * 0.6, vp.y + vp.height * 0.6);
+  await alice.mouse.down();
+  await alice.mouse.move(vp.x + vp.width * 0.4, vp.y + vp.height * 0.4, { steps: 5 });
+  await alice.mouse.up();
+  await expect(alice.getByTestId('pin-mark')).toHaveCount(0); // dragging doesn't place a pin
+  await alice.getByRole('button', { name: 'Voir toute l’image' }).click();
+  const target = { x: vp.x + vp.width * 0.25, y: vp.y + vp.height * 0.5 };
+  await alice.mouse.move(target.x, target.y);
+  await alice.mouse.wheel(0, -200);
+  await alice.mouse.wheel(0, -200);
+  await alice.mouse.click(target.x, target.y);
   await expect(alice.getByTestId('pin-mark')).toBeVisible();
   await alice.getByRole('button', { name: 'Valider' }).click();
   await tapPicture(bob, 0.95, 0.9);

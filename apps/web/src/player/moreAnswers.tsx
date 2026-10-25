@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type PointerEvent, type WheelEvent } from 'react';
 import { Reorder, motion } from 'framer-motion';
 import type { LobbyMember, PinPoint, QuestionPromptPayload } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
@@ -6,6 +6,7 @@ import { PinMarker, PinPicture } from '../components/PinPicture';
 import { itemLetter } from '../lib/orderItems';
 import type { PlayerState } from './playerState';
 import { sendAnswer } from './playerStore';
+import { IDENTITY, MAX_SCALE, clampView, zoomAt, type View } from './zoomPan';
 
 /** Phone controllers of the ORDER / PIN / WHO_OF_US questions (word clouds use `TextAnswer`). */
 
@@ -80,21 +81,170 @@ export function OrderAnswer({ items }: { items: string[] }) {
   );
 }
 
-/** Point sur l'image: tap the picture (tap again to move the pin), then « Valider ». */
+/** Moves under this many pixels count as a tap (places the pin), above as a drag (pans). */
+const TAP_SLOP_PX = 8;
+
+/**
+ * Point sur l'image: tap the picture (tap again to move the pin), then « Valider ». The picture can
+ * be zoomed (pinch, ＋ / −, mouse wheel) and moved (drag) to place the point precisely; the point is
+ * measured on the picture as shown, so it is the same picture fraction whatever the zoom.
+ */
 export function PinAnswer({ imageUrl }: { imageUrl: string }) {
   const [point, setPoint] = useState<PinPoint | null>(null);
+  const [view, setView] = useState<View>(IDENTITY);
+  const viewport = useRef<HTMLDivElement>(null);
+  const picture = useRef<HTMLDivElement>(null);
+  // Active pointers and the gesture they started (one finger: tap or pan; two: pinch).
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<
+    | { kind: 'one'; x: number; y: number; start: View; moved: boolean }
+    | { kind: 'pinch'; dist: number; mid: { x: number; y: number }; start: View }
+    | null
+  >(null);
+
+  const box = () => viewport.current?.getBoundingClientRect();
+  const local = (clientX: number, clientY: number) => {
+    const r = box();
+    return r ? { x: clientX - r.left, y: clientY - r.top } : { x: 0, y: 0 };
+  };
+  const zoomBy = (factor: number, cx?: number, cy?: number) => {
+    const r = box();
+    if (!r) return;
+    setView((v) =>
+      zoomAt(v, v.scale * factor, cx ?? r.width / 2, cy ?? r.height / 2, r.width, r.height),
+    );
+  };
+  const place = (clientX: number, clientY: number) => {
+    const r = picture.current?.getBoundingClientRect(); // includes the zoom / pan
+    if (!r || r.width === 0 || r.height === 0) return;
+    const f = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 10_000) / 10_000;
+    setPoint({ x: f((clientX - r.left) / r.width), y: f((clientY - r.top) / r.height) });
+  };
+
+  const twoFingers = () => {
+    const [a, b] = [...pointers.current.values()];
+    return {
+      dist: Math.hypot(a!.x - b!.x, a!.y - b!.y) || 1,
+      mid: local((a!.x + b!.x) / 2, (a!.y + b!.y) / 2),
+    };
+  };
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 1)
+      gesture.current = { kind: 'one', x: e.clientX, y: e.clientY, start: view, moved: false };
+    else if (pointers.current.size === 2)
+      gesture.current = { kind: 'pinch', ...twoFingers(), start: view };
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = gesture.current;
+    const r = box();
+    if (!g || !r) return;
+    if (g.kind === 'pinch' && pointers.current.size >= 2) {
+      const { dist, mid } = twoFingers();
+      // Zoom around where the fingers started, then follow the fingers' middle.
+      const zoomed = zoomAt(
+        g.start,
+        g.start.scale * (dist / g.dist),
+        g.mid.x,
+        g.mid.y,
+        r.width,
+        r.height,
+      );
+      setView(
+        clampView(
+          { ...zoomed, x: zoomed.x + mid.x - g.mid.x, y: zoomed.y + mid.y - g.mid.y },
+          r.width,
+          r.height,
+        ),
+      );
+    } else if (g.kind === 'one') {
+      const dx = e.clientX - g.x;
+      const dy = e.clientY - g.y;
+      if (!g.moved && Math.hypot(dx, dy) < TAP_SLOP_PX) return;
+      g.moved = true;
+      setView(clampView({ ...g.start, x: g.start.x + dx, y: g.start.y + dy }, r.width, r.height));
+    }
+  };
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (!pointers.current.delete(e.pointerId)) return;
+    const g = gesture.current;
+    if (g?.kind === 'one' && !g.moved) place(e.clientX, e.clientY);
+    // A pinch never ends with a tap: wait for every finger to lift before a new gesture.
+    gesture.current = pointers.current.size === 0 || g?.kind === 'pinch' ? null : g;
+  };
+  const onWheel = (e: WheelEvent<HTMLDivElement>) => {
+    const p = local(e.clientX, e.clientY);
+    zoomBy(e.deltaY < 0 ? 1.25 : 0.8, p.x, p.y);
+  };
+
+  const zoomed = view.scale > 1.001;
+  const zoomButton =
+    'grid size-11 place-items-center rounded-full bg-white/90 text-2xl font-black text-brand shadow-lg disabled:opacity-40';
   return (
     <div className="flex flex-1 flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <h2 className="text-center text-2xl font-black">Touche l’image</h2>
+      <p className="-mt-2 text-center text-sm opacity-80">
+        Pince ou ＋ pour zoomer, glisse pour te déplacer
+      </p>
       <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-        <PinPicture
-          src={imageUrl}
-          onPick={setPoint}
-          className="overflow-hidden rounded-xl shadow-lg"
-          imgClassName="max-h-[55vh] max-w-full"
-        >
-          {point && <Pin point={point} />}
-        </PinPicture>
+        <div className="flex flex-col items-center gap-3">
+          <div
+            ref={viewport}
+            className="relative inline-flex cursor-crosshair touch-none overflow-hidden rounded-xl shadow-lg select-none"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            onWheel={onWheel}
+            data-testid="pin-viewport"
+          >
+            <div
+              style={{
+                transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+                transformOrigin: '0 0',
+              }}
+            >
+              <div ref={picture} className="relative">
+                <PinPicture src={imageUrl} imgClassName="max-h-[55vh] max-w-full">
+                  {point && <Pin point={point} scale={view.scale} />}
+                </PinPicture>
+              </div>
+            </div>
+          </div>
+          {/* Under the picture, never over it: every spot of the picture stays tappable. */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              aria-label="Zoomer"
+              disabled={view.scale >= MAX_SCALE}
+              onClick={() => zoomBy(1.5)}
+              className={zoomButton}
+            >
+              ＋
+            </button>
+            <button
+              type="button"
+              aria-label="Dézoomer"
+              disabled={!zoomed}
+              onClick={() => zoomBy(1 / 1.5)}
+              className={zoomButton}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              aria-label="Voir toute l’image"
+              disabled={!zoomed}
+              onClick={() => setView(IDENTITY)}
+              className={zoomButton}
+            >
+              ⟲
+            </button>
+          </div>
+        </div>
       </div>
       <motion.button
         type="button"
@@ -109,16 +259,19 @@ export function PinAnswer({ imageUrl }: { imageUrl: string }) {
   );
 }
 
-function Pin({ point }: { point: PinPoint }) {
+/** `scale`: zoom of the picture — the mark is counter-scaled to keep its size on screen. */
+function Pin({ point, scale = 1 }: { point: PinPoint; scale?: number }) {
   return (
     <PinMarker point={point}>
-      <motion.span
-        key={`${point.x},${point.y}`}
-        initial={{ scale: 2, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="block size-7 rounded-full border-4 border-white bg-answer-red shadow-[0_0_0_2px_rgba(0,0,0,0.4)]"
-        data-testid="pin-mark"
-      />
+      <span className="block" style={{ transform: `scale(${1 / scale})` }}>
+        <motion.span
+          key={`${point.x},${point.y}`}
+          initial={{ scale: 2, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="block size-7 rounded-full border-4 border-white bg-answer-red shadow-[0_0_0_2px_rgba(0,0,0,0.4)]"
+          data-testid="pin-mark"
+        />
+      </span>
     </PinMarker>
   );
 }

@@ -1986,3 +1986,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   answer or the timer ends the question. `BuzzerRound.locked` (current locks) vs `wrong` (every
   wrong answer, reveal / report); wrong answers are recorded at REVEAL (one heart / streak reset
   at most); a locked player who drops doesn't pause the game. PLAN.md §3 updated; tests added.
+- 2026-10-25, main agent (user requests): (1) « Réponse libre »: up to **10** accepted answers
+  (`MAX_ACCEPTED_ANSWERS`, was 3; the editor showed no message when the add button disappeared —
+  now « n / 10 » + « Maximum atteint »). (2) **Zoom on the phone for « point sur l'image »**
+  (`player/moreAnswers.tsx` `PinAnswer` + pure math in `player/zoomPan.ts`): pinch (×1–×4), drag
+  to pan, mouse wheel, ＋ / − / ⟲ buttons **under** the picture (never over it, so every spot stays
+  tappable); a tap (< 8 px of movement) places the pin, a drag never does; the pin is measured on
+  the picture as displayed (its bounding box includes the zoom), so the answer is the same picture
+  fraction; the mark keeps its size. `e2e/question-types.spec.ts` drags, zooms and lands in the zone.
