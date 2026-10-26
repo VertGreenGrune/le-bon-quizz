@@ -1,0 +1,33 @@
+# Your own pictures (e.g. screenshots of the series) stay on your disk, never in git.
+# Only the freely licensed Wikimedia Commons files below are committed (credits in ../CREDITS.md).
+*
+!.gitignore
+!01-citrouilles.jpg
+!02-alex-hirsch.jpg
+!03-champ-de-citrouilles.jpg
+!04-dogue-allemand.jpg
+!05-mystery-machine.jpg
+!06-frank-sinatra.jpg
+!07-edgar-poe.jpg
+!08-matt-groening.jpg
+!09-stanley-hotel.jpg
+!10-maison-simpson.jpg
+!11-maison-hantee.jpg
+!12-maison-kansas.jpg
+!14-grenouille.jpg
+!15-elijah-wood.jpg
+!16-foret-automne.jpg
+!17-deguisements.jpg
+!18-famille-addams-1964.jpg
+!19-chateau-cantacuzino.jpg
+!20-lux-interior.jpg
+!21-cab-calloway.jpg
+!22-maison-charmed.jpg
+!23-chat-noir.jpg
+!24-sorciere.jpg
+!25-ecto-1.jpg
+!27-skeleton-dance.jpg
+!28-sarah-michelle-gellar.jpg
+!29-friendly-ghost.jpg
+!30-addams-1977.jpg
+!carte-etats-unis.png

@@ -85,9 +85,34 @@ describe('prepareQuiz', () => {
     expect(warnings).toEqual([expect.stringContaining('audio/absent.mp3')]);
   });
 
-  it('fails on a missing picture, an unknown format or an invalid quiz', async () => {
-    writeQuiz({ title: 'Quiz', questions: [question({ imageUrl: 'images/absent.jpg' })] });
+  it('skips a missing question picture (and its effect) with a warning', async () => {
+    writeQuiz({
+      title: 'Quiz',
+      questions: [question({ imageUrl: 'images/absent.jpg', imageEffect: 'zoom' })],
+    });
+    const warnings: string[] = [];
+    const quiz = await prepareQuiz(folder, store(), (m) => warnings.push(m));
+    expect(quiz.questions[0]!.imageUrl).toBeUndefined();
+    expect(quiz.questions[0]!.imageEffect).toBeUndefined();
+    expect(warnings).toEqual([expect.stringContaining('images/absent.jpg')]);
+  });
+
+  it('fails on a missing cover or PIN picture, an unknown format or an invalid quiz', async () => {
+    writeQuiz({ title: 'Quiz', coverImageUrl: 'images/absent.jpg', questions: [question()] });
     await expect(prepareQuiz(folder, store())).rejects.toThrow('images/absent.jpg');
+
+    writeQuiz({
+      title: 'Quiz',
+      questions: [
+        {
+          type: 'PIN',
+          text: 'Où ?',
+          imageUrl: 'images/carte.jpg',
+          zone: { x: 0.5, y: 0.5, radius: 0.1 },
+        },
+      ],
+    });
+    await expect(prepareQuiz(folder, store(), () => {})).rejects.toThrow('images/carte.jpg');
 
     writeQuiz({ title: 'Quiz', questions: [question({ imageUrl: 'audio/theme.wav' })] });
     await expect(prepareQuiz(folder, store())).rejects.toThrow('non reconnu');
