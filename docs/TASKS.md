@@ -1850,6 +1850,71 @@ the report.
   lists the ranking). **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on
   real phones.
 
+### T38 — Content: « Halloween animé — dessins animés & séries » (very hard, 30 questions, a picture each)
+- **Status:** todo
+- **Depends on:** — Content only (+ one small change to the import script, see below).
+- **Ports:** server 3038 / web 5238, test DB `lbq_test_t38`.
+- **Scope:** `content/quizzes/halloween-anime/**` (`quiz.json`, free pictures, `CREDITS.md`,
+  `README.md`, `images/.gitignore`), `apps/server/scripts/quizImport.ts` (+ its test) for the
+  missing-picture rule only.
+
+**User requirement (2026-10-26):** a Halloween quiz focused on **cartoons, animation and TV
+series**, **30 questions**, **fun but very hard**, **a picture to illustrate every question**. If a
+picture can't be downloaded legally, write the question anyway and tell the user which picture to
+add.
+
+**Design (decided):**
+- French, **very hard** (expert details, not « what is Scooby-Doo's dog called »): Halloween
+  episodes and specials, and spooky animated films and series. Pick from, for example: _The
+  Simpsons_ « Treehouse of Horror » (segments, numbers, the credit gags), _It's the Great Pumpkin,
+  Charlie Brown_, _Scooby-Doo_ (villains unmasked, the original 1969 series, the sidekicks),
+  _Courage the Cowardly Dog_, _Gravity Falls_ (« Summerween »), _Over the Garden Wall_, _Adventure
+  Time_, _Hilda_, _Danny Phantom_, _Les Razmoket_ / _Rugrats_, _SpongeBob_, _Phineas et Ferb_,
+  _Les Griffin_, _South Park_, the Addams family (animated 1973 / 1992, _Wednesday_ 2022),
+  _Buffy_, _Charmed_, _Sabrina_ (1996 and 2018), _Stranger Things_, _Chair de poule_ /
+  _Goosebumps_, _Fais-moi peur !_ / _Are You Afraid of the Dark?_, _La Petite Boutique des
+  horreurs_… plus the history of animation (Disney's _The Skeleton Dance_ 1929, the Fleischer _Betty
+  Boop_ ghosts, _Casper_ in 1945, _Le Crapaud et le Maître d'école_), and French dubs / creators /
+  voices. Fun tone: an emoji rebus, a « Qui a dit ? » quote, lighter questions between hard ones.
+  Every fact checked against reliable sources (Wikipedia en / fr, the series' wikis cross-checked,
+  credits, interviews), listed in `CREDITS.md`; when sources disagree, ask about something else.
+- **Types (30):** varied and fun — ~9 choix multiple (incl. one « select all » with several right
+  answers), ~2 vrai / faux, ~6 réponse libre (typo tolerance, several spellings: French and
+  original titles / names), ~3 curseur (year, episode number, count…), ~3 ordre, ~2 point sur
+  l'image, ~3 « Mytho ! », ~2 « Qui de nous ? » / sondage for fun breaks (no points). **No
+  « Dessine-moi »** (it can't have a picture). 1000 points, 2000 for the 5–6 hardest, a
+  2000-point finale; 20–45 s.
+- **Explanation on every question** (`explanation`, ≤ 300 characters): a sourced « 💡 Le
+  saviez-vous ? » (behind-the-scenes fact, origin of the gag…), its source in the `CREDITS.md`
+  « Le saviez-vous ? » table, as in `content/quizzes/halloween/CREDITS.md`.
+- **A picture on every question** (`imageUrl`), which must **never give the answer away** (use
+  `imageEffect` blur / zoom / pixelate when the picture is the clue, at least 6 questions). Pictures
+  of series and cartoons are copyrighted (Disney, Warner, Fox, Nickelodeon, Netflix…), so:
+  1. **Free pictures first:** Wikimedia Commons public domain or CC — public-domain cartoons
+     (e.g. _The Skeleton Dance_ 1929, Fleischer cartoons whose copyright expired — check the
+     Commons licence tag), CC photos of creators / voice actors / cosplay at conventions, houses
+     and places of shoots, PD paintings, Halloween photos (pumpkins, costumes…). Copy ≤ 1600 px
+     into `images/`, credit author + licence in `CREDITS.md`.
+  2. **Otherwise a placeholder** (like the music of T23 / T33): the question is fully written with
+     `imageUrl` = `images/<nn>-<slug>.jpg`, the file isn't in the repo (`images/.gitignore` keeps the
+     user's files out of git, except the free ones you add — list them in it), and `README.md` has a
+     **« Images à ajouter »** table: file name, question, exactly what the picture should show
+     (e.g. « une capture de Bart en costume dans le générique de Treehouse of Horror V »), and
+     whether it gets an effect. Prefer free pictures; placeholders only where no free picture fits.
+  - **PIN questions** need a picture that exists: use free pictures for them (e.g. a crowd
+    painting, a convention photo, a map), never placeholders.
+- **Import script change:** today a missing picture is an error. Make it like a missing sound: a
+  **missing picture → warning, the question is imported without it** (and without its
+  `imageEffect`); still an error for a PIN question (picture required) and for the cover. Unit
+  test in `scripts/quizImport.test.ts`. Note it under « Contract changes / cross-task notes ».
+- **README.md:** question table (number, type, theme, picture, points), « Images à ajouter »,
+  how to import / re-import once the pictures are added, how to play (e.g. « Équipes » for a
+  party, « Survie + Jokers »).
+- **Import + test:** import for `loicmoster@hotmail.fr` (private), play it once with a scripted
+  socket game on :3038 (host + 3 phones, every type, the PIN prompt carries the picture, no answer
+  / explanation in any phone prompt, explanations in the results), then delete the test game and
+  its temporary session.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
