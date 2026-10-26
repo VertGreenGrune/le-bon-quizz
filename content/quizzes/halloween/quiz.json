@@ -25,7 +25,8 @@
           "text": "Chandelier",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "Dans Macbeth (acte IV, scène 1), les trois sorcières y jettent aussi un orteil de grenouille, de la laine de chauve-souris et une langue de chien, en chantant « Double, double toil and trouble; Fire burn and cauldron bubble »."
     },
     {
       "type": "TYPE_ANSWER",
@@ -33,7 +34,8 @@
       "timeLimitSec": 25,
       "basePoints": 1000,
       "acceptedAnswers": ["Navet", "Rutabaga"],
-      "typoTolerance": true
+      "typoTolerance": true,
+      "explanation": "Refusé au paradis comme en enfer, Jack erre depuis avec sa lanterne : d'où « Jack-o'-lantern ». En Amérique, les émigrés irlandais et écossais ont remplacé le navet par la citrouille, plus grosse et bien plus facile à creuser."
     },
     {
       "type": "MCQ",
@@ -57,7 +59,8 @@
           "text": "Holi (Inde)",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "Au Japon, Obon s'achève souvent par des lanternes posées sur l'eau (tōrō nagashi) pour raccompagner les esprits. Holi, elle, fête le printemps et la victoire du bien sur le mal, à coups de poudres colorées."
     },
     {
       "type": "BLUFF",
@@ -65,7 +68,8 @@
       "timeLimitSec": 45,
       "basePoints": 1000,
       "truth": "Cempasúchil",
-      "voteTimeSec": 20
+      "voteTimeSec": 20,
+      "explanation": "Son nom vient du nahuatl cempōhualxōchitl, « fleur vingt ». Sa couleur vive et son parfum attireraient les âmes : on en couvre les autels (ofrendas) et l'on sème parfois ses pétales en chemin depuis la tombe."
     },
     {
       "type": "SLIDER",
@@ -78,7 +82,8 @@
         "step": 1,
         "correct": 7,
         "margin": 0
-      }
+      },
+      "explanation": "Tout le 7e mois lunaire est le « mois des fantômes » : les portes de l'enfer s'ouvrent. À Taïwan, on évite alors de nager, de déménager, de se marier, de siffler ou de sortir la nuit."
     },
     {
       "type": "PIN",
@@ -90,7 +95,8 @@
         "x": 0.12,
         "y": 0.655,
         "radius": 0.045
-      }
+      },
+      "explanation": "Bruegel peint une armée de squelettes qui emporte tous les vivants, rois et paysans : une « danse macabre » géante. Sur la charrette pleine de crânes, ce squelette musicien parodie les joies humaines. Le tableau est au musée du Prado."
     },
     {
       "type": "MCQ",
@@ -114,7 +120,8 @@
           "text": "George Sand",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "Dans La Sorcière (1862), l'historien Jules Michelet voit dans la sorcière une femme révoltée et une guérisseuse, née de la misère du Moyen Âge, plutôt qu'une servante du diable."
     },
     {
       "type": "ORDER",
@@ -127,7 +134,8 @@
         "Odilon de Cluny fixe le jour des morts au 2 novembre",
         "Robert Burns écrit son poème « Halloween »",
         "« Trick or treat » apparaît pour la première fois dans un journal"
-      ]
+      ],
+      "explanation": "« Halloween » vient de « All Hallows' Eve », la veille de la Toussaint. L'expression « trick or treat » n'apparaît dans un journal qu'en 1917, au Canada, dans le Sault Daily Star."
     },
     {
       "type": "DRAW",
@@ -146,7 +154,8 @@
         "Hibou",
         "Zombie",
         "Sorcière"
-      ]
+      ],
+      "explanation": "Pour les Celtes, Samhain marquait la fin des récoltes et le début de l'hiver : la frontière avec l'Autre Monde s'amincissait, laissant passer esprits et fées. D'où, peut-être, notre goût pour les créatures de la nuit."
     },
     {
       "type": "TYPE_ANSWER",
@@ -154,7 +163,8 @@
       "timeLimitSec": 30,
       "basePoints": 1000,
       "acceptedAnswers": ["Malleus Maleficarum", "Le Marteau des sorcières", "Malleus"],
-      "typoTolerance": true
+      "typoTolerance": true,
+      "explanation": "Le Malleus a connu 28 éditions entre 1486 et 1600 grâce à l'imprimerie. Il affirme que la sorcellerie est surtout le fait des femmes. Dès 1490, les théologiens de Cologne le condamnaient pour ses procédures illégales."
     },
     {
       "type": "MCQ",
@@ -178,7 +188,8 @@
           "text": "Une place sur deux",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "Les getai sont joués la nuit et très fort : le bruit attirerait et réjouirait les fantômes. Le premier rang leur est réservé : un vivant ne s'y assoit pas."
     },
     {
       "type": "SLIDER",
@@ -192,7 +203,8 @@
         "correct": 19,
         "margin": 2,
         "unit": "pendus"
-      }
+      },
+      "explanation": "Il faut y ajouter Giles Corey, écrasé sous des pierres, et au moins 5 morts en prison. En 1711, la colonie réhabilita les condamnés et indemnisa leurs familles ; la dernière, Elizabeth Johnson Jr., n'a été innocentée qu'en 2022."
     },
     {
       "type": "BLUFF",
@@ -200,7 +212,8 @@
       "timeLimitSec": 45,
       "basePoints": 1000,
       "truth": "Le dernier mort de l'année",
-      "voteTimeSec": 20
+      "voteTimeSec": 20,
+      "explanation": "L'Ankou, serviteur de la Mort en Bretagne, parcourt la nuit les chemins avec sa charrette qui grince (karrigell an Ankou) : entendre ce grincement annoncerait une mort prochaine."
     },
     {
       "type": "MCQ",
@@ -224,7 +237,8 @@
           "text": "Bretzel",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "Les parrains et marraines l'offrent pour la Toussaint. On rattache la coutume à d'anciens rites de deuil, où l'on se coupait les cheveux tressés pour exprimer son chagrin."
     },
     {
       "type": "TYPE_ANSWER",
@@ -232,7 +246,8 @@
       "timeLimitSec": 30,
       "basePoints": 1000,
       "acceptedAnswers": ["Baron Samedi", "Bawon Samdi", "Baron Samdi"],
-      "typoTolerance": true
+      "typoTolerance": true,
+      "explanation": "Baron Samedi garde le seuil entre les vivants et les morts ; on lui prête un goût pour le rhum pimenté et les cigares. Pendant la Fèt Gede, les fidèles vont au cimetière, souvent vêtus de violet et de noir, les couleurs des Guédé."
     },
     {
       "type": "ORDER",
@@ -245,7 +260,8 @@
         "Día de Muertos",
         "Andrzejki, la Saint-André polonaise",
         "Krampusnacht"
-      ]
+      ],
+      "explanation": "Pendant les Lémuries, fêtes romaines des morts, le père de famille jetait des fèves noires derrière lui à minuit pour chasser les lémures, les esprits malveillants (Ovide, Les Fastes, livre V)."
     },
     {
       "type": "PIN",
@@ -257,7 +273,8 @@
         "x": 0.794,
         "y": 0.858,
         "radius": 0.05
-      }
+      },
+      "explanation": "C'est le bouffon du banquet, réfugié sous la table : même lui n'échappera pas à la Mort. Autour, l'armée de squelettes avance à l'abri de boucliers faits de couvercles de cercueils."
     },
     {
       "type": "MCQ",
@@ -281,7 +298,8 @@
           "text": "Taras Chevtchenko",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "Dziady (Les Aïeux) est devenu un symbole patriotique polonais : en 1968, l'interdiction de sa mise en scène à Varsovie par le pouvoir communiste déclencha des manifestations étudiantes."
     },
     {
       "type": "TYPE_ANSWER",
@@ -289,7 +307,8 @@
       "timeLimitSec": 25,
       "basePoints": 1000,
       "acceptedAnswers": ["Arthur Miller", "Miller"],
-      "typoTolerance": true
+      "typoTolerance": true,
+      "explanation": "Miller écrit la pièce en plein maccarthysme : les procès de 1692 y deviennent une allégorie de la « chasse aux sorcières » anticommuniste. Lui-même fut convoqué devant la commission parlementaire en 1956."
     },
     {
       "type": "DRAW",
@@ -308,7 +327,8 @@
         "Pierre tombale",
         "Grimoire",
         "Bonbon"
-      ]
+      ],
+      "explanation": "Au Día de Muertos, les crânes en sucre (calaveras) portent souvent un prénom écrit sur le front : celui d'un défunt, ou de la personne à qui on l'offre."
     },
     {
       "type": "SLIDER",
@@ -321,7 +341,8 @@
         "step": 1,
         "correct": 1926,
         "margin": 3
-      }
+      },
+      "explanation": "Houdini meurt d'une péritonite après une appendicite. Grand chasseur de faux médiums, il avait promis à sa femme Bess de lui envoyer un message de l'au-delà : elle tint une séance de spiritisme chaque Halloween pendant dix ans, en vain."
     },
     {
       "type": "BLUFF",
@@ -329,7 +350,8 @@
       "timeLimitSec": 45,
       "basePoints": 2000,
       "truth": "Plus de poids",
-      "voteTimeSec": 20
+      "voteTimeSec": 20,
+      "explanation": "Corey refusa de plaider : sans plaidoyer, pas de procès possible. Il fut écrasé pendant deux à trois jours et mourut sans avoir été jugé ; ses biens revinrent ainsi à ses fils au lieu d'être saisis."
     },
     {
       "type": "MCQ",
@@ -353,7 +375,8 @@
           "text": "Nicolas Rémy",
           "isCorrect": false
         }
-      ]
+      ],
+      "explanation": "En 1609, Pierre de Lancre affirme que tout le Labourd est infesté de sorciers ; sa mission envoie de nombreuses personnes au bûcher, dont des prêtres. Il raconte le sabbat dans son Tableau de l'inconstance des mauvais anges et démons (1612)."
     },
     {
       "type": "TYPE_ANSWER",
@@ -361,7 +384,8 @@
       "timeLimitSec": 25,
       "basePoints": 1000,
       "acceptedAnswers": ["La Llorona", "Llorona", "La Pleureuse"],
-      "typoTolerance": true
+      "typoTolerance": true,
+      "explanation": "Selon la légende, elle noya ses enfants et cherche leurs âmes pour l'éternité. La chanson traditionnelle « La Llorona » a été reprise par Chavela Vargas, et on l'entend dans le film Coco."
     },
     {
       "type": "ORDER",
@@ -374,7 +398,8 @@
         "Urbain Grandier brûlé à Loudun",
         "Procès de Salem (Massachusetts)",
         "Anna Göldi décapitée à Glaris"
-      ]
+      ],
+      "explanation": "Anna Göldi, servante accusée d'avoir ensorcelé la fille de son maître, est souvent présentée comme la dernière « sorcière » exécutée en Europe. Le canton de Glaris l'a réhabilitée en 2008."
     }
   ]
 }
