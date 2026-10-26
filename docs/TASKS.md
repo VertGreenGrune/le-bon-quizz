@@ -1851,7 +1851,7 @@ the report.
   real phones.
 
 ### T38 — Content: « Halloween animé — dessins animés & séries » (very hard, 30 questions, a picture each)
-- **Status:** todo
+- **Status:** in-progress (T38 agent)
 - **Depends on:** — Content only (+ one small change to the import script, see below).
 - **Ports:** server 3038 / web 5238, test DB `lbq_test_t38`.
 - **Scope:** `content/quizzes/halloween-anime/**` (`quiz.json`, free pictures, `CREDITS.md`,
