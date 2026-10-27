@@ -1994,7 +1994,7 @@ link → starts the game, sees the answer, pauses / resumes, judges a buzzer ✅
 podium, while a player phone plays (and its frames never contain the answer).
 
 ### T40 — TV themes (Halloween, Noël, Rétro…)
-- **Status:** todo
+- **Status:** in-progress (T40 agent)
 - **Depends on:** — (everything merged). Runs in parallel with T39 (see « Wave 7 coordination »).
 - **Scope:** new `apps/web/src/themes/**`, host screens' styling (`apps/web/src/host/**` except
   T39's new files), light touches on the phone (`apps/web/src/player/**` lobby / waiting screens),
