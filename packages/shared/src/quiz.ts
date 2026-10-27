@@ -428,11 +428,29 @@ const percent = (fraction: number) => `${Math.round(fraction * 100)} %`;
 export const QuizVisibility = z.enum(['PRIVATE', 'PUBLIC']);
 export type QuizVisibility = z.infer<typeof QuizVisibility>;
 
+/**
+ * Look of the TV (and of the phones' waiting screens): colors, background, font, music and
+ * confetti (T40). Never the answer colors / shapes. `classic` = the default purple look.
+ */
+export const QUIZ_THEMES = ['classic', 'halloween', 'christmas', 'retro', 'space'] as const;
+export const QuizTheme = z.enum(QUIZ_THEMES);
+export type QuizTheme = z.infer<typeof QuizTheme>;
+export const DEFAULT_QUIZ_THEME: QuizTheme = 'classic';
+export const QUIZ_THEME_NAMES: Record<QuizTheme, string> = {
+  classic: 'Classique',
+  halloween: 'Halloween',
+  christmas: 'Noël',
+  retro: 'Rétro',
+  space: 'Espace',
+};
+
 export const QuizSchema = z.object({
   id: z.string(),
   title: z.string().trim().min(1).max(95),
   description: z.string().max(500).optional(),
   coverImageUrl: z.string().url().optional(),
+  /** Absent = `classic` (or unchanged on a quiz update). */
+  theme: QuizTheme.optional(),
   questions: z.array(QuestionSchema).min(1).max(100),
 });
 export type Quiz = z.infer<typeof QuizSchema>;

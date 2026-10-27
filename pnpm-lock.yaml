@@ -84,6 +84,18 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource/creepster':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/mountains-of-christmas':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/orbitron':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/press-start-2p':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@lbq/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -350,6 +362,18 @@ packages:
 
   '@fastify/static@10.1.6':
     resolution: {integrity: sha512-f3x9XisI+y6AIhIfA/+Q3SFsuXeqNNk5HQh5htgHsPxmMLb4pLFskV6eFaLSW3IbI4azrS5np+/tkzXNH99LyQ==}
+
+  '@fontsource/creepster@5.3.0':
+    resolution: {integrity: sha512-k1Y03cPd2QnoVBygqfYd/y1Byx1Rl3vDLuq3TrmujwaSgFh8hFy2e1ar7/zhillaaCwweLDI9AlvhIBA+VlsWg==}
+
+  '@fontsource/mountains-of-christmas@5.3.0':
+    resolution: {integrity: sha512-1MGTUv2jVnkKTFjWqxV1khJZkeN7ozFQJKUynJDbnrciXufx6ffy7sGDAmAvSwlzVn5rVjezkFpage5RQMS82A==}
+
+  '@fontsource/orbitron@5.3.0':
+    resolution: {integrity: sha512-+BhPsbUAo/AF7sRcf+TEexm+EWWkgTiR9Zwb7AhYIPkc5oplfvw0C45Oc2xlKPhwVEmxG8hHuA6/Ansbl+Bc6w==}
+
+  '@fontsource/press-start-2p@5.3.0':
+    resolution: {integrity: sha512-gxWFxdeDglPhEYSwEeooomcaFK8kSQYLQwVxfnOJeYRj2sPEHXjpVtFgEaYfqzOjuAJGrIcJOipu2KY5YkbyuQ==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -2418,6 +2442,14 @@ snapshots:
       fastify-plugin: 6.0.1
       fastq: 1.20.3
       glob: 13.0.6
+
+  '@fontsource/creepster@5.3.0': {}
+
+  '@fontsource/mountains-of-christmas@5.3.0': {}
+
+  '@fontsource/orbitron@5.3.0': {}
+
+  '@fontsource/press-start-2p@5.3.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

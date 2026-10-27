@@ -3,6 +3,8 @@ import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } from '@lbq/shared';
 import { parseGameOptions } from '../lib/gameOptions';
+import { getTheme } from '../themes';
+import { ThemedMain } from '../themes/ThemedMain';
 import { JokerAnnouncements } from './jokerScreens';
 import {
   currentDrawing,
@@ -41,6 +43,7 @@ export function HostPage() {
   const teams = searchParams.get('teams');
   const hearts = searchParams.get('hearts');
   const jokers = searchParams.get('jokers');
+  const themeParam = searchParams.get('theme');
   const isNew = pinParam === 'new';
   const pin = isNew ? undefined : pinParam;
   const [hostToken, setHostToken] = useState(() => (pin ? loadHostToken(pin) : null));
@@ -58,6 +61,7 @@ export function HostPage() {
         teams: teams ?? '',
         hearts: hearts ?? '',
         jokers: jokers ?? '',
+        theme: themeParam ?? '',
       }),
     );
     createGame(quizId, options).then(
@@ -71,7 +75,7 @@ export function HostPage() {
     return () => {
       cancelled = true;
     };
-  }, [isNew, quizId, mode, teams, hearts, jokers, navigate]);
+  }, [isNew, quizId, mode, teams, hearts, jokers, themeParam, navigate]);
 
   const timed = state.deadline != null;
   const now = useNow(timed || state.paused !== null || state.comebacks.length > 0);
@@ -89,6 +93,7 @@ export function HostPage() {
     resumeCount,
     playerCount: state.players.length,
     buzzerHolder: holder?.id ?? null,
+    theme: state.theme,
   });
 
   // Sound clip of the question (host screen only): paused with the game, until the 3-2-1 ends,
@@ -235,9 +240,9 @@ export function HostPage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <main className="flex min-h-dvh flex-col bg-brand text-white select-none">
+      <ThemedMain theme={getTheme(state.theme)} className="flex min-h-dvh flex-col select-none">
         <header className="flex items-center gap-4 px-6 py-3 text-lg font-semibold">
-          <Link to="/" className="font-black">
+          <Link to="/" className="font-display font-black">
             Le Bon Quizz
           </Link>
           {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
@@ -257,7 +262,7 @@ export function HostPage() {
             <span className="rounded bg-answer-red px-3 py-1">Connexion au serveur perdue…</span>
           )}
           {game.connected && !state.paused && offline.length > 0 && phase !== 'ENDED' && (
-            <span className="rounded bg-black/30 px-3 py-1" data-testid="offline-players">
+            <span className="rounded bg-panel px-3 py-1" data-testid="offline-players">
               📵 {nicknameList(offline)} {offline.length > 1 ? 'sont' : 'est'} hors ligne
             </span>
           )}
@@ -340,7 +345,7 @@ export function HostPage() {
             </motion.button>
           )}
         </footer>
-      </main>
+      </ThemedMain>
     </MotionConfig>
   );
 }

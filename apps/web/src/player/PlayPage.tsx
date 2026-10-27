@@ -27,6 +27,7 @@ import {
   pauseWaitingText,
   playerScreen,
   type PlayerState,
+  followsTheme,
 } from './playerState';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
@@ -41,6 +42,8 @@ import {
 } from './draw';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
+import { getTheme, useTheme } from '../themes';
+import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
 import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
 import { heartsText, survivalLabel } from '../lib/survival';
@@ -64,7 +67,13 @@ export function PlayPage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <main className="flex h-dvh select-none flex-col overflow-hidden bg-brand text-white">
+      <ThemedMain
+        theme={getTheme(s.theme)}
+        brand={false}
+        decorated={followsTheme(screen)}
+        light
+        className="flex h-dvh select-none flex-col overflow-hidden"
+      >
         <TopBar s={s} />
         <AnimatePresence mode="wait">
           <motion.section
@@ -87,7 +96,7 @@ export function PlayPage() {
           <div className="bg-black/70 py-2 text-center text-sm font-bold">Reconnexion…</div>
         )}
         <AnimatePresence>{s.paused && s.connected && <PauseOverlay s={s} />}</AnimatePresence>
-      </main>
+      </ThemedMain>
     </MotionConfig>
   );
 }
@@ -964,9 +973,14 @@ function Message({
   subtitle?: string;
   children?: ReactNode;
 }) {
+  const themed = useTheme().id !== 'classic';
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center-safe gap-6 overflow-y-auto p-6 text-center">
-      <h2 className="text-3xl font-black leading-tight">{title}</h2>
+      <h2
+        className={`text-3xl font-black leading-tight ${themed ? 'theme-phone-title font-display text-accent' : ''}`}
+      >
+        {title}
+      </h2>
       {subtitle && <p className="text-lg font-semibold opacity-85">{subtitle}</p>}
       {children}
     </div>

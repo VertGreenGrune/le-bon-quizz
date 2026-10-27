@@ -4,7 +4,13 @@
  * Dates are ISO 8601 strings in JSON.
  */
 import { z } from 'zod';
-import { QuizSchema, QuizVisibility, type Quiz, type QuestionType } from './quiz.js';
+import {
+  QuizSchema,
+  QuizVisibility,
+  type Quiz,
+  type QuestionType,
+  type QuizTheme,
+} from './quiz.js';
 import type { GameMode, TeamId } from './game.js';
 import type { AvatarId } from './avatars.js';
 import type { JokerType } from './jokers.js';
@@ -95,7 +101,7 @@ export interface AuthResponse {
 
 /**
  * Body of `POST /quizzes` and `PUT /quizzes/:id` (PUT replaces all questions).
- * `visibility` absent: `PRIVATE` on creation, unchanged on update.
+ * `visibility` / `theme` absent: `PRIVATE` / `classic` on creation, unchanged on update.
  */
 export const QuizInput = QuizSchema.omit({ id: true }).extend({
   visibility: QuizVisibility.optional(),
@@ -108,6 +114,7 @@ export interface QuizSummary {
   description?: string;
   coverImageUrl?: string;
   visibility: QuizVisibility;
+  theme: QuizTheme;
   questionCount: number;
   /** Games played with this quiz, by any host (public quizzes can be launched by others). */
   playCount: number;
@@ -118,6 +125,7 @@ export interface QuizSummary {
 /** Response of `GET /quizzes/:id` (and of POST/PUT/duplicate/library copy). */
 export type QuizDetail = Quiz & {
   visibility: QuizVisibility;
+  theme: QuizTheme;
   createdAt: string;
   updatedAt: string;
 };
@@ -141,6 +149,7 @@ export interface LibraryQuiz {
   title: string;
   description?: string;
   coverImageUrl?: string;
+  theme: QuizTheme;
   authorName: string;
   questionCount: number;
   playCount: number;

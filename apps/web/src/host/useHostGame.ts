@@ -45,6 +45,7 @@ export function createGame(
     ...(options.mode === 'teams' && { mode: options.mode, teamCount: options.teamCount }),
     ...(options.mode === 'survival' && { mode: options.mode, hearts: options.hearts }),
     ...(options.jokers && { jokers: true }),
+    ...(options.theme && { theme: options.theme }),
   };
   pendingCreate ??= new Promise((resolve, reject) => {
     getSocket()

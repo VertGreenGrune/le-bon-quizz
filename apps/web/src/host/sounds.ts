@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import type { GamePhase } from '@lbq/shared';
+import type { GamePhase, QuizTheme } from '@lbq/shared';
+import { getTheme, type ThemedSound } from '../themes';
 
 /** Host screen only — phones never play sounds. Files and licenses: `public/sounds/CREDITS.md`. */
 export type SoundName =
@@ -15,6 +16,14 @@ const VOLUME: Record<SoundName, number> = {
   eliminated: 0.8,
   buzz: 0.8,
 };
+
+/**
+ * File of a sound (without `.wav`) for a TV theme (T40): the theme's lobby music / reveal /
+ * podium, the classic file otherwise.
+ */
+export function soundFile(name: SoundName, theme: QuizTheme = 'classic'): string {
+  return getTheme(theme).sounds[name as ThemedSound] ?? name;
+}
 
 /** Volume factor of the game sounds while a question's sound clip plays. */
 export const DUCK_FACTOR = 0.3;
@@ -52,31 +61,46 @@ function localStorageOrUndefined(): Storage | undefined {
 let muted: boolean | null = null;
 const isMuted = () => (muted ??= readMuted(localStorageOrUndefined()));
 const listeners = new Set<() => void>();
-const elements = new Map<SoundName, HTMLAudioElement>();
+/** One element per sound *file* (a theme swaps some files). */
+const elements = new Map<string, HTMLAudioElement>();
+let soundTheme: QuizTheme = 'classic';
 /** The looping sound that should be playing (even while muted / blocked by autoplay). */
 let wantedLoop: SoundName | null = null;
 let unlockPending = false;
 /** A question's sound clip is playing (`clipPlayer.ts`): the game sounds are quieter. */
 let ducked = false;
 
-function applyVolume(name: SoundName, el: HTMLAudioElement) {
-  el.volume = VOLUME[name] * (ducked ? DUCK_FACTOR : 1);
+const volumes = new Map<HTMLAudioElement, number>();
+
+function applyVolume(el: HTMLAudioElement) {
+  el.volume = (volumes.get(el) ?? 1) * (ducked ? DUCK_FACTOR : 1);
 }
 
 export function setDucked(value: boolean) {
   ducked = value;
-  for (const [name, el] of elements) applyVolume(name, el);
+  for (const el of elements.values()) applyVolume(el);
 }
 
 function element(name: SoundName): HTMLAudioElement {
-  let el = elements.get(name);
+  const file = soundFile(name, soundTheme);
+  let el = elements.get(file);
   if (!el) {
-    el = new Audio(`${import.meta.env.BASE_URL}sounds/${name}.wav`);
+    el = new Audio(`${import.meta.env.BASE_URL}sounds/${file}.wav`);
     el.preload = 'auto';
-    applyVolume(name, el);
-    elements.set(name, el);
+    volumes.set(el, VOLUME[name]);
+    applyVolume(el);
+    elements.set(file, el);
   }
   return el;
+}
+
+/** TV theme of the sounds; a lobby music already playing switches to the new theme's. */
+export function setSoundTheme(theme: QuizTheme) {
+  if (theme === soundTheme) return;
+  const loop = wantedLoop;
+  if (loop) element(loop).pause();
+  soundTheme = theme;
+  if (loop) startLoop(loop);
 }
 
 /**
@@ -117,7 +141,7 @@ export function playSound(name: SoundName) {
 }
 
 export function loopSound(name: SoundName | null) {
-  if (wantedLoop && wantedLoop !== name) elements.get(wantedLoop)?.pause();
+  if (wantedLoop && wantedLoop !== name) element(wantedLoop).pause();
   wantedLoop = name;
   if (name) startLoop(name);
 }
@@ -179,6 +203,7 @@ export function useHostSounds({
   resumeCount = null,
   playerCount,
   buzzerHolder = null,
+  theme = 'classic',
 }: {
   phase: GamePhase | null;
   /** null while paused: the frozen clock doesn't tick. */
@@ -188,10 +213,15 @@ export function useHostSounds({
   playerCount: number;
   /** « Buzzer »: id of the player who has the hand. */
   buzzerHolder?: string | null;
+  /** TV theme (T40): lobby music, reveal and podium sounds. */
+  theme?: QuizTheme;
 }) {
   const prevPhase = useRef<GamePhase | null>(null);
   const prevCount = useRef<number | null>(null);
   const prevHolder = useRef<string | null | undefined>(undefined);
+
+  // Before the phase effect, so the first lobby music is already the theme's.
+  useEffect(() => setSoundTheme(theme), [theme]);
 
   useEffect(() => {
     const sound = phaseSound(prevPhase.current, phase);

@@ -5,6 +5,7 @@ import {
   type DrawStroke,
   type DrawStrokesPayload,
   type GameMode,
+  type QuizTheme,
   type GamePause,
   type GamePhase,
   type LobbyMember,
@@ -24,6 +25,8 @@ export interface HostGameState {
   /** null until the first `game:state` arrives. */
   phase: GamePhase | null;
   mode: GameMode;
+  /** TV theme (T40, `game:state.theme`). */
+  theme: QuizTheme;
   /** The game is played with jokers. */
   jokers: boolean;
   questionIndex: number;
@@ -85,6 +88,7 @@ export type HostAction =
 export const initialHostState: HostGameState = {
   phase: null,
   mode: 'solo',
+  theme: 'classic',
   jokers: false,
   questionIndex: -1,
   totalQuestions: 0,
@@ -126,6 +130,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         ...state,
         phase,
         mode,
+        theme: action.payload.theme ?? 'classic',
         jokers: !!action.payload.jokers,
         questionIndex,
         totalQuestions,

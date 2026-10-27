@@ -42,6 +42,7 @@ import {
   type RankedPlayer,
   type RevealDetails,
   type Quiz,
+  type QuizTheme,
   type RankedTeam,
   type ServerToClientEvents,
   type SliderPrompt,
@@ -220,6 +221,8 @@ export interface GameSettings {
   jokerHand?: JokerType[];
   /** « Survie »: hearts per player (default SURVIVAL_DEFAULT_HEARTS). */
   hearts?: number;
+  /** TV theme chosen in the start dialog (T40); absent = the quiz's own theme. */
+  theme?: QuizTheme;
 }
 
 export interface GameHooks {
@@ -285,6 +288,8 @@ export class Game {
   private hold: { remainingMs: number } | null = null;
 
   readonly mode: GameMode;
+  /** TV theme (T40): the start dialog's override, else the quiz's theme. */
+  readonly theme: QuizTheme;
   /** Team mode: the teams offered in the lobby, then (from the start) the ones that have players. */
   private teamIds: TeamId[] = [];
   private readonly teamScores = new Map<TeamId, number>();
@@ -314,6 +319,7 @@ export class Game {
     settings: GameSettings = { mode: 'solo' },
   ) {
     this.mode = settings.mode;
+    this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
     if (this.mode === 'teams') {
       const count = settings.teamCount ?? DEFAULT_TEAM_COUNT;
@@ -977,6 +983,7 @@ export class Game {
       questionIndex: this.questionIndex,
       totalQuestions: this.totalQuestions,
       ...(this.withJokers && { jokers: true as const }),
+      ...(this.theme !== 'classic' && { theme: this.theme }),
     };
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;

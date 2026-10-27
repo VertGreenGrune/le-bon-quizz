@@ -8,6 +8,24 @@
   --color-answer-green: #26890c;
 }
 
+/* TV themes (T40, `src/themes/`): each theme redefines these variables (and `--color-brand`) on
+   the page's `<main>`; these are the classic values. Never the answer colors. */
+:root {
+  --theme-bg: var(--color-brand);
+  --theme-panel: rgb(0 0 0 / 0.25);
+  --theme-accent: #fbbf24;
+  --theme-text: #ffffff;
+  --theme-timer: #ffffff;
+  --theme-font: ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-panel: var(--theme-panel);
+  --color-accent: var(--theme-accent);
+  --color-timer: var(--theme-timer);
+  --font-display: var(--theme-font);
+}
+
 html,
 body {
   background: var(--color-brand);

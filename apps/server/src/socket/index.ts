@@ -213,7 +213,7 @@ export function registerSocketHandlers(
       handler(
         socket,
         HostCreatePayload,
-        async ({ quizId, mode = 'solo', teamCount, jokers, hearts }) => {
+        async ({ quizId, mode = 'solo', teamCount, jokers, hearts, theme }) => {
           const token = handshakeToken(socket);
           const hostId = token ? await persistence.authenticate(token) : null;
           const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
@@ -221,7 +221,7 @@ export function registerSocketHandlers(
             quiz,
             (pin) => makeTransport(io, pin),
             { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount, jokers, jokerHand, hearts },
+            { mode, teamCount, jokers, jokerHand, hearts, theme },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };

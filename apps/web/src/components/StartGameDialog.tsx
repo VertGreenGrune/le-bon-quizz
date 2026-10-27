@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
+  QUIZ_THEMES,
   SHAPES,
   SURVIVAL_DEFAULT_HEARTS,
   SURVIVAL_MAX_HEARTS,
   SURVIVAL_MIN_HEARTS,
   TEAM_NAMES,
+  type QuizTheme,
   type TeamCount,
 } from '@lbq/shared';
 import type { GameOptions } from '../lib/gameOptions';
+import { THEMES } from '../themes';
 import { ShapeIcon, shapeBg } from './shapes';
 
 const TEAM_COUNTS: TeamCount[] = [2, 3, 4];
@@ -16,19 +19,27 @@ const HEARTS = Array.from(
   (_, i) => SURVIVAL_MIN_HEARTS + i,
 );
 
-/** "Solo", "Équipes" (+ number of teams) or "Survie" (+ hearts) before creating a game. */
+/**
+ * "Solo", "Équipes" (+ number of teams) or "Survie" (+ hearts) before creating a game, plus the
+ * TV theme (the quiz's by default).
+ */
 export function StartGameDialog({
   onStart,
   onClose,
+  quizTheme = 'classic',
 }: {
   onStart: (options: GameOptions) => void;
   onClose: () => void;
+  /** The quiz's own theme (default choice). */
+  quizTheme?: QuizTheme;
 }) {
   const [mode, setMode] = useState<GameOptions['mode']>('solo');
   const [teamCount, setTeamCount] = useState<TeamCount>(2);
   const [hearts, setHearts] = useState(SURVIVAL_DEFAULT_HEARTS);
   // Jokers are the selling point: on by default.
   const [jokers, setJokers] = useState(true);
+  // '' = the quiz's theme (no override sent).
+  const [theme, setTheme] = useState<QuizTheme | ''>('');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -177,6 +188,24 @@ export function StartGameDialog({
           </span>
         </label>
 
+        <label className="mb-4 flex items-center gap-3">
+          <span className="font-bold">🎨 Thème</span>
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as QuizTheme | '')}
+            className="min-w-0 flex-1 rounded-lg border-2 border-gray-200 px-3 py-2 font-semibold outline-none focus:border-brand"
+          >
+            <option value="">
+              Celui du quiz ({THEMES[quizTheme].icon} {THEMES[quizTheme].name})
+            </option>
+            {QUIZ_THEMES.filter((t) => t !== quizTheme).map((t) => (
+              <option key={t} value={t}>
+                {THEMES[t].icon} {THEMES[t].name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="flex justify-end gap-2">
           <button
             type="button"
@@ -195,6 +224,7 @@ export function StartGameDialog({
                     ? { mode, hearts }
                     : { mode }),
                 ...(jokers && { jokers: true }),
+                ...(theme && { theme }),
               })
             }
             className="rounded-lg bg-answer-green px-5 py-2 font-black text-white"

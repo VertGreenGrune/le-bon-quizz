@@ -219,14 +219,26 @@ describe('new question types', () => {
   });
 
   it('loads every type of a saved quiz into the editor and saves it unchanged', () => {
-    const draft = fromDetail({ ...DEMO_QUIZ, visibility: 'PRIVATE', createdAt: '', updatedAt: '' });
+    const draft = fromDetail({
+      ...DEMO_QUIZ,
+      visibility: 'PRIVATE',
+      theme: 'classic',
+      createdAt: '',
+      updatedAt: '',
+    });
     const res = validateDraft(draft);
     expect(res.ok && res.data.questions).toEqual(DEMO_QUIZ.questions);
   });
 
   it('keeps the visibility: private for a new quiz, as saved otherwise', () => {
     expect(emptyQuiz().visibility).toBe('PRIVATE');
-    const draft = fromDetail({ ...DEMO_QUIZ, visibility: 'PUBLIC', createdAt: '', updatedAt: '' });
+    const draft = fromDetail({
+      ...DEMO_QUIZ,
+      visibility: 'PUBLIC',
+      theme: 'classic',
+      createdAt: '',
+      updatedAt: '',
+    });
     const res = validateDraft(draft);
     expect(res.ok && res.data.visibility).toBe('PUBLIC');
   });
@@ -266,6 +278,7 @@ describe('media (sound clip, picture effect)', () => {
       ...res.data,
       id: 'x',
       visibility: 'PRIVATE',
+      theme: 'classic',
       createdAt: '',
       updatedAt: '',
     });
@@ -285,7 +298,13 @@ describe('media (sound clip, picture effect)', () => {
   });
 
   it('a saved question without media gets no effect and no sound', () => {
-    const draft = fromDetail({ ...DEMO_QUIZ, visibility: 'PRIVATE', createdAt: '', updatedAt: '' });
+    const draft = fromDetail({
+      ...DEMO_QUIZ,
+      visibility: 'PRIVATE',
+      theme: 'classic',
+      createdAt: '',
+      updatedAt: '',
+    });
     expect(draft.questions[0]).toMatchObject({ imageEffect: 'none', audioOnReveal: false });
     expect(draft.questions[0]!.audio).toBeUndefined();
   });

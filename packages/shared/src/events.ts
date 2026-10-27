@@ -12,6 +12,7 @@ import {
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
   PinPointSchema,
+  QuizTheme,
   TYPE_ANSWER_MAX_LENGTH,
   type ImageEffect,
   type PinPoint,
@@ -101,6 +102,8 @@ export const HostCreatePayload = z.object({
   jokers: z.boolean().optional(),
   /** « Survie » only: hearts per player, 1–5 (default 3). */
   hearts: SurvivalHearts.optional(),
+  /** TV theme for this game (T40); absent = the quiz's own theme. */
+  theme: QuizTheme.optional(),
 });
 /** Actions only the TV can do (`host:rejoin`, `host:remote`): its `hostToken`. */
 export const HostTokenPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
@@ -364,6 +367,8 @@ export interface GameStatePayload {
   paused?: GamePause;
   /** The game is played with jokers. */
   jokers?: true;
+  /** TV theme (T40): the start dialog's choice or the quiz's theme; absent = `classic`. */
+  theme?: QuizTheme;
   /**
    * « Buzzer » question, ANSWERING: who has the hand (the timer is then frozen, `remainingMs` =
    * frozen value) and who answered wrong and can't buzz right now (emptied when everyone has).

@@ -118,6 +118,7 @@ export function toQuizDetail(q: QuizRow): QuizDetail {
     description: q.description ?? undefined,
     coverImageUrl: q.coverImageUrl ?? undefined,
     visibility: q.visibility,
+    theme: q.theme,
     createdAt: q.createdAt.toISOString(),
     updatedAt: q.updatedAt.toISOString(),
     questions: q.questions.map(toQuestion),
@@ -145,12 +146,16 @@ const questionsCreate = (input: QuizInput) =>
     })),
   }) satisfies Prisma.QuestionCreateNestedManyWithoutQuizInput;
 
-/** `visibility` is only written when given (absent = default PRIVATE / unchanged). */
+/**
+ * `visibility` / `theme` are only written when given (absent = default PRIVATE / classic, or
+ * unchanged).
+ */
 const quizFields = (input: QuizInput) => ({
   title: input.title,
   description: input.description ?? null,
   coverImageUrl: input.coverImageUrl ?? null,
   ...(input.visibility && { visibility: input.visibility }),
+  ...(input.theme && { theme: input.theme }),
 });
 
 const counts = {
@@ -169,6 +174,7 @@ export async function listQuizzes(prisma: PrismaClient, ownerId: string): Promis
     description: q.description ?? undefined,
     coverImageUrl: q.coverImageUrl ?? undefined,
     visibility: q.visibility,
+    theme: q.theme,
     questionCount: q._count.questions,
     playCount: q._count.gameSessions,
     createdAt: q.createdAt.toISOString(),
@@ -202,6 +208,7 @@ export async function listLibrary(
     title: q.title,
     description: q.description ?? undefined,
     coverImageUrl: q.coverImageUrl ?? undefined,
+    theme: q.theme,
     authorName: q.owner.name,
     questionCount: q._count.questions,
     playCount: q._count.gameSessions,

@@ -172,7 +172,13 @@ export function newQuestion(): DraftQuestion {
 }
 
 export function emptyQuiz(): QuizDraft {
-  return { title: '', description: '', visibility: 'PRIVATE', questions: [newQuestion()] };
+  return {
+    title: '',
+    description: '',
+    visibility: 'PRIVATE',
+    theme: 'classic',
+    questions: [newQuestion()],
+  };
 }
 
 /** A saved question in the editor model (defaults for the fields of the other types). */

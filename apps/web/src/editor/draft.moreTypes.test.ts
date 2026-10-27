@@ -100,6 +100,7 @@ describe('editor model of the ORDER / PIN / WHO_OF_US / WORD_CLOUD questions', (
       id: 'x',
       title: 'T',
       visibility: 'PRIVATE',
+      theme: 'classic',
       createdAt: '',
       updatedAt: '',
       questions,

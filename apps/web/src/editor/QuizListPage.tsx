@@ -6,6 +6,7 @@ import { EditorShell, btn } from './EditorShell';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl } from '../lib/gameOptions';
 import { VisibilityBadge } from './visibility';
+import { ThemeBadge } from '../themes/ThemePicker';
 import { playedLabel } from '../library/format';
 import { mediaUrl } from '../lib/mediaUrl';
 
@@ -90,6 +91,7 @@ export function QuizListPage() {
                     {q.title}
                   </Link>
                   <VisibilityBadge visibility={q.visibility} />
+                  <ThemeBadge theme={q.theme} />
                 </div>
                 <p className="text-sm text-gray-500">
                   {q.questionCount} question{q.questionCount > 1 ? 's' : ''} ·{' '}
@@ -130,6 +132,7 @@ export function QuizListPage() {
       </main>
       {launchId && (
         <StartGameDialog
+          quizTheme={quizzes?.find((q) => q.id === launchId)?.theme}
           onStart={(options) => navigate(hostUrl(launchId, options))}
           onClose={() => setLaunchId(null)}
         />

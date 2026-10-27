@@ -49,4 +49,20 @@ describe('game options in the host URL', () => {
     });
     expect(parse('/host/new?mode=survival')).toEqual({ mode: 'survival', hearts: 3 });
   });
+
+  it('carries the TV theme override (T40); unknown → the quiz theme', () => {
+    expect(hostUrl('abc', { mode: 'solo', theme: 'christmas' })).toBe(
+      '/host/new?quizId=abc&theme=christmas',
+    );
+    expect(parse('/host/new?quizId=abc&theme=christmas')).toEqual({
+      mode: 'solo',
+      theme: 'christmas',
+    });
+    expect(parse(hostUrl('abc', { mode: 'teams', teamCount: 3, theme: 'retro' }))).toEqual({
+      mode: 'teams',
+      teamCount: 3,
+      theme: 'retro',
+    });
+    expect(parse('/host/new?theme=disco')).toEqual({ mode: 'solo' });
+  });
 });

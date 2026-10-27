@@ -316,6 +316,46 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       expect(list).toMatchObject([{ id: quiz.id, visibility: 'PUBLIC', playCount: 0 }]);
     });
 
+    it('keeps the TV theme: classic by default, unchanged without it, kept by copies', async () => {
+      const alice = await register('alice@test.fr');
+      const bob = await register('bob@test.fr');
+      const quiz = await createQuiz(alice.headers);
+      expect(quiz.theme).toBe('classic');
+
+      const put = (payload: Record<string, unknown>) =>
+        app.inject({
+          method: 'PUT',
+          url: `/api/quizzes/${quiz.id}`,
+          headers: alice.headers,
+          payload,
+        });
+      expect(
+        (await put({ ...quizInput, theme: 'halloween', visibility: 'PUBLIC' })).json(),
+      ).toMatchObject({ theme: 'halloween' });
+      expect((await put({ ...quizInput, visibility: 'PUBLIC' })).json()).toMatchObject({
+        theme: 'halloween',
+      });
+      expect((await put({ ...quizInput, theme: 'disco' })).statusCode).toBe(400);
+      const list = (await app.inject({ url: '/api/quizzes', headers: alice.headers })).json<
+        QuizSummary[]
+      >();
+      expect(list).toMatchObject([{ id: quiz.id, theme: 'halloween' }]);
+
+      const duplicate = await app.inject({
+        method: 'POST',
+        url: `/api/quizzes/${quiz.id}/duplicate`,
+        headers: alice.headers,
+      });
+      expect(duplicate.json<QuizDetail>().theme).toBe('halloween');
+      expect((await library(bob.headers))[0]?.theme).toBe('halloween');
+      const copy = await app.inject({
+        method: 'POST',
+        url: `/api/library/${quiz.id}/copy`,
+        headers: bob.headers,
+      });
+      expect(copy.json<QuizDetail>().theme).toBe('halloween');
+    });
+
     it("lists other hosts' public quizzes only, without questions", async () => {
       const alice = await register('alice@test.fr');
       const bob = await register('bob@test.fr');
@@ -333,6 +373,7 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
         id: pub2.id,
         title: 'Géo',
         description: quizInput.description,
+        theme: 'classic',
         authorName: 'Host',
         questionCount: quizInput.questions.length,
         playCount: 2,

@@ -9,7 +9,7 @@ import { cloudLayout } from '../lib/wordCloud';
 
 export const MORE_TYPES: readonly QuestionType[] = ['ORDER', 'PIN', 'WHO_OF_US', 'WORD_CLOUD'];
 
-const hintClass = 'rounded-2xl bg-black/25 px-8 py-4 text-center text-4xl font-black';
+const hintClass = 'rounded-2xl bg-panel px-8 py-4 text-center text-4xl font-black';
 
 /** While answering: what to do on the phone (+ the items to order / the players to vote for). */
 export function MoreTypeHint({
@@ -233,7 +233,7 @@ function VotesReveal({
               initial={instant ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: instant ? 0 : 0.9 + i * 0.08 }}
-              className="flex items-center gap-2 rounded-full bg-black/25 py-1 pr-4 pl-1 text-xl font-bold"
+              className="flex items-center gap-2 rounded-full bg-panel py-1 pr-4 pl-1 text-xl font-bold"
             >
               <Avatar id={v.avatar} size="sm" />
               {v.nickname} · {v.count}
