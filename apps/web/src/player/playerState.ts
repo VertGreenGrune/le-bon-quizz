@@ -406,6 +406,7 @@ export function reclaimErrorMessage(code: ErrorCode | 'TIMEOUT'): string {
 
 /** Pause screen text: who the game is waiting for. */
 export function pauseWaitingText(paused: GamePause): string {
+  if (paused.byHost) return "⏸ Pause demandée par l'animateur";
   const names = paused.waitingFor.map((p) => p.nickname);
   if (paused.hostMissing) names.push("l'écran de l'animateur");
   if (names.length === 0) return 'Tout le monde est là !';

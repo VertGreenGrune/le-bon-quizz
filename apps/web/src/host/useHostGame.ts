@@ -2,13 +2,13 @@ import { useCallback, useEffect, useReducer, useState } from 'react';
 import type {
   Ack,
   ErrorPayload,
-  HostActionPayload,
+  HostTokenPayload,
   ServerToClientEvents,
   TeamId,
 } from '@lbq/shared';
 import { SOLO, type GameOptions } from '../lib/gameOptions';
-import { getSocket } from '../lib/socket';
-import { hostReducer, initialHostState } from './hostReducer';
+import { getSocket, type GameSocket } from '../lib/socket';
+import { hostReducer, initialHostState, type HostAction } from './hostReducer';
 
 const tokenKey = (pin: string) => `lbq:host:${pin}`;
 
@@ -66,6 +66,64 @@ export function createGame(
 }
 
 /**
+ * Folds every host-facing server event into the host reducer (the TV, and the « Télécommande »
+ * which gets the same events). Returns the unsubscribe function.
+ */
+export function listenHostEvents(
+  socket: GameSocket,
+  dispatch: (action: HostAction) => void,
+  onError: (error: ErrorPayload) => void,
+): () => void {
+  const onState: ServerToClientEvents['game:state'] = (p) =>
+    dispatch({ type: 'state', payload: p, now: Date.now() });
+  const onResuming: ServerToClientEvents['game:resuming'] = ({ inMs }) =>
+    dispatch({ type: 'resuming', inMs, now: Date.now() });
+  const onPlayers: ServerToClientEvents['lobby:players'] = (p) =>
+    dispatch({ type: 'players', payload: p, now: Date.now() });
+  const onTeams: ServerToClientEvents['lobby:teams'] = (p) =>
+    dispatch({ type: 'teams', payload: p });
+  const onQuestion: ServerToClientEvents['question:show'] = (p) =>
+    dispatch({ type: 'question', payload: p });
+  const onCount: ServerToClientEvents['answer:count'] = (p) => dispatch({ type: 'count', ...p });
+  const onReveal: ServerToClientEvents['question:reveal'] = (p) =>
+    dispatch({ type: 'reveal', payload: p });
+  const onLeaderboard: ServerToClientEvents['leaderboard'] = (p) =>
+    dispatch({ type: 'leaderboard', ...p });
+  const onPodium: ServerToClientEvents['podium'] = (p) => dispatch({ type: 'podium', ...p });
+  const onSurvival: ServerToClientEvents['survival:state'] = (p) =>
+    dispatch({ type: 'survival', payload: p });
+  const onDraw: ServerToClientEvents['draw:strokes'] = (p) =>
+    dispatch({ type: 'drawStrokes', payload: p });
+
+  socket.on('game:state', onState);
+  socket.on('game:resuming', onResuming);
+  socket.on('lobby:players', onPlayers);
+  socket.on('lobby:teams', onTeams);
+  socket.on('question:show', onQuestion);
+  socket.on('answer:count', onCount);
+  socket.on('question:reveal', onReveal);
+  socket.on('leaderboard', onLeaderboard);
+  socket.on('podium', onPodium);
+  socket.on('survival:state', onSurvival);
+  socket.on('draw:strokes', onDraw);
+  socket.on('error', onError);
+  return () => {
+    socket.off('game:state', onState);
+    socket.off('game:resuming', onResuming);
+    socket.off('lobby:players', onPlayers);
+    socket.off('lobby:teams', onTeams);
+    socket.off('question:show', onQuestion);
+    socket.off('answer:count', onCount);
+    socket.off('question:reveal', onReveal);
+    socket.off('leaderboard', onLeaderboard);
+    socket.off('podium', onPodium);
+    socket.off('survival:state', onSurvival);
+    socket.off('draw:strokes', onDraw);
+    socket.off('error', onError);
+  };
+}
+
+/**
  * Subscribes to every host-facing server event and exposes host actions.
  * Listeners live as long as the component (not the pin), so events sent right after
  * `host:create` are not lost while the URL switches from /host/new to /host/:pin.
@@ -81,56 +139,13 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const socket = getSocket();
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
-    const onState: ServerToClientEvents['game:state'] = (p) =>
-      dispatch({ type: 'state', payload: p, now: Date.now() });
-    const onResuming: ServerToClientEvents['game:resuming'] = ({ inMs }) =>
-      dispatch({ type: 'resuming', inMs, now: Date.now() });
-    const onPlayers: ServerToClientEvents['lobby:players'] = (p) =>
-      dispatch({ type: 'players', payload: p, now: Date.now() });
-    const onTeams: ServerToClientEvents['lobby:teams'] = (p) =>
-      dispatch({ type: 'teams', payload: p });
-    const onQuestion: ServerToClientEvents['question:show'] = (p) =>
-      dispatch({ type: 'question', payload: p });
-    const onCount: ServerToClientEvents['answer:count'] = (p) => dispatch({ type: 'count', ...p });
-    const onReveal: ServerToClientEvents['question:reveal'] = (p) =>
-      dispatch({ type: 'reveal', payload: p });
-    const onLeaderboard: ServerToClientEvents['leaderboard'] = (p) =>
-      dispatch({ type: 'leaderboard', ...p });
-    const onPodium: ServerToClientEvents['podium'] = (p) => dispatch({ type: 'podium', ...p });
-    const onSurvival: ServerToClientEvents['survival:state'] = (p) =>
-      dispatch({ type: 'survival', payload: p });
-    const onDraw: ServerToClientEvents['draw:strokes'] = (p) =>
-      dispatch({ type: 'drawStrokes', payload: p });
-
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
-    socket.on('game:state', onState);
-    socket.on('game:resuming', onResuming);
-    socket.on('lobby:players', onPlayers);
-    socket.on('lobby:teams', onTeams);
-    socket.on('question:show', onQuestion);
-    socket.on('answer:count', onCount);
-    socket.on('question:reveal', onReveal);
-    socket.on('leaderboard', onLeaderboard);
-    socket.on('podium', onPodium);
-    socket.on('survival:state', onSurvival);
-    socket.on('draw:strokes', onDraw);
-    socket.on('error', setError);
+    const unlisten = listenHostEvents(socket, dispatch, setError);
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
-      socket.off('game:state', onState);
-      socket.off('game:resuming', onResuming);
-      socket.off('lobby:players', onPlayers);
-      socket.off('lobby:teams', onTeams);
-      socket.off('question:show', onQuestion);
-      socket.off('answer:count', onCount);
-      socket.off('question:reveal', onReveal);
-      socket.off('leaderboard', onLeaderboard);
-      socket.off('podium', onPodium);
-      socket.off('survival:state', onSurvival);
-      socket.off('draw:strokes', onDraw);
-      socket.off('error', setError);
+      unlisten();
     };
   }, []);
 
@@ -157,7 +172,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     else setError(res.error);
   }, []);
 
-  const auth = (): HostActionPayload | null => (pin && hostToken ? { pin, hostToken } : null);
+  const auth = (): HostTokenPayload | null => (pin && hostToken ? { pin, hostToken } : null);
 
   const start = () => {
     const a = auth();
@@ -188,7 +203,12 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const a = auth();
     if (a) getSocket().emit('host:judge', { ...a, correct }, handleAck);
   };
-  /** « Continuer sans… » during a pause. */
+  /** « ⏸ Pause » (QUESTION_INTRO / ANSWERING). */
+  const pause = () => {
+    const a = auth();
+    if (a) getSocket().emit('host:pause', a, handleAck);
+  };
+  /** « ▶ Reprendre » after a « ⏸ Pause », or « Continuer sans… » during a pause. */
   const resume = () => {
     const a = auth();
     if (a) getSocket().emit('host:resume', a, handleAck);
@@ -205,6 +225,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     kick,
     movePlayer,
     shuffle,
+    pause,
     resume,
     judge,
     clearError: () => setError(null),

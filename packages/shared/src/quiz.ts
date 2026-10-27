@@ -378,10 +378,12 @@ export function questionExplanation(q: Question): string | undefined {
 }
 
 /**
- * « Buzzer »: the right answer in words, for the host to judge what is said out loud (TV only,
- * and the phones at the reveal). One line per accepted answer / item.
+ * The right answer in words, one line per accepted answer / item: what the host remote shows
+ * secretly (`remote:answer`, T39) and what the host judges a « Buzzer » answer against.
+ * `drawWord` = the word picked for a « Dessine-moi » (drawn when the question starts). Types
+ * without a right answer (POLL, WHO_OF_US, WORD_CLOUD) → [].
  */
-export function buzzerAnswer(q: Question): string[] {
+export function answerText(q: Question, drawWord?: string): string[] {
   switch (q.type) {
     case 'MCQ':
     case 'TRUE_FALSE':
@@ -390,15 +392,34 @@ export function buzzerAnswer(q: Question): string[] {
       return [...q.acceptedAnswers];
     case 'SLIDER': {
       const { correct, margin, unit } = q.slider;
-      const value = `${String(correct).replace('.', ',')}${unit ? ` ${unit}` : ''}`;
-      return [margin > 0 ? `${value} (± ${String(margin).replace('.', ',')})` : value];
+      const value = `${frenchNumber(correct)}${unit ? ` ${unit}` : ''}`;
+      return [margin > 0 ? `${value} (± ${frenchNumber(margin)})` : value];
     }
     case 'ORDER':
       return q.items.map((item, i) => `${i + 1}. ${item}`);
+    case 'PIN':
+      return [
+        `Zone : à ${percent(q.zone.x)} depuis la gauche, ${percent(q.zone.y)} depuis le haut`,
+      ];
+    case 'BLUFF':
+      return [q.truth];
+    case 'DRAW':
+      return drawWord ? [drawWord] : [];
     default:
       return [];
   }
 }
+
+/**
+ * « Buzzer »: the right answer in words, for the host to judge what is said out loud (TV only,
+ * and the phones at the reveal). Same as `answerText` (the buzzer types).
+ */
+export function buzzerAnswer(q: Question): string[] {
+  return answerText(q);
+}
+
+const frenchNumber = (n: number) => String(n).replace('.', ',');
+const percent = (fraction: number) => `${Math.round(fraction * 100)} %`;
 
 /**
  * `PRIVATE`: only its owner can launch it. `PUBLIC`: listed in the library, any logged-in host

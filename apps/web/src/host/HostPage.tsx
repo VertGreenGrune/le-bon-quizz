@@ -16,6 +16,7 @@ import { ComebackToasts, PauseOverlay, nicknameList } from './pauseScreens';
 import { TeamLobby, TeamPodiumScreen } from './teamScreens';
 import { EliminationMoment, SurvivalBadge } from './survivalScreens';
 import { useQuestionClip } from './clipPlayer';
+import { RemoteButton, RemoteToast, useRemotePairing, useTvControls } from './remoteLink';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
   LeaderboardScreen,
@@ -97,6 +98,9 @@ export function HostPage() {
     state.phase,
     state.paused !== null || holder !== null,
   );
+  // « 📱 Télécommande » (T39): pairing, and the TV controls pressed on the remote.
+  const pairing = useRemotePairing(pin, hostToken);
+  useTvControls(clip.replay);
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
   // entrance animations (podium reveal, re-ordering…) instead of replaying them.
@@ -257,6 +261,9 @@ export function HostPage() {
               📵 {nicknameList(offline)} {offline.length > 1 ? 'sont' : 'est'} hors ligne
             </span>
           )}
+          {phase !== 'ENDED' && (
+            <RemoteButton pin={pin} remotes={pairing.remotes} remoteToken={pairing.remoteToken} />
+          )}
           <MuteButton />
           {phase !== 'ENDED' && phase !== 'PODIUM' && (
             <button
@@ -290,6 +297,7 @@ export function HostPage() {
           )}
         </AnimatePresence>
         <ComebackToasts state={state} now={now} />
+        <RemoteToast text={pairing.toast} />
         {(state.jokers || state.mode === 'survival') && <JokerAnnouncements />}
         {phase === 'LEADERBOARD' && survival && !instant && (
           <EliminationMoment survival={survival} questionIndex={state.questionIndex} />
@@ -309,6 +317,15 @@ export function HostPage() {
             <Link to="/" className="rounded-xl bg-white px-8 py-4 text-2xl font-black text-brand">
               Retour à l'accueil
             </Link>
+          )}
+          {(phase === 'QUESTION_INTRO' || phase === 'ANSWERING') && !state.paused && (
+            <button
+              type="button"
+              onClick={game.pause}
+              className="rounded-xl border-2 border-white/70 px-6 py-4 text-2xl font-black hover:bg-white/10"
+            >
+              ⏸ Pause
+            </button>
           )}
           {primary && (
             <motion.button

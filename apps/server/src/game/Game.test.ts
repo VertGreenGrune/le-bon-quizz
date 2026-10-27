@@ -467,7 +467,7 @@ describe('Game state machine', () => {
 
     it('LOBBY: state + players', () => {
       joinAll('Alice');
-      expect(resyncHost()).toEqual(['game:state', 'lobby:players']);
+      expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'remote:status']);
       expect(rec.last('lobby:players')).toEqual({
         players: [{ id: expect.any(String), nickname: 'Alice', avatar: expect.any(String) }],
       });
@@ -483,6 +483,7 @@ describe('Game state machine', () => {
         'lobby:players',
         'question:show',
         'answer:count',
+        'remote:status',
       ]);
       expect(rec.last('game:state')).toMatchObject({ phase: 'ANSWERING', remainingMs: 15_000 });
       expect(rec.last('question:show')).toMatchObject({
@@ -504,6 +505,7 @@ describe('Game state machine', () => {
         'question:show',
         'answer:count',
         'question:reveal',
+        'remote:status',
       ]);
       expect(rec.last('question:reveal')).toEqual(live);
     });
@@ -514,12 +516,18 @@ describe('Game state machine', () => {
       vi.advanceTimersByTime(QUESTION_INTRO_MS);
       game.answer(alice!.id, 0, 1);
       game.next();
-      expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'question:show', 'leaderboard']);
+      expect(resyncHost()).toEqual([
+        'game:state',
+        'lobby:players',
+        'question:show',
+        'leaderboard',
+        'remote:status',
+      ]);
       expect(rec.last('leaderboard')).toEqual({
         top: [{ nickname: 'Alice', avatar: expect.any(String), score: alice!.totalScore }],
       });
       game.end();
-      expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'podium']);
+      expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'podium', 'remote:status']);
     });
   });
 

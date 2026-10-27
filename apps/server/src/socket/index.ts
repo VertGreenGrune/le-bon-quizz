@@ -5,6 +5,8 @@ import {
   HostJudgePayload,
   HostKickPayload,
   HostMovePlayerPayload,
+  HostRemotePayload,
+  HostTokenPayload,
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
   PlayerBuzzPayload,
@@ -14,6 +16,8 @@ import {
   PlayerJokerPayload,
   PlayerRejoinPayload,
   PlayerTeamPayload,
+  RemoteJoinPayload,
+  RemoteTvPayload,
   roomAll,
   roomHost,
   type Ack,
@@ -40,7 +44,8 @@ interface Schema<T> {
 }
 
 /** Who this socket is, within one game. */
-type Session = { pin: string; role: 'host' } | { pin: string; role: 'player'; playerId: string };
+type Session =
+  { pin: string; role: 'host' | 'remote' } | { pin: string; role: 'player'; playerId: string };
 
 function toErrorPayload(err: unknown): ErrorPayload {
   if (err instanceof GameError) return err.toPayload();
@@ -149,8 +154,29 @@ export function registerSocketHandlers(
       if (!session) return;
       const game = games.find(session.pin);
       if (session.role === 'host') game?.hostDisconnected(socket.id);
+      else if (session.role === 'remote') game?.remoteDisconnected(socket.id);
       else game?.disconnect(socket.id);
     };
+
+    /** « Télécommande »: the host rooms (host events), but never counted as the TV. */
+    const attachRemote = (game: Game): void => {
+      leaveSession();
+      session = { pin: game.pin, role: 'remote' };
+      void socket.join([roomAll(game.pin), roomHost(game.pin)]);
+      game.remoteConnected(socket.id);
+    };
+
+    const asRemote = (pin: string, remoteToken: string, { attach = false } = {}): Game => {
+      const game = games.get(pin);
+      game.assertRemote(remoteToken);
+      if (attach || session?.pin !== pin || session.role !== 'remote') attachRemote(game);
+      return game;
+    };
+
+    /** A host action: the TV's `hostToken` or a paired remote's `remoteToken`. */
+    const asController = (
+      p: { pin: string } & ({ hostToken: string } | { remoteToken: string }),
+    ): Game => ('hostToken' in p ? asHost(p.pin, p.hostToken) : asRemote(p.pin, p.remoteToken));
 
     const attachHost = (game: Game): void => {
       leaveSession();
@@ -207,40 +233,40 @@ export function registerSocketHandlers(
 
     socket.on(
       'host:start',
-      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
-        asHost(pin, hostToken).start();
+      handler(socket, HostActionPayload, (p) => {
+        asController(p).start();
         return {};
       }),
     );
 
     socket.on(
       'host:next',
-      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
-        asHost(pin, hostToken).next();
+      handler(socket, HostActionPayload, (p) => {
+        asController(p).next();
         return {};
       }),
     );
 
     socket.on(
       'host:kick',
-      handler(socket, HostKickPayload, ({ pin, hostToken, playerId }) => {
-        asHost(pin, hostToken).kick(playerId);
+      handler(socket, HostKickPayload, (p) => {
+        asController(p).kick(p.playerId);
         return {};
       }),
     );
 
     socket.on(
       'host:moveplayer',
-      handler(socket, HostMovePlayerPayload, ({ pin, hostToken, playerId, teamId }) => {
-        asHost(pin, hostToken).setTeam(playerId, teamId);
+      handler(socket, HostMovePlayerPayload, (p) => {
+        asController(p).setTeam(p.playerId, p.teamId);
         return {};
       }),
     );
 
     socket.on(
       'host:shuffle',
-      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
-        asHost(pin, hostToken).shuffleTeams();
+      handler(socket, HostActionPayload, (p) => {
+        asController(p).shuffleTeams();
         return {};
       }),
     );
@@ -249,7 +275,7 @@ export function registerSocketHandlers(
       'host:rejoin',
       handler(
         socket,
-        HostActionPayload,
+        HostTokenPayload,
         ({ pin, hostToken }) => {
           asHost(pin, hostToken);
           return {};
@@ -262,25 +288,65 @@ export function registerSocketHandlers(
     );
 
     socket.on(
+      'host:pause',
+      handler(socket, HostActionPayload, (p) => {
+        asController(p).pauseByHost();
+        return {};
+      }),
+    );
+
+    socket.on(
       'host:resume',
-      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
-        asHost(pin, hostToken).resume();
+      handler(socket, HostActionPayload, (p) => {
+        asController(p).resume();
         return {};
       }),
     );
 
     socket.on(
       'host:judge',
-      handler(socket, HostJudgePayload, ({ pin, hostToken, correct }) => {
-        asHost(pin, hostToken).judge(correct);
+      handler(socket, HostJudgePayload, (p) => {
+        asController(p).judge(p.correct);
         return {};
       }),
     );
 
     socket.on(
       'host:end',
-      handler(socket, HostActionPayload, ({ pin, hostToken }) => {
-        asHost(pin, hostToken).end();
+      handler(socket, HostActionPayload, (p) => {
+        asController(p).end();
+        return {};
+      }),
+    );
+
+    socket.on(
+      'host:remote',
+      handler(socket, HostRemotePayload, ({ pin, hostToken, revoke }) => ({
+        remoteToken: asHost(pin, hostToken).remoteTokenFor(!!revoke),
+      })),
+    );
+
+    // ---------- « Télécommande » (T39) ----------
+
+    socket.on(
+      'remote:join',
+      handler(
+        socket,
+        RemoteJoinPayload,
+        ({ pin, remoteToken }) => {
+          asRemote(pin, remoteToken, { attach: true });
+          return {};
+        },
+        () => {
+          if (session?.role === 'remote') games.find(session.pin)?.resyncRemote(socket.id);
+        },
+      ),
+    );
+
+    socket.on(
+      'remote:tv',
+      handler(socket, RemoteTvPayload, ({ pin, remoteToken, action }) => {
+        asRemote(pin, remoteToken).tvControl(action);
         return {};
       }),
     );

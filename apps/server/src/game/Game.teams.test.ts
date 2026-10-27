@@ -385,6 +385,7 @@ describe('Game in team mode', () => {
       'lobby:players',
       'lobby:teams',
       'podium',
+      'remote:status',
     ]);
     expect((rec.last('podium', 'host-2') as StandingsPayload).teams).toHaveLength(2);
   });
