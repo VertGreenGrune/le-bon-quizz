@@ -40,8 +40,9 @@ type Json = Record<string, unknown>;
 
 /**
  * Reads `<folder>/quiz.json`, copies its local media through `store` and validates it with
- * `QuizInput`. A missing sound is skipped with a warning (music files are added by the user);
- * a missing picture is an error. The quiz is always private.
+ * `QuizInput`. A missing sound or question picture is skipped with a warning (copyrighted media
+ * are added by the user); a missing cover or « point sur l'image » picture is an error. The quiz
+ * is always private.
  */
 export async function prepareQuiz(
   folder: string,
@@ -54,16 +55,28 @@ export async function prepareQuiz(
     if (typeof ref !== 'string' || isUrl(ref)) return ref as string | undefined;
     const file = path.resolve(folder, ref);
     if (!existsSync(file)) {
-      if (kind === 'image') throw new Error(`Image introuvable : ${ref}`);
       return undefined;
     }
     return store(file, kind);
   };
 
-  if (raw.coverImageUrl !== undefined) raw.coverImageUrl = await media(raw.coverImageUrl, 'image');
+  if (raw.coverImageUrl !== undefined) {
+    const ref = raw.coverImageUrl;
+    raw.coverImageUrl = await media(ref, 'image');
+    if (!raw.coverImageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
+  }
   const questions = Array.isArray(raw.questions) ? (raw.questions as Json[]) : [];
   for (const [i, q] of questions.entries()) {
-    if (q.imageUrl !== undefined) q.imageUrl = await media(q.imageUrl, 'image');
+    if (q.imageUrl !== undefined) {
+      const ref = q.imageUrl;
+      q.imageUrl = await media(ref, 'image');
+      if (!q.imageUrl) {
+        if (q.type === 'PIN') throw new Error(`Image introuvable : ${String(ref)}`);
+        warn(`Question ${i + 1} : image ${String(ref)} absente, question importée sans l’image`);
+        delete q.imageUrl;
+        delete q.imageEffect;
+      }
+    }
     const audio = q.audio as Json | undefined;
     if (audio) {
       const url = await media(audio.url, 'audio');

@@ -1851,7 +1851,7 @@ the report.
   real phones.
 
 ### T38 — Content: « Halloween animé — dessins animés & séries » (very hard, 30 questions, a picture each)
-- **Status:** in-progress (T38 agent)
+- **Status:** done
 - **Depends on:** — Content only (+ one small change to the import script, see below).
 - **Ports:** server 3038 / web 5238, test DB `lbq_test_t38`.
 - **Scope:** `content/quizzes/halloween-anime/**` (`quiz.json`, free pictures, `CREDITS.md`,
@@ -1914,6 +1914,36 @@ add.
   socket game on :3038 (host + 3 phones, every type, the PIN prompt carries the picture, no answer
   / explanation in any phone prompt, explanations in the results), then delete the test game and
   its temporary session.
+
+- **Summary:** `content/quizzes/halloween-anime/` — `quiz.json` « Halloween animé — dessins animés &
+  séries », 30 questions (1000 pts, 2000 for 5 incl. the finale; 0 for the 2 pauses; 15–45 s):
+  10 choix multiples (rébus 🎃 + 👑, « Qui a dit ? » Charlie Brown, « select all » on Mercredi's
+  actresses), 2 vrai / faux, 5 réponses libres (Summerween rébus, Norville, Willie, Nevermore, The
+  Cramps), 3 curseurs (1990, 10 episodes, Hush 27 min ± 3), 3 ordres (witch series, spooky
+  animation 1929 → 1999, finale = the Addams Family 1938 → 2022), 2 points sur l'image (Oregon,
+  Indiana), 3 « Mytho ! » (Too Much, Jason Funderburker, Saberhagen), 1 « Qui de nous ? », 1
+  sondage; no « Dessine-moi ». Every question has a **free picture** that never gives the answer
+  (29 Wikimedia Commons files: PD / CC0 / CC BY / CC BY-SA, ≤ 1600 px; the two cartoon frames are
+  US public domain — _The Skeleton Dance_ 1929, _The Friendly Ghost_ 1945; one title card was
+  swapped because it printed the answer) and 9 start blurred / zoomed / pixelated; cover = _The
+  Skeleton Dance_. PIN map = Commons CC0 blank US map, zones measured by flood fill (centroid +
+  bounding box) and checked. Every answer and every « Le saviez-vous ? » explanation (≤ 300) is
+  sourced in `CREDITS.md` (Wikipedia en / fr, one fan-wiki cross-check for the frog's spelling);
+  `README.md`: question table, « Images à ajouter » (none required — optional screenshots to swap
+  in), import, how to play. `images/.gitignore` keeps any other picture out of git.
+  `scripts/quizImport.ts`: a missing question picture → warning, imported without it and without
+  its `imageEffect`; still an error for a PIN picture and the cover (+ 2 unit tests). Imported for
+  loicmoster@hotmail.fr (private, media in the main checkout's `apps/server/uploads`, base URL
+  :3001) and played with a scripted socket game on :3038 (host + 3 phones, all 30 questions to the
+  podium: right / wrong / typo / slider edge / partial PIN and ORDER results as expected, a lie
+  equal to the truth refused `LIE_TOO_CLOSE`, own-lie vote refused, « select all » exact set
+  right and subset / superset wrong, both PIN prompts carried the map (HTTP 200) and never the
+  zone, no answer or explanation in any phone frame before the reveal, the explanation in every
+  `question:reveal` and `player:result`, report saved with 30 questions and 30 explanations) —
+  then the test game and its temporary host session were deleted.
+- **Notes:** (1) Every picture is free, so the « Images à ajouter » table only lists optional
+  screenshots for private games. (2) CC BY-SA pictures: keep the credits if the quiz is made
+  public. (3) Not tried on real phones / a real TV.
 
 ### Wave 7 coordination — T39 ‖ T40 run in parallel (read before starting)
 - **T39 = host remote** (new phone page + server pairing), **T40 = TV themes** (styling of the TV
@@ -2285,3 +2315,6 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `QuestionStats` (server) gains `explanation` (**required**, null = none). Prisma migration
   `20261025120000_explanations`. `testing.ts` `rightAnswer` / `wrongAnswer` return `choiceIndexes`
   for a « select all » MCQ.
+- 2026-10-26, T38 agent (no contract change): `apps/server/scripts/quizImport.ts` — a missing
+  **question picture** is now a warning (the question is imported without `imageUrl` /
+  `imageEffect`), like a missing sound; a missing **cover** or **PIN** picture is still an error.

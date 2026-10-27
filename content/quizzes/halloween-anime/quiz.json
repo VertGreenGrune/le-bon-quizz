@@ -1,0 +1,547 @@
+{
+  "title": "Halloween animé — dessins animés & séries",
+  "description": "30 questions très difficiles sur les Halloween des dessins animés et des séries : Simpson Horror Show, Scooby-Doo, Courage, Gravity Falls, Over the Garden Wall, les Addams, Buffy, les sorcières de la télé… Une image par question, trois « Mytho ! » et une carte à pointer.",
+  "coverImageUrl": "images/27-skeleton-dance.jpg",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Rébus 🧩 : 🎃 + 👑 = ? Indice : il s'ennuie de son propre Halloween et veut kidnapper le Père Noël.",
+      "imageUrl": "images/01-citrouilles.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Oogie Boogie",
+          "isCorrect": false
+        },
+        {
+          "text": "Jack Skellington",
+          "isCorrect": true
+        },
+        {
+          "text": "Zéro",
+          "isCorrect": false
+        },
+        {
+          "text": "Le maire d’Halloween",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Jack est le « Roi des citrouilles » (Pumpkin King) d'Halloween Town dans L'Étrange Noël de monsieur Jack (1993). En VO, Danny Elfman, le compositeur du film, chante pour lui et Chris Sarandon lui prête sa voix parlée."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Rébus 🧩 : ☀️ + 🎃 = ? Indice : dans une petite ville de dessin animé, on fête Halloween deux fois par an.",
+      "imageUrl": "images/02-alex-hirsch.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Summerween", "Summer ween"],
+      "typoTolerance": true,
+      "explanation": "Le mot vient de l'épisode « Summerween » de Gravity Falls (2012), créé par Alex Hirsch (en photo) : la ville fête Halloween le 22 juin. Depuis, des magasins américains vendent de vraies décorations « Summerween » l'été."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? 🗣️ « I got a rock. » (« J'ai eu un caillou. »), à chaque porte, pendant la tournée des bonbons.",
+      "imageUrl": "images/03-champ-de-citrouilles.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Pig-Pen",
+          "isCorrect": false
+        },
+        {
+          "text": "Charlie Brown",
+          "isCorrect": true
+        },
+        {
+          "text": "Linus",
+          "isCorrect": false
+        },
+        {
+          "text": "Schroeder",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Dans It's the Great Pumpkin, Charlie Brown, Linus attend la Grande Citrouille dans un champ pendant que Snoopy, en as de la Première Guerre mondiale, combat le Baron rouge sur sa niche. La musique est de Vince Guaraldi."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Dans le tout premier projet de la série, comment s'appelait le dogue allemand qui deviendra Scooby-Doo ?",
+      "imageUrl": "images/04-dogue-allemand.jpg",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Too Much",
+      "voteTimeSec": 20,
+      "explanation": "Too Much jouait des bongos dans le groupe des Mysteries Five. Pour le dessiner, Iwao Takamoto a consulté une éleveuse de dogues allemands… puis a pris le contre-pied de tous les critères : pattes arquées, double menton, dos tombant."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Sammy (Shaggy en VO), le meilleur ami de Scooby-Doo, a un vrai prénom, rarement prononcé. Lequel ?",
+      "imageUrl": "images/05-mystery-machine.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Norville"],
+      "typoTolerance": true,
+      "explanation": "Son nom complet est Norville « Shaggy » Rogers (« shaggy » veut dire « hirsute »). Dans la série pour adultes Velma, il n'est d'ailleurs appelé que Norville."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le nom « Scooby-Doo » a été inspiré par une chanson des Beatles.",
+      "imageUrl": "images/06-frank-sinatra.jpg",
+      "imageEffect": "blur",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Faux : c'est Frank Sinatra (en photo). Dans un vol de nuit, le producteur Fred Silverman a entendu le « doo-be-doo-be-doo » qu'il chante à la fin de « Strangers in the Night », et a rebaptisé le chien."
+    },
+    {
+      "type": "MCQ",
+      "text": "Dans le tout premier « Simpson Horror Show », quelle voix célèbre récite « Le Corbeau » d'Edgar Allan Poe ?",
+      "imageUrl": "images/07-edgar-poe.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vincent Price",
+          "isCorrect": false
+        },
+        {
+          "text": "Orson Welles",
+          "isCorrect": false
+        },
+        {
+          "text": "James Earl Jones",
+          "isCorrect": true
+        },
+        {
+          "text": "Christopher Lee",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "La voix de Dark Vador joue dans les trois segments de l'épisode : le déménageur de la maison hantée, l'extraterrestre Serak le cuisinier, puis le narrateur du « Corbeau ». C'est aussi la première apparition de Kang et Kodos."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : au début du 1er « Simpson Horror Show », Marge prévient que l'épisode risque d'effrayer les enfants.",
+      "imageUrl": "images/08-matt-groening.jpg",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai : le producteur James L. Brooks voulait un avertissement, et Marge est sortie du rideau pour le lire. Selon l'auteur M. Keith Booker, cet avertissement a surtout rendu l'épisode plus attirant pour les enfants."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "« Simpson Horror Show V » : quel personnage se prend une hache dans le dos dans chacun des trois segments ?",
+      "imageUrl": "images/09-stanley-hotel.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": [
+        "Willie",
+        "Jardinier Willie",
+        "Willie le jardinier",
+        "Groundskeeper Willie"
+      ],
+      "typoTolerance": true,
+      "explanation": "Le jardinier Willie meurt ainsi trois fois. Le premier segment, « The Shinning », parodie Shining : « pas de télé et pas de bière, Homer devient fou ». C'est aussi le premier Horror Show sans séquence d'introduction."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année le tout premier « Simpson Horror Show » a-t-il été diffusé aux États-Unis ?",
+      "imageUrl": "images/10-maison-simpson.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1985,
+        "max": 2005,
+        "step": 1,
+        "correct": 1990,
+        "margin": 1
+      },
+      "explanation": "Le 25 octobre 1990, pendant la saison 2. L'épisode s'inspire des bandes dessinées d'horreur des années 1950 et ses histoires ne comptent pas dans la continuité de la série. La maison en photo est une réplique construite au Nevada."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Pause 👻 Qui de nous hurlerait le premier dans une maison hantée ?",
+      "imageUrl": "images/11-maison-hantee.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Dans Scooby-Doo, ce sont presque toujours Sammy et Scooby qui hurlent les premiers : pour les convaincre d'avancer, Véra, Daphné et Fred doivent souvent les soudoyer avec des Scoobyscuits."
+    },
+    {
+      "type": "MCQ",
+      "text": "Le court métrage pilote de Courage le chien froussard, « The Chicken from Outer Space », a été nommé pour…",
+      "imageUrl": "images/12-maison-kansas.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "le César du meilleur court métrage",
+          "isCorrect": false
+        },
+        {
+          "text": "l'Oscar du meilleur court métrage d'animation",
+          "isCorrect": true
+        },
+        {
+          "text": "le Grammy du meilleur clip",
+          "isCorrect": false
+        },
+        {
+          "text": "la Palme d'or du court métrage",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Il a perdu face à Wallace et Gromit : Rasé de près. Courage vit avec Muriel et Eustace Bagge dans une ferme isolée près de Nowhere (« nulle part »), au Kansas : d'où la vieille maison abandonnée du Kansas en photo."
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur l'image 📍 Dans quel État se trouve Gravity Falls, la ville de Dipper et Mabel ? Pointez-le sur la carte.",
+      "imageUrl": "images/carte-etats-unis.png",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "zone": {
+        "x": 0.1453,
+        "y": 0.2207,
+        "radius": 0.05
+      },
+      "explanation": "L'Oregon. Les jumeaux viennent de Piedmont, en Californie, pour passer l'été au Mystery Shack de leur grand-oncle. Alex Hirsch a grandi avec Twin Peaks et X-Files, et prête sa voix à Grunkle Stan."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Over the Garden Wall : après des épisodes d'hésitation, quel nom Greg donne-t-il finalement à sa grenouille ?",
+      "imageUrl": "images/14-grenouille.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Jason Funderburker",
+      "voteTimeSec": 20,
+      "explanation": "Avant cela, Greg l'appelle Kitty, Wirt, George Washington, Benjamin Franklin, Dr. Cucumber ou Greg Jr. Quand elle chante, c'est la voix du crooner Jack Jones."
+    },
+    {
+      "type": "MCQ",
+      "text": "Over the Garden Wall : quel acteur prête sa voix (VO) à Wirt, le grand frère poète ?",
+      "imageUrl": "images/15-elijah-wood.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Seth Green",
+          "isCorrect": false
+        },
+        {
+          "text": "Daniel Radcliffe",
+          "isCorrect": false
+        },
+        {
+          "text": "Elijah Wood",
+          "isCorrect": true
+        },
+        {
+          "text": "Joseph Gordon-Levitt",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Frodon lui-même ! La distribution compte aussi Christopher Lloyd, Tim Curry et John Cleese, et la Bête qui rôde dans l'Inconnu chante avec la voix du chanteur d'opéra Samuel Ramey."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien d'épisodes compte la mini-série Over the Garden Wall (2014) ?",
+      "imageUrl": "images/16-foret-automne.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1,
+        "max": 30,
+        "step": 1,
+        "correct": 10,
+        "margin": 0
+      },
+      "explanation": "Dix épisodes d'environ onze minutes, diffusés en une semaine (3–7 novembre 2014). Patrick McHale en imaginait dix-huit, mais le budget et le temps l'ont obligé à couper."
+    },
+    {
+      "type": "POLL",
+      "text": "Sondage 🗳️ Pour la soirée, tu te déguises en…",
+      "imageUrl": "images/17-deguisements.jpg",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Mercredi Addams"
+        },
+        {
+          "text": "Jack Skellington"
+        },
+        {
+          "text": "Bill Cipher"
+        },
+        {
+          "text": "Casper"
+        }
+      ],
+      "explanation": "Casper devait n'apparaître qu'une fois, dans un seul dessin animé : son succès en a fait l'une des grandes vedettes des studios Famous et Paramount, avec sa propre série de courts métrages."
+    },
+    {
+      "type": "MCQ",
+      "text": "Lesquelles de ces actrices ont incarné Mercredi Addams ? (plusieurs réponses)",
+      "imageUrl": "images/18-famille-addams-1964.jpg",
+      "imageEffect": "blur",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Christina Ricci",
+          "isCorrect": true
+        },
+        {
+          "text": "Anjelica Huston",
+          "isCorrect": false
+        },
+        {
+          "text": "Lisa Loring",
+          "isCorrect": true
+        },
+        {
+          "text": "Jenna Ortega",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Lisa Loring avait six ans dans la série en noir et blanc (en photo). Anjelica Huston, elle, jouait Morticia au cinéma. Tim Burton a fait revenir Christina Ricci dans un second rôle de la série Mercredi."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Série Mercredi : comment s'appelle le pensionnat pour « parias » où ses parents l'envoient ?",
+      "imageUrl": "images/19-chateau-cantacuzino.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Nevermore", "Nevermore Academy", "Académie Nevermore"],
+      "typoTolerance": true,
+      "explanation": "La Nevermore Academy est en réalité le château Cantacuzino, à Bușteni, en Roumanie (en photo), où la saison 1 a été tournée. Tim Burton a réalisé quatre épisodes de chaque saison."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "La danse de Mercredi, devenue virale, a été tournée sur « Goo Goo Muck ». Quel groupe a enregistré ce titre en 1981 ?",
+      "imageUrl": "images/20-lux-interior.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["The Cramps", "Cramps", "Les Cramps"],
+      "typoTolerance": true,
+      "explanation": "Jenna Ortega a chorégraphié la danse elle-même, inspirée par Siouxsie Sioux et Bob Fosse, malade et en attente d'un test Covid. Selon Billboard, les écoutes du titre aux États-Unis sont passées de 2 500 à plus de 134 000."
+    },
+    {
+      "type": "MCQ",
+      "text": "Betty Boop, « Snow-White » (1933) : la danse de Koko le clown changé en fantôme a été rotoscopée sur quel jazzman ?",
+      "imageUrl": "images/21-cab-calloway.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Louis Armstrong",
+          "isCorrect": false
+        },
+        {
+          "text": "Cab Calloway",
+          "isCorrect": true
+        },
+        {
+          "text": "Fats Waller",
+          "isCorrect": false
+        },
+        {
+          "text": "Duke Ellington",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Koko y chante « St. James Infirmary Blues » avec des pas qui ressemblent au futur moonwalk. Le miroir magique a lui aussi les traits de Cab Calloway. Le film est au National Film Registry depuis 1994."
+    },
+    {
+      "type": "MCQ",
+      "text": "Le générique de Charmed est la reprise de « How Soon Is Now? » par Love Spit Love. Qui avait créé la chanson ?",
+      "imageUrl": "images/22-maison-charmed.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Joy Division",
+          "isCorrect": false
+        },
+        {
+          "text": "The Smiths",
+          "isCorrect": true
+        },
+        {
+          "text": "Depeche Mode",
+          "isCorrect": false
+        },
+        {
+          "text": "The Cure",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Cette reprise servait déjà dans le film The Craft (1996). La maison des sœurs Halliwell (en photo) se trouve au 1329 Carroll Avenue, à Los Angeles, et non à San Francisco."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel est le nom de famille de Salem, le chat qui parle de Sabrina, l’apprentie sorcière ?",
+      "imageUrl": "images/23-chat-noir.jpg",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Saberhagen",
+      "voteTimeSec": 20,
+      "explanation": "Salem Saberhagen est un sorcier de 500 ans, condamné par le Conseil des sorcières à vivre 100 ans en chat pour avoir tenté de conquérir le monde. Dans la série de 1996, il a la voix de Nick Bakay."
+    },
+    {
+      "type": "ORDER",
+      "text": "Sorcières à la télé 🧙 Classez ces séries de la plus ancienne à la plus récente (première diffusion).",
+      "imageUrl": "images/24-sorciere.jpg",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "Ma sorcière bien-aimée",
+        "Sabrina, l’apprentie sorcière",
+        "Charmed",
+        "Les Nouvelles Aventures de Sabrina",
+        "Agatha All Along"
+      ],
+      "explanation": "1964, 1996, 1998, 2018, 2024. Le titre Agatha All Along vient d'une chanson de WandaVision, la série dont elle est le deuxième volet."
+    },
+    {
+      "type": "MCQ",
+      "text": "Dans le dessin animé The Real Ghostbusters, Peter Venkman (saisons 1 et 2) a la voix de l'acteur qui doublait aussi…",
+      "imageUrl": "images/25-ecto-1.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Scooby-Doo",
+          "isCorrect": false
+        },
+        {
+          "text": "Winnie l'ourson",
+          "isCorrect": false
+        },
+        {
+          "text": "Garfield",
+          "isCorrect": true
+        },
+        {
+          "text": "Homer Simpson",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Lorenzo Music, la voix de Garfield dans les dessins animés. Il a été remplacé par Dave Coulier à partir de la saison 3. Jim Davis racontait l'avoir repéré à l'audition « tranquillement en train de se lécher » dans un coin."
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur l'image 📍 Stranger Things : dans quel État se trouve la ville de Hawkins ? Pointez-le sur la carte.",
+      "imageUrl": "images/carte-etats-unis.png",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "zone": {
+        "x": 0.6671,
+        "y": 0.4075,
+        "radius": 0.022
+      },
+      "explanation": "L'Indiana. Dans cette saison, une mystérieuse maladie fait pourrir les champs de citrouilles autour de la ville à l'approche d'Halloween, et Will aperçoit une immense ombre aux nombreux bras, le « Mind Flayer »."
+    },
+    {
+      "type": "MCQ",
+      "text": "The Skeleton Dance (Disney) : quel animateur a dessiné presque seul ce ballet de squelettes, en six semaines ?",
+      "imageUrl": "images/27-skeleton-dance.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Carl Stalling",
+          "isCorrect": false
+        },
+        {
+          "text": "Ub Iwerks",
+          "isCorrect": true
+        },
+        {
+          "text": "Max Fleischer",
+          "isCorrect": false
+        },
+        {
+          "text": "Walt Disney",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "L'idée vient du compositeur Carl Stalling. Iwerks s'est inspiré des squelettes du caricaturiste anglais Rowlandson. Sorti en 1929, le film est entré dans le domaine public le 1er janvier 2025 : d'où cette image."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Buffy, épisode « Hush » : sur ses 44 minutes, combien de minutes sont totalement sans dialogue ?",
+      "imageUrl": "images/28-sarah-michelle-gellar.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 0,
+        "max": 44,
+        "step": 1,
+        "correct": 27,
+        "margin": 3,
+        "unit": "min"
+      },
+      "explanation": "27 minutes, pendant que les Gentlemen volent la voix de toute la ville. Joss Whedon voulait répondre aux critiques qui ne louaient que les dialogues de la série. « Hush » est le seul épisode de Buffy nommé à l'Emmy du meilleur scénario dramatique."
+    },
+    {
+      "type": "ORDER",
+      "text": "Les grands frissons animés 📺 Remettez-les dans l'ordre de sortie, du plus ancien au plus récent.",
+      "imageUrl": "images/29-friendly-ghost.jpg",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "items": [
+        "The Skeleton Dance (Disney)",
+        "The Friendly Ghost, premier Casper",
+        "It's the Great Pumpkin, Charlie Brown",
+        "Scooby-Doo, Where Are You!",
+        "The Real Ghostbusters",
+        "Courage le chien froussard (la série)"
+      ],
+      "explanation": "1929, 1945, 1966, 1969, 1986, 1999. La Grande Citrouille de Charlie Brown a été rediffusée à la télévision américaine chaque année de 1966 à 2020, avant de passer sur Apple TV+."
+    },
+    {
+      "type": "ORDER",
+      "text": "Finale 🏆 La famille Addams, de sa naissance à aujourd'hui : remettez ses apparitions dans l'ordre chronologique.",
+      "imageUrl": "images/30-addams-1977.jpg",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": [
+        "Les dessins de Charles Addams dans le New Yorker",
+        "La série télévisée en noir et blanc",
+        "Le dessin animé de Hanna-Barbera",
+        "Le film de Barry Sonnenfeld",
+        "La série animée d'ABC",
+        "La série Mercredi sur Netflix"
+      ],
+      "explanation": "1938, 1964, 1973, 1991, 1992, 2022. Gomez et Pugsley n'ont reçu leurs prénoms qu'en 1964, pour la série. En 1977, le téléfilm Halloween with the New Addams Family a réuni presque toute la distribution (en photo)."
+    }
+  ]
+}
