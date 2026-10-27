@@ -2443,3 +2443,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `content/quizzes/halloween-anime/quiz.json`; the 3 Halloween quizzes re-imported for
   loicmoster@hotmail.fr (theme `halloween` in the DB, blind-test sounds kept). Dev DB migrated
   (`20261027120000_quiz_theme`). 592 unit tests + 16 e2e pass.
+- 2026-10-27, main agent (user feedback on T38): the quiz was renamed « Halloween Pop » by the
+  user and **rewritten**: French-friendly pop culture (VF names of cartoons, manga / anime, video
+  games, films, classic horror novels) instead of US actors / voice actors; no POLL / WORD_CLOUD;
+  30 questions (11 MCQ incl. one « select all », 6 typed, 3 « Mytho ! », 2 vrai / faux, 2 curseurs,
+  2 ordres, 2 PIN on a cropped public-domain equirectangular map of Europe, 1 « Qui de nous ? »,
+  1 « Dessine-moi »), every one with a sourced explanation; 12 new free Commons pictures, 13 unused
+  ones removed. Re-imported in place for loicmoster@hotmail.fr. Not played with a scripted game.

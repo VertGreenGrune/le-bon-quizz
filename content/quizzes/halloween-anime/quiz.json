@@ -1,7 +1,7 @@
 {
-  "title": "Halloween animé — dessins animés & séries",
+  "title": "Halloween Pop",
   "theme": "halloween",
-  "description": "30 questions très difficiles sur les Halloween des dessins animés et des séries : Simpson Horror Show, Scooby-Doo, Courage, Gravity Falls, Over the Garden Wall, les Addams, Buffy, les sorcières de la télé… Une image par question, trois « Mytho ! » et une carte à pointer.",
+  "description": "30 questions pour frissonner en riant : dessins animés, mangas, jeux vidéo, films et grands romans qui font peur. Bob Razowski, Véra, Bibendum Chamallow, Sans-Visage, Ectoplasma, Mimi Geignarde, Dracula… Une image par question, trois « Mytho ! », deux cartes et un « Dessine-moi ».",
   "coverImageUrl": "images/27-skeleton-dance.jpg",
   "questions": [
     {
@@ -24,525 +24,524 @@
           "isCorrect": false
         },
         {
-          "text": "Le maire d’Halloween",
+          "text": "Le maire d'Halloween",
           "isCorrect": false
         }
       ],
-      "explanation": "Jack est le « Roi des citrouilles » (Pumpkin King) d'Halloween Town dans L'Étrange Noël de monsieur Jack (1993). En VO, Danny Elfman, le compositeur du film, chante pour lui et Chris Sarandon lui prête sa voix parlée."
+      "explanation": "Jack est le « Roi des citrouilles » d'Halloween Town dans L'Étrange Noël de monsieur Jack (1993). En VO, c'est Danny Elfman, le compositeur du film, qui chante pour lui."
     },
     {
       "type": "TYPE_ANSWER",
-      "text": "Rébus 🧩 : ☀️ + 🎃 = ? Indice : dans une petite ville de dessin animé, on fête Halloween deux fois par an.",
-      "imageUrl": "images/02-alex-hirsch.jpg",
-      "timeLimitSec": 30,
+      "text": "Monstres & Cie 👾 En VO, le petit monstre vert à un seul œil s'appelle Mike Wazowski. Et dans la version française ?",
+      "imageUrl": "images/17-deguisements.jpg",
+      "timeLimitSec": 25,
       "basePoints": 1000,
-      "acceptedAnswers": ["Summerween", "Summer ween"],
+      "acceptedAnswers": ["Bob Razowski", "Bob", "Razowski"],
       "typoTolerance": true,
-      "explanation": "Le mot vient de l'épisode « Summerween » de Gravity Falls (2012), créé par Alex Hirsch (en photo) : la ville fête Halloween le 22 juin. Depuis, des magasins américains vendent de vraies décorations « Summerween » l'été."
+      "explanation": "Bob Razowski ! Et la petite Boo devient Bouh. À Monstropolis, l'énergie vient des cris des enfants… jusqu'à ce que Bob et Sulli découvrent que leurs rires sont bien plus puissants."
     },
     {
       "type": "MCQ",
-      "text": "Qui a dit ? 🗣️ « I got a rock. » (« J'ai eu un caillou. »), à chaque porte, pendant la tournée des bonbons.",
-      "imageUrl": "images/03-champ-de-citrouilles.jpg",
+      "text": "Pac-Man 👾 Les quatre fantômes s'appellent Blinky, Pinky, Inky et Clyde. Lequel est orange ?",
+      "imageUrl": "images/03-pac-man.jpg",
+      "imageEffect": "pixelate",
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Pig-Pen",
+          "text": "Blinky",
           "isCorrect": false
         },
         {
-          "text": "Charlie Brown",
+          "text": "Pinky",
+          "isCorrect": false
+        },
+        {
+          "text": "Inky",
+          "isCorrect": false
+        },
+        {
+          "text": "Clyde",
           "isCorrect": true
-        },
-        {
-          "text": "Linus",
-          "isCorrect": false
-        },
-        {
-          "text": "Schroeder",
-          "isCorrect": false
         }
       ],
-      "explanation": "Dans It's the Great Pumpkin, Charlie Brown, Linus attend la Grande Citrouille dans un champ pendant que Snoopy, en as de la Première Guerre mondiale, combat le Baron rouge sur sa niche. La musique est de Vince Guaraldi."
+      "explanation": "Clyde est orange, Blinky rouge, Pinky rose et Inky bleu. Chacun chasse à sa façon : Blinky vous suit à la trace, Pinky essaie de vous couper la route… et Clyde se balade un peu au hasard. Pac-Man (Namco) est sorti en 1980."
     },
     {
       "type": "BLUFF",
-      "text": "Mytho ! 🤥 Dans le tout premier projet de la série, comment s'appelait le dogue allemand qui deviendra Scooby-Doo ?",
-      "imageUrl": "images/04-dogue-allemand.jpg",
+      "text": "Mytho ! 🤥 SOS Fantômes (1984), en VF : comment s'appelle le géant tout blanc qui marche sur New York ?",
+      "imageUrl": "images/25-ecto-1.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
-      "truth": "Too Much",
+      "truth": "Bibendum Chamallow",
       "voteTimeSec": 20,
-      "explanation": "Too Much jouait des bongos dans le groupe des Mysteries Five. Pour le dessiner, Iwao Takamoto a consulté une éleveuse de dogues allemands… puis a pris le contre-pied de tous les critères : pattes arquées, double menton, dos tombant."
-    },
-    {
-      "type": "TYPE_ANSWER",
-      "text": "Sammy (Shaggy en VO), le meilleur ami de Scooby-Doo, a un vrai prénom, rarement prononcé. Lequel ?",
-      "imageUrl": "images/05-mystery-machine.jpg",
-      "timeLimitSec": 25,
-      "basePoints": 1000,
-      "acceptedAnswers": ["Norville"],
-      "typoTolerance": true,
-      "explanation": "Son nom complet est Norville « Shaggy » Rogers (« shaggy » veut dire « hirsute »). Dans la série pour adultes Velma, il n'est d'ailleurs appelé que Norville."
+      "explanation": "En VO, c'est le Stay Puft Marshmallow Man. Forcé de choisir la forme du destructeur, Ray pense à la mascotte de guimauve de son enfance, la chose la plus inoffensive qui soit… raté ! En photo : l'Ecto-1, la voiture des chasseurs de fantômes."
     },
     {
       "type": "TRUE_FALSE",
-      "text": "Vrai ou faux : le nom « Scooby-Doo » a été inspiré par une chanson des Beatles.",
-      "imageUrl": "images/06-frank-sinatra.jpg",
-      "imageEffect": "blur",
+      "text": "Vrai ou faux : le masque de Michael Myers (Halloween, 1978) est un masque du capitaine Kirk repeint en blanc.",
+      "imageUrl": "images/23-chat-noir.jpg",
       "timeLimitSec": 15,
       "basePoints": 1000,
       "choices": [
         {
           "text": "Vrai",
-          "isCorrect": false
+          "isCorrect": true
         },
         {
           "text": "Faux",
-          "isCorrect": true
+          "isCorrect": false
         }
       ],
-      "explanation": "Faux : c'est Frank Sinatra (en photo). Dans un vol de nuit, le producteur Fred Silverman a entendu le « doo-be-doo-be-doo » qu'il chante à la fin de « Strangers in the Night », et a rebaptisé le chien."
+      "explanation": "Vrai ! Avec un tout petit budget, l'équipe de John Carpenter a acheté un masque de William Shatner (le capitaine Kirk) pour moins de deux dollars, a agrandi les trous des yeux et l'a peint en blanc."
     },
     {
       "type": "MCQ",
-      "text": "Dans le tout premier « Simpson Horror Show », quelle voix célèbre récite « Le Corbeau » d'Edgar Allan Poe ?",
-      "imageUrl": "images/07-edgar-poe.jpg",
+      "text": "Scooby-Doo 🐕 Le nom « Scooby-Doo » vient des paroles d'une chanson. Laquelle ?",
+      "imageUrl": "images/05-mystery-machine.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Vincent Price",
-          "isCorrect": false
-        },
-        {
-          "text": "Orson Welles",
-          "isCorrect": false
-        },
-        {
-          "text": "James Earl Jones",
+          "text": "Strangers in the Night (Frank Sinatra)",
           "isCorrect": true
         },
         {
-          "text": "Christopher Lee",
+          "text": "Hound Dog (Elvis Presley)",
           "isCorrect": false
-        }
-      ],
-      "explanation": "La voix de Dark Vador joue dans les trois segments de l'épisode : le déménageur de la maison hantée, l'extraterrestre Serak le cuisinier, puis le narrateur du « Corbeau ». C'est aussi la première apparition de Kang et Kodos."
-    },
-    {
-      "type": "TRUE_FALSE",
-      "text": "Vrai ou faux : au début du 1er « Simpson Horror Show », Marge prévient que l'épisode risque d'effrayer les enfants.",
-      "imageUrl": "images/08-matt-groening.jpg",
-      "timeLimitSec": 15,
-      "basePoints": 1000,
-      "choices": [
-        {
-          "text": "Vrai",
-          "isCorrect": true
         },
         {
-          "text": "Faux",
+          "text": "Yellow Submarine (The Beatles)",
+          "isCorrect": false
+        },
+        {
+          "text": "What a Wonderful World (Louis Armstrong)",
           "isCorrect": false
         }
       ],
-      "explanation": "Vrai : le producteur James L. Brooks voulait un avertissement, et Marge est sortie du rideau pour le lire. Selon l'auteur M. Keith Booker, cet avertissement a surtout rendu l'épisode plus attirant pour les enfants."
+      "explanation": "Fred Silverman, le patron des programmes de CBS, a eu le déclic en entendant Sinatra chanter « doo-be-doo-be-doo » à la fin de Strangers in the Night (1966). La série est arrivée en 1969. En photo : une réplique de la Mystery Machine."
     },
     {
       "type": "TYPE_ANSWER",
-      "text": "« Simpson Horror Show V » : quel personnage se prend une hache dans le dos dans chacun des trois segments ?",
+      "text": "Scooby-Doo 🔍 En VF, Shaggy s'appelle Sammy. Et Velma, la fille à lunettes qui résout toutes les énigmes ?",
+      "imageUrl": "images/04-dogue-allemand.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Véra", "Vera Dinkley"],
+      "typoTolerance": true,
+      "explanation": "Véra ! Daphné et Fred, eux, gardent leur prénom. Scooby est un dogue allemand (en photo) : son dessinateur, Iwao Takamoto, a pris le contre-pied de tous les critères de la race."
+    },
+    {
+      "type": "ORDER",
+      "text": "Frissons au cinéma 🎬 Remettez ces films dans l'ordre de sortie, du plus ancien au plus récent.",
       "imageUrl": "images/09-stanley-hotel.jpg",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "SOS Fantômes",
+        "Beetlejuice",
+        "Hocus Pocus : Les Trois Sorcières",
+        "Casper",
+        "Les Noces funèbres"
+      ],
+      "explanation": "1984, 1988, 1993, 1995, 2005. Hocus Pocus a fait un flop à sa sortie, avant de devenir un classique d'Halloween grâce aux rediffusions à la télé, au point d'avoir une suite en 2022."
+    },
+    {
+      "type": "MCQ",
+      "text": "Casper (1995) 👻 Ses trois oncles fantômes s'appellent Stretch, Stinkie et Fatso en VO. Et en VF ?",
+      "imageUrl": "images/29-friendly-ghost.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Teigneux, Crado et Bouffi",
+          "isCorrect": true
+        },
+        {
+          "text": "Grincheux, Puant et Gros-Lard",
+          "isCorrect": false
+        },
+        {
+          "text": "Bougon, Crasseux et Glouton",
+          "isCorrect": false
+        },
+        {
+          "text": "Râleur, Cracra et Goinfre",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Teigneux, Crado et Bouffi. Casper est né en 1945 dans un dessin animé des studios Famous (en photo) : un petit fantôme qui ne veut faire peur à personne. Le film de 1995 est l'un des premiers à avoir un héros entièrement en images de synthèse."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Le Voyage de Chihiro 🏮 En VF, comment s'appelle l'esprit masqué tout noir qui suit Chihiro dans les bains ?",
+      "imageUrl": "images/10-dogo-onsen.jpg",
       "imageEffect": "zoom",
       "timeLimitSec": 30,
-      "basePoints": 2000,
-      "acceptedAnswers": [
-        "Willie",
-        "Jardinier Willie",
-        "Willie le jardinier",
-        "Groundskeeper Willie"
-      ],
+      "basePoints": 1000,
+      "acceptedAnswers": ["Sans-Visage", "Kaonashi"],
       "typoTolerance": true,
-      "explanation": "Le jardinier Willie meurt ainsi trois fois. Le premier segment, « The Shinning », parodie Shining : « pas de télé et pas de bière, Homer devient fou ». C'est aussi le premier Horror Show sans séquence d'introduction."
+      "explanation": "Sans-Visage (Kaonashi en japonais). Les bains de Yubaba s'inspirent en partie de vieux bains japonais comme le Dōgo Onsen de Matsuyama (en photo). Le film a reçu l'Oscar du meilleur film d'animation en 2003."
+    },
+    {
+      "type": "MCQ",
+      "text": "Mon voisin Totoro 🌳 En VF, comment s'appellent les petites boules de suie aux grands yeux ?",
+      "imageUrl": "images/16-foret-automne.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Les poussiérots",
+          "isCorrect": false
+        },
+        {
+          "text": "Les noiraudes",
+          "isCorrect": true
+        },
+        {
+          "text": "Les charbonnets",
+          "isCorrect": false
+        },
+        {
+          "text": "Les suies-suies",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Les noiraudes (susuwatari en japonais) quittent la maison quand la famille éclate de rire. Miyazaki les a fait revenir dans Le Voyage de Chihiro, où elles portent le charbon de Kamaji."
+    },
+    {
+      "type": "MCQ",
+      "text": "Death Note 📓 Ryuk, le dieu de la mort qui suit Light, est accro à un fruit du monde des humains. Lequel ?",
+      "imageUrl": "images/12-kohada-koheiji.jpg",
+      "imageEffect": "blur",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Les kakis",
+          "isCorrect": false
+        },
+        {
+          "text": "Les fraises",
+          "isCorrect": false
+        },
+        {
+          "text": "Les pommes",
+          "isCorrect": true
+        },
+        {
+          "text": "Les pêches",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Les pommes ! Privé de pommes, Ryuk se tord dans tous les sens ; celles du monde des dieux de la mort sont, dit-il, sèches comme du sable. En photo : le fantôme Kohada Koheiji, peint par Hokusai (vers 1831)."
     },
     {
       "type": "SLIDER",
-      "text": "En quelle année le tout premier « Simpson Horror Show » a-t-il été diffusé aux États-Unis ?",
-      "imageUrl": "images/10-maison-simpson.jpg",
+      "text": "Jujutsu Kaisen 🩸 Sukuna, le roi des fléaux, a été découpé en doigts maudits. Combien de doigts ?",
+      "imageUrl": "images/13-takiyasha.jpg",
+      "imageEffect": "zoom",
       "timeLimitSec": 25,
       "basePoints": 1000,
       "slider": {
-        "min": 1985,
-        "max": 2005,
+        "min": 0,
+        "max": 50,
         "step": 1,
-        "correct": 1990,
-        "margin": 1
+        "correct": 20,
+        "margin": 2,
+        "unit": "doigts"
       },
-      "explanation": "Le 25 octobre 1990, pendant la saison 2. L'épisode s'inspire des bandes dessinées d'horreur des années 1950 et ses histoires ne comptent pas dans la continuité de la série. La maison en photo est une réplique construite au Nevada."
-    },
-    {
-      "type": "WHO_OF_US",
-      "text": "Pause 👻 Qui de nous hurlerait le premier dans une maison hantée ?",
-      "imageUrl": "images/11-maison-hantee.jpg",
-      "timeLimitSec": 20,
-      "basePoints": 0,
-      "majorityBonus": true,
-      "explanation": "Dans Scooby-Doo, ce sont presque toujours Sammy et Scooby qui hurlent les premiers : pour les convaincre d'avancer, Véra, Daphné et Fred doivent souvent les soudoyer avec des Scoobyscuits."
+      "explanation": "Vingt doigts : Sukuna avait quatre bras ! Yuji Itadori avale le premier pour sauver ses amis et devient son hôte. En photo : la sorcière Takiyasha et son squelette géant, estampe d'Utagawa Kuniyoshi (vers 1844)."
     },
     {
       "type": "MCQ",
-      "text": "Le court métrage pilote de Courage le chien froussard, « The Chicken from Outer Space », a été nommé pour…",
+      "text": "Demon Slayer 🗡️ Le soleil tue les démons. Comment Tanjirō transporte-t-il Nezuko pendant la journée ?",
+      "imageUrl": "images/14-foret-nikko.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Sous un grand parapluie rouge",
+          "isCorrect": false
+        },
+        {
+          "text": "Dans une caisse en bois sur son dos",
+          "isCorrect": true
+        },
+        {
+          "text": "Dans un panier en osier",
+          "isCorrect": false
+        },
+        {
+          "text": "Cachée sous sa cape",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Dans une caisse en bois portée sur le dos, où Nezuko se fait toute petite. Elle porte aussi un bâillon de bambou pour ne mordre personne. Demon Slayer (Kimetsu no Yaiba) a été publié de 2016 à 2020."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Pokémon 👻 Le Pokémon spectre Fantominus évolue en Spectrum… puis en quel Pokémon ?",
+      "imageUrl": "images/15-sekien-ten.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Ectoplasma", "Gengar"],
+      "typoTolerance": true,
+      "explanation": "Ectoplasma (Gengar en VO). Pour l'obtenir, il faut échanger son Spectrum avec un ami ! Dans les premiers jeux, les fantômes hantent la Tour Pokémon de Lavanville. En photo : un yōkai dessiné par Toriyama Sekien en 1776."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Luigi's Mansion : en VF, comment s'appelle le savant qui donne à Luigi un aspirateur à fantômes ?",
+      "imageUrl": "images/11-maison-hantee.jpg",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Professeur Karl Tastroff",
+      "voteTimeSec": 20,
+      "explanation": "Karl Tastroff… comme « catastrophe » ! En VO, c'est le professeur E. Gadd. Avec son aspirateur, l'Ectoblast, Luigi capture les fantômes du manoir pour délivrer Mario, prisonnier du roi Boo."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : dans Minecraft, une citrouille sur la tête permet de regarder un Enderman sans le fâcher.",
+      "imageUrl": "images/03-champ-de-citrouilles.jpg",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai ! Sans citrouille, croiser le regard d'un Enderman le rend furieux. Le prix à payer : la citrouille cache une bonne partie de l'écran. Les Endermen sont arrivés dans le jeu en 2011."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Pause 🎬 Qui de nous mourrait le premier dans un film d'horreur ?",
+      "imageUrl": "images/22-maison-charmed.jpg",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Dans Scream (1996), Randy énonce les règles pour survivre dans un film d'horreur. L'une d'elles : ne jamais dire « Je reviens tout de suite ! »."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Harry Potter 🏰 Nick Quasi-Sans-Tête a raté de peu sa décapitation. Combien de coups de hache émoussée a-t-il reçus ?",
+      "imageUrl": "images/19-chateau-cantacuzino.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "slider": {
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "correct": 45,
+        "margin": 5,
+        "unit": "coups"
+      },
+      "explanation": "Quarante-cinq coups, et sa tête tient encore par un lambeau de peau : voilà pourquoi le club des Chasseurs sans tête refuse de l'accueillir. Dans La Chambre des secrets, Harry fête avec lui son 500e anniversaire de mort."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Harry Potter 🚽 Quel fantôme pleurnichard hante les toilettes des filles du deuxième étage de Poudlard ?",
+      "imageUrl": "images/20-toilettes.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Mimi Geignarde", "Mimi", "Mimi la Geignarde"],
+      "typoTolerance": true,
+      "explanation": "Mimi Geignarde (Moaning Myrtle en VO) est morte dans ces toilettes en croisant le regard du Basilic, libéré de la Chambre des secrets par Tom Jedusor cinquante ans plus tôt."
+    },
+    {
+      "type": "MCQ",
+      "text": "Lesquels de ces personnages sont des fantômes ? (plusieurs réponses)",
+      "imageUrl": "images/27-skeleton-dance.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Casper",
+          "isCorrect": true
+        },
+        {
+          "text": "La Chose (La Famille Addams)",
+          "isCorrect": false
+        },
+        {
+          "text": "Mimi Geignarde",
+          "isCorrect": true
+        },
+        {
+          "text": "Les Boo (Super Mario)",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "La Chose est une main vivante, pas un fantôme ! Les Boo, eux, cachent leur visage quand Mario les regarde et avancent dès qu'il a le dos tourné. En photo : The Skeleton Dance (Disney, 1929), l'ancêtre des dessins animés d'Halloween."
+    },
+    {
+      "type": "MCQ",
+      "text": "Gremlins (1984) 🌙 Trois règles à respecter avec un mogwaï comme Gizmo. Laquelle n'en fait PAS partie ?",
       "imageUrl": "images/12-maison-kansas.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
         {
-          "text": "le César du meilleur court métrage",
+          "text": "Ne jamais l'exposer à la lumière",
           "isCorrect": false
         },
         {
-          "text": "l'Oscar du meilleur court métrage d'animation",
+          "text": "Ne jamais le mouiller",
+          "isCorrect": false
+        },
+        {
+          "text": "Ne jamais le laisser seul la nuit",
           "isCorrect": true
         },
         {
-          "text": "le Grammy du meilleur clip",
-          "isCorrect": false
-        },
-        {
-          "text": "la Palme d'or du court métrage",
+          "text": "Ne jamais le nourrir après minuit",
           "isCorrect": false
         }
       ],
-      "explanation": "Il a perdu face à Wallace et Gromit : Rasé de près. Courage vit avec Muriel et Eustace Bagge dans une ferme isolée près de Nowhere (« nulle part »), au Kansas : d'où la vieille maison abandonnée du Kansas en photo."
-    },
-    {
-      "type": "PIN",
-      "text": "Point sur l'image 📍 Dans quel État se trouve Gravity Falls, la ville de Dipper et Mabel ? Pointez-le sur la carte.",
-      "imageUrl": "images/carte-etats-unis.png",
-      "timeLimitSec": 30,
-      "basePoints": 1000,
-      "zone": {
-        "x": 0.1453,
-        "y": 0.2207,
-        "radius": 0.05
-      },
-      "explanation": "L'Oregon. Les jumeaux viennent de Piedmont, en Californie, pour passer l'été au Mystery Shack de leur grand-oncle. Alex Hirsch a grandi avec Twin Peaks et X-Files, et prête sa voix à Grunkle Stan."
-    },
-    {
-      "type": "BLUFF",
-      "text": "Mytho ! 🤥 Over the Garden Wall : après des épisodes d'hésitation, quel nom Greg donne-t-il finalement à sa grenouille ?",
-      "imageUrl": "images/14-grenouille.jpg",
-      "imageEffect": "zoom",
-      "timeLimitSec": 45,
-      "basePoints": 1000,
-      "truth": "Jason Funderburker",
-      "voteTimeSec": 20,
-      "explanation": "Avant cela, Greg l'appelle Kitty, Wirt, George Washington, Benjamin Franklin, Dr. Cucumber ou Greg Jr. Quand elle chante, c'est la voix du crooner Jack Jones."
+      "explanation": "La lumière vive le blesse (le soleil le tue), l'eau le fait se multiplier, et un repas après minuit le transforme en gremlin. Le film se passe à Noël, dans la petite ville de Kingston Falls."
     },
     {
       "type": "MCQ",
-      "text": "Over the Garden Wall : quel acteur prête sa voix (VO) à Wirt, le grand frère poète ?",
-      "imageUrl": "images/15-elijah-wood.jpg",
-      "imageEffect": "pixelate",
-      "timeLimitSec": 20,
-      "basePoints": 1000,
-      "choices": [
-        {
-          "text": "Seth Green",
-          "isCorrect": false
-        },
-        {
-          "text": "Daniel Radcliffe",
-          "isCorrect": false
-        },
-        {
-          "text": "Elijah Wood",
-          "isCorrect": true
-        },
-        {
-          "text": "Joseph Gordon-Levitt",
-          "isCorrect": false
-        }
-      ],
-      "explanation": "Frodon lui-même ! La distribution compte aussi Christopher Lloyd, Tim Curry et John Cleese, et la Bête qui rôde dans l'Inconnu chante avec la voix du chanteur d'opéra Samuel Ramey."
-    },
-    {
-      "type": "SLIDER",
-      "text": "Combien d'épisodes compte la mini-série Over the Garden Wall (2014) ?",
-      "imageUrl": "images/16-foret-automne.jpg",
-      "timeLimitSec": 20,
-      "basePoints": 1000,
-      "slider": {
-        "min": 1,
-        "max": 30,
-        "step": 1,
-        "correct": 10,
-        "margin": 0
-      },
-      "explanation": "Dix épisodes d'environ onze minutes, diffusés en une semaine (3–7 novembre 2014). Patrick McHale en imaginait dix-huit, mais le budget et le temps l'ont obligé à couper."
-    },
-    {
-      "type": "POLL",
-      "text": "Sondage 🗳️ Pour la soirée, tu te déguises en…",
-      "imageUrl": "images/17-deguisements.jpg",
-      "timeLimitSec": 15,
-      "basePoints": 0,
-      "choices": [
-        {
-          "text": "Mercredi Addams"
-        },
-        {
-          "text": "Jack Skellington"
-        },
-        {
-          "text": "Bill Cipher"
-        },
-        {
-          "text": "Casper"
-        }
-      ],
-      "explanation": "Casper devait n'apparaître qu'une fois, dans un seul dessin animé : son succès en a fait l'une des grandes vedettes des studios Famous et Paramount, avec sa propre série de courts métrages."
-    },
-    {
-      "type": "MCQ",
-      "text": "Lesquelles de ces actrices ont incarné Mercredi Addams ? (plusieurs réponses)",
-      "imageUrl": "images/18-famille-addams-1964.jpg",
+      "text": "Qui a dit ? 🗣️ « Je ne bois jamais… de vin. »",
+      "imageUrl": "images/23-chauve-souris.jpg",
       "imageEffect": "blur",
-      "timeLimitSec": 25,
-      "basePoints": 1000,
-      "choices": [
-        {
-          "text": "Christina Ricci",
-          "isCorrect": true
-        },
-        {
-          "text": "Anjelica Huston",
-          "isCorrect": false
-        },
-        {
-          "text": "Lisa Loring",
-          "isCorrect": true
-        },
-        {
-          "text": "Jenna Ortega",
-          "isCorrect": true
-        }
-      ],
-      "explanation": "Lisa Loring avait six ans dans la série en noir et blanc (en photo). Anjelica Huston, elle, jouait Morticia au cinéma. Tim Burton a fait revenir Christina Ricci dans un second rôle de la série Mercredi."
-    },
-    {
-      "type": "TYPE_ANSWER",
-      "text": "Série Mercredi : comment s'appelle le pensionnat pour « parias » où ses parents l'envoient ?",
-      "imageUrl": "images/19-chateau-cantacuzino.jpg",
-      "imageEffect": "zoom",
-      "timeLimitSec": 25,
-      "basePoints": 1000,
-      "acceptedAnswers": ["Nevermore", "Nevermore Academy", "Académie Nevermore"],
-      "typoTolerance": true,
-      "explanation": "La Nevermore Academy est en réalité le château Cantacuzino, à Bușteni, en Roumanie (en photo), où la saison 1 a été tournée. Tim Burton a réalisé quatre épisodes de chaque saison."
-    },
-    {
-      "type": "TYPE_ANSWER",
-      "text": "La danse de Mercredi, devenue virale, a été tournée sur « Goo Goo Muck ». Quel groupe a enregistré ce titre en 1981 ?",
-      "imageUrl": "images/20-lux-interior.jpg",
-      "imageEffect": "pixelate",
-      "timeLimitSec": 30,
-      "basePoints": 2000,
-      "acceptedAnswers": ["The Cramps", "Cramps", "Les Cramps"],
-      "typoTolerance": true,
-      "explanation": "Jenna Ortega a chorégraphié la danse elle-même, inspirée par Siouxsie Sioux et Bob Fosse, malade et en attente d'un test Covid. Selon Billboard, les écoutes du titre aux États-Unis sont passées de 2 500 à plus de 134 000."
-    },
-    {
-      "type": "MCQ",
-      "text": "Betty Boop, « Snow-White » (1933) : la danse de Koko le clown changé en fantôme a été rotoscopée sur quel jazzman ?",
-      "imageUrl": "images/21-cab-calloway.jpg",
-      "imageEffect": "pixelate",
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Louis Armstrong",
+          "text": "Gomez Addams",
           "isCorrect": false
         },
         {
-          "text": "Cab Calloway",
+          "text": "Beetlejuice",
+          "isCorrect": false
+        },
+        {
+          "text": "Le comte Dracula",
           "isCorrect": true
         },
         {
-          "text": "Fats Waller",
-          "isCorrect": false
-        },
-        {
-          "text": "Duke Ellington",
+          "text": "Le monstre de Frankenstein",
           "isCorrect": false
         }
       ],
-      "explanation": "Koko y chante « St. James Infirmary Blues » avec des pas qui ressemblent au futur moonwalk. Le miroir magique a lui aussi les traits de Cab Calloway. Le film est au National Film Registry depuis 1994."
-    },
-    {
-      "type": "MCQ",
-      "text": "Le générique de Charmed est la reprise de « How Soon Is Now? » par Love Spit Love. Qui avait créé la chanson ?",
-      "imageUrl": "images/22-maison-charmed.jpg",
-      "timeLimitSec": 20,
-      "basePoints": 1000,
-      "choices": [
-        {
-          "text": "Joy Division",
-          "isCorrect": false
-        },
-        {
-          "text": "The Smiths",
-          "isCorrect": true
-        },
-        {
-          "text": "Depeche Mode",
-          "isCorrect": false
-        },
-        {
-          "text": "The Cure",
-          "isCorrect": false
-        }
-      ],
-      "explanation": "Cette reprise servait déjà dans le film The Craft (1996). La maison des sœurs Halliwell (en photo) se trouve au 1329 Carroll Avenue, à Los Angeles, et non à San Francisco."
+      "explanation": "Réplique culte de Bela Lugosi dans Dracula (1931) : « I never drink… wine. » Lugosi avait déjà joué le comte au théâtre, à Broadway, et il a été enterré avec sa cape."
     },
     {
       "type": "BLUFF",
-      "text": "Mytho ! 🤥 Quel est le nom de famille de Salem, le chat qui parle de Sabrina, l’apprentie sorcière ?",
-      "imageUrl": "images/23-chat-noir.jpg",
+      "text": "Mytho ! 🤥 Le roman Frankenstein (1818) de Mary Shelley a un sous-titre : « Frankenstein ou… » quoi ?",
+      "imageUrl": "images/24-mary-shelley.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
-      "truth": "Saberhagen",
+      "truth": "Le Prométhée moderne",
       "voteTimeSec": 20,
-      "explanation": "Salem Saberhagen est un sorcier de 500 ans, condamné par le Conseil des sorcières à vivre 100 ans en chat pour avoir tenté de conquérir le monde. Dans la série de 1996, il a la voix de Nick Bakay."
-    },
-    {
-      "type": "ORDER",
-      "text": "Sorcières à la télé 🧙 Classez ces séries de la plus ancienne à la plus récente (première diffusion).",
-      "imageUrl": "images/24-sorciere.jpg",
-      "timeLimitSec": 40,
-      "basePoints": 1000,
-      "items": [
-        "Ma sorcière bien-aimée",
-        "Sabrina, l’apprentie sorcière",
-        "Charmed",
-        "Les Nouvelles Aventures de Sabrina",
-        "Agatha All Along"
-      ],
-      "explanation": "1964, 1996, 1998, 2018, 2024. Le titre Agatha All Along vient d'une chanson de WandaVision, la série dont elle est le deuxième volet."
-    },
-    {
-      "type": "MCQ",
-      "text": "Dans le dessin animé The Real Ghostbusters, Peter Venkman (saisons 1 et 2) a la voix de l'acteur qui doublait aussi…",
-      "imageUrl": "images/25-ecto-1.jpg",
-      "imageEffect": "zoom",
-      "timeLimitSec": 20,
-      "basePoints": 2000,
-      "choices": [
-        {
-          "text": "Scooby-Doo",
-          "isCorrect": false
-        },
-        {
-          "text": "Winnie l'ourson",
-          "isCorrect": false
-        },
-        {
-          "text": "Garfield",
-          "isCorrect": true
-        },
-        {
-          "text": "Homer Simpson",
-          "isCorrect": false
-        }
-      ],
-      "explanation": "Lorenzo Music, la voix de Garfield dans les dessins animés. Il a été remplacé par Dave Coulier à partir de la saison 3. Jim Davis racontait l'avoir repéré à l'audition « tranquillement en train de se lécher » dans un coin."
+      "explanation": "Frankenstein ou le Prométhée moderne : comme Prométhée, qui vola le feu aux dieux, Victor Frankenstein défie la nature. Et la créature n'a pas de nom : Frankenstein, c'est le savant, pas le monstre !"
     },
     {
       "type": "PIN",
-      "text": "Point sur l'image 📍 Stranger Things : dans quel État se trouve la ville de Hawkins ? Pointez-le sur la carte.",
-      "imageUrl": "images/carte-etats-unis.png",
+      "text": "Point sur l'image 📍 En 1816, Mary Shelley a imaginé Frankenstein au bord d'un lac. Pointez ce lac !",
+      "imageUrl": "images/carte-europe.png",
       "timeLimitSec": 30,
       "basePoints": 1000,
       "zone": {
-        "x": 0.6671,
-        "y": 0.4075,
-        "radius": 0.022
+        "x": 0.3567,
+        "y": 0.5523,
+        "radius": 0.03
       },
-      "explanation": "L'Indiana. Dans cette saison, une mystérieuse maladie fait pourrir les champs de citrouilles autour de la ville à l'approche d'Halloween, et Will aperçoit une immense ombre aux nombreux bras, le « Mind Flayer »."
+      "explanation": "Le lac Léman ! À la villa Diodati, près de Genève, Lord Byron lance un défi : chacun écrit une histoire de fantômes. Mary Shelley, 18 ans, en tire Frankenstein, et John Polidori Le Vampire. Il fait si froid qu'on parle de « l'année sans été »."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Le Fantôme de l'Opéra 🎭 Dans le roman de Gaston Leroux (1910), quel est le prénom du Fantôme ?",
+      "imageUrl": "images/26-palais-garnier.jpg",
+      "imageEffect": "zoom",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Erik", "Éric"],
+      "typoTolerance": true,
+      "explanation": "Erik, un génie défiguré caché dans les dessous du Palais Garnier (en photo), au bord d'un lac souterrain. Ce « lac » existe : une immense citerne sous l'Opéra, où les pompiers de Paris viennent s'entraîner."
     },
     {
       "type": "MCQ",
-      "text": "The Skeleton Dance (Disney) : quel animateur a dessiné presque seul ce ballet de squelettes, en six semaines ?",
-      "imageUrl": "images/27-skeleton-dance.jpg",
-      "timeLimitSec": 20,
+      "text": "Le Horla (1887) de Maupassant 👁️ Quel phénomène prouve au narrateur qu'un être invisible vit chez lui ?",
+      "imageUrl": "images/27-maupassant.jpg",
+      "imageEffect": "pixelate",
+      "timeLimitSec": 25,
       "basePoints": 2000,
       "choices": [
         {
-          "text": "Carl Stalling",
+          "text": "Ses miroirs se brisent la nuit",
           "isCorrect": false
         },
         {
-          "text": "Ub Iwerks",
+          "text": "Sa carafe d'eau se vide pendant qu'il dort",
           "isCorrect": true
         },
         {
-          "text": "Max Fleischer",
+          "text": "Ses bougies s'éteignent toutes seules",
           "isCorrect": false
         },
         {
-          "text": "Walt Disney",
+          "text": "Son chien refuse d'entrer dans la chambre",
           "isCorrect": false
         }
       ],
-      "explanation": "L'idée vient du compositeur Carl Stalling. Iwerks s'est inspiré des squelettes du caricaturiste anglais Rowlandson. Sorti en 1929, le film est entré dans le domaine public le 1er janvier 2025 : d'où cette image."
+      "explanation": "La nuit, quelqu'un boit l'eau, et même le lait, de sa carafe, alors qu'il est seul et que tout est fermé. Maupassant (en photo, par Nadar) a écrit deux versions de cette nouvelle, en 1886 et 1887."
     },
     {
-      "type": "SLIDER",
-      "text": "Buffy, épisode « Hush » : sur ses 44 minutes, combien de minutes sont totalement sans dialogue ?",
-      "imageUrl": "images/28-sarah-michelle-gellar.jpg",
-      "timeLimitSec": 25,
+      "type": "PIN",
+      "text": "Point sur l'image 📍 Le château du comte Dracula se trouve en Transylvanie. Pointez la Transylvanie sur la carte.",
+      "imageUrl": "images/carte-europe.png",
+      "timeLimitSec": 30,
       "basePoints": 1000,
-      "slider": {
-        "min": 0,
-        "max": 44,
-        "step": 1,
-        "correct": 27,
-        "margin": 3,
-        "unit": "min"
+      "zone": {
+        "x": 0.6981,
+        "y": 0.5467,
+        "radius": 0.04
       },
-      "explanation": "27 minutes, pendant que les Gentlemen volent la voix de toute la ville. Joss Whedon voulait répondre aux critiques qui ne louaient que les dialogues de la série. « Hush » est le seul épisode de Buffy nommé à l'Emmy du meilleur scénario dramatique."
+      "explanation": "La Transylvanie est au cœur de la Roumanie, entourée par les Carpates. Bram Stoker n'y est jamais allé : il s'est documenté dans les bibliothèques. Le château de Bran, vendu aux touristes comme « le château de Dracula », n'a presque rien à voir avec le roman."
     },
     {
-      "type": "ORDER",
-      "text": "Les grands frissons animés 📺 Remettez-les dans l'ordre de sortie, du plus ancien au plus récent.",
-      "imageUrl": "images/29-friendly-ghost.jpg",
-      "timeLimitSec": 45,
+      "type": "DRAW",
+      "text": "Dessine-moi 🎨 Un joueur dessine en secret une star d'Halloween de la pop culture, les autres devinent en l'écrivant !",
+      "timeLimitSec": 90,
       "basePoints": 1000,
-      "items": [
-        "The Skeleton Dance (Disney)",
-        "The Friendly Ghost, premier Casper",
-        "It's the Great Pumpkin, Charlie Brown",
-        "Scooby-Doo, Where Are You!",
-        "The Real Ghostbusters",
-        "Courage le chien froussard (la série)"
+      "words": [
+        "Casper",
+        "Dracula",
+        "Frankenstein",
+        "Totoro",
+        "Pac-Man",
+        "Scooby-Doo",
+        "Gremlins",
+        "Ectoplasma",
+        "Ghostface",
+        "Jack Skellington",
+        "Mercredi Addams",
+        "La Chose"
       ],
-      "explanation": "1929, 1945, 1966, 1969, 1986, 1999. La Grande Citrouille de Charlie Brown a été rediffusée à la télévision américaine chaque année de 1966 à 2020, avant de passer sur Apple TV+."
+      "explanation": "Astuce de dessinateur : commencez par le détail qui se reconnaît au premier coup d'œil : la cape de Dracula, les boulons de Frankenstein, la grande bouche de Pac-Man, le masque de Ghostface…"
     },
     {
       "type": "ORDER",
-      "text": "Finale 🏆 La famille Addams, de sa naissance à aujourd'hui : remettez ses apparitions dans l'ordre chronologique.",
-      "imageUrl": "images/30-addams-1977.jpg",
+      "text": "Finale 🏆 Les grands classiques qui font peur : remettez-les dans l'ordre de publication, du plus ancien au plus récent.",
+      "imageUrl": "images/07-edgar-poe.jpg",
       "timeLimitSec": 45,
       "basePoints": 2000,
       "items": [
-        "Les dessins de Charles Addams dans le New Yorker",
-        "La série télévisée en noir et blanc",
-        "Le dessin animé de Hanna-Barbera",
-        "Le film de Barry Sonnenfeld",
-        "La série animée d'ABC",
-        "La série Mercredi sur Netflix"
+        "Frankenstein (Mary Shelley)",
+        "Le Chat noir (Edgar Allan Poe)",
+        "Le Horla (Guy de Maupassant)",
+        "Dracula (Bram Stoker)",
+        "Le Fantôme de l'Opéra (Gaston Leroux)",
+        "Ça (Stephen King)"
       ],
-      "explanation": "1938, 1964, 1973, 1991, 1992, 2022. Gomez et Pugsley n'ont reçu leurs prénoms qu'en 1964, pour la série. En 1977, le téléfilm Halloween with the New Addams Family a réuni presque toute la distribution (en photo)."
+      "explanation": "1818, 1843, 1887, 1897, 1910, 1986. C'est Charles Baudelaire qui a traduit Le Chat noir et les autres contes de Poe (en photo) en français, dans les années 1850."
     }
   ]
 }

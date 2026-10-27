@@ -1,71 +1,57 @@
-# Halloween animé — dessins animés & séries
+# Halloween Pop
 
-30 questions **très difficiles** sur les Halloween des dessins animés et des séries : _Simpson
-Horror Show_, Scooby-Doo, Charlie Brown, _Courage le chien froussard_, _Gravity Falls_, _Over the
-Garden Wall_, la famille Addams et _Mercredi_, _Buffy_, _Charmed_, _Sabrina_, _Stranger Things_,
-_The Real Ghostbusters_, Betty Boop, Casper et _The Skeleton Dance_. Une **image par question**
-(jamais la réponse : 9 sont floutées, zoomées ou pixelisées au départ) et une **explication
-« 💡 Le saviez-vous ? »** sourcée après chaque réponse (sources : [`CREDITS.md`](CREDITS.md)).
+30 questions **fun mais corsées** sur Halloween dans la pop culture qu'on connaît en France :
+dessins animés (version française !), mangas et animés japonais, jeux vidéo, films et grands
+romans qui font peur. Bob Razowski, Véra, Bibendum Chamallow, Sans-Visage, les noiraudes, Ryuk,
+Ectoplasma, le professeur Tastroff, Mimi Geignarde, Dracula, Frankenstein, Erik… Une **image par
+question** (jamais la réponse : 8 sont floutées, zoomées ou pixelisées au départ ; le « Dessine-moi »
+n'en a pas, la TV montre le dessin) et une **explication « 💡 Le saviez-vous ? »** sourcée après chaque
+réponse (sources : [`CREDITS.md`](CREDITS.md)). Pas de sondage ni de nuage de mots. Thème TV :
+🎃 Halloween.
 
 ## Les questions
 
-| #   | Type               | Thème                                               | Image (effet)                      | Points |
-| --- | ------------------ | --------------------------------------------------- | ---------------------------------- | ------ |
-| 1   | Choix multiple     | Rébus 🎃 + 👑 (L'Étrange Noël de monsieur Jack)     | citrouilles                        | 1000   |
-| 2   | Réponse libre      | Rébus ☀️ + 🎃 (Gravity Falls)                       | Alex Hirsch                        | 1000   |
-| 3   | Choix multiple     | Qui a dit ? « I got a rock. » (Charlie Brown)       | champ de citrouilles               | 1000   |
-| 4   | « Mytho ! »        | Le premier nom du chien de Scooby-Doo               | dogue allemand                     | 1000   |
-| 5   | Réponse libre      | Le vrai prénom de Sammy (Shaggy)                    | Mystery Machine                    | 1000   |
-| 6   | Vrai / faux        | D'où vient le nom « Scooby-Doo » ?                  | Frank Sinatra (flou)               | 1000   |
-| 7   | Choix multiple     | Simpson Horror Show : qui lit « Le Corbeau » ?      | Edgar Allan Poe                    | 1000   |
-| 8   | Vrai / faux        | L'avertissement de Marge                            | Matt Groening                      | 1000   |
-| 9   | Réponse libre      | Simpson Horror Show V : la victime des trois haches | Stanley Hotel (zoom)               | 2000   |
-| 10  | Curseur            | L'année du premier Simpson Horror Show              | réplique de la maison des Simpson  | 1000   |
-| 11  | « Qui de nous ? »  | Pause : qui hurlerait le premier ?                  | maison hantée de fête foraine      | 0      |
-| 12  | Choix multiple     | Courage : le pilote nommé à…                        | maison abandonnée du Kansas        | 1000   |
-| 13  | Point sur l'image  | L'État de Gravity Falls                             | carte des États-Unis               | 1000   |
-| 14  | « Mytho ! »        | Over the Garden Wall : le nom de la grenouille      | grenouille (zoom)                  | 1000   |
-| 15  | Choix multiple     | Over the Garden Wall : la voix de Wirt              | Elijah Wood (pixelisé)             | 1000   |
-| 16  | Curseur            | Over the Garden Wall : nombre d'épisodes            | forêt d'automne                    | 1000   |
-| 17  | Sondage            | Pause : ton déguisement                             | enfants déguisés                   | 0      |
-| 18  | Choix multiple ☑️  | Les actrices de Mercredi Addams (3 bonnes réponses) | famille Addams 1964 (flou)         | 1000   |
-| 19  | Réponse libre      | Mercredi : le nom du pensionnat                     | château Cantacuzino (zoom)         | 1000   |
-| 20  | Réponse libre      | Mercredi : le groupe de « Goo Goo Muck »            | Lux Interior en concert (pixelisé) | 2000   |
-| 21  | Choix multiple     | Betty Boop « Snow-White » : le jazzman rotoscopé    | Cab Calloway (pixelisé)            | 1000   |
-| 22  | Choix multiple     | Charmed : qui a créé la chanson du générique ?      | la maison des Halliwell            | 1000   |
-| 23  | « Mytho ! »        | Le nom de famille de Salem, le chat de Sabrina      | chat noir                          | 1000   |
-| 24  | Ordre              | Les séries de sorcières, de 1964 à 2024             | sorcière déguisée                  | 1000   |
-| 25  | Choix multiple     | The Real Ghostbusters : l'autre rôle de Venkman     | Ecto-1 (zoom)                      | 2000   |
-| 26  | Point sur l'image  | L'État de Hawkins (Stranger Things)                 | carte des États-Unis               | 1000   |
-| 27  | Choix multiple     | The Skeleton Dance : l'animateur                    | image du film (1929)               | 2000   |
-| 28  | Curseur            | Buffy « Hush » : minutes sans dialogue              | Sarah Michelle Gellar              | 1000   |
-| 29  | Ordre              | Les grands frissons animés, de 1929 à 1999          | carton-titre de The Friendly Ghost | 1000   |
-| 30  | Ordre — **finale** | La famille Addams, de 1938 à 2022                   | la famille Addams en 1977          | 2000   |
-
-10 choix multiples (dont un « plusieurs réponses »), 2 vrai / faux, 5 réponses libres (petites
-fautes tolérées, orthographes françaises et originales), 3 curseurs, 3 ordres, 2 points sur
-l'image, 3 « Mytho ! », 1 sondage et 1 « Qui de nous ? » (pauses sans points). Pas de « Dessine-moi »
-(une question de dessin ne peut pas avoir d'image). Couverture : _The Skeleton Dance_.
+| #   | Type              | Thème                                                  | Image (effet)                   | Points |
+| --- | ----------------- | ------------------------------------------------------ | ------------------------------- | ------ |
+| 1   | Choix multiple    | Rébus 🎃 + 👑 (L'Étrange Noël de monsieur Jack)        | citrouille sculptée             | 1000   |
+| 2   | Réponse libre     | Monstres & Cie : Mike Wazowski en VF                   | enfants déguisés                | 1000   |
+| 3   | Choix multiple    | Pac-Man : le fantôme orange                            | borne d'arcade (pixelisé)       | 1000   |
+| 4   | « Mytho ! »       | SOS Fantômes : le géant de guimauve en VF              | Ecto-1                          | 1000   |
+| 5   | Vrai / faux       | Halloween (1978) : le masque de Michael Myers          | chat noir                       | 1000   |
+| 6   | Choix multiple    | D'où vient le nom « Scooby-Doo » ?                     | Mystery Machine                 | 1000   |
+| 7   | Réponse libre     | Scooby-Doo : Velma en VF                               | dogue allemand                  | 1000   |
+| 8   | Ordre             | Films : SOS Fantômes → Les Noces funèbres              | Stanley Hotel                   | 1000   |
+| 9   | Choix multiple    | Casper (1995) : les trois oncles en VF                 | The Friendly Ghost (1945)       | 2000   |
+| 10  | Réponse libre     | Le Voyage de Chihiro : l'esprit masqué                 | Dōgo Onsen (zoom)               | 1000   |
+| 11  | Choix multiple    | Mon voisin Totoro : les boules de suie                 | forêt d'automne                 | 1000   |
+| 12  | Choix multiple    | Death Note : le fruit préféré de Ryuk                  | fantôme d'Hokusai (flou)        | 1000   |
+| 13  | Curseur           | Jujutsu Kaisen : les doigts de Sukuna                  | estampe de Kuniyoshi (zoom)     | 1000   |
+| 14  | Choix multiple    | Demon Slayer : comment Nezuko voyage le jour           | forêt de Nikkō                  | 1000   |
+| 15  | Réponse libre     | Pokémon : Fantominus → Spectrum → ?                    | yōkai de Sekien (pixelisé)      | 1000   |
+| 16  | « Mytho ! »       | Luigi's Mansion : le savant en VF                      | maison hantée                   | 1000   |
+| 17  | Vrai / faux       | Minecraft : la citrouille et l'Enderman                | champ de citrouilles            | 1000   |
+| 18  | « Qui de nous ? » | Pause : qui mourrait le premier dans un film d'horreur | maison victorienne              | 0      |
+| 19  | Curseur           | Harry Potter : les coups de hache de Nick              | château                         | 2000   |
+| 20  | Réponse libre     | Harry Potter : le fantôme des toilettes                | toilettes victoriennes          | 1000   |
+| 21  | Choix multiple ☑️ | Lesquels sont des fantômes ? (3 bonnes réponses)       | The Skeleton Dance (1929)       | 1000   |
+| 22  | Choix multiple    | Gremlins : la règle qui n'existe pas                   | maison abandonnée               | 1000   |
+| 23  | Choix multiple    | Qui a dit ? « Je ne bois jamais… de vin. »             | chauve-souris (flou)            | 1000   |
+| 24  | « Mytho ! »       | Le sous-titre de Frankenstein                          | Mary Shelley                    | 1000   |
+| 25  | Point sur l'image | Le lac où est né Frankenstein                          | carte de l'Europe               | 1000   |
+| 26  | Réponse libre     | Le prénom du Fantôme de l'Opéra                        | Palais Garnier (zoom)           | 2000   |
+| 27  | Choix multiple    | Le Horla : la preuve de l'être invisible               | Maupassant par Nadar (pixelisé) | 2000   |
+| 28  | Point sur l'image | Où est la Transylvanie ?                               | carte de l'Europe               | 1000   |
+| 29  | « Dessine-moi »   | 12 stars d'Halloween de la pop culture à dessiner      | — (la TV montre le dessin)      | 1000   |
+| 30  | Ordre             | Finale : 6 classiques de l'horreur, de 1818 à 1986     | Edgar Allan Poe                 | 2000   |
 
 ## Images
 
-Toutes les images du quiz sont **libres** (Wikimedia Commons : domaine public, CC0, CC BY, CC BY-SA)
-et sont dans [`images/`](images/), avec leurs crédits dans [`CREDITS.md`](CREDITS.md). Aucune
-capture de dessin animé ou de série sous droits n'est incluse.
-
-### Images à ajouter
-
-Aucune n'est obligatoire : le quiz est complet tel quel. Si vous préférez une **capture de la
-série** à la photo libre (pour une soirée privée), déposez-la dans `images/` sous le nom
-indiqué, changez `imageUrl` dans `quiz.json` puis ré-importez. Vos fichiers restent hors de git
-(`images/.gitignore`) ; une image absente n'empêche pas l'import (la question est importée sans
-image, avec un avertissement), sauf pour la couverture et les points sur l'image.
-
-| Fichier (à ajouter)                  | Question | Ce que l'image doit montrer                                                                          | Effet conseillé |
-| ------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------- | --------------- |
-| `images/09-shinning.jpg`             | 9        | Homer dans l'hôtel enneigé de M. Burns, segment « The Shinning » (sans Willie à l'écran)             | zoom            |
-| `images/14-over-the-garden-wall.jpg` | 14       | Wirt et Greg dans la forêt de l'Inconnu (sans que la grenouille ni son nom apparaissent)             | aucun           |
-| `images/23-sabrina.jpg`              | 23       | Le salon des tantes Hilda et Zelda dans _Sabrina, l'apprentie sorcière_ (1996), sans générique écrit | flou            |
+Toutes les images sont **libres** (Wikimedia Commons : domaine public, CC0, CC BY, CC BY-SA ;
+crédits dans [`CREDITS.md`](CREDITS.md)) : aucune capture de dessin animé, de film ou de jeu sous
+droits. Aucune image n'est à ajouter. Pour une partie privée, vous pouvez remplacer une image par
+votre propre capture : mettez le fichier dans `images/` sous le même nom (il reste hors de git
+grâce à `images/.gitignore`) et réimportez. Ne remplacez pas `carte-europe.png` sans recalculer les
+zones des questions 25 et 28.
 
 ## Importer
 
@@ -73,21 +59,12 @@ image, avec un avertissement), sauf pour la couverture et les points sur l'image
 pnpm --filter @lbq/server quiz:import content/quizzes/halloween-anime <email de l'animateur>
 ```
 
-Le quiz est importé **privé** ; relancer la commande met à jour le quiz du même titre (par
-exemple après avoir ajouté vos propres images) au lieu d'en créer un second. Les images sont
-copiées dans le dossier d'upload du serveur (`UPLOAD_DIR`) et référencées depuis `PUBLIC_URL`
-(ou `--base-url`).
+Le quiz est importé en **privé** ; relancer la commande met à jour le quiz du même titre
+(« Halloween Pop »).
 
 ## Comment jouer
 
-- **Soirée d'Halloween à plusieurs** : lancez en **Équipes** (2 à 4) — les questions très
-  difficiles se jouent mieux à plusieurs têtes, et le score d'équipe reste équitable même si les
-  équipes n'ont pas la même taille. Les « Mytho ! » sont encore plus drôles entre équipes.
-- **Entre amis qui connaissent leurs classiques** : **Survie + Jokers**, 3 ou 4 ❤️ (le quiz est
-  dur : avec 1 ou 2 cœurs, tout le monde est fantôme avant la moitié). Les deux pauses (11 et 17) ne coûtent jamais de cœur.
-- **Jokers** : 🎯 50/50 sur les choix multiples (première lettre sur les réponses libres, plage
-  réduite sur les curseurs, moitié des mensonges sur les « Mytho ! » ; pas sur les vrai / faux,
-  ordres et points sur l'image) ; 🌀 Brouilleur frappe sur un choix multiple ou un vrai / faux ;
-  ⏳ Sablier partout sauf les « Mytho ! » ; aucun joker sur le sondage ni sur « Qui de nous ? ».
-- Les questions 6, 9, 14, 15, 18, 19, 20, 21 et 25 commencent avec une image brouillée qui
-  s'éclaircit : répondre tôt rapporte plus de points.
+- **Entre amis à une soirée d'Halloween** : mode **Équipes** (2 ou 3 équipes) — les « Mytho ! »
+  et le « Dessine-moi » sont encore plus drôles en équipe.
+- **Survie + Jokers** avec 3 cœurs : les questions VF et les mangas départagent vite les joueurs.
+- Avec la **📱 télécommande**, l'animateur voit la réponse et l'explication sur son téléphone.
