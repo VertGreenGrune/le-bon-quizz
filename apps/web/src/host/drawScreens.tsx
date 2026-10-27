@@ -17,7 +17,7 @@ export function DrawIntroLine({ question }: { question: QuestionShowPayload | nu
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.3 }}
-      className="flex items-center gap-4 rounded-2xl bg-black/25 px-8 py-4 text-4xl font-black"
+      className="flex items-center gap-4 rounded-2xl bg-panel px-8 py-4 text-4xl font-black"
     >
       <span aria-hidden="true">🎨</span>
       <Avatar id={drawer.avatar} size="md" />
@@ -57,7 +57,7 @@ export function DrawStage({
       </div>
       <aside className="flex w-80 shrink-0 flex-col gap-4">
         {drawer && (
-          <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 text-2xl font-black">
+          <div className="flex items-center gap-3 rounded-2xl bg-panel px-4 py-3 text-2xl font-black">
             <Avatar id={drawer.avatar} size="md" />
             <span className="min-w-0 break-words">
               🎨 {drawer.nickname} {done ? 'a dessiné' : 'dessine…'}

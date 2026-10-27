@@ -11,6 +11,9 @@ import {
   hasRightAnswer,
   isMultipleAnswer,
   questionExplanation,
+  HostCreatePayload,
+  QUIZ_THEMES,
+  QUIZ_THEME_NAMES,
 } from './index.js';
 
 describe('« Buzzer » option (T28)', () => {
@@ -335,5 +338,22 @@ describe('explanations and « select all » (T37)', () => {
     expect(valid({ choiceIndexes: [4] })).toBe(false);
     expect(valid({ choiceIndexes: [0, 1, 2, 3, 0] })).toBe(false);
     expect(valid({ choiceIndexes: [0], choiceIndex: 0 })).toBe(false);
+  });
+});
+
+describe('TV themes (T40)', () => {
+  it('is optional on a quiz and refuses unknown themes', () => {
+    expect(QuizSchema.parse(DEMO_QUIZ).theme).toBeUndefined();
+    expect(QuizSchema.parse({ ...DEMO_QUIZ, theme: 'halloween' }).theme).toBe('halloween');
+    expect(QuizSchema.safeParse({ ...DEMO_QUIZ, theme: 'disco' }).success).toBe(false);
+  });
+
+  it('can be overridden in host:create', () => {
+    expect(HostCreatePayload.parse({ quizId: 'demo', theme: 'space' }).theme).toBe('space');
+    expect(HostCreatePayload.safeParse({ quizId: 'demo', theme: 'disco' }).success).toBe(false);
+  });
+
+  it('has a French name for every theme', () => {
+    for (const t of QUIZ_THEMES) expect(QUIZ_THEME_NAMES[t]).toBeTruthy();
   });
 });

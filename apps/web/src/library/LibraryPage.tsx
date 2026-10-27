@@ -5,6 +5,7 @@ import { api } from '../api';
 import { EditorShell, btn } from '../editor/EditorShell';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl } from '../lib/gameOptions';
+import { ThemeBadge } from '../themes/ThemePicker';
 import { playedLabel } from './format';
 import { mediaUrl } from '../lib/mediaUrl';
 
@@ -138,7 +139,10 @@ export function LibraryPage() {
               )}
               <div className="flex flex-1 flex-col gap-1 p-4">
                 <h2 className="text-lg leading-tight font-bold">{q.title}</h2>
-                <p className="text-sm text-gray-500">par {q.authorName}</p>
+                <p className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                  par {q.authorName}
+                  <ThemeBadge theme={q.theme} />
+                </p>
                 {q.description && (
                   <p className="line-clamp-2 text-sm text-gray-600">{q.description}</p>
                 )}
@@ -166,6 +170,7 @@ export function LibraryPage() {
       </main>
       {launchId && (
         <StartGameDialog
+          quizTheme={quizzes?.find((q) => q.id === launchId)?.theme}
           onStart={(options) => navigate(hostUrl(launchId, options))}
           onClose={() => setLaunchId(null)}
         />

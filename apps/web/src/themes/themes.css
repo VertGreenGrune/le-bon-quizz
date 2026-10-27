@@ -1,0 +1,319 @@
+/* TV themes (T40): page surface + the animated background layers of `backgrounds.tsx`.
+   Only transforms and opacity are animated (cheap on a low-end TV). */
+
+.theme-surface {
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+/* Readable display titles over busy backgrounds. */
+.theme-lobby-title {
+  text-shadow: 0 3px 12px rgb(0 0 0 / 0.55);
+  letter-spacing: 0.02em;
+}
+
+@keyframes theme-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(6deg);
+  }
+}
+.theme-bob {
+  display: inline-block;
+  animation: theme-bob 3s ease-in-out infinite;
+}
+
+/* ---------- Halloween ---------- */
+
+@keyframes hw-fog {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.hw-fog {
+  position: absolute;
+  left: 0;
+  width: 200%;
+  height: 28vh;
+  opacity: 0.3;
+  background:
+    radial-gradient(ellipse 12% 50% at 10% 60%, rgb(220 210 240 / 0.7), transparent 70%),
+    radial-gradient(ellipse 16% 45% at 30% 50%, rgb(220 210 240 / 0.6), transparent 70%),
+    radial-gradient(ellipse 12% 55% at 60% 60%, rgb(220 210 240 / 0.7), transparent 70%),
+    radial-gradient(ellipse 16% 45% at 80% 50%, rgb(220 210 240 / 0.6), transparent 70%);
+  animation: hw-fog var(--dur, 80s) linear infinite;
+}
+
+@keyframes hw-bat {
+  0% {
+    transform: translate(-10vw, 0) scaleX(1);
+  }
+  25% {
+    transform: translate(22vw, -4vh) scaleX(1);
+  }
+  50% {
+    transform: translate(55vw, 3vh) scaleX(1);
+  }
+  75% {
+    transform: translate(85vw, -5vh) scaleX(1);
+  }
+  100% {
+    transform: translate(112vw, 0) scaleX(1);
+  }
+}
+.hw-bat {
+  position: absolute;
+  left: 0;
+  opacity: 0.55;
+  filter: brightness(0.6);
+  animation: hw-bat var(--dur, 20s) linear infinite;
+}
+
+@keyframes hw-flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  40% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.7;
+  }
+  55% {
+    opacity: 0.95;
+  }
+}
+.hw-pumpkin {
+  position: absolute;
+  bottom: 0.5rem;
+  line-height: 1;
+  animation: hw-flicker 2.4s ease-in-out infinite;
+}
+
+/* ---------- Noël ---------- */
+
+.xm-garland {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1rem;
+  border-top: 3px solid rgb(10 60 30 / 0.9);
+}
+@keyframes xm-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.xm-light {
+  position: absolute;
+  width: 0.5rem;
+  height: 0.75rem;
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: 0 0 10px 2px currentColor;
+  animation: xm-blink 1.8s ease-in-out infinite;
+}
+
+@keyframes xm-snow {
+  from {
+    transform: translate(0, -5vh);
+  }
+  to {
+    transform: translate(var(--drift, 0), 105vh);
+  }
+}
+.xm-snow {
+  position: absolute;
+  top: -2vh;
+  border-radius: 9999px;
+  background: white;
+  animation: xm-snow var(--dur, 14s) linear infinite;
+}
+
+/* ---------- Rétro ---------- */
+
+@keyframes rt-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+.rt-sun {
+  position: absolute;
+  left: 50%;
+  /* Half sunk behind the horizon (the floor hides its lower half), dim: never behind text at full
+     strength. */
+  bottom: 21vh;
+  width: 24vh;
+  height: 24vh;
+  margin-left: -12vh;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #fff200 0%, #ff8a00 45%, #ff2fb9 100%);
+  box-shadow: 0 0 80px rgb(255 47 185 / 0.55);
+  /* Horizontal gaps in the lower half, like the classic synthwave sun. */
+  mask-image: linear-gradient(
+    180deg,
+    black 0 55%,
+    transparent 55% 59%,
+    black 59% 67%,
+    transparent 67% 71%,
+    black 71% 78%,
+    transparent 78% 83%,
+    black 83% 89%,
+    transparent 89% 95%,
+    black 95%
+  );
+  opacity: 0.5;
+  animation: rt-pulse 4s ease-in-out infinite;
+}
+.rt-floor {
+  position: absolute;
+  inset: auto 0 0;
+  height: 32vh;
+  overflow: hidden;
+  perspective: 30vh;
+  background: linear-gradient(180deg, #2a0838, #0d0221);
+  border-top: 2px solid #ff2fb9;
+  box-shadow: 0 -6px 30px rgb(255 47 185 / 0.5);
+}
+@keyframes rt-grid {
+  from {
+    transform: rotateX(60deg) translateY(0);
+  }
+  to {
+    transform: rotateX(60deg) translateY(60px);
+  }
+}
+.rt-grid {
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  top: -100%;
+  height: 300%;
+  transform-origin: 50% 100%;
+  background-image:
+    linear-gradient(rgb(255 47 185 / 0.65) 2px, transparent 2px),
+    linear-gradient(90deg, rgb(0 240 255 / 0.45) 2px, transparent 2px);
+  background-size: 60px 60px;
+  transform: rotateX(60deg);
+  animation: rt-grid 1.6s linear infinite;
+}
+.rt-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(180deg, rgb(0 0 0 / 0.16) 0 2px, transparent 2px 4px);
+}
+/* Pixel frame around the retro lobby title (stepped corners). */
+.rt-frame {
+  padding: 1rem 1.5rem;
+  background: rgb(13 2 33 / 0.75);
+  box-shadow:
+    0 -6px 0 0 #00f0ff,
+    0 6px 0 0 #00f0ff,
+    -6px 0 0 0 #00f0ff,
+    6px 0 0 0 #00f0ff,
+    0 0 30px rgb(0 240 255 / 0.45);
+  line-height: 1.4;
+}
+
+/* ---------- Espace ---------- */
+
+@keyframes sp-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.sp-star {
+  position: absolute;
+  border-radius: 9999px;
+  background: white;
+  box-shadow: 0 0 6px rgb(255 255 255 / 0.8);
+  animation: sp-twinkle var(--dur, 3s) ease-in-out infinite;
+}
+@keyframes sp-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-12deg);
+  }
+  50% {
+    transform: translateY(-14px) rotate(-12deg);
+  }
+}
+.sp-planet {
+  position: absolute;
+  right: 6vw;
+  bottom: 10vh;
+  width: 16vh;
+  height: 16vh;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, #c4b5fd 0%, #7c3aed 45%, #2e1065 100%);
+  box-shadow: inset -12px -10px 30px rgb(0 0 0 / 0.5);
+  opacity: 0.8;
+  animation: sp-float 14s ease-in-out infinite;
+}
+.sp-planet::after {
+  content: '';
+  position: absolute;
+  inset: 40% -45%;
+  border: 3px solid rgb(253 230 138 / 0.6);
+  border-radius: 50%;
+}
+@keyframes sp-shoot {
+  0%,
+  90% {
+    transform: translate(0, 0) rotate(-30deg);
+    opacity: 0;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-60vw, 35vh) rotate(-30deg);
+    opacity: 0;
+  }
+}
+.sp-shooting {
+  position: absolute;
+  top: 8vh;
+  right: 5vw;
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, white, transparent);
+  animation: sp-shoot 11s ease-in infinite;
+}
+
+/* Reduced motion: moving pieces go away, the rest stays still. */
+@media (prefers-reduced-motion: reduce) {
+  .theme-moving {
+    display: none;
+  }
+  .theme-bg *,
+  .theme-bob {
+    animation: none !important;
+  }
+}
+
+/* Phone waiting screens: the retro pixel font is very wide. */
+.theme-phone-title {
+  text-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+}
+[data-theme='retro'] .theme-phone-title {
+  font-size: 1.15rem;
+  line-height: 1.7;
+}

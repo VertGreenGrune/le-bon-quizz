@@ -96,6 +96,13 @@ describe('prepareQuiz', () => {
     await expect(prepareQuiz(folder, store())).rejects.toThrow('questions.0.choices');
   });
 
+  it('keeps the TV theme of quiz.json (T40)', async () => {
+    writeQuiz({ title: 'Quiz', theme: 'halloween', questions: [question()] });
+    expect((await prepareQuiz(folder, store())).theme).toBe('halloween');
+    writeQuiz({ title: 'Quiz', theme: 'disco', questions: [question()] });
+    await expect(prepareQuiz(folder, store())).rejects.toThrow();
+  });
+
   it('forces the quiz to private', async () => {
     writeQuiz({ title: 'Quiz', visibility: 'PUBLIC', questions: [question()] });
     expect((await prepareQuiz(folder, store())).visibility).toBe('PRIVATE');

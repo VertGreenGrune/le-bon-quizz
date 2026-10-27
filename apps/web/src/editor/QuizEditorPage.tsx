@@ -6,6 +6,7 @@ import { EditorShell, btn } from './EditorShell';
 import { QuestionEditor } from './QuestionEditor';
 import { ImageField } from './ImageField';
 import { VisibilityField } from './visibility';
+import { ThemeField } from '../themes/ThemePicker';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl, type GameOptions } from '../lib/gameOptions';
 import {
@@ -225,6 +226,10 @@ export function QuizEditorPage() {
               onChange={(visibility) => setDraft((d) => ({ ...d, visibility }))}
               hasMedia={hasMedia(draft)}
             />
+            <ThemeField
+              value={draft.theme ?? 'classic'}
+              onChange={(theme) => setDraft((d) => ({ ...d, theme }))}
+            />
           </div>
           <ImageField
             label="Image de couverture"
@@ -294,7 +299,13 @@ export function QuizEditorPage() {
           />
         </div>
       </main>
-      {starting && <StartGameDialog onStart={startGame} onClose={() => setStarting(false)} />}
+      {starting && (
+        <StartGameDialog
+          quizTheme={draft.theme ?? 'classic'}
+          onStart={startGame}
+          onClose={() => setStarting(false)}
+        />
+      )}
     </EditorShell>
   );
 }

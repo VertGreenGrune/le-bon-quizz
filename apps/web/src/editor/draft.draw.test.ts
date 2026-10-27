@@ -57,6 +57,7 @@ describe('editor model of a « Dessine-moi » question', () => {
       id: 'q1',
       title: 'Dessin',
       visibility: 'PRIVATE',
+      theme: 'classic',
       createdAt: '',
       updatedAt: '',
       questions: [

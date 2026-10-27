@@ -61,7 +61,7 @@ export function TeamLobby({
         type="button"
         onClick={() => setSelected(selected === p.id ? null : p.id)}
         aria-expanded={selected === p.id}
-        className="flex w-full items-center gap-3 rounded-full bg-black/25 py-2 pr-4 pl-2 text-xl font-bold hover:bg-black/40"
+        className="flex w-full items-center gap-3 rounded-full bg-panel py-2 pr-4 pl-2 text-xl font-bold hover:bg-black/40"
       >
         <motion.span
           initial={{ scale: 0, rotate: -40 }}
@@ -117,7 +117,7 @@ export function TeamLobby({
           🔀 Mélanger
         </button>
         {unassigned > 0 && (
-          <span className="rounded-lg bg-black/25 px-3 py-1.5">
+          <span className="rounded-lg bg-panel px-3 py-1.5">
             {unassigned} joueur{unassigned > 1 ? 's' : ''} sans équipe
           </span>
         )}
@@ -215,7 +215,7 @@ export function TeamPodiumScreen({
   const best = top[0];
   return (
     <div className="flex flex-1 flex-col items-center gap-3 p-6">
-      <h2 className="text-5xl font-black">Podium des équipes</h2>
+      <h2 className="theme-lobby-title font-display text-5xl font-black">Podium des équipes</h2>
       <div className="flex flex-1 items-end gap-6">
         {SLOTS.map(({ place, height, delay }) => {
           const t = teams[place];

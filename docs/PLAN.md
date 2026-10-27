@@ -226,6 +226,20 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   clock stays frozen after the 3-2-1 until judged); kicking the holder frees the hand. The TV hides
   the answer behind « 👁 Voir la réponse (animateur) ».
 
+- **TV themes** (T40; `QuizTheme` = `classic` (default) | `halloween` | `christmas` | `retro` |
+  `space`, `Quiz.theme`, overridable per game by the start dialog → `host:create.theme`). The
+  server resolves the game's theme (override, else the quiz's) and sends it in `game:state.theme`
+  (absent = classic, so also in both resyncs). One file per theme in `apps/web/src/themes/`: CSS
+  variables (`--color-brand`, `--theme-bg` / `-panel` / `-accent` / `-text` / `-timer` /
+  `-font`, Tailwind `bg-panel`, `text-accent`, `stroke-timer`, `font-display`), a local display
+  font (`@fontsource/*`, OFL), an animated background layer (`backgrounds.tsx` + `themes.css`:
+  ≤ 30 elements, transforms / opacity only, moving pieces hidden with `prefers-reduced-motion`),
+  confetti shapes, a lobby title and its own lobby music / reveal / podium sounds
+  (`public/sounds/<name>-<theme>.wav`, synthesized CC0 by `generate-sounds.mjs`; `soundFile` in
+  `host/sounds.ts`). **Never themed:** the answer colors and shapes, the question text, the
+  explanation card, the scoring. Phones: only the waiting screens (lobby, get ready, answered,
+  standings, podium) follow it (`followsTheme`); answer / result screens keep the classic look.
+
 ## 4. Socket protocol (source of truth = `packages/shared/src/events.ts`)
 
 Rooms: `game:<PIN>` (everyone), `game:<PIN>:host` (host sockets only).
@@ -236,7 +250,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5 }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -263,7 +277,7 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs }`, `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs }`, `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -291,7 +305,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `PasswordResetToken` — id (= SHA-256 of the token in the e-mailed link), userId, expiresAt
   (1 hour), usedAt? (single use), createdAt; a new request deletes the user's unused ones
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
-  `PUBLIC`, default `PRIVATE`: public quizzes are in the library), createdAt, updatedAt
+  `PUBLIC`, default `PRIVATE`: public quizzes are in the library), theme (`QuizTheme` enum, default
+  `classic`, T40), createdAt, updatedAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
   `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD` | `BLUFF` | `DRAW`), timeLimitSec (default 20),
   basePoints (default 1000), config? (JSON: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
@@ -345,7 +360,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   400 `WRONG_PASSWORD`
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
   (body `QuizInput` = `QuizSchema` without `id` + optional `visibility` — absent = `PRIVATE` on
-  creation, unchanged on update; PUT replaces all questions). Owner only, public or not.
+  creation, unchanged on update — and optional `theme`, same rule with `classic`; PUT replaces all
+  questions). `QuizDetail`, `QuizSummary` and `LibraryQuiz` have `theme` (copies keep it). Owner only, public or not.
   `QuizSummary` has `visibility` and `playCount` (games played with it by any host); copies
   (duplicate, library copy) are always `PRIVATE`, title + " (copie)"
 - `GET /library?search=&sort=popular|newest` → `LibraryQuiz[]`: `PUBLIC` quizzes of the **other**
@@ -368,8 +384,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/` landing → "Join a game" / "Host"
 - `/join?pin=123456` → phone join screen (QR code points here)
 - `/play` → phone controller
-- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1` (or
-  `mode=survival&hearts=<n>`) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
+- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`
+  (or `mode=survival&hearts=<n>`; no `theme` = the quiz's) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
   of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic
   game)
 - `/login`, `/register` → host account (`?next=` = page to return to)

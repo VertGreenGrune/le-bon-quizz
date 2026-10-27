@@ -55,6 +55,8 @@ model Quiz {
   coverImageUrl String?
   /// PUBLIC quizzes are listed in the library and can be launched / copied by any host.
   visibility    QuizVisibility @default(PRIVATE)
+  /// TV theme (T40): colors, background, music and confetti of the game.
+  theme         QuizTheme      @default(classic)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   questions     Question[]
@@ -67,6 +69,14 @@ model Quiz {
 enum QuizVisibility {
   PRIVATE
   PUBLIC
+}
+
+enum QuizTheme {
+  classic
+  halloween
+  christmas
+  retro
+  space
 }
 
 enum QuestionType {

@@ -8,6 +8,7 @@ import {
   type DrawStrokesPayload,
   type ErrorCode,
   type GameMode,
+  type QuizTheme,
   type GamePause,
   type GamePhase,
   type GameStatePayload,
@@ -28,6 +29,8 @@ export interface PlayerState {
   /** null until the first `game:state` arrives (after join / rejoin). */
   phase: GamePhase | null;
   mode: GameMode;
+  /** TV theme (T40, `game:state.theme`): the waiting screens follow it. */
+  theme: QuizTheme;
   questionIndex: number;
   totalQuestions: number;
   prompt: QuestionPromptPayload | null;
@@ -111,6 +114,7 @@ export const initialPlayerState: PlayerState = {
   connected: false,
   phase: null,
   mode: 'solo',
+  theme: 'classic',
   questionIndex: -1,
   totalQuestions: 0,
   prompt: null,
@@ -179,6 +183,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
         mode,
+        theme: action.payload.theme ?? 'classic',
         jokerGame: !!action.payload.jokers,
         questionIndex,
         totalQuestions,
@@ -325,6 +330,23 @@ export type PlayerScreen =
   | 'ended'
   | 'kicked'
   | 'lost';
+
+/**
+ * Phone screens that follow the TV theme (T40): the waiting ones. The answer and result
+ * screens keep the classic look (the answer buttons never change).
+ */
+export function followsTheme(screen: PlayerScreen): boolean {
+  return (
+    screen === 'connecting' ||
+    screen === 'lobby' ||
+    screen === 'getReady' ||
+    screen === 'answered' ||
+    screen === 'waitingResult' ||
+    screen === 'standings' ||
+    screen === 'podium' ||
+    screen === 'ended'
+  );
+}
 
 export function playerScreen(s: PlayerState): PlayerScreen {
   if (s.kicked) return 'kicked';

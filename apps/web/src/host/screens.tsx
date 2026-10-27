@@ -15,6 +15,8 @@ import {
 } from '@lbq/shared';
 import { Avatar, type AvatarSize } from '../components/Avatar';
 import { Confetti, CountUp } from '../components/motion';
+import { useTheme } from '../themes';
+import { ThemeLobbyTitle } from '../themes/ThemedMain';
 import { RevealImage } from '../components/RevealImage';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue } from '../lib/numbers';
@@ -50,8 +52,11 @@ export function LobbyScreen({
   const [originIndex, setOriginIndex] = useState(0);
   const origin = origins[originIndex] ?? origins[0]!;
 
+  const theme = useTheme();
+
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
+      <ThemeLobbyTitle theme={theme} />
       <motion.div
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -90,7 +95,7 @@ export function LobbyScreen({
           initial={players.length > 0 ? { scale: 1.4 } : false}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 500, damping: 14 }}
-          className="rounded-lg bg-black/25 px-4 py-1 tabular-nums"
+          className="rounded-lg bg-panel px-4 py-1 tabular-nums"
         >
           {players.length}
         </motion.span>
@@ -99,7 +104,7 @@ export function LobbyScreen({
 
       {hearts !== undefined && (
         <p
-          className="rounded-2xl bg-black/25 px-8 py-3 text-center text-2xl font-bold"
+          className="rounded-2xl bg-panel px-8 py-3 text-center text-2xl font-bold"
           data-testid="survival-rules"
         >
           💀 Survie : {heartsText(hearts, hearts)} chacun · une erreur = un cœur en moins · le
@@ -127,7 +132,7 @@ export function LobbyScreen({
                     type="button"
                     onClick={() => onKick(p.id)}
                     title="Cliquer pour exclure"
-                    className="group flex items-center gap-4 rounded-full bg-black/25 py-3 pr-8 pl-3 text-3xl font-bold hover:bg-answer-red hover:line-through"
+                    className="group flex items-center gap-4 rounded-full bg-panel py-3 pr-8 pl-3 text-3xl font-bold hover:bg-answer-red hover:line-through"
                   >
                     <motion.span
                       initial={{ scale: 0, rotate: -40 }}
@@ -170,7 +175,7 @@ export function QuestionIntroScreen({
       <motion.p
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="rounded-full bg-black/25 px-6 py-2 text-2xl font-bold"
+        className="rounded-full bg-panel px-6 py-2 font-display text-2xl font-bold"
       >
         Question {index + 1} / {total}
       </motion.p>
@@ -185,7 +190,7 @@ export function QuestionIntroScreen({
       </motion.h2>
       <DrawIntroLine question={question} />
       {progress != null && (
-        <div className="h-3 w-full max-w-3xl overflow-hidden rounded-full bg-black/25">
+        <div className="h-3 w-full max-w-3xl overflow-hidden rounded-full bg-panel">
           <div
             className="h-full bg-white transition-[width] duration-100 ease-linear"
             style={{ width: `${Math.min(100, progress * 100)}%` }}
@@ -335,7 +340,7 @@ export function QuestionScreen({
         </div>
 
         <div
-          className={`flex w-32 shrink-0 flex-col items-center rounded-2xl bg-black/25 py-3 ${question.buzzer ? 'invisible' : ''}`}
+          className={`flex w-32 shrink-0 flex-col items-center rounded-2xl bg-panel py-3 ${question.buzzer ? 'invisible' : ''}`}
         >
           <motion.span
             key={answered}
@@ -374,7 +379,7 @@ function AllFound({ count, instant }: { count: number; instant: boolean }) {
       initial={instant ? false : { y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: instant ? 0 : 1.2 }}
-      className="rounded-2xl bg-black/25 px-6 py-2 text-2xl font-black"
+      className="rounded-2xl bg-panel px-6 py-2 text-2xl font-black"
       data-testid="all-found"
     >
       {count === 0
@@ -398,7 +403,8 @@ function ExplanationCard({ text, instant }: { text: string; instant: boolean }) 
         💡
       </span>
       <div className="min-w-0">
-        <p className="text-xl font-black text-brand">Le saviez-vous ?</p>
+        {/* Never themed (T40): the classic purple. */}
+        <p className="text-xl font-black text-[#46178f]">Le saviez-vous ?</p>
         <p className="text-2xl leading-snug font-semibold whitespace-pre-line">{text}</p>
       </div>
     </motion.div>
@@ -422,7 +428,7 @@ function ListenBadge({
       initial={{ scale: 0.7, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       data-testid="listen-badge"
-      className={`flex items-center rounded-2xl bg-black/25 font-black ${compact ? 'gap-3 px-5 py-3 text-2xl' : 'flex-col gap-3 px-10 py-6 text-4xl'}`}
+      className={`flex items-center rounded-2xl bg-panel font-black ${compact ? 'gap-3 px-5 py-3 text-2xl' : 'flex-col gap-3 px-10 py-6 text-4xl'}`}
     >
       <motion.span
         aria-hidden="true"
@@ -463,7 +469,7 @@ function AnswerHint({ question }: { question: QuestionShowPayload }) {
     <motion.p
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="rounded-2xl bg-black/25 px-8 py-4 text-center text-4xl font-black"
+      className="rounded-2xl bg-panel px-8 py-4 text-center text-4xl font-black"
     >
       {hint}
     </motion.p>
@@ -499,7 +505,7 @@ function TypedAnswersReveal({
               initial={instant ? false : { x: -30, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: instant ? 0 : 0.3 + i * 0.12 }}
-              className={`flex items-center gap-4 rounded-xl px-5 py-3 text-2xl font-bold shadow ${a.correct ? 'bg-answer-green' : 'bg-black/25'}`}
+              className={`flex items-center gap-4 rounded-xl px-5 py-3 text-2xl font-bold shadow ${a.correct ? 'bg-answer-green' : 'bg-panel'}`}
             >
               <span className="flex-1 truncate">
                 {a.correct && '✓ '}
@@ -600,7 +606,7 @@ function Countdown({
   const urgent = !done && sec != null && sec <= TICK_FROM_SEC;
   return (
     <motion.div
-      className="relative size-32 shrink-0 rounded-full bg-black/25"
+      className="relative size-32 shrink-0 rounded-full bg-panel"
       animate={urgent ? { scale: [1, 1.08, 1] } : { scale: 1 }}
       transition={urgent ? { duration: 1, repeat: Infinity } : undefined}
     >
@@ -612,7 +618,7 @@ function Countdown({
           fill="none"
           strokeWidth="10"
           strokeLinecap="round"
-          className={`transition-[stroke-dashoffset,stroke] duration-100 ease-linear ${urgent ? 'stroke-answer-red' : 'stroke-white'}`}
+          className={`transition-[stroke-dashoffset,stroke] duration-100 ease-linear ${urgent ? 'stroke-answer-red' : 'stroke-timer'}`}
           strokeDasharray={RING_C}
           strokeDashoffset={RING_C * (1 - Math.min(1, fraction))}
         />
@@ -790,7 +796,7 @@ export function LeaderboardScreen({
       <motion.h2
         initial={instant ? false : { y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="rounded-2xl bg-white px-10 py-4 text-5xl font-black text-brand"
+        className="rounded-2xl bg-white px-10 py-4 font-display text-5xl font-black text-brand"
       >
         {survival ? 'Survivants' : 'Classement'}
       </motion.h2>
@@ -818,7 +824,7 @@ export function LeaderboardScreen({
                     layout: { type: 'spring', stiffness: 200, damping: 24 },
                     delay: showNew && reorder ? 0 : i * 0.12,
                   }}
-                  className={`flex items-center rounded-xl font-bold shadow-lg transition-colors duration-500 ${rowSize} ${i === 0 ? 'bg-white text-brand' : 'bg-black/25'}`}
+                  className={`flex items-center rounded-xl font-bold shadow-lg transition-colors duration-500 ${rowSize} ${i === 0 ? 'bg-white text-brand' : 'bg-panel'}`}
                 >
                   <span className="w-10 tabular-nums opacity-70">{i + 1}</span>
                   <Avatar id={p.avatar} size={avatarSize} />
@@ -872,7 +878,7 @@ export function PodiumScreen({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center gap-6 p-8">
-      <h2 className="text-6xl font-black">
+      <h2 className="theme-lobby-title font-display text-6xl font-black">
         {maxHearts !== undefined ? 'Podium des survivants' : 'Podium'}
       </h2>
       <div className="flex flex-1 items-end gap-6">

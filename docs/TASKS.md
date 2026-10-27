@@ -1994,7 +1994,7 @@ link → starts the game, sees the answer, pauses / resumes, judges a buzzer ✅
 podium, while a player phone plays (and its frames never contain the answer).
 
 ### T40 — TV themes (Halloween, Noël, Rétro…)
-- **Status:** in-progress (T40 agent)
+- **Status:** done
 - **Depends on:** — (everything merged). Runs in parallel with T39 (see « Wave 7 coordination »).
 - **Scope:** new `apps/web/src/themes/**`, host screens' styling (`apps/web/src/host/**` except
   T39's new files), light touches on the phone (`apps/web/src/player/**` lobby / waiting screens),
@@ -2042,6 +2042,55 @@ background, the music and the confetti follow the quiz.
   lobby music file is the Halloween one, answer buttons keep their colors), override to Noël in the
   dialog, phone lobby follows. Screenshots of every theme on the lobby, a question, the reveal and
   the podium (host 1600×900, Pixel 7) — check contrast.
+
+- **Summary:** shared (`quiz.ts`): `QUIZ_THEMES` / `QuizTheme` (`classic`, `halloween`,
+  `christmas`, `retro`, `space`), `DEFAULT_QUIZ_THEME`, `QUIZ_THEME_NAMES`, `QuizSchema.theme?`
+  (so `QuizInput` and `quiz.json` carry it); `QuizDetail` / `QuizSummary` / `LibraryQuiz.theme`
+  (**required**); `HostCreatePayload.theme?`, `GameStatePayload.theme?` (absent = classic).
+  Server: migration `20261027120000_quiz_theme` (enum `QuizTheme`, `Quiz.theme` default
+  `classic`), `quizzes.service.ts` (written only when given, so absent = classic on creation /
+  unchanged on update; copies, duplicates, library, import keep it), `GameSettings.theme` →
+  `Game.theme` = override ?? quiz theme, sent in every `game:state` (hence both resyncs).
+  Web: `src/themes/` — one file per theme (CSS variables, local `@fontsource` font — Creepster,
+  Mountains of Christmas, Press Start 2P, Orbitron, all OFL —, confetti, sounds, lobby title),
+  registry `getTheme` / `themeVars` / `useTheme` context, `ThemedMain` (the `<main>` of the TV and
+  the phone), `backgrounds.tsx` + `themes.css` (Halloween fog + 5 bats + flickering pumpkins; Noël
+  falling snow + garland; Rétro half-sunk neon sun + moving pixel grid + scanlines; Espace
+  twinkling stars + floating planet + a shooting star; ≤ 30 elements, transforms / opacity only,
+  moving pieces hidden under `prefers-reduced-motion`), `ThemePicker.tsx` (editor « Thème de la
+  TV » with a live preview card per theme, `ThemeBadge` in « Mes quiz » and the library). Tailwind
+  tokens in `index.css` (`bg-panel`, `text-accent`, `stroke-timer`, `font-display`); TV panels
+  (`bg-black/25` → `bg-panel`), timer ring, logo and titles follow the theme; the explanation
+  card is pinned to the classic purple. `Confetti` uses the theme's shapes (emoji pumpkins / bats,
+  snowflakes / stars / gifts, pixel squares, stars / planets). Sounds: `soundFile(name, theme)` /
+  `setSoundTheme` in `host/sounds.ts`; 12 new CC0 files (`lobby|reveal|podium-<theme>.wav`, spooky
+  organ / sleigh bells / chiptune / synth pad) appended to `generate-sounds.mjs` (classic files
+  byte-identical), in `public/sounds/CREDITS.md` with the font licences. Start dialog « 🎨 Thème :
+  Celui du quiz (🎃 Halloween) / … » → `&theme=` (`lib/gameOptions.ts`) → `host:create.theme`.
+  Phones: `followsTheme(screen)` — lobby / get ready / answered / waiting / standings / podium /
+  end get the theme background (lighter layer), accent + display font on their title; answer and
+  result screens keep the classic look. Content: `"theme": "halloween"` in
+  `content/quizzes/halloween` and `blind-test-halloween`. Tests: shared schema (optional, unknown
+  refused, `host:create`), server `Game.theme.test.ts` (default, quiz theme, override, both
+  resyncs) + API (default classic, PUT keeps it, unknown 400, list, duplicate, library, copy) +
+  import script; web `themes.test.ts` (registry: every theme / variable / confetti / sound file
+  exists and is credited), `reducers.theme.test.ts`, `gameOptions` URL; e2e `e2e/themes.spec.ts`
+  (editor picker + badge, « Lancer » with the quiz's Halloween theme: TV `data-theme`, background,
+  title, `lobby-halloween.wav` requested, phone lobby follows, answer red unchanged on TV and
+  phone, phone answer screen unthemed; dialog override → Noël on TV + phone, kept after a host
+  reload). Screenshots of the 5 themes (TV 1600×900 lobby / question / reveal / leaderboard /
+  podium, Pixel 7 lobby / get ready / answer / answered / podium) checked for contrast — the
+  retro sun was sunk behind the horizon and dimmed, the retro panels made opaque, the garland
+  bulbs shrunk after the first pass.
+- **Notes:** (1) **Not re-imported yet** (deliberately): the shared dev DB `lbq` doesn't have the
+  migration and applying it from this branch would make `main` see an unknown migration. **After
+  merging:** `pnpm --filter @lbq/server db:migrate`, then re-import
+  `content/quizzes/halloween` and `content/quizzes/blind-test-halloween` for
+  loicmoster@hotmail.fr (`quiz:import`, same `UPLOAD_DIR` / base URL as for T35 / T36), and
+  `halloween-anime` once T38 lands (add `"theme": "halloween"` to its `quiz.json`). (2) The theme
+  is not saved with the game (`GameSession`): reports stay unthemed. (3) Themed sounds add
+  ~2.6 MB of WAV (loaded only by the theme in use). (4) Emoji rendering (bats, pumpkins) varies by
+  OS. Not tried on a real TV / real phones.
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
@@ -2285,3 +2334,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `QuestionStats` (server) gains `explanation` (**required**, null = none). Prisma migration
   `20261025120000_explanations`. `testing.ts` `rightAnswer` / `wrongAnswer` return `choiceIndexes`
   for a « select all » MCQ.
+- 2026-10-27, T40 agent (additive, PLAN.md §3–§7): `QuizTheme` / `QUIZ_THEMES` /
+  `QUIZ_THEME_NAMES` / `DEFAULT_QUIZ_THEME` in `quiz.ts`, `QuizSchema.theme?`,
+  `HostCreatePayload.theme?`, `GameStatePayload.theme?`; `QuizDetail.theme`,
+  `QuizSummary.theme`, `LibraryQuiz.theme` are **required** (fixtures building them must set it).
+  Prisma migration `20261027120000_quiz_theme`. `HostPage` / `PlayPage` render `ThemedMain`
+  instead of their `<main>` (T39: put new header buttons inside it as before); host panels use
+  `bg-panel` instead of `bg-black/25`.

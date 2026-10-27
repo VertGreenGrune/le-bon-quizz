@@ -34,7 +34,7 @@ export function BluffHint({
         >
           🤥
         </motion.p>
-        <p className="rounded-2xl bg-black/25 px-8 py-4 text-4xl font-black">
+        <p className="rounded-2xl bg-panel px-8 py-4 text-4xl font-black">
           Inventez un mytho crédible sur votre téléphone !
         </p>
         <p className="text-2xl font-semibold opacity-80">
@@ -119,7 +119,7 @@ export function BluffReveal({
           {past.map((o) => (
             <li
               key={o.text}
-              className="flex items-center gap-2 rounded-full bg-black/25 px-4 py-1 text-xl font-bold"
+              className="flex items-center gap-2 rounded-full bg-panel px-4 py-1 text-xl font-bold"
             >
               <span className="line-through decoration-answer-red decoration-4">{o.text}</span>
               <span className="opacity-80">

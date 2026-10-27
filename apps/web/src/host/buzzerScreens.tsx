@@ -53,7 +53,7 @@ export function BuzzerPanel({
             initial={instant ? false : { y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center gap-2 rounded-2xl bg-black/25 px-10 py-6 text-center"
+            className="flex flex-col items-center gap-2 rounded-2xl bg-panel px-10 py-6 text-center"
           >
             <motion.span
               animate={{ scale: [1, 1.15, 1] }}
@@ -130,7 +130,7 @@ function WrongList({ players, label }: { players: LobbyMember[]; label: string }
       {players.map((p) => (
         <span
           key={p.id}
-          className="flex items-center gap-2 rounded-full bg-black/25 py-1 pr-4 pl-1 text-xl font-bold line-through decoration-2"
+          className="flex items-center gap-2 rounded-full bg-panel py-1 pr-4 pl-1 text-xl font-bold line-through decoration-2"
         >
           <Avatar id={p.avatar} size="sm" className="grayscale" />
           {p.nickname}
