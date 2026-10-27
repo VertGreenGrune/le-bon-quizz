@@ -1929,7 +1929,7 @@ add.
   `lbq_e2e_t39` / `lbq_e2e_t40`. Shared Postgres, never `docker compose down`.
 
 ### T39 — Host remote on the phone (« Télécommande »)
-- **Status:** todo
+- **Status:** in-progress (T39 agent)
 - **Depends on:** — (everything merged). Runs in parallel with T40 (see « Wave 7 coordination »).
 - **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` +
   `apps/server/src/socket/**` (pairing, remote room, manual pause), new `apps/web/src/remote/**`
