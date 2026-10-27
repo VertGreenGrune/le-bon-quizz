@@ -1959,7 +1959,7 @@ add.
   `lbq_e2e_t39` / `lbq_e2e_t40`. Shared Postgres, never `docker compose down`.
 
 ### T39 — Host remote on the phone (« Télécommande »)
-- **Status:** in-progress (T39 agent)
+- **Status:** done
 - **Depends on:** — (everything merged). Runs in parallel with T40 (see « Wave 7 coordination »).
 - **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` +
   `apps/server/src/socket/**` (pairing, remote room, manual pause), new `apps/web/src/remote/**`
@@ -2022,6 +2022,63 @@ resync); shared (`answerText` per type, payload schemas); web (remote reducer, m
 mapping per phase, token storage); e2e: TV opens the remote dialog → a phone context opens the
 link → starts the game, sees the answer, pauses / resumes, judges a buzzer ✅, goes to the
 podium, while a player phone plays (and its frames never contain the answer).
+- **Summary:** shared: `answerText(q, drawWord?)` in `quiz.ts` (the right answer in words for every
+  type that has one — MCQ / vrai-faux choices, accepted answers, slider value ± margin + unit,
+  numbered order, PIN « Zone : à x % … », Mytho = the truth, Dessine-moi = the word; [] for the
+  types without a right answer; `buzzerAnswer` now calls it). Contract (`events.ts`, PLAN.md §2 /
+  §4 / §7): host action payloads are a union `{ pin, hostToken } | { pin, remoteToken }`
+  (`hostAction()` helper), `HostTokenPayload` for the TV-only `host:rejoin` / new `host:remote`
+  (`{ revoke? }` → ack `{ remoteToken }`), new `host:pause`, `remote:join`, `remote:tv`
+  (`TvAction` mute / unmute / replay), server events `remote:answer` (`RemoteAnswerPayload`),
+  `remote:revoked`, `remote:status` (`{ remotes }`, host room), `tv:control`, `GamePause.byHost?`.
+  Server (`Game.ts`): lazy `remoteToken` (24 random bytes, base64url) + `remoteSockets`,
+  `assertRemote`, `remoteTokenFor(revoke)` (revoke → `remote:revoked` + detach + new token),
+  `remoteConnected / Disconnected` (never touch `hostSockets`: the TV dropping still pauses),
+  `resyncRemote` (= `resyncHost` + `remote:answer`), `tvControl` (TV sockets only), `remote:answer`
+  to each remote at QUESTION_INTRO, `remote:status` in the host resync; manual pause `pauseByHost()`
+  = a `hostPause` flag folded into `checkPause` (same freeze, `GAME_PAUSED`, `responseMs`, 3-2-1),
+  `resume()` lifts it first (players still missing keep the game paused; a second resume = « Continuer
+  sans »), any phase change ends it. Socket: `asController` (host or remote token), `asRemote`,
+  remote sessions join `game:<PIN>` + `game:<PIN>:host`. TV (`host/remoteLink.tsx`,
+  `host/remoteUrl.ts`, small hooks in `HostPage.tsx` / `useHostGame.ts`): « 📱 Télécommande »
+  header button (« … connectée » when paired) → dialog with QR + link (LAN origin like the lobby,
+  token in the fragment), connection state, « Déconnecter la télécommande », « Fermer »; toasts
+  « 📱 Télécommande connectée / déconnectée »; `tv:control` → mute / unmute / replay the clip;
+  « ⏸ Pause » next to « Passer »; pause overlay « ⏸ Pause demandée par l'animateur » + « ▶
+  Reprendre » (`pauseScreens.tsx`, text only). `useHostGame` exports `listenHostEvents` (reused by
+  the remote) and `pause`. Phones: `pauseWaitingText` says « ⏸ Pause demandée par l'animateur ».
+  Remote (`apps/web/src/remote/`, route `/remote/:pin`): `remoteState.ts` (reducer wrapping
+  `hostReducer` + answer + revoked, `mainAction` per phase, `phaseLabel`, token from the fragment /
+  `localStorage` `lbq:remote:<pin>`), `useRemote.ts` (`remote:join` on every connection, reconnect
+  on `visibilitychange`), `RemotePage.tsx` (portrait: PIN + phase + timer header, « Reconnexion… »,
+  lobby list → Exclure / change team + « 🔀 Mélanger », question + type + « n / m ont répondu »,
+  « 👁 Voir la réponse » (tap toggles, press-and-hold peeks; PIN picture with the zone; 💡
+  explanation), buzzer holder + big ✅ / ❌ with a vibration, pause panel (missing players,
+  « Continuer sans… », « Exclure »), top 5 / podium, big main button, ⏸ / ▶, 🔇 / 🔊 / ↻ TV,
+  « Terminer la partie » behind a confirmation, wake lock, « Télécommande déconnectée » screen).
+  Tests: `Game.remote.test.ts` (15: token lazily created / refused / revoked, remote never the TV,
+  resync, TV controls, `remote:answer` only to remotes for MCQ + explanation / DRAW word / PIN zone
+  / poll, no leak before the reveal, manual pause: freeze + `GAME_PAUSED` + resume countdown, same
+  points, intro, with a missing player, comeback during it, skip), `socket/remote.test.ts` (real
+  Socket.IO: pairing, wrong / TV / revoked tokens `UNAUTHORIZED`, TV-only events refuse a remote
+  token, every host action with a remote token incl. team lobby, `tv:control` to the TV only, no
+  `remote:answer` for TV / phones, re-pairing with the new token), shared `remote.test.ts`
+  (`answerText` per type, payload schemas), web `remoteState.test.ts` (reducer, main button per
+  phase, token storage, link, toasts, phone pause text); host resync tests now end with
+  `remote:status`. e2e `e2e/remote.spec.ts` (TV dialog on demand → phone opens the link → reload
+  keeps it → start, answer hidden then shown, pause / resume with frozen timer, buzzer ✅ judged
+  from the remote, TV mute / unmute relayed, podium, revoke; the player's frames never contain the
+  explanation, the answer before the reveal nor any `remote:` event). Checked with screenshots
+  (TV 1600×900, Pixel 7).
+- **Deviations / notes:** (1) No `game:<PIN>:remote` socket room: the game keeps the remote socket
+  ids and sends `remote:answer` / `remote:revoked` (and `tv:control` to the TV) socket by socket —
+  same guarantee, no change to `GameTransport` (every test transport stays valid). (2) « ▶
+  Reprendre » and « Continuer sans… » are the same `host:resume`: the first lifts the host's pause,
+  the next one excuses the players still missing (the TV / remote only show « Continuer sans »
+  once the host pause is lifted). (3) 🔇 / 🔊 are two buttons on the remote (the TV's mute state
+  isn't sent back). (4) `apps/server` gets `socket.io-client` as a dev dependency (socket test).
+  (5) The remote reuses `QUESTION_TYPES` labels from `editor/draft.ts`. No migration. Not tried on
+  real phones.
 
 ### T40 — TV themes (Halloween, Noël, Rétro…)
 - **Status:** in-progress (T40 agent)
@@ -2318,3 +2375,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
 - 2026-10-26, T38 agent (no contract change): `apps/server/scripts/quizImport.ts` — a missing
   **question picture** is now a warning (the question is imported without `imageUrl` /
   `imageEffect`), like a missing sound; a missing **cover** or **PIN** picture is still an error.
+- 2026-10-27, T39 agent (PLAN.md §2 / §4 / §7): host action payloads (`HostActionPayload`,
+  `HostKickPayload`, `HostMovePlayerPayload`, `HostJudgePayload`) are now a **union** — `{ pin,
+  hostToken }` or `{ pin, remoteToken }` (narrow with `'hostToken' in p`); `host:rejoin` takes the
+  new `HostTokenPayload`. New events `host:pause`, `host:remote`, `remote:join`, `remote:tv`,
+  `remote:answer`, `remote:revoked`, `remote:status`, `tv:control`; `GamePause.byHost?`;
+  `answerText(q, drawWord?)` in `quiz.ts`. The host resync (`resyncHost`) now ends with
+  `remote:status` (tests listing its events must add it). `useHostGame.ts` exports
+  `listenHostEvents`. Server devDependency `socket.io-client`. No migration.

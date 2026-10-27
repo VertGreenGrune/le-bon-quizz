@@ -19,7 +19,8 @@ export function nicknameList(members: Pick<LobbyMember, 'nickname'>[]): string {
 
 /**
  * Over the question while the game is paused: who it waits for (and since when), « Continuer
- * sans… » (highlighted after PAUSE_HINT_MS) and « Exclure », then the 3-2-1 countdown.
+ * sans… » (highlighted after PAUSE_HINT_MS) and « Exclure », then the 3-2-1 countdown. A pause
+ * asked by the host (« ⏸ Pause », TV or remote) shows « ▶ Reprendre » first.
  */
 export function PauseOverlay({
   state,
@@ -64,7 +65,9 @@ export function PauseOverlay({
       ) : (
         <>
           <div>
-            <h2 className="text-6xl font-black">⏸ Partie en pause</h2>
+            <h2 className="text-6xl font-black">
+              {paused.byHost ? "⏸ Pause demandée par l'animateur" : '⏸ Partie en pause'}
+            </h2>
             <p className="mt-3 text-2xl opacity-80">
               Le chrono est arrêté depuis {formatDuration(waitedMs)} — personne ne perd de points.
             </p>
@@ -99,7 +102,17 @@ export function PauseOverlay({
               </li>
             ))}
           </ul>
-          {missing.length > 0 && (
+          {paused.byHost && (
+            <button
+              type="button"
+              onClick={onResume}
+              className="rounded-xl bg-white px-10 py-4 text-2xl font-black text-brand shadow-lg"
+            >
+              ▶ Reprendre
+            </button>
+          )}
+          {/* After « ▶ Reprendre »: the usual « Continuer sans… » (the same host:resume). */}
+          {missing.length > 0 && !paused.byHost && (
             <motion.button
               type="button"
               onClick={onResume}

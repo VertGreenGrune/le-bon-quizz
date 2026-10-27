@@ -51,6 +51,19 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   / `host:end` during a pause skip it. REVEAL / LEADERBOARD / PODIUM never pause (offline players
   are flagged in `lobby:players`). Socket.IO heartbeat is 5 s + 5 s so silent drops are seen
   within ~10 s.
+- **Manual pause** (T39): « ⏸ Pause » (TV or remote, `host:pause`) during QUESTION_INTRO /
+  ANSWERING pauses exactly like a drop (timer frozen, answers `GAME_PAUSED`, `responseMs` excludes
+  it, sound clip paused), `game:state.paused.byHost: true` (« ⏸ Pause demandée par l'animateur »), until
+  `host:resume` (« ▶ Reprendre », then the 3-2-1). Players still missing keep it paused: a second
+  `host:resume` is « Continuer sans… ». A phase change (`host:next` / `host:end`) ends it.
+- **« Télécommande »** (T39, host remote on a phone): the TV's « 📱 Télécommande » dialog shows
+  (on demand only) a QR code to `<origin>/remote/<PIN>#<remoteToken>` — 24 random bytes,
+  separate from the `hostToken`, in the fragment so it never reaches HTTP logs; kept in the phone's
+  `localStorage` per PIN. A remote gets the host events (it joins `game:<PIN>` + `game:<PIN>:host`)
+  but **never counts as the TV** (`hostMissing` unchanged); every host action accepts its
+  `remoteToken`; it alone gets the answer (`remote:answer`, `answerText(q)` + explanation, PIN
+  zone). « Déconnecter la télécommande » = new token, remotes told (`remote:revoked`) and dropped.
+  In memory only (`Game.ts`), no DB.
 
 ## 3. Scoring
 
@@ -228,7 +241,13 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
 
 ## 4. Socket protocol (source of truth = `packages/shared/src/events.ts`)
 
-Rooms: `game:<PIN>` (everyone), `game:<PIN>:host` (host sockets only).
+Rooms: `game:<PIN>` (everyone), `game:<PIN>:host` (host sockets only: the TV and the paired
+remotes). Remote-only events (`remote:answer`, `remote:revoked`) and `tv:control` are sent to the
+remote / TV sockets one by one (the game tracks them), never to a room.
+
+**Host actions** (`host:start`, `next`, `kick`, `moveplayer`, `shuffle`, `pause`, `resume`, `judge`,
+`end`) carry `{ pin, hostToken }` **or** `{ pin, remoteToken }` (T39; `host:rejoin` and
+`host:remote` need the `hostToken`). The tables below write `hostToken` for short.
 
 Every client → server event takes an ack callback receiving
 `{ ok: true, ...data }` or `{ ok: false, error: { code, message } }` (`Ack<T>` in shared).
@@ -245,7 +264,15 @@ Every client → server event takes an ack callback receiving
 | `host:end` | `{ pin, hostToken }` | → ENDED |
 | `host:judge` | `{ pin, hostToken, correct: boolean }` | « Buzzer » (§3): ✅ / ❌ on the answer said out loud by the player who has the hand (allowed while paused); `INVALID_PAYLOAD` when nobody has it |
 | `host:resume` | `{ pin, hostToken }` | « Continuer sans… » while paused: the missing players become absent for the current question, then `game:resuming` (no-op when not paused) |
-| `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED) |
+| `host:pause` | `{ pin, hostToken }` | « ⏸ Pause » (T39), QUESTION_INTRO / ANSWERING only (`NOT_ANSWERING` otherwise): see §2 « Manual pause » |
+| `host:remote` | `{ pin, hostToken, revoke?: true }` | TV only: ack `{ remoteToken }` (created the first time); `revoke` = new token, paired remotes get `remote:revoked` and are dropped |
+| `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED), `remote:status` |
+
+### Remote → server (« Télécommande », T39)
+| Event | Payload | Notes |
+|---|---|---|
+| `remote:join` | `{ pin, remoteToken }` | pairs the socket (`UNAUTHORIZED` for a wrong / revoked token, `GAME_NOT_FOUND`), then the `host:rejoin` resync + `remote:answer`; sent again on every reconnection |
+| `remote:tv` | `{ pin, remoteToken, action: 'mute' \| 'unmute' \| 'replay' }` | relayed to the TV sockets as `tv:control` (🔇 / 🔊, ↻ the sound clip) |
 
 ### Player → server
 | Event | Payload | Notes |
@@ -263,7 +290,7 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs }`, `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -279,6 +306,10 @@ Every client → server event takes an ack callback receiving
 | `player:kicked` | that player | `{}` |
 | `joker:state` | each player | games with jokers, sent at the start, each question, each joker played, REVEAL, kick and in the rejoin resync: `{ questionIndex, questionType?, hand, played?: { joker, target? }, shield?, others: { id, nickname, avatar, teamId? }[], attacked: string[], effects }` — `effects` (this phone only) = `hiddenChoices?`, `sliderRange?`, `firstLetter?`, `frozen?: { ms, by }`, `scrambled?: { by, choices: { index, text }[] }`, `copied?` (`buzzer: true` on a « Buzzer » question: no joker playable) |
 | `joker:used` | all | `{ questionIndex, joker, by, target?, blocked?, haunt? }` (TV announcement; no `target` for Copieur; `haunt: true` = a « Survie » ghost's Gel / Brouilleur; never re-sent) |
+| `remote:answer` | each remote | `{ index, answer: string[], pin?: { imageUrl, zone }, explanation? }` at each QUESTION_INTRO and in its resync — `answerText(q)` (« Dessine-moi »: the word drawn; [] without a right answer); never sent to the TV nor the phones |
+| `remote:revoked` | each remote | `{}` — the TV revoked the token (the socket leaves the rooms) |
+| `remote:status` | host room | `{ remotes }` — remotes connected (TV indicator + toast), also in the host resync |
+| `tv:control` | the TV sockets | `{ action }` from `remote:tv` |
 | `error` | sender | `{ code, message }` |
 
 Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow ●`, `3 = green ■`.
@@ -368,6 +399,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/` landing → "Join a game" / "Host"
 - `/join?pin=123456` → phone join screen (QR code points here)
 - `/play` → phone controller
+- `/remote/:pin#<remoteToken>` → « Télécommande » (T39): the host's phone drives the game (token
+  kept in `localStorage` `lbq:remote:<pin>`, removed from the address bar)
 - `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1` (or
   `mode=survival&hearts=<n>`) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
   of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic

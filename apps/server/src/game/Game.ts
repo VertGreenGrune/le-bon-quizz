@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import {
   DEFAULT_TEAM_COUNT,
   LEADERBOARD_SIZE,
@@ -10,6 +10,7 @@ import {
   SURVIVAL_DEFAULT_HEARTS,
   TEAM_NAMES,
   TYPE_ANSWER_MAX_LENGTH,
+  answerText,
   buzzerAnswer,
   choiceTexts,
   correctChoiceIndexes,
@@ -35,6 +36,8 @@ import {
   type Question,
   type QuestionPromptPayload,
   type QuestionRevealPayload,
+  type RemoteAnswerPayload,
+  type TvAction,
   type QuestionShowPayload,
   type RankedPlayer,
   type RevealDetails,
@@ -255,6 +258,12 @@ export class Game {
   /** Players kicked after the start: out of the game, but kept in the saved results. */
   private readonly kicked: Player[] = [];
   private readonly hostSockets = new Set<string>();
+  /** « Télécommande » (T39): token of the remote link, created the first time the TV asks. */
+  private remoteToken: string | null = null;
+  /** Paired remotes: they get the host events, but never count as the TV. */
+  private readonly remoteSockets = new Set<string>();
+  /** « ⏸ Pause » pressed by the host: the game stays paused until `resume()`. */
+  private hostPause = false;
   /** Reveal of the current question, re-sent to a host that rejoins. */
   private reveal: QuestionRevealPayload | null = null;
   /** Drawn when the current question starts (ORDER shuffle), see `questionTypes/`. */
@@ -368,6 +377,64 @@ export class Game {
     if (hostToken !== this.hostToken) throw new GameError('UNAUTHORIZED', 'Invalid host token');
   }
 
+  /** « Télécommande »: the token must be the current one (a revoked one is refused). */
+  assertRemote(remoteToken: string): void {
+    if (this.remoteToken === null || remoteToken !== this.remoteToken)
+      throw new GameError('UNAUTHORIZED', 'Télécommande non reconnue');
+  }
+
+  /**
+   * TV « 📱 Télécommande » dialog: the token of the remote link, created the first time.
+   * `revoke`: a new token, and the paired remotes are told (`remote:revoked`) and dropped.
+   */
+  remoteTokenFor(revoke = false): string {
+    if (revoke) {
+      for (const sid of this.remoteSockets) {
+        this.transport.toSocket(sid, 'remote:revoked', {});
+        this.transport.detachSocket(sid);
+      }
+      this.remoteSockets.clear();
+      this.remoteToken = null;
+      this.sendRemoteStatus();
+    }
+    this.remoteToken ??= randomBytes(24).toString('base64url');
+    return this.remoteToken;
+  }
+
+  remoteConnected(socketId: string): void {
+    this.remoteSockets.add(socketId);
+    this.sendRemoteStatus();
+  }
+
+  remoteDisconnected(socketId: string): void {
+    if (this.remoteSockets.delete(socketId)) this.sendRemoteStatus();
+  }
+
+  /** A paired remote's socket: what the TV gets on `host:rejoin`, plus the answer. */
+  resyncRemote(socketId: string): void {
+    this.resyncHost(socketId);
+    const answer = this.remoteAnswerPayload();
+    if (answer) this.transport.toSocket(socketId, 'remote:answer', answer);
+  }
+
+  /** Remote → TV (🔇 / 🔊 / ↻): to the TV sockets only, not to the other remotes. */
+  tvControl(action: TvAction): void {
+    for (const sid of this.hostSockets) this.transport.toSocket(sid, 'tv:control', { action });
+  }
+
+  /**
+   * « ⏸ Pause » (TV or remote), QUESTION_INTRO / ANSWERING: the game pauses like when someone
+   * drops (timer frozen, answers refused) until `resume()`. No-op when already paused by the host.
+   */
+  pauseByHost(): void {
+    if (!this.isTimedPhase())
+      throw new GameError('NOT_ANSWERING', 'Pause possible seulement pendant une question');
+    if (this.hostPause) return;
+    this.touch();
+    this.hostPause = true;
+    this.checkPause({ immediate: true });
+  }
+
   start(): void {
     if (this.phase !== 'LOBBY') throw new GameError('GAME_ALREADY_STARTED', 'Game already started');
     if (this.mode === 'teams') this.startTeams();
@@ -444,6 +511,12 @@ export class Game {
   resume(): void {
     if (!this.pause) return;
     this.touch();
+    // « ▶ Reprendre » after a « ⏸ Pause »: players still missing keep the game paused (a second
+    // `resume()` = « Continuer sans… »).
+    if (this.hostPause) {
+      this.hostPause = false;
+      return this.checkPause();
+    }
     for (const p of this.awaitedOffline()) {
       this.excused.add(p.id);
       this.presentIds.delete(p.id);
@@ -511,6 +584,7 @@ export class Game {
     if (phase === 'REVEAL' && this.reveal) send('question:reveal', this.reveal);
     if (phase === 'LEADERBOARD') send('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
     if (phase === 'PODIUM' || phase === 'ENDED') send('podium', this.standingsPayload(PODIUM_SIZE));
+    this.sendRemoteStatus(send);
   }
 
   // ---------- Player actions ----------
@@ -949,6 +1023,9 @@ export class Game {
     this.setPhase('QUESTION_INTRO', QUESTION_INTRO_MS);
     this.broadcastState();
     this.transport.toHost('question:show', this.showPayload());
+    const answer = this.remoteAnswerPayload();
+    if (answer)
+      for (const sid of this.remoteSockets) this.transport.toSocket(sid, 'remote:answer', answer);
     this.jokers?.startQuestion();
     this.survival?.startQuestion();
     // Someone still offline from the previous phases: the question starts paused.
@@ -1316,7 +1393,7 @@ export class Game {
     this.clearGraceTimer();
     if (!this.isTimedPhase()) return;
     const missing = this.awaitedOffline();
-    const someoneMissing = missing.length > 0 || this.hostMissing();
+    const someoneMissing = missing.length > 0 || this.hostMissing() || this.hostPause;
     const pause = this.pause;
     if (pause) {
       if (someoneMissing && pause.resumeAt !== null) {
@@ -1331,6 +1408,7 @@ export class Game {
     const since = Math.min(
       ...missing.map((p) => p.offlineSince ?? Date.now()),
       this.hostGoneSince ?? Infinity,
+      this.hostPause ? Date.now() : Infinity,
     );
     const graceLeft = since + PAUSE_GRACE_MS - Date.now();
     if (immediate || graceLeft <= 0) this.enterPause(since);
@@ -1390,6 +1468,25 @@ export class Game {
       waitingFor: this.awaitedOffline().map(lobbyMember),
       hostMissing: this.hostMissing(),
       sinceMs: Date.now() - pause.since,
+      ...(this.hostPause && { byHost: true as const }),
+    };
+  }
+
+  private sendRemoteStatus(send: Send = this.transport.toHost.bind(this.transport)): void {
+    send('remote:status', { remotes: this.remoteSockets.size });
+  }
+
+  /** The current question's answer for the remotes (none outside a question). */
+  private remoteAnswerPayload(): RemoteAnswerPayload | null {
+    const q = this.currentQuestion;
+    if (!q || this.phase === 'LOBBY' || this.phase === 'PODIUM' || this.phase === 'ENDED')
+      return null;
+    const explanation = questionExplanation(q);
+    return {
+      index: this.questionIndex,
+      answer: answerText(q, this.setup.draw?.word),
+      ...(q.type === 'PIN' && q.imageUrl && { pin: { imageUrl: q.imageUrl, zone: q.zone } }),
+      ...(explanation && { explanation }),
     };
   }
 
@@ -1543,6 +1640,7 @@ export class Game {
   private setPhase(phase: GamePhase, durationMs: number | null): void {
     this.clearTimer();
     this.clearPause();
+    this.hostPause = false;
     this.hold = null;
     this.phase = phase;
     this.phaseStartedAt = Date.now();

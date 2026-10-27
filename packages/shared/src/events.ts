@@ -102,11 +102,34 @@ export const HostCreatePayload = z.object({
   /** « Survie » only: hearts per player, 1–5 (default 3). */
   hearts: SurvivalHearts.optional(),
 });
-export const HostActionPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
-export const HostKickPayload = HostActionPayload.extend({ playerId: z.string().min(1) });
-export const HostMovePlayerPayload = HostKickPayload.extend({ teamId: TeamId });
+/** Actions only the TV can do (`host:rejoin`, `host:remote`): its `hostToken`. */
+export const HostTokenPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
+/**
+ * A host action (start, next, pause…) carries the TV's `hostToken` **or** the `remoteToken` of a
+ * paired « Télécommande » (T39).
+ */
+function hostAction<S extends z.ZodRawShape>(shape: S) {
+  return z.union([
+    z.object({ pin: Pin, hostToken: z.string().min(1), ...shape }),
+    z.object({ pin: Pin, remoteToken: z.string().min(1), ...shape }),
+  ]);
+}
+export const HostActionPayload = hostAction({});
+export const HostKickPayload = hostAction({ playerId: z.string().min(1) });
+export const HostMovePlayerPayload = hostAction({ playerId: z.string().min(1), teamId: TeamId });
 /** « Buzzer »: the host judges the answer said out loud by the player who has the hand. */
-export const HostJudgePayload = HostActionPayload.extend({ correct: z.boolean() });
+export const HostJudgePayload = hostAction({ correct: z.boolean() });
+/**
+ * « 📱 Télécommande » dialog of the TV: the token to put in the remote's link (created the first
+ * time); `revoke` = « Déconnecter la télécommande » (a new token, the paired remotes are dropped).
+ */
+export const HostRemotePayload = HostTokenPayload.extend({ revoke: z.literal(true).optional() });
+/** A phone opened the remote link `/remote/<PIN>#<remoteToken>`. */
+export const RemoteJoinPayload = z.object({ pin: Pin, remoteToken: z.string().min(1) });
+export const TvAction = z.enum(['mute', 'unmute', 'replay']);
+export type TvAction = z.infer<typeof TvAction>;
+/** Remote → TV: 🔇 / 🔊 the TV's sound, ↻ replay the question's sound clip. */
+export const RemoteTvPayload = RemoteJoinPayload.extend({ action: TvAction });
 
 /** `avatar` missing (older clients) → the server picks a random one. */
 export const PlayerJoinPayload = z.object({
@@ -188,6 +211,10 @@ export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
 export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
 export type HostJudgePayload = z.infer<typeof HostJudgePayload>;
+export type HostTokenPayload = z.infer<typeof HostTokenPayload>;
+export type HostRemotePayload = z.infer<typeof HostRemotePayload>;
+export type RemoteJoinPayload = z.infer<typeof RemoteJoinPayload>;
+export type RemoteTvPayload = z.infer<typeof RemoteTvPayload>;
 export type PlayerBuzzPayload = z.infer<typeof PlayerBuzzPayload>;
 export type PlayerDrawPayload = z.infer<typeof PlayerDrawPayload>;
 export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
@@ -240,12 +267,28 @@ export interface ClientToServerEvents {
    * Host screen reloaded / reconnected: re-attaches this socket as host, then the server
    * re-sends everything the host screen needs for the current phase.
    */
-  'host:rejoin': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  'host:rejoin': (p: HostTokenPayload, ack: (r: Ack) => void) => void;
+  /**
+   * QUESTION_INTRO / ANSWERING (`NOT_ANSWERING` otherwise): pauses the game like a lost
+   * connection (`game:state.paused.byHost`), until `host:resume`. No-op when already paused.
+   */
+  'host:pause': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  /** TV only: the « Télécommande » token (created lazily; `revoke` drops the paired remotes). */
+  'host:remote': (p: HostRemotePayload, ack: (r: Ack<{ remoteToken: string }>) => void) => void;
   /**
    * « Continuer sans… »: while paused, the missing players become absent for the current
    * question and the game resumes (after the usual 3-2-1 countdown). No-op when not paused.
    */
   'host:resume': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+
+  /**
+   * « Télécommande » (T39): pairs this socket as a remote (`UNAUTHORIZED` for a wrong / revoked
+   * token), then the server re-sends what the TV gets on `host:rejoin` + `remote:answer`. A remote
+   * gets the host events but never counts as the TV (the TV dropping still pauses the game).
+   */
+  'remote:join': (p: RemoteJoinPayload, ack: (r: Ack) => void) => void;
+  /** Relayed to the TV as `tv:control`. */
+  'remote:tv': (p: RemoteTvPayload, ack: (r: Ack) => void) => void;
   /**
    * « Buzzer »: ✅ / ❌ on the answer of the player who has the hand (allowed while paused).
    * Right → REVEAL; wrong → that player can't buzz again, the timer goes on (everyone wrong → all can buzz again).
@@ -374,6 +417,31 @@ export interface GamePause {
   hostMissing: boolean;
   /** How long the game has been paused, in ms. */
   sinceMs: number;
+  /** « ⏸ Pause » pressed by the host (TV or remote): lasts until `host:resume`. */
+  byHost?: true;
+}
+
+/**
+ * « Télécommande » only (never the TV nor the phones), at each QUESTION_INTRO and in its resync:
+ * the right answer of the current question, to read out discreetly.
+ */
+export interface RemoteAnswerPayload {
+  index: number;
+  /** `answerText` (« Dessine-moi »: the word drawn); [] for the types without a right answer. */
+  answer: string[];
+  /** PIN: the picture and its zone (drawn small on the remote). */
+  pin?: { imageUrl: string; zone: PinZone };
+  explanation?: string;
+}
+
+/** To the TV: how many remotes are paired and connected right now. */
+export interface RemoteStatusPayload {
+  remotes: number;
+}
+
+/** To the TV: a control pressed on the remote. */
+export interface TvControlPayload {
+  action: TvAction;
 }
 
 /** Everyone is back (or the host continued without them): resumes in `inMs` (3-2-1). */
@@ -756,6 +824,10 @@ export interface ServerToClientEvents {
   'joker:used': (p: JokerUsedPayload) => void; // all (games with jokers, « Survie » haunts)
   'survival:state': (p: SurvivalStatePayload) => void; // all (« Survie »)
   'draw:strokes': (p: DrawStrokesPayload) => void; // host (+ the drawer on rejoin)
+  'remote:answer': (p: RemoteAnswerPayload) => void; // remotes only
+  'remote:revoked': (p: Record<string, never>) => void; // remotes only (then dropped)
+  'remote:status': (p: RemoteStatusPayload) => void; // host room
+  'tv:control': (p: TvControlPayload) => void; // the TV sockets only
   error: (p: ErrorPayload) => void; // sender
 }
 
