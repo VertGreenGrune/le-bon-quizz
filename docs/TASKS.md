@@ -2439,3 +2439,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   Prisma migration `20261027120000_quiz_theme`. `HostPage` / `PlayPage` render `ThemedMain`
   instead of their `<main>` (T39: put new header buttons inside it as before); host panels use
   `bg-panel` instead of `bg-black/25`.
+- 2026-10-27, main agent (post-merge T38 + T39 + T40): `"theme": "halloween"` added to
+  `content/quizzes/halloween-anime/quiz.json`; the 3 Halloween quizzes re-imported for
+  loicmoster@hotmail.fr (theme `halloween` in the DB, blind-test sounds kept). Dev DB migrated
+  (`20261027120000_quiz_theme`). 592 unit tests + 16 e2e pass.
