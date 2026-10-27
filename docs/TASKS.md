@@ -1915,6 +1915,134 @@ add.
   / explanation in any phone prompt, explanations in the results), then delete the test game and
   its temporary session.
 
+### Wave 7 coordination — T39 ‖ T40 run in parallel (read before starting)
+- **T39 = host remote** (new phone page + server pairing), **T40 = TV themes** (styling of the TV
+  screens + a quiz field). Overlap is small; keep it that way:
+  - `packages/shared/src/events.ts`: both only **add** (T39: remote events / `GamePause.byHost?`;
+    T40: `GameStatePayload.theme?`, `HostCreatePayload.theme?`).
+  - `apps/web/src/host/HostPage.tsx`: T39 only adds the « 📱 Télécommande » button + dialog and
+    the handler of relayed TV controls (new files `host/remote*.tsx`); T40 only wraps the page in
+    the theme (new files `apps/web/src/themes/**`). Don't restyle what the other task adds.
+  - T40 owns the look of the TV screens (`host/screens.tsx` and friends); T39 doesn't restyle them.
+  - Only T40 adds a migration (`Quiz.theme`); T39 needs none (pairing lives in memory).
+- Ports: T39 3039 / 5239, T40 3040 / 5240; test DBs `lbq_test_t39` / `lbq_test_t40`, e2e DBs
+  `lbq_e2e_t39` / `lbq_e2e_t40`. Shared Postgres, never `docker compose down`.
+
+### T39 — Host remote on the phone (« Télécommande »)
+- **Status:** todo
+- **Depends on:** — (everything merged). Runs in parallel with T40 (see « Wave 7 coordination »).
+- **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` +
+  `apps/server/src/socket/**` (pairing, remote room, manual pause), new `apps/web/src/remote/**`
+  (route `/remote/:pin` in `main.tsx`), new `apps/web/src/host/remote*.tsx` + small hooks in
+  `HostPage.tsx` / `useHostGame.ts`, PLAN.md §2 / §4 / §7, e2e.
+
+**User requirement (2026-10-27):** control the game from the host's own phone — next, pause,
+buzzer ✅ / ❌, see the answer secretly — so the host doesn't have to stand next to the PC.
+
+**Design (decided — note any deviation below):**
+- **Pairing (safe in a room full of players):** the TV header gets a « 📱 Télécommande » button →
+  a dialog with a big QR code + link `<origin>/remote/<PIN>#<remoteToken>` (the token in the
+  fragment, never sent in HTTP requests / logs) and « Fermer ». The QR is **only shown on
+  demand**, never in the lobby by default. `remoteToken` = random 24 bytes, separate from the
+  `hostToken` (created lazily by `host:remote` `{ pin, hostToken }` → ack `{ remoteToken }`).
+  « Déconnecter la télécommande » in the same dialog revokes it (new token, the paired phones get
+  `remote:revoked` and show « Télécommande déconnectée »). Several remotes may be paired (rare,
+  fine). The token is kept in the phone's `localStorage` per PIN so a reload / lock reconnects.
+  Works for logged-in and anonymous (demo) hosts.
+- **Remote socket:** `remote:join` `{ pin, remoteToken }` → ack `{ ok }` + a full resync like
+  `host:rejoin`. A remote joins the host room (gets `question:show`, `answer:count`,
+  `question:reveal`, `leaderboard`, `lobby:players`…) plus a remote-only room
+  `game:<PIN>:remote`. **A remote never counts as the host screen**: the TV still has to be
+  connected (`hostMissing` pause unchanged). Every host action (`host:start`, `host:next`,
+  `host:end`, `host:kick`, `host:resume`, `host:judge`, `host:moveplayer`, `host:shuffle`) accepts
+  either the `hostToken` or a valid `remoteToken` (one small auth helper, zod-validated: a payload
+  carries `hostToken` **or** `remoteToken`).
+- **The answer, secretly:** `remote:answer` (remote room only, never the TV nor the phones) sent
+  at each `QUESTION_INTRO` (and in the resync): the right answer in words for every type that has
+  one — reuse / extend `buzzerAnswer` into a general `answerText(q)` in shared (MCQ / vrai-faux
+  choices, accepted answers, slider value ± margin + unit, order, PIN « zone : … » (a small picture
+  with the zone), Mytho = the truth, Dessine-moi = the word); types without a right answer → none.
+  Plus the explanation, so the host can read it out. On the remote it's hidden behind « 👁 Voir
+  la réponse » (press and hold, or tap to toggle) so players looking over the shoulder don't see
+  it by accident.
+- **Manual pause:** new `host:pause` `{ pin, hostToken | remoteToken }` during QUESTION_INTRO /
+  ANSWERING: pauses like the automatic pause (timer frozen, answers refused `GAME_PAUSED`,
+  `responseMs` excludes it, sound clip paused) with `paused.byHost: true`; « ▶ Reprendre » =
+  `host:resume` → the usual 3-2-1. Available from the TV too (« ⏸ Pause » button next to « Passer »).
+  If players are also missing, the pause stays until they're back or excused (existing rules).
+  TV / phones overlay: « ⏸ Pause demandée par l'animateur ».
+- **Remote screen (portrait, French, big buttons, one hand):** header PIN + phase + timer; one
+  big main button that does the right thing for the phase (« ▶ Commencer » / « ⏭ Passer » /
+  « Suivant » / « Voir le podium » / « Terminer »), « ⏸ Pause » / « ▶ Reprendre »; the current
+  question text + type + `answer:count` (« 4 / 6 ont répondu »); « 👁 Voir la réponse »; buzzer:
+  holder's avatar + name + big ✅ / ❌ (vibration when someone buzzes); during a pause: who is
+  missing + « Continuer sans… » + « Exclure »; lobby: the player list (tap → exclure / changer
+  d'équipe), « Mélanger » in team mode; leaderboard: top 5; « Terminer la partie » behind a
+  confirmation. **TV controls relayed** to the TV (`remote:tv` `{ action: 'mute' | 'unmute' |
+  'replay' }` → `tv:control` to the host room only): 🔇 son de la TV, ↻ rejouer l'extrait.
+  Wake lock like the player phone. « Reconnexion… » banner.
+- **TV:** small « 📱 Télécommande connectée » indicator in the header when a remote is paired;
+  a toast when it connects / disconnects. The TV buttons keep working (both can be used).
+
+**Tests:** server (pairing ack, wrong / revoked token refused `UNAUTHORIZED`, every host action
+with a remote token, remote doesn't count as host — TV drop still pauses, `remote:answer` only
+in the remote room and never in any player / TV payload, answer text per type, manual pause:
+timer frozen / answers refused / same points / resume countdown / pause + missing player,
+resync); shared (`answerText` per type, payload schemas); web (remote reducer, main-button
+mapping per phase, token storage); e2e: TV opens the remote dialog → a phone context opens the
+link → starts the game, sees the answer, pauses / resumes, judges a buzzer ✅, goes to the
+podium, while a player phone plays (and its frames never contain the answer).
+
+### T40 — TV themes (Halloween, Noël, Rétro…)
+- **Status:** todo
+- **Depends on:** — (everything merged). Runs in parallel with T39 (see « Wave 7 coordination »).
+- **Scope:** new `apps/web/src/themes/**`, host screens' styling (`apps/web/src/host/**` except
+  T39's new files), light touches on the phone (`apps/web/src/player/**` lobby / waiting screens),
+  `components/StartGameDialog.tsx`, the editor quiz form (theme picker), `lib/gameOptions.ts`,
+  `apps/web/public/sounds/**` + `scripts/generate-sounds.mjs`, `packages/shared` (`quiz.ts`
+  `theme`, `events.ts` additive), `apps/server` (migration `Quiz.theme`, quiz service,
+  `host:create`, `game:state`), the 4 Halloween / Batman quiz.json `theme` fields, PLAN.md.
+
+**User requirement (2026-10-27):** TV themes — Halloween, Christmas, retro… — the colors, the
+background, the music and the confetti follow the quiz.
+
+**Design (decided — note any deviation below):**
+- **Themes** (`QuizTheme` in shared): `classic` (today's look, default), `halloween`, `christmas`
+  (« Noël »), `retro` (80s arcade), `space` (« Espace ») — one file each in
+  `apps/web/src/themes/`, same shape: CSS variables (background gradient, panel color, accent,
+  text, timer ring), a display font (bundled locally — `@fontsource/*` or files in `public/`,
+  **no external CDN**, OFL / free licence noted in CREDITS), a **background layer** (light
+  CSS / SVG animation, ≤ 30 particles: Halloween = drifting fog + a few bats + flickering
+  pumpkins; Noël = falling snow + garland lights; Rétro = pixel grid + scanlines + neon sun;
+  Espace = twinkling stars + a slow planet), **confetti shapes** (pumpkins / bats, snowflakes /
+  stars, pixel squares, stars), **sounds** (lobby music loop + podium fanfare + reveal sting per
+  theme, synthesized CC0 by `generate-sounds.mjs` like T10 — spooky organ / sleigh bells /
+  chiptune / synth pad — listed in `public/sounds/CREDITS.md`), and a lobby title decoration
+  (e.g. « 🎃 » / « 🎄 » / pixel frame).
+- **Never themed:** the 4 answer colors and shapes (red ▲, blue ◆, yellow ●, green ■ — they must
+  match the phones), readability (contrast checked on every screen, the question text stays
+  big and plain), the explanation card and the scoring. Animations respect
+  `prefers-reduced-motion` and stay cheap for a low-end TV (CSS transforms / opacity only, no
+  canvas loop when the tab is hidden).
+- **Choosing it:** `Quiz.theme` (default `classic`, migration; `QuizInput.theme?` absent =
+  unchanged / `classic` on creation; kept by copies, duplicates, library, import script). Editor:
+  « Thème de la TV » picker with a small live preview card per theme. Start dialog: « Thème :
+  celui du quiz (Halloween) / … » override → `&theme=` in `/host/new` → `host:create.theme?`. The
+  server resolves (override or the quiz's theme) and sends `theme` in `game:state` (all clients,
+  re-sent in both resyncs). Library cards show the theme as a small badge.
+- **Phones:** only the lobby / « get ready » / waiting / podium backgrounds and the accent color
+  follow the theme (the answer buttons never change); the podium confetti uses the theme's shapes.
+- **Content:** set `theme` in `quiz.json` of the 3 Halloween quizzes (`halloween`, `halloween-anime`
+  if merged, `blind-test-halloween`) → `halloween`, and re-import them for loicmoster@hotmail.fr;
+  others stay `classic`.
+- **Tests:** shared schema (theme default / unknown refused), server (`host:create` override vs
+  quiz theme, `game:state.theme`, resyncs, persistence round trip + copy keeps it), web (theme
+  registry: every theme defines every variable / sound / confetti, `gameOptions` URL parsing,
+  reducers), e2e: launch a quiz with the Halloween theme (TV has the theme class / background, the
+  lobby music file is the Halloween one, answer buttons keep their colors), override to Noël in the
+  dialog, phone lobby follows. Screenshots of every theme on the lobby, a question, the reveal and
+  the podium (host 1600×900, Pixel 7) — check contrast.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
