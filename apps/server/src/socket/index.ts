@@ -1,5 +1,6 @@
 import type { Server, Socket } from 'socket.io';
 import {
+  HostAcceptPayload,
   HostActionPayload,
   HostCreatePayload,
   HostJudgePayload,
@@ -307,6 +308,15 @@ export function registerSocketHandlers(
       'host:judge',
       handler(socket, HostJudgePayload, (p) => {
         asController(p).judge(p.correct);
+        return {};
+      }),
+    );
+
+    socket.on(
+      'host:accept',
+      handler(socket, HostAcceptPayload, (p) => {
+        const { choiceIndex, text, margin } = p;
+        asController(p).accept(p.questionIndex, { choiceIndex, text, margin });
         return {};
       }),
     );

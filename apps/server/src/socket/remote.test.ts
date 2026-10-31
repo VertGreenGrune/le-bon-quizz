@@ -123,6 +123,22 @@ describe('« Télécommande » over sockets (T39)', () => {
       ok: false,
       error: { code: 'INVALID_PAYLOAD' },
     });
+    // « ✅ Accepter » (T44): authorized, refused outside the reveal; one field only; never a player.
+    const acceptOne = { ...auth, questionIndex: 0, choiceIndex: 1 };
+    expect(await call(remote.socket, 'host:accept', acceptOne)).toMatchObject({
+      ok: false,
+      error: { code: 'NOT_REVEALING' },
+    });
+    expect(await call(remote.socket, 'host:accept', { ...acceptOne, text: 'B' })).toMatchObject({
+      ok: false,
+      error: { code: 'INVALID_PAYLOAD' },
+    });
+    expect(
+      await call(phone.socket, 'host:accept', { pin, questionIndex: 0, choiceIndex: 1 }),
+    ).toMatchObject({ ok: false, error: { code: 'INVALID_PAYLOAD' } });
+    expect(
+      await call(phone.socket, 'host:accept', { ...acceptOne, remoteToken: 'nope' }),
+    ).toMatchObject({ ok: false, error: { code: 'UNAUTHORIZED' } });
     expect((await call(remote.socket, 'host:next', auth)).ok).toBe(true);
     expect(
       (await call(remote.socket, 'host:kick', { ...auth, playerId: bobJoined.playerId })).ok,

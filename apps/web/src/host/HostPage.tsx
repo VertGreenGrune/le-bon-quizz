@@ -213,6 +213,7 @@ export function HostPage() {
           onReplay={clip.replay}
           buzzer={state.buzzer}
           onJudge={game.judge}
+          onAccept={(input) => question && game.accept(question.index, input)}
           draw={state.draw}
           drawing={currentDrawing(state)}
         />

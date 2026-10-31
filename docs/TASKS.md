@@ -2407,7 +2407,7 @@ team / Survie, rejoin while cancelled (phone gets the prompt again); e2e: answer
 another choice, result matches the second answer.
 
 ### T44 — The host accepts an answer that was refused
-- **Status:** in-progress (T44 agent)
+- **Status:** done
 - **Depends on:** T41, T42 merged. Runs in parallel with T43 (see « Wave 9 coordination »).
 - **Ports:** server 3044 / web 5244, test DB `lbq_test_t44`, e2e DB `lbq_e2e_t44`.
 - **Scope:** `apps/server/src/game/**` (reveal settlement, new `game/rejudge.ts`),
@@ -2450,6 +2450,50 @@ accept, refused after « Suivant » / on other types / from a player, both resyn
 reveal and results, saved report; e2e: MCQ where the quiz marks the wrong choice, Bob picked the
 real answer → host accepts from the remote → Bob's phone shows the accepted result and the
 leaderboard has his points.
+- **Summary:** shared: new `accept.ts` — `acceptKind(q)` (`choice` MCQ / TRUE_FALSE, `text`
+  TYPE_ANSWER, `margin` SLIDER, null otherwise and au buzzer), `AcceptedAnswers`
+  (`choiceIndexes?`, `texts?`, `margin?`), `acceptedChoiceIndexes`; contract (`events.ts`,
+  additive, PLAN.md §3 / §4): `host:accept` (`HostAcceptPayload` = host or remote token +
+  `questionIndex` + exactly one of `choiceIndex` / `text` / `margin`), error `NOT_REVEALING`,
+  `RevealDetails.accepted?` (so the report has it), `TypedAnswerGroup.accepted?`,
+  `QuestionRevealPayload.typedAnswers?` (every group), `PlayerResultPayload.accepted?`. Server:
+  `game/rejudge.ts` — `addAccept` (validation, no-op when already right), `rejudgeAnswer` (from the
+  answer as given: newly right = time points from its real time, Sablier halved; never right →
+  wrong; SLIDER: every guess with the wider margin; « select all »: the set grows, the quiz's own
+  set stays right), `groupTypedAnswers` (now also used by the reveal), `ReplayRandom` (the joker
+  engine's random source: a settlement's draws come out again), `Settlement` (snapshot just
+  before the settlement: scores, correct counts, streaks, original answers, team scores / gains,
+  `Jokers.snapshot()` = hands / results / Sablier points, `Survival.snapshot()` = lives — haunts
+  spent since the reveal stay spent —, report length). `Game.ts` hooks: `enterReveal` captures the
+  snapshot then calls the new `settleReveal(question, again)` (the former body: scoring, jokers,
+  teams, « Survie », report entry, reveal + results); `accept()` restores, judges again, settles
+  again (same draws) and re-sends `game:state`, `survival:state`, `question:reveal`, every
+  `player:result` (`accepted: true` for the players made right); `revealDetails` uses the accepted
+  margin / marks; socket `host:accept` (`asController`). Web: `host/accept.ts` (`acceptOptions`,
+  `nextSliderMargin` = smallest margin on a step taking in the closest refused guess) +
+  `host/acceptControls.tsx`; TV reveal: « ✅ Accepter » under each refused bar (« ✅ Acceptée »
+  once done), on each refused typed group (« ✅ Réponse acceptée »), « ✅ Accepter les réponses à
+  ± n » under the slider axis; remote: « Corriger la réponse » panel at the reveal (every choice /
+  every typed group with counts, « ✓ Bonne » / « ✅ Acceptée » / « ✅ Accepter », slider button);
+  phone: the result screen plays again with « ✅ Réponse acceptée par l’animateur ! » and the new
+  points; report: « ✅ Réponse acceptée par l’animateur : … » on the question card
+  (`acceptedText`). Tests: `Game.accept.test.ts` (16: MCQ points from the real time + reveal +
+  report + leaderboard gains, no-op / `NOT_REVEALING` / wrong kind / poll, buzzer refused, vrai /
+  faux, « select all », typed groups, slider margin, streak + bonus, Double, Voleur, Bouclier,
+  Sablier after answering, same joker drawn again for a streak, team averages, « Survie » heart
+  back + not finished any more, both resyncs), `socket/remote.test.ts` (remote token, one field
+  only, a player can't), persistence (saved report, Postgres), shared `accept.test.ts`, web
+  `accept.test.ts` (options, slider margin, report text), `playerState.accept.test.ts`; e2e
+  `e2e/accept.spec.ts` (the quiz marks Sydney: Bob's Canberra accepted from the remote → Bob's
+  phone « Correct ! » + accepted note, TV tag, leaderboard gains; a typed answer accepted from the
+  TV; report). Checked with screenshots (TV 1600×900 before / after an accept, typed groups,
+  leaderboard, report; remote and phone on a Pixel 7).
+- **Notes:** (1) An accept never takes points away: a right answer stays right (« select all »:
+  ticking the quiz's set stays right). (2) No undo (not needed per spec). (3) The remote's
+  `remote:answer` isn't updated after an accept. (4) T43 merge: only `enterReveal` /
+  `settleReveal`, `revealDetails`, `resultPayload` and the constructor's joker random changed in
+  `Game.ts`; `player.answer` is replaced during an accept (REVEAL only, never during ANSWERING).
+  No migration. Not tried on real phones / a real TV.
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
@@ -2742,3 +2786,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   logic (big bar during the intro, bar kept on « Réponse envoyée ! » while ANSWERING, greyed jokers
   stay tappable and the sheet says why via `jokerBlocked`). `layout.test.ts` updated: the
   « answered » screen shows the bar during ANSWERING, hidden after the reveal. 623 unit + 17 e2e pass.
+- 2026-10-31, T44 agent (additive, PLAN.md §3 / §4): new `packages/shared/src/accept.ts`
+  (`acceptKind`, `AcceptedAnswers`, `acceptedChoiceIndexes`); `host:accept` (`HostAcceptPayload`),
+  error `NOT_REVEALING`, `RevealDetails.accepted?`, `TypedAnswerGroup.accepted?`,
+  `QuestionRevealPayload.typedAnswers?`, `PlayerResultPayload.accepted?`. Server: `Jokers` gains
+  `snapshot` / `restore` / `setHourglassExtra` and now receives `ReplayRandom.next` (not
+  `settings.random` directly); `Survival` gains `snapshot` / `restore`; `Game.enterReveal` split
+  into capture + `settleReveal`. `Game.types.test.ts`'s typed reveal expectation gained
+  `typedAnswers`. No migration.

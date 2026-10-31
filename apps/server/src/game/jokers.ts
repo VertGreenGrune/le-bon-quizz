@@ -77,6 +77,12 @@ interface JokerHand {
   results: JokerResult[];
 }
 
+/** `Jokers.snapshot()`: per player, the fields a reveal's settlement changes. */
+export type JokerSnapshot = Map<
+  string,
+  { hand: JokerType[]; results: JokerResult[]; hourglassExtra: number }
+>;
+
 const member = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
 
 const refuse = (message: string) => new GameError('JOKER_REFUSED', message);
@@ -283,6 +289,35 @@ export class Jokers {
     const h = this.hands.get(playerId);
     if (h) h.hand = hand.slice(0, JOKERS_MAX);
     else this.hands.set(playerId, newHand(hand.slice(0, JOKERS_MAX)));
+  }
+
+  /**
+   * « ✅ Accepter » (T44): what the reveal's settlement changes in the hands (jokers earned for a
+   * streak, results, Sablier points), to score the question again from the same starting point.
+   */
+  snapshot(): JokerSnapshot {
+    return new Map(
+      [...this.hands].map(([id, h]) => [
+        id,
+        { hand: [...h.hand], results: [...h.results], hourglassExtra: h.hourglassExtra },
+      ]),
+    );
+  }
+
+  restore(snapshot: JokerSnapshot): void {
+    for (const [id, saved] of snapshot) {
+      const h = this.hands.get(id);
+      if (!h) continue;
+      h.hand = [...saved.hand];
+      h.results = [...saved.results];
+      h.hourglassExtra = saved.hourglassExtra;
+    }
+  }
+
+  /** An answer was judged again (T44): the Sablier's extra points of the new judgement. */
+  setHourglassExtra(playerId: string, extra: number): void {
+    const h = this.hands.get(playerId);
+    if (h) h.hourglassExtra = extra;
   }
 
   usedBy(playerId: string): JokerType[] {

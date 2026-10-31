@@ -218,6 +218,12 @@ describe('Game with every question type', () => {
         { text: 'Pacifiqe', count: 1, correct: true },
         { text: 'Atlantique', count: 1, correct: false },
       ],
+      // Every group (T44: the host can accept one from the remote).
+      typedAnswers: [
+        { text: 'Pacifique', count: 2, correct: true },
+        { text: 'Pacifiqe', count: 1, correct: true },
+        { text: 'Atlantique', count: 1, correct: false },
+      ],
     });
     expect(result(chloe!)).toMatchObject({ correct: true, pointsEarned: 1000 });
     expect(result(dan!)).toMatchObject({ correct: false, pointsEarned: 0, streak: 0 });

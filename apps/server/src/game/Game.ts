@@ -14,11 +14,13 @@ import {
   answerText,
   buzzerAnswer,
   choiceTexts,
+  acceptedChoiceIndexes,
   correctChoiceIndexes,
   hasRightAnswer,
   isMultipleAnswer,
   questionExplanation,
   randomAvatarId,
+  type AcceptedAnswers,
   type AnswerInput,
   type AvatarId,
   type DrawGuess,
@@ -70,7 +72,16 @@ import {
   startDraw,
 } from './questionTypes/draw.js';
 import { Jokers } from './jokers.js';
-import { matchesAnswer, normalizeAnswer } from './matching.js';
+import {
+  ReplayRandom,
+  Settlement,
+  addAccept,
+  groupTypedAnswers,
+  hasAccepts,
+  rejudgeAnswer,
+  type AcceptInput,
+} from './rejudge.js';
+import { matchesAnswer } from './matching.js';
 import { Survival } from './survival.js';
 import {
   NO_SETUP,
@@ -313,6 +324,10 @@ export class Game {
   private readonly drawRotation = newRotation();
   /** Random source (« Dessine-moi » words; tests can fix it). */
   private readonly random: () => number;
+  /** The joker engine's random source: a reveal's draws come out again after an accept (T44). */
+  private readonly jokerRandom: ReplayRandom;
+  /** REVEAL: the state before the settlement and the host's accepts (`game/rejudge.ts`, T44). */
+  private settlement: Settlement | null = null;
 
   constructor(
     readonly pin: string,
@@ -324,6 +339,7 @@ export class Game {
     this.mode = settings.mode;
     this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
+    this.jokerRandom = new ReplayRandom(settings.random ?? Math.random);
     if (this.mode === 'teams') {
       const count = settings.teamCount ?? DEFAULT_TEAM_COUNT;
       this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
@@ -350,7 +366,7 @@ export class Game {
                 this.setup.bluff?.stage === 'vote' ? otherLies(this.setup.bluff, playerId) : null,
               transport,
             },
-            settings.random,
+            this.jokerRandom.next,
             settings.jokerHand,
             this.withJokers,
           )
@@ -596,6 +612,42 @@ export class Game {
     if (phase === 'LEADERBOARD') send('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
     if (phase === 'PODIUM' || phase === 'ENDED') send('podium', this.standingsPayload(PODIUM_SIZE));
     this.sendRemoteStatus(send);
+  }
+
+  /**
+   * « ✅ Accepter aussi cette réponse » (T44), REVEAL of that question only: scores the question
+   * again with the extra right answer, then re-sends the reveal, every result and the hearts.
+   */
+  accept(questionIndex: number, input: AcceptInput): void {
+    const question = this.currentQuestion;
+    const settlement = this.settlement;
+    if (this.phase !== 'REVEAL' || questionIndex !== this.questionIndex || !question || !settlement)
+      throw new GameError('NOT_REVEALING', 'Trop tard : la question est terminée');
+    const accepted = addAccept(question, settlement.accepted, input);
+    if (!accepted) return; // already right
+    this.touch();
+    settlement.restore();
+    settlement.accepted = accepted;
+    const limitMs = question.timeLimitSec * 1000;
+    const timePoints = (ms: number) => computePoints(question.basePoints, ms, limitMs);
+    for (const p of this.players.values()) {
+      const original = settlement.original(p.id);
+      if (!original) continue;
+      const scoringMs = this.jokers?.scoringMs(p.id, original.responseMs) ?? original.responseMs;
+      p.answer = rejudgeAnswer(question, original, accepted, timePoints, scoringMs);
+      if (p.answer.correct && !original.correct) settlement.acceptedIds.add(p.id);
+      if (scoringMs !== original.responseMs) {
+        const unhalved = rejudgeAnswer(
+          question,
+          original,
+          accepted,
+          timePoints,
+          original.responseMs,
+        );
+        this.jokers?.setHourglassExtra(p.id, p.answer.points - unhalved.points);
+      }
+    }
+    this.settleReveal(question, true);
   }
 
   // ---------- Player actions ----------
@@ -1028,6 +1080,7 @@ export class Game {
     this.startedAt ??= new Date();
     this.questionIndex = index;
     this.reveal = null;
+    this.settlement = null;
     this.setup = prepareQuestion(question);
     // « Dessine-moi »: the next drawer in turn and a word (only their phone will get it).
     if (question.type === 'DRAW') {
@@ -1111,7 +1164,26 @@ export class Game {
     if (this.phase !== 'ANSWERING' || !question) return;
     if (this.buzzer) this.recordBuzzerWrongs(this.buzzer);
     this.setPhase('REVEAL', null);
+    // What the settlement changes, so that « ✅ Accepter » can score the question again (T44).
+    this.settlement = Settlement.capture({
+      players: this.players,
+      teamScores: this.teamScores,
+      teamGains: this.teamGains,
+      jokers: this.jokers,
+      survival: this.survival,
+      questionStats: this.questionStats,
+    });
+    this.settleReveal(question, false);
+  }
 
+  /**
+   * Scores the revealed question (points, streaks, jokers, teams, « Survie », report), then sends
+   * the reveal and every result. `again`: after a host's accept, with the same random draws.
+   */
+  private settleReveal(question: Question, again: boolean): void {
+    const accepted = this.settlement?.accepted ?? {};
+    if (again) this.jokerRandom.replay();
+    else this.jokerRandom.record();
     const choices = choiceTexts(question);
     // « Buzzer »: nobody tapped a shape, and the type's own rules don't apply.
     const buzzer = !!question.buzzer;
@@ -1162,9 +1234,13 @@ export class Game {
         question.type === 'DRAW' ||
         (buzzer ? !p.answer : this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer)),
     );
-    const correctIndexes = correctChoiceIndexes(question);
-    const details = this.revealDetails(question);
+    this.jokerRandom.stop();
+    const correctIndexes = accepted.choiceIndexes
+      ? acceptedChoiceIndexes(question, accepted)
+      : correctChoiceIndexes(question);
+    const details = this.revealDetails(question, accepted);
     if (isMultipleAnswer(question)) details.multiple = { allFound: correctCount };
+    if (hasAccepts(accepted)) details.accepted = accepted;
     const explanation = questionExplanation(question);
     this.questionStats.push({
       index: this.questionIndex,
@@ -1189,6 +1265,8 @@ export class Game {
       ...details,
       ...(details.slider && { correct: details.slider.correct, margin: details.slider.margin }),
       ...(explanation && { explanation }),
+      ...(question.type === 'TYPE_ANSWER' &&
+        !buzzer && { typedAnswers: groupTypedAnswers(this.answers(), accepted) }),
     };
     this.transport.toHost('question:reveal', this.reveal);
     for (const p of this.players.values()) {
@@ -1196,29 +1274,28 @@ export class Game {
     }
   }
 
-  /** TYPE_ANSWER: accepted + most typed answers; SLIDER: settings, guesses, closest guess. */
-  private revealDetails(question: Question): RevealDetails {
+  private answers(): Answer[] {
+    return [...this.players.values()].flatMap((p) => (p.answer ? [p.answer] : []));
+  }
+
+  /**
+   * TYPE_ANSWER: accepted + most typed answers; SLIDER: settings (with the margin the host
+   * accepted), guesses, closest guess.
+   */
+  private revealDetails(question: Question, accepted: AcceptedAnswers): RevealDetails {
     if (this.buzzer) return { buzzer: buzzerReveal(question, this.buzzer, this.players) };
     // Earliest answers first: the first typing names a group, the fastest wins a tie.
     const answers = [...this.players.values()]
       .flatMap((player) => (player.answer ? [{ player, answer: player.answer }] : []))
       .sort((a, b) => a.answer.responseMs - b.answer.responseMs);
     if (question.type === 'TYPE_ANSWER') {
-      const groups = new Map<string, { text: string; count: number; correct: boolean }>();
-      for (const { answer } of answers) {
-        if (answer.text === null) continue;
-        const key = normalizeAnswer(answer.text);
-        const group = groups.get(key);
-        if (group) group.count++;
-        else groups.set(key, { text: answer.text, count: 1, correct: answer.correct });
-      }
       return {
         acceptedAnswers: question.acceptedAnswers,
-        topAnswers: [...groups.values()].sort((a, b) => b.count - a.count).slice(0, TOP_ANSWERS),
+        topAnswers: groupTypedAnswers(this.answers(), accepted).slice(0, TOP_ANSWERS),
       };
     }
     if (question.type === 'SLIDER') {
-      const { slider } = question;
+      const slider = { ...question.slider, margin: accepted.margin ?? question.slider.margin };
       const guesses = answers.flatMap(({ player, answer }) =>
         answer.value === null
           ? []
@@ -1667,6 +1744,8 @@ export class Game {
       ...(jokers && { jokers }),
       ...(this.survival && { survival: this.survival.resultFields(player.id) }),
       ...(explanation && { explanation }),
+      ...(this.phase === 'REVEAL' &&
+        this.settlement?.acceptedIds.has(player.id) && { accepted: true as const }),
     };
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router';
-import { TEAM_NAMES, type LobbyMember, type QuestionType, type TeamId } from '@lbq/shared';
+import { SHAPES, TEAM_NAMES, type LobbyMember, type QuestionType, type TeamId } from '@lbq/shared';
 import { GainBadge } from '../components/GainBadge';
 import { Avatar } from '../components/Avatar';
 import { PinPicture, PinZoneMark } from '../components/PinPicture';
@@ -8,6 +8,10 @@ import { QUESTION_TYPES } from '../editor/draft';
 import { currentQuestion, remainingMsAt, type HostGameState } from '../host/hostReducer';
 import { nicknameList } from '../host/pauseScreens';
 import { useNow } from '../host/useHostGame';
+import { acceptOptions, nextSliderMargin, type AcceptInput } from '../host/accept';
+import { AcceptButton, AcceptedTag } from '../host/acceptControls';
+import { ShapeIcon, shapeBg } from '../components/shapes';
+import { formatValue } from '../lib/numbers';
 import { useWakeLock } from '../player/useWakeLock';
 import {
   currentAnswer,
@@ -124,6 +128,7 @@ export function RemotePage() {
               <BuzzerPanel holder={host.buzzer.holder} onJudge={remote.judge} />
             )}
             <AnswerPeek key={host.questionIndex} state={state} />
+            {phase === 'REVEAL' && <AcceptPanel state={host} remote={remote} />}
           </>
         )}
         {phase === 'LEADERBOARD' && (
@@ -334,6 +339,68 @@ function AnswerPeek({ state }: { state: RemoteState }) {
             <p className="rounded-xl bg-white/10 p-3 text-base">💡 {answer.explanation}</p>
           )}
         </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Reveal (T44): the quiz's answer was set wrong? « ✅ Accepter » a refused choice / typed answer
+ * (every group, not only the TV's top 6) or a wider slider margin — the server scores again.
+ */
+function AcceptPanel({ state, remote }: { state: HostGameState; remote: Remote }) {
+  const reveal = state.reveal;
+  const question = currentQuestion(state);
+  if (!reveal || !question) return null;
+  const options = acceptOptions(reveal, question.choices);
+  const wider = nextSliderMargin(reveal);
+  const unit = reveal.slider?.unit;
+  const accept = (input: AcceptInput) => remote.accept(question.index, input);
+  if (options.length === 0 && wider === null && reveal.accepted?.margin === undefined) return null;
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl bg-white/10 p-4" data-testid="accept-panel">
+      <div>
+        <h2 className="text-lg font-black">Corriger la réponse</h2>
+        <p className="text-sm opacity-80">
+          Une bonne réponse a été refusée ? Accepte-la : les points sont recalculés.
+        </p>
+      </div>
+      {options.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {options.map((o) => (
+            <li
+              key={o.key}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 ${
+                o.shape !== undefined ? shapeBg[SHAPES[o.shape]!.color] : 'bg-white/10'
+              }`}
+            >
+              {o.shape !== undefined && (
+                <ShapeIcon shape={SHAPES[o.shape]!.shape} className="size-6 shrink-0 fill-white" />
+              )}
+              <span className="min-w-0 flex-1 font-bold break-words">{o.label}</span>
+              <span className="shrink-0 font-semibold tabular-nums opacity-90">× {o.count}</span>
+              {o.accepted ? (
+                <AcceptedTag big label="✅ Acceptée" />
+              ) : o.right ? (
+                <span className="shrink-0 px-2 font-black">✓ Bonne</span>
+              ) : (
+                <AcceptButton big onClick={() => accept(o.input)} />
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {reveal.accepted?.margin !== undefined && (
+        <p className="font-bold">
+          ✅ Réponses acceptées à ± {formatValue(reveal.accepted.margin, unit)}
+        </p>
+      )}
+      {wider !== null && (
+        <AcceptButton
+          big
+          label={`✅ Accepter les réponses à ± ${formatValue(wider, unit)}`}
+          onClick={() => accept({ margin: wider })}
+        />
       )}
     </section>
   );
