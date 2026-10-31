@@ -10,3 +10,6 @@ coverage/
 .vite/
 playwright-report/
 test-results/
+
+# Personal launcher (contains this PC's public address)
+start-lbq.cmd
