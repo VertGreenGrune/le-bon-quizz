@@ -2374,7 +2374,7 @@ Bob during the intro → Bob frozen on this question; Alice answers then plays D
   (title line, size on the intro, `data-blocked`, `JokerSheet.blocked`), not its placement.
 
 ### T43 — Cancel an answer
-- **Status:** todo
+- **Status:** in-progress (T43 agent)
 - **Depends on:** T41, T42 merged. Runs in parallel with T44 (see « Wave 9 coordination »).
 - **Ports:** server 3043 / web 5243, test DB `lbq_test_t43`, e2e DB `lbq_e2e_t43`.
 - **Scope:** `apps/server/src/game/**` (answer path, new `game/answerCancel.ts`),
