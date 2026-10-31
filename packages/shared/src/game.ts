@@ -24,6 +24,26 @@ export const PIN_LENGTH = 6;
 export const NICKNAME_MAX_LENGTH = 20;
 export const MAX_PLAYERS_PER_GAME = 30;
 export const QUESTION_INTRO_MS = 3000;
+/**
+ * QUESTION_INTRO of a question that takes jokers, in a game with jokers (or « Survie » haunts):
+ * time to read the question and play a joker before the answers appear (T42).
+ */
+export const JOKER_INTRO_MS = 8000;
+/** Long question texts get longer to read: + 1 s per this many characters beyond… */
+export const INTRO_CHARS_PER_SECOND = 40;
+/** …this length (any game). */
+export const INTRO_LONG_TEXT = 80;
+/** The intro never lasts longer than this. */
+export const MAX_INTRO_MS = 12_000;
+
+/** QUESTION_INTRO duration (PLAN.md §2): 3 s, 8 s with jokers, + reading time for long texts. */
+export function introDurationMs(text: string, jokers: boolean): number {
+  const extra = Math.max(
+    0,
+    Math.ceil((text.trim().length - INTRO_LONG_TEXT) / INTRO_CHARS_PER_SECOND),
+  );
+  return Math.min(MAX_INTRO_MS, (jokers ? JOKER_INTRO_MS : QUESTION_INTRO_MS) + extra * 1000);
+}
 /** Games are small (~6 players, 15 at most): the leaderboard shows everyone up to this. */
 export const LEADERBOARD_SIZE = 15;
 export const PODIUM_SIZE = 3;

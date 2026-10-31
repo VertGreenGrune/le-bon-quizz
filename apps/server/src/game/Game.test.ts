@@ -5,7 +5,7 @@ import {
   type Quiz,
   type ServerToClientEvents,
 } from '@lbq/shared';
-import { CLASSIC_QUIZ as DEMO_QUIZ } from './testing.js';
+import { CLASSIC_QUIZ as DEMO_QUIZ, introOf } from './testing.js';
 import { Game, type GameTransport } from './Game.js';
 import { GameError } from './errors.js';
 import { GameManager, GAME_IDLE_TTL_MS, HOST_GONE_TTL_MS, generatePin } from './GameManager.js';
@@ -105,7 +105,7 @@ describe('Game state machine', () => {
       timeLimitSec: 20,
     });
 
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
     expect(rec.last('game:state')).toMatchObject({ phase: 'ANSWERING', remainingMs: 20_000 });
   });
@@ -113,7 +113,7 @@ describe('Game state machine', () => {
   it('never sends the question text or correct answer to players before REVEAL', () => {
     joinAll('Alice');
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     const toPlayer = rec.sent.filter((s) => s.to === 'sock-0');
     expect(toPlayer.map((s) => s.event)).toEqual(['question:prompt']);
     expect(toPlayer[0]!.payload).toEqual({
@@ -129,7 +129,7 @@ describe('Game state machine', () => {
   it('scores on server time, accepts one answer, reveals when everyone answered', () => {
     const [alice, bob] = joinAll('Alice', 'Bob');
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
 
     vi.advanceTimersByTime(5_000);
     game.answer(alice!.id, 0, 1); // correct after 5 s of 20 s → 875
@@ -165,7 +165,7 @@ describe('Game state machine', () => {
   it('ends ANSWERING when the timer expires and ignores late answers', () => {
     const [alice, bob] = joinAll('Alice', 'Bob');
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     game.answer(alice!.id, 0, 1);
     vi.advanceTimersByTime(20_000);
     expect(game.phase).toBe('REVEAL');
@@ -177,12 +177,12 @@ describe('Game state machine', () => {
     const [alice] = joinAll('Alice', 'Bob');
     game.start();
     expectGameError(() => game.answer(alice!.id, 0, 1), 'NOT_ANSWERING'); // still in intro
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expectGameError(() => game.answer(alice!.id, 1, 1), 'NOT_ANSWERING');
     game.next(); // → REVEAL
     game.next(); // → LEADERBOARD
     game.next(); // → QUESTION_INTRO q1 (true/false: 2 choices)
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expectGameError(() => game.answer(alice!.id, 1, 3), 'INVALID_PAYLOAD');
   });
 
@@ -192,7 +192,7 @@ describe('Game state machine', () => {
     for (let q = 0; q < DEMO_QUIZ.questions.length; q++) {
       expect(game.phase).toBe('QUESTION_INTRO');
       expect(game.questionIndex).toBe(q);
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       const correct = DEMO_QUIZ.questions[q]!.choices.findIndex((c) => c.isCorrect);
       game.answer(alice!.id, q, correct);
       game.answer(bob!.id, q, (correct + 1) % 2);
@@ -255,7 +255,7 @@ describe('Game state machine', () => {
 
     /** Plays one question; `picks[i]` is player i's choice, or null to not answer. */
     function playQuestion(g: Game, ids: string[], q: number, picks: (number | null)[]) {
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       picks.forEach((c, i) => c !== null && g.answer(ids[i]!, q, c));
       if (g.phase === 'ANSWERING') g.next(); // someone didn't answer → skip the timer
       expect(g.phase).toBe('REVEAL');
@@ -329,7 +329,7 @@ describe('Game state machine', () => {
       playQuestion(game, [alice!.id], 0, [1]);
       game.next();
       game.next();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       game.answer(
         alice!.id,
         1,
@@ -394,7 +394,7 @@ describe('Game state machine', () => {
   it('kicking the last non-answering player triggers the reveal', () => {
     const [alice, bob] = joinAll('Alice', 'Bob');
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     game.answer(alice!.id, 0, 1);
     game.kick(bob!.id);
     expect(game.phase).toBe('REVEAL');
@@ -404,7 +404,7 @@ describe('Game state machine', () => {
     it('keeps waiting for a disconnected player who still has to answer', () => {
       const [alice] = joinAll('Alice', 'Bob');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       game.disconnect('sock-1');
       expect(rec.last('answer:count', 'host')).toEqual({ answered: 0, total: 2 });
       game.answer(alice!.id, 0, 1);
@@ -414,7 +414,7 @@ describe('Game state machine', () => {
     it('rejoin with the session token restores the player and re-sends the prompt', () => {
       const [alice] = joinAll('Alice', 'Bob');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS + 1_000);
+      vi.advanceTimersByTime(introOf(game) + 1_000);
       game.disconnect('sock-0');
       vi.advanceTimersByTime(4_000); // paused after 2 s, timer frozen at the drop
 
@@ -442,7 +442,7 @@ describe('Game state machine', () => {
     it('re-sends the player result when rejoining during REVEAL', () => {
       const [alice] = joinAll('Alice');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       game.answer(alice!.id, 0, 1);
       game.disconnect('sock-0');
       const p = game.rejoin(alice!.sessionToken, 'sock-new');
@@ -476,7 +476,7 @@ describe('Game state machine', () => {
     it('ANSWERING: question, remaining time and answer count', () => {
       const [alice] = joinAll('Alice', 'Bob');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS + 5_000);
+      vi.advanceTimersByTime(introOf(game) + 5_000);
       game.answer(alice!.id, 0, 1);
       expect(resyncHost()).toEqual([
         'game:state',
@@ -496,7 +496,7 @@ describe('Game state machine', () => {
     it('REVEAL: the same reveal the host got live', () => {
       const [alice] = joinAll('Alice');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       game.answer(alice!.id, 0, 1);
       const live = rec.last('question:reveal', 'host');
       expect(resyncHost()).toEqual([
@@ -513,7 +513,7 @@ describe('Game state machine', () => {
     it('LEADERBOARD, PODIUM and ENDED', () => {
       const [alice] = joinAll('Alice');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       game.answer(alice!.id, 0, 1);
       game.next();
       expect(resyncHost()).toEqual([
@@ -548,7 +548,7 @@ describe('Game state machine', () => {
     const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé', 'Dan');
     game.kick(chloe!.id); // in the lobby: forgotten
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     game.answer(alice!.id, 0, 1);
     game.answer(bob!.id, 0, 1);
     vi.advanceTimersByTime(20_000);

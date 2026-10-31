@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
@@ -110,7 +111,7 @@ describe('Game in team mode', () => {
       return p;
     });
 
-  const toAnswering = () => vi.advanceTimersByTime(QUESTION_INTRO_MS);
+  const toAnswering = () => vi.advanceTimersByTime(introOf(game));
   const answer = (p: Player, choice: number) => game.answer(p.id, game.questionIndex, choice);
   const teams = () => (rec.last('leaderboard', 'host') as StandingsPayload).teams;
   const result = (p: Player) => rec.last('player:result', p.socketId!) as PlayerResultPayload;

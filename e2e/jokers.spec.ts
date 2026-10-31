@@ -3,9 +3,10 @@ import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
 import { answerOnPhone } from './answers';
 
 /**
- * Jokers (T25): the server gives every player the hand `E2E_JOKER_HAND` (freeze, copy, fifty —
- * set in playwright.config.ts) instead of a random one. Alice freezes Bob, Chloé copies Bob's
- * answer, then Bob is frozen at the start of the next question.
+ * Jokers (T25, T42): the server gives every player the hand `E2E_JOKER_HAND` (freeze, copy, fifty,
+ * double — set in playwright.config.ts) instead of a random one. During the intro of question 1,
+ * Alice freezes Bob (frozen on this question), Chloé copies Bob's answer, Bob plays a 50/50; on
+ * question 2 Alice answers, then plays Double ou rien while the others answer.
  */
 const SHOTS = process.env.E2E_SHOTS_DIR;
 
@@ -15,7 +16,9 @@ async function newPhone(browser: Browser): Promise<Page> {
 }
 
 const shot = async (page: Page, name: string) => {
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/${name}.png` });
+  if (!SHOTS) return;
+  await page.waitForTimeout(600); // let the entrance animations end
+  await page.screenshot({ path: `${SHOTS}/${name}.png` });
 };
 
 /** Opens a joker of the bar and taps the target (or « Jouer »). */
@@ -53,23 +56,29 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
   }
   await host.getByRole('button', { name: 'Commencer' }).click();
 
-  // ---- Question 1 (MCQ): Alice freezes Bob, Chloé copies Bob ----
+  // ---- Question 1 (MCQ), during the 8 s intro: Alice freezes Bob, Chloé copies Bob ----
   const q1 = DEMO_QUIZ.questions[0]!;
-  await expect(alice!.getByTestId('joker-bar')).toBeVisible();
-  await expect(alice!.getByRole('button', { name: /^Réponse / }).first()).toBeVisible();
+  await expect(host.getByTestId('intro-jokers')).toContainText('Jouez vos jokers !');
+  await expect(alice!.getByTestId('joker-bar')).toContainText('Joue tes jokers !');
+  await shot(host, 'host-intro');
+  await shot(alice!, 'phone-intro');
   await playJoker(alice!, 'Gel', 'Bob');
   await expect(host.getByTestId('joker-announcement')).toContainText('Alice a gelé Bob !');
   await expect(bob!.getByTestId('joker-toast')).toContainText('Alice a gelé Bob !');
   await shot(host, 'host-announcement');
   await expect(alice!.getByTestId('joker-bar')).toContainText('Joker joué : Gel → Bob');
-
+  // Still in the intro: Chloé copies Bob, Bob plays a 50/50.
   await playJoker(chloe!, 'Copieur', 'Bob');
-  await expect(chloe!.getByRole('heading', { name: 'Tu copies Bob' })).toBeVisible();
+  await playJoker(bob!, '50/50');
   await expect(host.getByTestId('joker-announcement')).toContainText('Chloé copie quelqu');
+  await expect(chloe!.getByRole('heading', { name: 'Tu copies Bob' })).toBeVisible();
   await shot(chloe!, 'phone-copy');
 
-  // A 50/50 on Bob's phone hides 2 of the 3 wrong shapes.
-  await playJoker(bob!, '50/50');
+  // The 50/50 hides 2 of the 3 wrong shapes. Bob is frozen on this question.
+  await expect(bob!.getByTestId('frozen-overlay')).toBeVisible();
+  await expect(bob!.getByTestId('frozen-overlay')).toContainText('Gelé par Alice !');
+  await shot(bob!, 'phone-frozen');
+  await expect(bob!.getByTestId('frozen-overlay')).toBeHidden({ timeout: 12_000 });
   await expect(bob!.getByRole('button', { name: /^Réponse / })).toHaveCount(2);
   await shot(bob!, 'phone-fifty');
   const paris = q1.type === 'MCQ' ? q1.choices.findIndex((c) => c.isCorrect) : -1;
@@ -86,16 +95,26 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
   await shot(host, 'host-leaderboard');
   await host.getByRole('button', { name: 'Question suivante' }).click();
 
-  // ---- Question 2 (true / false): Bob is frozen 5 s, the 50/50 is greyed out ----
-  await expect(bob!.getByTestId('frozen-overlay')).toBeVisible();
-  await expect(bob!.getByTestId('frozen-overlay')).toContainText('Gelé par Alice !');
-  await shot(bob!, 'phone-frozen');
-  await expect(alice!.getByRole('button', { name: 'Joker 50/50' })).toBeDisabled();
-  await expect(bob!.getByTestId('frozen-overlay')).toBeHidden({ timeout: 12_000 });
+  // ---- Question 2 (true / false): 50/50 greyed; Alice answers, then plays Double ou rien ----
+  await expect(alice!.getByRole('button', { name: 'Joker 50/50' })).toHaveAttribute(
+    'data-blocked',
+    'Ce joker ne marche pas sur cette question',
+  );
   const q2 = DEMO_QUIZ.questions[1]!;
-  await answerOnPhone(bob!, q2, 'right');
-  for (const phone of [alice!, chloe!]) await answerOnPhone(phone, q2, 'right');
-  await expect(bob!.getByRole('heading', { name: 'Correct !' })).toBeVisible();
+  await answerOnPhone(alice!, q2, 'right');
+  await expect(alice!.getByTestId('joker-bar')).toContainText('Encore un joker');
+  // Copieur is « before answering » only: the sheet says why.
+  await alice!.getByRole('button', { name: 'Joker Copieur' }).click();
+  await expect(alice!.getByTestId('joker-blocked')).toHaveText('🚫 Seulement avant de répondre');
+  await shot(alice!, 'phone-after-answer-blocked');
+  await alice!.getByRole('button', { name: 'Annuler' }).click();
+  await playJoker(alice!, 'Double ou rien');
+  await expect(host.getByTestId('joker-announcement')).toContainText('Alice joue Double ou rien');
+  await expect(alice!.getByTestId('joker-bar')).toContainText('Joker joué : Double ou rien');
+  await shot(alice!, 'phone-after-answer');
+  for (const phone of [bob!, chloe!]) await answerOnPhone(phone, q2, 'right');
+  await expect(alice!.getByRole('heading', { name: 'Correct !' })).toBeVisible();
+  await expect(alice!.getByTestId('joker-results')).toContainText('Double ou rien');
 
   host.once('dialog', (dialog) => void dialog.accept()); // « Terminer la partie maintenant ? »
   await host.getByRole('button', { name: 'Terminer', exact: true }).click();

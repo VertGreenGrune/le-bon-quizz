@@ -363,6 +363,8 @@ export interface GameStatePayload {
    * While paused: the frozen value.
    */
   remainingMs?: number;
+  /** QUESTION_INTRO only: its whole duration in ms (`introDurationMs`, T42), for a progress bar. */
+  introMs?: number;
   /** QUESTION_INTRO / ANSWERING only: the game is paused, the timer frozen (PLAN.md §2). */
   paused?: GamePause;
   /** The game is played with jokers. */
@@ -759,7 +761,10 @@ export interface JokerEffects {
   sliderRange?: { min: number; max: number };
   /** 50/50, TYPE_ANSWER: first letter of the expected answer. */
   firstLetter?: string;
-  /** Gel: answers refused during the first `ms` of ANSWERING (pauses excluded). */
+  /**
+   * Gel: answers refused until `ms` of ANSWERING have elapsed (pauses excluded) — 5 s when played
+   * before ANSWERING, elapsed time + 5 s when it lands during ANSWERING (T42).
+   */
   frozen?: { ms: number; by: LobbyMember };
   /** Brouilleur: grey buttons in this order, labelled with the choice texts (read the TV). */
   scrambled?: { by: LobbyMember; choices: { index: number; text: string }[] };
@@ -784,6 +789,11 @@ export interface PlayerJokersPayload {
   others: (LobbyMember & { teamId?: TeamId })[];
   /** Ids of the players already attacked on this question (one attack per target). */
   attacked: string[];
+  /**
+   * Ids of the players who already answered this question (T42: Gel / Brouilleur can't target
+   * them; re-sent on each answer). This player answered: their own id is in it.
+   */
+  answered?: string[];
   effects: JokerEffects;
 }
 

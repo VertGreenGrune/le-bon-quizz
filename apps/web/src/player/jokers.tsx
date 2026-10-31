@@ -10,8 +10,9 @@ import {
 import { Avatar } from '../components/Avatar';
 import {
   announcement,
+  answeredNow,
   eligibleTargets,
-  jokerPlayable,
+  jokerBlocked,
   noJokersHere,
   resultLine,
 } from '../lib/jokers';
@@ -24,7 +25,11 @@ import {
   type PlayerState,
 } from './playerState';
 
-/** Phone, games with jokers: the hand at the bottom of the "get ready" / answer screens. */
+/**
+ * Phone, games with jokers: the hand at the bottom of the "get ready" / answer screens — big
+ * during the intro (time to play one, T42) — and of the « Réponse envoyée ! » screen (the jokers
+ * that still make sense after answering).
+ */
 export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }) {
   const [open, setOpen] = useState<JokerType | null>(null);
   const j = s.jokers;
@@ -32,12 +37,16 @@ export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }
     s.jokerGame &&
     j !== null &&
     j.questionIndex === s.questionIndex &&
-    (screen === 'getReady' || screen === 'answer') &&
+    (screen === 'getReady' ||
+      screen === 'answer' ||
+      (screen === 'answered' && s.phase === 'ANSWERING')) &&
     !s.paused &&
     !noJokersHere(j);
+  const answered = !!j && answeredNow(j, s.playerId);
   // A new question / the answer sent closes the sheet.
-  useEffect(() => setOpen(null), [s.questionIndex, visible]);
+  useEffect(() => setOpen(null), [s.questionIndex, visible, answered]);
   if (!visible || !j) return null;
+  const big = screen === 'getReady';
 
   if (j.played) {
     const info = JOKERS[j.played.joker];
@@ -59,51 +68,79 @@ export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }
     <>
       <div
         data-testid="joker-bar"
-        className="flex items-center gap-2 overflow-x-auto bg-black/30 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        className={`flex flex-col gap-1 bg-black/30 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${
+          big ? 'pt-3' : 'pt-2'
+        }`}
       >
-        <span className="shrink-0 text-xs font-black uppercase opacity-80">
-          Jokers{j.shield && ' · 🛡️'}
-        </span>
-        {j.hand.length === 0 && (
-          <span className="text-xs font-semibold opacity-80">
-            Plus de joker : {JOKER_STREAK_STEP} bonnes réponses d'affilée pour en gagner un
-          </span>
+        {(big || answered) && j.hand.length > 0 && (
+          <p className={`text-center font-black ${big ? 'text-xl' : 'text-xs opacity-90'}`}>
+            {big ? '🃏 Joue tes jokers !' : '🃏 Encore un joker en attendant les autres ?'}
+          </p>
         )}
-        {j.hand.map((joker, i) => {
-          const playable = jokerPlayable(j, joker);
-          return (
-            <motion.button
-              key={`${joker}-${i}`}
-              type="button"
-              whileTap={{ scale: 0.9 }}
-              disabled={!playable}
-              onClick={() => setOpen(joker)}
-              aria-label={`Joker ${JOKERS[joker].name}`}
-              className="flex shrink-0 touch-manipulation flex-col items-center rounded-xl bg-white/90 px-2 py-1 text-brand shadow disabled:opacity-35"
-            >
-              <span className="text-2xl leading-none" aria-hidden="true">
-                {JOKERS[joker].icon}
-              </span>
-              <span className="text-[0.65rem] font-black">{JOKERS[joker].name}</span>
-            </motion.button>
-          );
-        })}
+        <div className={`flex items-center overflow-x-auto ${big ? 'gap-3' : 'gap-2'}`}>
+          {!big && (
+            <span className="shrink-0 text-xs font-black uppercase opacity-80">
+              Jokers{j.shield && ' · 🛡️'}
+            </span>
+          )}
+          {j.hand.length === 0 && (
+            <span className="text-xs font-semibold opacity-80">
+              Plus de joker : {JOKER_STREAK_STEP} bonnes réponses d'affilée pour en gagner un
+            </span>
+          )}
+          {j.hand.map((joker, i) => {
+            const blocked = jokerBlocked(j, joker, answered);
+            return (
+              <motion.button
+                key={`${joker}-${i}`}
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                // Greyed but tappable: the sheet tells why (e.g. « Seulement avant de répondre »).
+                data-blocked={blocked ?? undefined}
+                onClick={() => setOpen(joker)}
+                aria-label={`Joker ${JOKERS[joker].name}`}
+                className={`flex shrink-0 touch-manipulation flex-col items-center rounded-xl bg-white/90 text-brand shadow data-blocked:opacity-35 ${
+                  big ? 'min-w-20 px-3 py-2' : 'px-2 py-1'
+                }`}
+              >
+                <span
+                  className={`leading-none ${big ? 'text-4xl' : 'text-2xl'}`}
+                  aria-hidden="true"
+                >
+                  {JOKERS[joker].icon}
+                </span>
+                <span className={`font-black ${big ? 'text-xs' : 'text-[0.65rem]'}`}>
+                  {JOKERS[joker].name}
+                </span>
+              </motion.button>
+            );
+          })}
+        </div>
       </div>
       <AnimatePresence>
-        {open && <JokerSheet s={s} joker={open} onClose={() => setOpen(null)} />}
+        {open && (
+          <JokerSheet
+            s={s}
+            joker={open}
+            blocked={jokerBlocked(j, open, answered)}
+            onClose={() => setOpen(null)}
+          />
+        )}
       </AnimatePresence>
     </>
   );
 }
 
-/** What the joker does, then « Jouer » or a target to tap. */
+/** What the joker does, then « Jouer » or a target to tap — or why it can't be played now. */
 function JokerSheet({
   s,
   joker,
+  blocked,
   onClose,
 }: {
   s: PlayerState;
   joker: JokerType;
+  blocked: string | null;
   onClose: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +177,14 @@ function JokerSheet({
         </p>
         <h2 className="text-center text-2xl font-black">{info.name}</h2>
         <p className="text-center font-semibold text-gray-600">{info.description}</p>
-        {info.target ? (
+        {blocked ? (
+          <p
+            data-testid="joker-blocked"
+            className="rounded-xl bg-gray-100 px-4 py-3 text-center font-black text-gray-700"
+          >
+            🚫 {blocked}
+          </p>
+        ) : info.target ? (
           <>
             <p className="font-black">{joker === 'copy' ? 'Qui copier ?' : 'Sur qui ?'}</p>
             {targets.length === 0 && (

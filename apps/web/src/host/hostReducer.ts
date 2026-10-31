@@ -33,6 +33,8 @@ export interface HostGameState {
   totalQuestions: number;
   /** Local timestamp (ms) when the current timed phase ends, derived from `remainingMs`. */
   deadline: number | null;
+  /** QUESTION_INTRO: its whole duration (`game:state.introMs`, T42), null otherwise. */
+  introMs: number | null;
   /** The game is paused (a player / the host screen lost the connection): timer frozen. */
   paused: GamePause | null;
   /** While paused: the frozen time left and the local time the pause started at. */
@@ -93,6 +95,7 @@ export const initialHostState: HostGameState = {
   questionIndex: -1,
   totalQuestions: 0,
   deadline: null,
+  introMs: null,
   paused: null,
   frozenMs: null,
   pausedSince: null,
@@ -135,6 +138,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         questionIndex,
         totalQuestions,
         deadline: remainingMs != null && !frozen ? action.now + remainingMs : null,
+        introMs: action.payload.introMs ?? null,
         paused,
         buzzer,
         draw: action.payload.draw ?? null,

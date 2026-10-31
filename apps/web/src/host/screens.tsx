@@ -163,12 +163,17 @@ export function QuestionIntroScreen({
   total,
   question,
   progress,
+  remainingMs = null,
+  jokers = false,
 }: {
   index: number;
   total: number;
   question: QuestionShowPayload | null;
   /** 0 → 1 over the intro duration, null if unknown. */
   progress: number | null;
+  remainingMs?: number | null;
+  /** Players can play jokers on this question (T42): « 🃏 Jouez vos jokers ! ». */
+  jokers?: boolean;
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-10 p-8">
@@ -189,9 +194,26 @@ export function QuestionIntroScreen({
         {question?.text ?? '…'}
       </motion.h2>
       <DrawIntroLine question={question} />
+      {jokers && (
+        <motion.p
+          data-testid="intro-jokers"
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: [0.6, 1.1, 1], opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="flex items-center gap-4 rounded-full bg-panel px-8 py-3 font-display text-4xl font-black text-white"
+        >
+          🃏 Jouez vos jokers !
+          {remainingMs != null && (
+            <span className="flex size-14 items-center justify-center rounded-full bg-white tabular-nums text-brand">
+              {Math.max(0, Math.ceil(remainingMs / 1000))}
+            </span>
+          )}
+        </motion.p>
+      )}
       {progress != null && (
         <div className="h-3 w-full max-w-3xl overflow-hidden rounded-full bg-panel">
           <div
+            data-testid="intro-progress"
             className="h-full bg-white transition-[width] duration-100 ease-linear"
             style={{ width: `${Math.min(100, progress * 100)}%` }}
           />

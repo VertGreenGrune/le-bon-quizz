@@ -1,7 +1,7 @@
 import {
   JOKERS,
-  jokerAllowed,
   jokerAvailability,
+  jokerRefusal,
   type JokerResult,
   type JokerType,
   type JokerUsedPayload,
@@ -29,11 +29,11 @@ export function announcement(p: JokerUsedPayload): { title: string; detail: stri
     case 'copy':
       return { title: `🦜 ${by} copie quelqu'un…`, detail: 'Mais qui ?' };
     case 'freeze':
-      return { title: `🥶 ${by} a gelé ${target} !`, detail: 'Bloqué 5 s à sa prochaine question' };
+      return { title: `🥶 ${by} a gelé ${target} !`, detail: 'Bloqué 5 s sur cette question' };
     case 'scramble':
       return {
         title: `🌀 ${by} brouille ${target} !`,
-        detail: 'Boutons mélangés à sa prochaine question',
+        detail: 'Boutons mélangés sur cette question',
       };
     case 'double':
       return { title: `✖️2 ${by} joue Double ou rien !`, detail: 'Points ×2… ou −500' };
@@ -73,9 +73,31 @@ export function resultLine(r: JokerResult): string {
   }
 }
 
+/** This player already answered the current question (`joker:state.answered`, T42). */
+export function answeredNow(state: PlayerJokersPayload, playerId: string | null): boolean {
+  return playerId !== null && !!state.answered?.includes(playerId);
+}
+
+/**
+ * Why this joker can't be played now (greyed out with this reason), null when it can. Without a
+ * question type: playable (the server decides).
+ */
+export function jokerBlocked(
+  state: PlayerJokersPayload,
+  joker: JokerType,
+  answered = false,
+): string | null {
+  if (!state.questionType) return null;
+  return jokerRefusal(state.questionType, joker, { buzzer: !!state.buzzer, answered });
+}
+
 /** Can this joker be played now (question type known)? Without a type: yes (server decides). */
-export function jokerPlayable(state: PlayerJokersPayload, joker: JokerType): boolean {
-  return !state.questionType || jokerAllowed(state.questionType, joker, !!state.buzzer);
+export function jokerPlayable(
+  state: PlayerJokersPayload,
+  joker: JokerType,
+  answered = false,
+): boolean {
+  return jokerBlocked(state, joker, answered) === null;
 }
 
 /** The question takes no joker at all (e.g. a poll, a « Buzzer » question): the bar is hidden. */
@@ -85,7 +107,8 @@ export function noJokersHere(state: PlayerJokersPayload): boolean {
 
 /**
  * Players this joker may target (same rules as the server): not yourself; team mode → attacks
- * and Voleur on the other teams, Copieur in your own team; one attack per target per question.
+ * and Voleur on the other teams, Copieur in your own team; one attack per target per question;
+ * Gel / Brouilleur only on players who haven't answered yet (T42).
  */
 export function eligibleTargets(
   state: PlayerJokersPayload,
@@ -101,6 +124,8 @@ export function eligibleTargets(
         if (joker === 'copy' && !same) return false;
         if (info.attack && same) return false;
       }
+      if ((joker === 'freeze' || joker === 'scramble') && state.answered?.includes(p.id))
+        return false;
       return !(info.attack && state.attacked.includes(p.id));
     })
     .map(({ id, nickname, avatar }) => ({ id, nickname, avatar }));

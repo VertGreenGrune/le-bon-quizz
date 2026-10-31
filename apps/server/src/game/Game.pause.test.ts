@@ -11,7 +11,7 @@ import {
 } from '@lbq/shared';
 import { Game, type GameTransport, type Player } from './Game.js';
 import { GameError } from './errors.js';
-import { CLASSIC_QUIZ, rightAnswer } from './testing.js';
+import { CLASSIC_QUIZ, rightAnswer, introOf } from './testing.js';
 
 type Sent = { to: string; event: keyof ServerToClientEvents; payload: unknown };
 
@@ -61,7 +61,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
   /** Starts the game and goes to ANSWERING of question 1. */
   const toAnswering = () => {
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
 
@@ -189,7 +189,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
       const g = new Game('654321', CLASSIC_QUIZ, recorder().transport);
       const [alice, bob] = ['Alice', 'Bob'].map((n) => g.join(n, `s-${n}`));
       g.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS + 3_000);
+      vi.advanceTimersByTime(introOf(game) + 3_000);
       if (withPause) {
         g.disconnect('s-Bob');
         vi.advanceTimersByTime(45_000);
@@ -231,7 +231,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
       remainingMs: QUESTION_INTRO_MS,
       paused: { waitingFor: [{ nickname: 'Bob' }] },
     });
-    vi.advanceTimersByTime(QUESTION_INTRO_MS * 3);
+    vi.advanceTimersByTime(introOf(game) * 3);
     expect(game.phase).toBe('QUESTION_INTRO');
   });
 
@@ -345,7 +345,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
       let bobSocket = 's-Bob';
       g.start();
       for (let i = 0; i < DEMO_QUIZ.questions.length; i++) {
-        vi.advanceTimersByTime(QUESTION_INTRO_MS + 1_000);
+        vi.advanceTimersByTime(introOf(g) + 1_000);
         if (withPause) {
           g.disconnect(bobSocket);
           vi.advanceTimersByTime(PAUSE_GRACE_MS + 5_000);
@@ -382,7 +382,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
       g.setTeam(r2!.id, 0);
       g.setTeam(b1!.id, 1);
       g.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS + 2_000);
+      vi.advanceTimersByTime(introOf(g) + 2_000);
       if (withPause) {
         g.disconnect('s-R2');
         vi.advanceTimersByTime(PAUSE_GRACE_MS + 10_000);

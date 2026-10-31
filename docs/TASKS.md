@@ -2256,7 +2256,7 @@ full-screen helper (supported / unsupported / dropped), layout e2e (PIN + ORDER 
 jokers on 2 phone sizes), TV leaderboard screenshot with gains.
 
 ### T42 — Jokers that hit the current question + jokers after answering
-- **Status:** in-progress (T42 agent)
+- **Status:** done
 - **Depends on:** — Runs in parallel with T41 (see « Wave 8 coordination »).
 - **Ports:** server 3042 / web 5242, test DB `lbq_test_t42`, e2e DB `lbq_e2e_t42`.
 - **Scope:** `apps/server/src/game/**` (jokers, intro timer), `packages/shared/src/jokers.ts` +
@@ -2295,6 +2295,44 @@ answered or a type they can't hit (joker kept in hand), Bouclier still blocks, h
 each « after answering » joker (Double, Voleur, Bouclier, Sablier on the recorded time), 50/50 and
 Copieur refused after answering, team / Survie, pause during the intro, resyncs; e2e: Alice freezes
 Bob during the intro → Bob frozen on this question; Alice answers then plays Double ou rien.
+
+- **Summary:** shared: `introDurationMs(text, jokers)` + `JOKER_INTRO_MS` (8 s),
+  `INTRO_LONG_TEXT` (80), `INTRO_CHARS_PER_SECOND` (40), `MAX_INTRO_MS` (12 s) in `game.ts`;
+  `jokers.ts`: `JokerInfo.afterAnswer`, new descriptions (Gel / Brouilleur « sur cette question »),
+  `JokerAvailability.afterAnswer` (derived per type), **`jokerRefusal(type, joker, { buzzer,
+  answered })`** = the single source of the refusal reasons (server `JOKER_REFUSED` message and the
+  phone's greyed joker), Brouilleur refused outside MCQ / TRUE_FALSE (`jokerAllowed` gains
+  `answered`). Contract (additive): `game:state.introMs`, `joker:state.answered` (ids who answered
+  this question), `effects.frozen.ms` = elapsed ANSWERING time when the Gel ends. Server
+  (`jokers.ts`): `use()` checks `jokerRefusal` with `answered`, refuses Gel / Brouilleur on a target
+  who answered (« Bob a déjà répondu »), `freezeNow` (intro → 5 s from ANSWERING, ANSWERING → from
+  now; « Mytho ! » writing → blocks the vote) and `scrambleNow` apply on the current question
+  (Bouclier still blocks); `pendingFreeze` / `pendingScramble` are now only « Survie » haunts;
+  Sablier after answering → `ctx.rescore` (new `Game.scoreAnswer`, split out of `recordAnswer`);
+  `joker:state` re-sent on each answer (target lists). `Game.ts`: intro timer =
+  `introMs(question)` (8 s when the game has the joker engine and the question takes jokers),
+  `game:state.introMs` during the intro. TV (`host/screens.tsx`, `HostPage.tsx`, reducer
+  `introMs`): progress bar over the real intro length, « 🃏 Jouez vos jokers ! » + seconds left.
+  Phone (`player/jokers.tsx`, `lib/jokers.ts`): big bar « 🃏 Joue tes jokers ! » during the intro,
+  bar on « Réponse envoyée ! » (« Encore un joker en attendant les autres ? »), greyed jokers stay
+  tappable and the sheet shows the reason (« 🚫 Seulement avant de répondre »), Gel / Brouilleur
+  targets exclude players who answered; TV / phone announcements « sur cette question ». Tests:
+  shared (refusals, after-answer table, intro lengths), `Game.jokers.test.ts` (Gel in the intro +
+  pause, Gel mid-ANSWERING from now, refusals on an answered target / types without buttons,
+  haunt still on the next question, Double / Voleur / Bouclier / Sablier after answering, one per
+  question, team average, intro lengths incl. poll / no jokers / « Survie », pause in the intro),
+  buzzer / « select all » tests moved to the new timing, every test advancing the intro uses
+  `introOf(game)` (`testing.ts`); web helpers + host reducer; e2e `jokers.spec.ts` rewritten (Gel /
+  Copieur / 50/50 during the 8 s intro → Bob frozen on question 1; Alice answers question 2, sees
+  Copieur's reason, plays Double ou rien). All 16 e2e specs pass. Screenshots checked (TV
+  1600×900 intro, Pixel 7 intro bar, frozen, after-answer bar and sheet).
+- **Deviations / notes:** (1) The 8 s intro only applies to questions that take jokers (a poll,
+  a « Buzzer » or « Dessine-moi » question keeps 3 s + reading time), « Survie » included even
+  without the Jokers option (as specified). (2) Long texts: `ceil((length − 80) / 40)` s, so 81
+  characters already add 1 s. (3) Greyed jokers use `data-blocked` (not `aria-disabled`) so they
+  stay tappable to show the reason. (4) `E2E_JOKER_HAND` (`playwright.config.ts`) is now
+  `freeze,copy,fifty,double`. (5) T41: only the bar's *content* changed in `player/jokers.tsx`
+  (title line, size on the intro, `data-blocked`, `JokerSheet.blocked`), not its placement.
 
 ### T43 — Cancel an answer
 - **Status:** todo
@@ -2645,3 +2683,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   2 ordres, 2 PIN on a cropped public-domain equirectangular map of Europe, 1 « Qui de nous ? »,
   1 « Dessine-moi »), every one with a sourced explanation; 12 new free Commons pictures, 13 unused
   ones removed. Re-imported in place for loicmoster@hotmail.fr. Not played with a scripted game.
+- 2026-10-31, T42 agent (additive, PLAN.md §2–§4): `introDurationMs` / `JOKER_INTRO_MS` /
+  `MAX_INTRO_MS` in `game.ts`; `JokerInfo.afterAnswer`, `JokerAvailability.afterAnswer`
+  (**required** — fixtures building a `JokerAvailability` must set it), `jokerRefusal`,
+  `jokerAllowed(…, answered)`; `GameStatePayload.introMs?`, `PlayerJokersPayload.answered?`;
+  `effects.frozen.ms` now = elapsed ANSWERING time when the Gel ends. Behaviour: Gel / Brouilleur
+  jokers hit the current question (haunts still the next one), Brouilleur refused outside MCQ /
+  TRUE_FALSE, QUESTION_INTRO lasts 3–12 s (tests: advance by `introOf(game)` from
+  `game/testing.ts`, not `QUESTION_INTRO_MS`). `JokerContext.rescore`, `Game.scoreAnswer`.
+  `playwright.config.ts`: `E2E_JOKER_HAND` gains `double`.

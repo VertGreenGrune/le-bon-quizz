@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   FREEZE_MS,
   PAUSE_GRACE_MS,
@@ -113,12 +114,12 @@ describe('Game « Buzzer » questions', () => {
   const toAnswering = (index: number) => {
     game.start();
     for (let i = 0; i < index; i++) {
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       game.next(); // ANSWERING → REVEAL
       game.next(); // → LEADERBOARD
       game.next(); // → next question
     }
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
     expect(game.questionIndex).toBe(index);
   };
@@ -288,12 +289,12 @@ describe('Game « Buzzer » questions', () => {
   it('usual streak rules: base points + streak bonus for the winner', () => {
     const [alice, bob] = joinAll('Alice', 'Bob');
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     game.answer(alice!.id, 0, 0); // Q1 right (streak 1)
     game.answer(bob!.id, 0, 0);
     game.next();
     game.next();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     game.buzz(alice!.id, 1);
     game.judge(true);
     expect(result(alice!)).toMatchObject({ streak: 2, streakBonus: 100, pointsEarned: 1100 });
@@ -309,7 +310,7 @@ describe('Game « Buzzer » questions', () => {
     expect(result(alice!)).toMatchObject({ correct: true, pointsEarned: 1000 });
     game.next();
     game.next();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     const show = rec.last('question:show', 'host') as QuestionShowPayload;
     expect(show.buzzer).toEqual({ answer: ['1789 (± 5)'] });
     expect(show.slider).toBeUndefined();
@@ -345,16 +346,17 @@ describe('Game « Buzzer » questions', () => {
     // Nobody buzzes at all: nobody loses a heart.
     game.next();
     game.next();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS + 20_000);
+    vi.advanceTimersByTime(introOf(game) + 20_000);
     expect(game.phase).toBe('REVEAL');
     for (const p of [alice!, bob!, chloe!]) expect(result(p).survival?.lostHeart).toBe(false);
   });
 
-  it('jokers: none can be played, but a pending Gel delays the BUZZ by 5 s', () => {
-    create({ mode: 'solo', jokers: true, jokerHand: ['freeze', 'double'] });
+  it('jokers: none can be played, but a pending (haunt) Gel delays the BUZZ by 5 s', () => {
+    create({ mode: 'survival', jokers: true, jokerHand: ['freeze', 'double'] });
     const [alice, bob] = joinAll('Alice', 'Bob');
     game.start();
-    game.useJoker(alice!.id, 0, 'freeze', bob!.id); // lands on Bob's next question
+    // A « Survie » haunt lands on Bob's next question (a Gel joker hits the current one, T42).
+    game.jokers!.haunt(alice!, 'freeze', bob!);
     game.next(); // Q1 ANSWERING
     game.next(); // REVEAL
     game.next(); // LEADERBOARD
@@ -365,7 +367,7 @@ describe('Game « Buzzer » questions', () => {
       buzzer: true,
       effects: { frozen: { ms: FREEZE_MS } },
     });
-    vi.advanceTimersByTime(QUESTION_INTRO_MS + 2_000);
+    vi.advanceTimersByTime(introOf(game) + 2_000);
     expectGameError(() => game.buzz(bob!.id, 1), 'FROZEN');
     vi.advanceTimersByTime(FREEZE_MS - 2_000);
     game.buzz(bob!.id, 1);
