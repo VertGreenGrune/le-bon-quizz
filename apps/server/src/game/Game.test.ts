@@ -209,10 +209,11 @@ describe('Game state machine', () => {
         { nickname: 'Bob', avatar: expect.any(String), score: 0 },
       ],
     });
+    // The leaderboard also tells what each one earned on the last question (T41).
     expect(rec.last('leaderboard', 'host')).toEqual({
       top: [
-        { nickname: 'Alice', avatar: expect.any(String), score: 5600 },
-        { nickname: 'Bob', avatar: expect.any(String), score: 0 },
+        { nickname: 'Alice', avatar: expect.any(String), score: 5600, gained: 1300 },
+        { nickname: 'Bob', avatar: expect.any(String), score: 0, gained: 0 },
       ],
     });
     game.next();
@@ -524,7 +525,14 @@ describe('Game state machine', () => {
         'remote:status',
       ]);
       expect(rec.last('leaderboard')).toEqual({
-        top: [{ nickname: 'Alice', avatar: expect.any(String), score: alice!.totalScore }],
+        top: [
+          {
+            nickname: 'Alice',
+            avatar: expect.any(String),
+            score: alice!.totalScore,
+            gained: alice!.totalScore,
+          },
+        ],
       });
       game.end();
       expect(resyncHost()).toEqual(['game:state', 'lobby:players', 'podium', 'remote:status']);

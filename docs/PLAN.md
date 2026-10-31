@@ -77,8 +77,10 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
 - **Media** (any question type, optional, host screen only — phones never get them):
   `audio: { url, startSec ≥ 0, durationSec 5–30 (default 15) }` — the excerpt plays from the start
   of `ANSWERING`, looped, stops at `REVEAL`, pauses with the game and resumes after the 3-2-1
-  (`audioOnReveal: true` = plays once at `REVEAL` instead); follows the host mute toggle, the other
-  host sounds are ducked meanwhile (`apps/web/src/host/clipPlayer.ts`). `imageEffect` (`blur` 30 px
+  (`audioOnReveal: true` = plays once at `REVEAL` instead); the other host sounds are ducked
+  meanwhile (`apps/web/src/host/clipPlayer.ts`). TV volumes (T41, « 🔊 Son » in the TV header,
+  `host/soundSettings.tsx`, `localStorage`): « Musique et effets » (every other host sound) and
+  « Extraits du quiz » (the clip), 0–100 % each, plus « Tout couper ». `imageEffect` (`blur` 30 px
   → 0, `zoom` ×6 on a point → ×1, `pixelate` 8 blocks → full; only with `imageUrl`): the picture
   clears up over the answering time (frozen while paused), fully clear at `REVEAL`
   (`apps/web/src/components/RevealImage.tsx`). Scoring is unchanged (faster = more points).
@@ -286,7 +288,7 @@ Every client → server event takes an ack callback receiving
 | Event | Payload | Notes |
 |---|---|---|
 | `remote:join` | `{ pin, remoteToken }` | pairs the socket (`UNAUTHORIZED` for a wrong / revoked token, `GAME_NOT_FOUND`), then the `host:rejoin` resync + `remote:answer`; sent again on every reconnection |
-| `remote:tv` | `{ pin, remoteToken, action: 'mute' \| 'unmute' \| 'replay' }` | relayed to the TV sockets as `tv:control` (🔇 / 🔊, ↻ the sound clip) |
+| `remote:tv` | `{ pin, remoteToken, action: 'mute' \| 'unmute' \| 'replay' \| 'music-down' \| 'music-up' }` | relayed to the TV sockets as `tv:control` (🔇 / 🔊 « Tout couper », ↻ the sound clip, « Musique − / + » = the « Musique et effets » level by 20 %, T41) |
 
 ### Player → server
 | Event | Payload | Notes |
@@ -313,7 +315,7 @@ Every client → server event takes an ack callback receiving
 | `answer:count` | host | `{ answered, total }` |
 | `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[] }` (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars); ORDER `order: { items (right order), placed: number[] (players with the right item at each position) }`; PIN `pin: { imageUrl, zone, pins: { x, y, nickname, avatar, correct }[] }`; WHO_OF_US `votes: { nickname, avatar, count }[]` (most voted first) + `majorityBonus?: true`; WORD_CLOUD `words: { text, count }[]` (top 40); BLUFF `bluff: { truth, options: { text, truth, authors, voters }[] }` (lies that fooled the fewest first, truth last — the TV reveals them one by one) (`RevealDetails`) « Buzzer »: `buzzer: { answer, winner?, wrong }` (`distribution` empty, no type details) DRAW: `draw: { word, drawer?, strokes, found: (LobbyMember & { ms })[] }`; « select all »: `distribution` counts every ticked choice + `multiple: { allFound }`; `explanation?` (T37) |
 | `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL, WHO_OF_US, WORD_CLOUD: `correct` false; 0 points except the WHO_OF_US majority bonus) + SLIDER `yourValue?` (absent without an answer), `correctValue` + ORDER `placed?: { correct, total }` (partial points: `pointsEarned` > 0 with `correct` false, also for PIN near the zone) + WHO_OF_US `votesReceived`, `withMajority?` (absent without a vote) + BLUFF `bluff: { truth, found, lie?, fooled, fooledPoints, fellFor? }` + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) + « Survie » `survival: { hearts, lostHeart, eliminated?, ghost?, hauntEarned? }` (`rank` = survivor ranking) + « Buzzer » `buzzer: { answer, won, wrong, winner? }` (no type-specific fields) + DRAW `draw: { word, drawer?, drew, found, finders }` + « select all » `multiple: { correctIndexes, yours? }` + `explanation?` (T37) |
-| `leaderboard` | host | `{ top: { nickname, avatar, score, jokers?, survival? }[], teams? }` (everyone, up to 15; `jokers` = `{ hand, used? }` in games with jokers; `survival` = `{ hearts, eliminatedAt? }` in « Survie », ordered by the survivor ranking; `teams` in team mode = `{ id, name, score, playerCount }[]`, best first) |
+| `leaderboard` | host | `{ top: { nickname, avatar, score, gained, jokers?, survival? }[], teams? }` (everyone, up to 15; `gained` (T41) = what the player earned on the question just played, after jokers — may be negative, 0 without an answer; `jokers` = `{ hand, used? }` in games with jokers; `survival` = `{ hearts, eliminatedAt? }` in « Survie », ordered by the survivor ranking; `teams` in team mode = `{ id, name, score, playerCount, gained }[]`, best first, `gained` = what the team's score moved by). `podium` never has `gained` |
 | `podium` | all | `{ top: { nickname, avatar, score, survival? }[], teams? }` (top 3 players; all teams in team mode) |
 | `survival:state` | all | « Survie » only, from the lobby on, re-sent after each REVEAL, haunt, join, kick and in both rejoin resyncs: `{ hearts (at start), players: { id, nickname, avatar, hearts, eliminatedAt?, lastLoss?, haunts? }[], finished? }` |
 | `draw:strokes` | host (+ the drawer on rejoin) | « Dessine-moi »: `{ index, clear?, strokes: DrawStroke[] }` — new chunks of the drawing (`mergeStrokes`); `clear` = start from empty (« Tout effacer », or the whole drawing re-sent on `host:rejoin` / `player:rejoin`) |
@@ -414,7 +416,11 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 
 - `/` landing → "Join a game" / "Host"
 - `/join?pin=123456` → phone join screen (QR code points here)
-- `/play` → phone controller
+- `/play` → phone controller. Phone full screen (T41): « ⛶ Plein écran » on `/join`, in the lobby
+  and in the header (Fullscreen API on a tap, never automatic; banner to come back after the
+  browser drops it), `lib/fullscreen.ts`; iPhone Safari (no API): « Sur l'écran d'accueil » hint +
+  web app manifest (`public/manifest.webmanifest`, `display: fullscreen`, `start_url: /join`, icons
+  from `scripts/generate-icons.mjs`)
 - `/remote/:pin#<remoteToken>` → « Télécommande » (T39): the host's phone drives the game (token
   kept in `localStorage` `lbq:remote:<pin>`, removed from the address bar)
 - `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`

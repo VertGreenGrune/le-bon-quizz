@@ -1,4 +1,12 @@
-import { useRef, useState, type PointerEvent, type WheelEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+  type RefObject,
+  type WheelEvent,
+} from 'react';
 import { Reorder, motion } from 'framer-motion';
 import type { LobbyMember, PinPoint, QuestionPromptPayload } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
@@ -28,17 +36,24 @@ export function OrderAnswer({ items }: { items: string[] }) {
   const arrowClass =
     'flex size-10 shrink-0 touch-manipulation items-center justify-center rounded-lg bg-black/10 text-xl font-black active:bg-black/25 disabled:opacity-30';
   return (
-    <div className="flex flex-1 flex-col gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <h2 className="text-center text-2xl font-black">Remets dans l’ordre</h2>
       <p className="-mt-2 text-center text-sm font-semibold opacity-80">
         Fais glisser les éléments, le premier en haut
       </p>
-      <Reorder.Group axis="y" values={order} onReorder={setOrder} className="flex flex-col gap-2">
+      {/* Scrolls on a short phone, so « Valider » always stays on screen (T41). */}
+      <Reorder.Group
+        axis="y"
+        values={order}
+        onReorder={setOrder}
+        layoutScroll
+        className="-mx-1 flex min-h-0 flex-col gap-2 overflow-y-auto px-1 py-0.5 [@media(max-height:640px)]:gap-1.5"
+      >
         {order.map((shown, position) => (
           <Reorder.Item
             key={shown}
             value={shown}
-            className="flex touch-none items-center gap-2 rounded-2xl bg-white p-2 text-brand shadow"
+            className="flex shrink-0 touch-none items-center gap-2 rounded-2xl bg-white p-2 text-brand shadow [@media(max-height:640px)]:p-1"
             whileDrag={{ scale: 1.04, boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }}
             data-testid="order-item"
           >
@@ -73,7 +88,7 @@ export function OrderAnswer({ items }: { items: string[] }) {
         type="button"
         whileTap={{ scale: 0.95 }}
         onClick={() => sendAnswer({ order })}
-        className={`mt-auto ${validateClass}`}
+        className={`mt-auto shrink-0 ${validateClass}`}
       >
         Valider
       </motion.button>
@@ -94,6 +109,10 @@ export function PinAnswer({ imageUrl }: { imageUrl: string }) {
   const [view, setView] = useState<View>(IDENTITY);
   const viewport = useRef<HTMLDivElement>(null);
   const picture = useRef<HTMLDivElement>(null);
+  // The picture takes the height left between the title and « Valider » (T41: never pushes
+  // « Valider » out of the screen, whatever the phone and the joker bar).
+  const area = useRef<HTMLDivElement>(null);
+  const areaHeight = useElementHeight(area);
   // Active pointers and the gesture they started (one finger: tap or pan; two: pinch).
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<
@@ -184,12 +203,16 @@ export function PinAnswer({ imageUrl }: { imageUrl: string }) {
   const zoomButton =
     'grid size-11 place-items-center rounded-full bg-white/90 text-2xl font-black text-brand shadow-lg disabled:opacity-40';
   return (
-    <div className="flex flex-1 flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <div className="flex min-h-0 flex-1 flex-col items-center gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <h2 className="text-center text-2xl font-black">Touche l’image</h2>
       <p className="-mt-2 text-center text-sm opacity-80">
         Pince ou ＋ pour zoomer, glisse pour te déplacer
       </p>
-      <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+      <div
+        ref={area}
+        className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden"
+        style={{ '--pin-max-h': `${pictureMaxHeight(areaHeight)}px` } as CSSProperties}
+      >
         <div className="flex flex-col items-center gap-3">
           <div
             ref={viewport}
@@ -208,7 +231,7 @@ export function PinAnswer({ imageUrl }: { imageUrl: string }) {
               }}
             >
               <div ref={picture} className="relative">
-                <PinPicture src={imageUrl} imgClassName="max-h-[55vh] max-w-full">
+                <PinPicture src={imageUrl} imgClassName="max-h-(--pin-max-h) max-w-full">
                   {point && <Pin point={point} scale={view.scale} />}
                 </PinPicture>
               </div>
@@ -257,6 +280,29 @@ export function PinAnswer({ imageUrl }: { imageUrl: string }) {
       </motion.button>
     </div>
   );
+}
+
+/** Height of the zoom buttons under the picture + the gap above them + their shadow. */
+const ZOOM_ROW_PX = 64;
+
+/** Picture height that fits the area with the zoom buttons (before the first measure: 55vh). */
+export function pictureMaxHeight(areaHeight: number | null): number {
+  if (areaHeight === null) return Math.round((globalThis.innerHeight ?? 800) * 0.55);
+  return Math.max(120, areaHeight - ZOOM_ROW_PX);
+}
+
+/** Height of an element, followed on resize (keyboard, rotation, joker bar…). */
+function useElementHeight(ref: RefObject<HTMLElement | null>): number | null {
+  const [height, setHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setHeight(el.clientHeight));
+    observer.observe(el);
+    setHeight(el.clientHeight);
+    return () => observer.disconnect();
+  }, [ref]);
+  return height;
 }
 
 /** `scale`: zoom of the picture — the mark is counter-scaled to keep its size on screen. */

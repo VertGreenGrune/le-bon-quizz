@@ -12,6 +12,7 @@ import {
   type TeamId,
 } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
+import { FullscreenBanner, FullscreenButton } from '../components/FullscreenButton';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { formatValue, snapToStep } from '../lib/numbers';
@@ -51,6 +52,7 @@ import {
   CopyWaiting,
   FrozenOverlay,
   JokerBar,
+  JokerChip,
   JokerResultLines,
   JokerToast,
   ScrambledButtons,
@@ -74,7 +76,8 @@ export function PlayPage() {
         light
         className="flex h-dvh select-none flex-col overflow-hidden"
       >
-        <TopBar s={s} />
+        <TopBar s={s} screen={screen} />
+        <FullscreenBanner />
         <AnimatePresence mode="wait">
           <motion.section
             key={`${screen}-${s.questionIndex}`}
@@ -129,6 +132,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
             </motion.span>
           )}
           <BouncingShapes />
+          <FullscreenButton variant="big" />
         </Message>
       );
     case 'getReady':
@@ -179,7 +183,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
   }
 }
 
-function TopBar({ s }: { s: PlayerState }) {
+function TopBar({ s, screen }: { s: PlayerState; screen: ReturnType<typeof playerScreen> }) {
   const inQuestion = s.questionIndex >= 0 && s.phase !== 'PODIUM' && s.phase !== 'ENDED';
   // Team mode: the header band takes the team color for the whole game.
   const team = myTeam(s);
@@ -199,7 +203,8 @@ function TopBar({ s }: { s: PlayerState }) {
         </span>
         <HeartsBadge s={s} />
       </span>
-      <span className="flex items-center gap-3">
+      <span className="flex items-center gap-2">
+        <JokerChip s={s} screen={screen} />
         {inQuestion && s.totalQuestions > 0 && (
           <span className="opacity-80">
             {s.questionIndex + 1}/{s.totalQuestions}
@@ -215,6 +220,7 @@ function TopBar({ s }: { s: PlayerState }) {
         >
           {s.totalScore}
         </motion.span>
+        <FullscreenButton variant="icon" />
       </span>
     </header>
   );

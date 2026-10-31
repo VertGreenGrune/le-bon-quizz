@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   JOKERS,
@@ -6,6 +6,7 @@ import {
   type JokerResult,
   type JokerType,
   type LobbyMember,
+  type QuestionType,
 } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import {
@@ -24,9 +25,24 @@ import {
   type PlayerState,
 } from './playerState';
 
-/** Phone, games with jokers: the hand at the bottom of the "get ready" / answer screens. */
-export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }) {
-  const [open, setOpen] = useState<JokerType | null>(null);
+/**
+ * Answer screens that need the whole height (picture to tap, list to order, slider, text field,
+ * avatar grid…): the hand collapses to a « 🃏 n » button in the header (T41), so it never covers
+ * « Valider ». Shape-button screens keep the bar.
+ */
+const FULL_HEIGHT_TYPES = new Set<QuestionType>([
+  'TYPE_ANSWER',
+  'SLIDER',
+  'ORDER',
+  'PIN',
+  'WHO_OF_US',
+  'WORD_CLOUD',
+]);
+
+export type JokerBarMode = 'hidden' | 'bar' | 'chip';
+
+/** Where the hand shows: nowhere, as a bar at the bottom, or as a button in the header. */
+export function jokerBarMode(s: PlayerState, screen: PlayerScreen): JokerBarMode {
   const j = s.jokers;
   const visible =
     s.jokerGame &&
@@ -35,22 +51,30 @@ export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }
     (screen === 'getReady' || screen === 'answer') &&
     !s.paused &&
     !noJokersHere(j);
+  if (!visible) return 'hidden';
+  if (screen !== 'answer') return 'bar';
+  const type = s.prompt?.index === s.questionIndex ? s.prompt.type : undefined;
+  const fullHeight =
+    (type !== undefined && FULL_HEIGHT_TYPES.has(type)) || bluffStage(s) === 'write';
+  return fullHeight ? 'chip' : 'bar';
+}
+
+/** Phone, games with jokers: the hand at the bottom of the "get ready" / answer screens. */
+export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }) {
+  const [open, setOpen] = useState<JokerType | null>(null);
+  const mode = jokerBarMode(s, screen);
+  const j = s.jokers;
   // A new question / the answer sent closes the sheet.
-  useEffect(() => setOpen(null), [s.questionIndex, visible]);
-  if (!visible || !j) return null;
+  useEffect(() => setOpen(null), [s.questionIndex, mode]);
+  if (mode !== 'bar' || !j) return null;
 
   if (j.played) {
-    const info = JOKERS[j.played.joker];
     return (
       <div
         data-testid="joker-bar"
         className="flex items-center justify-center gap-2 bg-black/30 px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-sm font-bold"
       >
-        <span className="text-xl" aria-hidden="true">
-          {info.icon}
-        </span>
-        Joker joué : {info.name}
-        {j.played.target && <> → {j.played.target.nickname}</>}
+        <PlayedJoker s={s} />
       </div>
     );
   }
@@ -64,35 +88,160 @@ export function JokerBar({ s, screen }: { s: PlayerState; screen: PlayerScreen }
         <span className="shrink-0 text-xs font-black uppercase opacity-80">
           Jokers{j.shield && ' · 🛡️'}
         </span>
-        {j.hand.length === 0 && (
-          <span className="text-xs font-semibold opacity-80">
-            Plus de joker : {JOKER_STREAK_STEP} bonnes réponses d'affilée pour en gagner un
-          </span>
-        )}
-        {j.hand.map((joker, i) => {
-          const playable = jokerPlayable(j, joker);
-          return (
-            <motion.button
-              key={`${joker}-${i}`}
-              type="button"
-              whileTap={{ scale: 0.9 }}
-              disabled={!playable}
-              onClick={() => setOpen(joker)}
-              aria-label={`Joker ${JOKERS[joker].name}`}
-              className="flex shrink-0 touch-manipulation flex-col items-center rounded-xl bg-white/90 px-2 py-1 text-brand shadow disabled:opacity-35"
-            >
-              <span className="text-2xl leading-none" aria-hidden="true">
-                {JOKERS[joker].icon}
-              </span>
-              <span className="text-[0.65rem] font-black">{JOKERS[joker].name}</span>
-            </motion.button>
-          );
-        })}
+        <JokerHand s={s} onPick={setOpen} />
       </div>
       <AnimatePresence>
         {open && <JokerSheet s={s} joker={open} onClose={() => setOpen(null)} />}
       </AnimatePresence>
     </>
+  );
+}
+
+/**
+ * The hand as a small « 🃏 n » button in the phone header, on the answer screens that need the
+ * whole height (`jokerBarMode` = `chip`): a tap opens the hand, then the usual joker sheet.
+ */
+export function JokerChip({ s, screen }: { s: PlayerState; screen: PlayerScreen }) {
+  const [handOpen, setHandOpen] = useState(false);
+  const [open, setOpen] = useState<JokerType | null>(null);
+  const mode = jokerBarMode(s, screen);
+  const j = s.jokers;
+  useEffect(() => {
+    setHandOpen(false);
+    setOpen(null);
+  }, [s.questionIndex, mode]);
+  if (mode !== 'chip' || !j) return null;
+
+  const playable = !j.played && j.hand.some((joker) => jokerPlayable(j, joker));
+  return (
+    <>
+      <motion.button
+        type="button"
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setHandOpen(true)}
+        aria-label={j.played ? `Joker joué : ${JOKERS[j.played.joker].name}` : 'Mes jokers'}
+        data-testid="joker-chip"
+        className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-black ${
+          playable ? 'bg-white text-brand shadow' : 'bg-white/25'
+        }`}
+      >
+        <span aria-hidden="true">{j.played ? JOKERS[j.played.joker].icon : '🃏'}</span>
+        {!j.played && <span className="tabular-nums">{j.hand.length}</span>}
+      </motion.button>
+      <AnimatePresence>
+        {handOpen && (
+          <BottomSheet label="Mes jokers" onClose={() => setHandOpen(false)}>
+            <h2 className="text-center text-2xl font-black">🃏 Mes jokers{j.shield && ' · 🛡️'}</h2>
+            {j.played ? (
+              <p className="text-center font-bold">
+                <PlayedJoker s={s} />
+              </p>
+            ) : (
+              <div className="flex flex-wrap justify-center gap-2">
+                <JokerHand
+                  s={s}
+                  onPick={(joker) => {
+                    setHandOpen(false);
+                    setOpen(joker);
+                  }}
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setHandOpen(false)}
+              className="py-2 font-bold text-gray-500"
+            >
+              Fermer
+            </button>
+          </BottomSheet>
+        )}
+        {open && <JokerSheet s={s} joker={open} onClose={() => setOpen(null)} />}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function PlayedJoker({ s }: { s: PlayerState }) {
+  const played = s.jokers?.played;
+  if (!played) return null;
+  const info = JOKERS[played.joker];
+  return (
+    <>
+      <span className="text-xl" aria-hidden="true">
+        {info.icon}
+      </span>{' '}
+      Joker joué : {info.name}
+      {played.target && <> → {played.target.nickname}</>}
+    </>
+  );
+}
+
+/** The joker buttons of the hand (greyed when this question doesn't take them). */
+function JokerHand({ s, onPick }: { s: PlayerState; onPick: (joker: JokerType) => void }) {
+  const j = s.jokers!;
+  if (j.hand.length === 0)
+    return (
+      <span className="text-xs font-semibold opacity-80">
+        Plus de joker : {JOKER_STREAK_STEP} bonnes réponses d'affilée pour en gagner un
+      </span>
+    );
+  return (
+    <>
+      {j.hand.map((joker, i) => {
+        const playable = jokerPlayable(j, joker);
+        return (
+          <motion.button
+            key={`${joker}-${i}`}
+            type="button"
+            whileTap={{ scale: 0.9 }}
+            disabled={!playable}
+            onClick={() => onPick(joker)}
+            aria-label={`Joker ${JOKERS[joker].name}`}
+            className="flex shrink-0 touch-manipulation flex-col items-center rounded-xl bg-white/90 px-2 py-1 text-brand shadow ring-1 ring-black/10 disabled:opacity-35"
+          >
+            <span className="text-2xl leading-none" aria-hidden="true">
+              {JOKERS[joker].icon}
+            </span>
+            <span className="text-[0.65rem] font-black">{JOKERS[joker].name}</span>
+          </motion.button>
+        );
+      })}
+    </>
+  );
+}
+
+/** White sheet from the bottom of the phone screen, closed by a tap outside. */
+function BottomSheet({
+  label,
+  onClose,
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-40 flex items-end bg-black/60"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        initial={{ y: 200 }}
+        animate={{ y: 0 }}
+        exit={{ y: 200 }}
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[80dvh] w-full flex-col gap-3 overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-gray-900"
+      >
+        {children}
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -118,65 +267,48 @@ function JokerSheet({
     else onClose();
   };
   return (
-    <motion.div
-      className="fixed inset-0 z-40 flex items-end bg-black/60"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Joker ${info.name}`}
-        initial={{ y: 200 }}
-        animate={{ y: 0 }}
-        exit={{ y: 200 }}
-        onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[80dvh] w-full flex-col gap-3 overflow-y-auto rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-gray-900"
-      >
-        <p className="text-center text-5xl" aria-hidden="true">
-          {info.icon}
-        </p>
-        <h2 className="text-center text-2xl font-black">{info.name}</h2>
-        <p className="text-center font-semibold text-gray-600">{info.description}</p>
-        {info.target ? (
-          <>
-            <p className="font-black">{joker === 'copy' ? 'Qui copier ?' : 'Sur qui ?'}</p>
-            {targets.length === 0 && (
-              <p className="text-sm text-gray-500">Personne à viser sur cette question.</p>
-            )}
-            <div className="grid grid-cols-3 gap-2">
-              {targets.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void play(t)}
-                  className="flex touch-manipulation flex-col items-center gap-1 rounded-xl border-2 border-gray-200 p-2 font-bold active:border-brand"
-                >
-                  <Avatar id={t.avatar} size="md" />
-                  <span className="max-w-full truncate text-sm">{t.nickname}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void play()}
-            className="touch-manipulation rounded-2xl bg-answer-green py-4 text-2xl font-black text-white shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)]"
-          >
-            Jouer
-          </button>
-        )}
-        {error && <p className="text-center font-bold text-answer-red">{error}</p>}
-        <button type="button" onClick={onClose} className="py-2 font-bold text-gray-500">
-          Annuler
+    <BottomSheet label={`Joker ${info.name}`} onClose={onClose}>
+      <p className="text-center text-5xl" aria-hidden="true">
+        {info.icon}
+      </p>
+      <h2 className="text-center text-2xl font-black">{info.name}</h2>
+      <p className="text-center font-semibold text-gray-600">{info.description}</p>
+      {info.target ? (
+        <>
+          <p className="font-black">{joker === 'copy' ? 'Qui copier ?' : 'Sur qui ?'}</p>
+          {targets.length === 0 && (
+            <p className="text-sm text-gray-500">Personne à viser sur cette question.</p>
+          )}
+          <div className="grid grid-cols-3 gap-2">
+            {targets.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={busy}
+                onClick={() => void play(t)}
+                className="flex touch-manipulation flex-col items-center gap-1 rounded-xl border-2 border-gray-200 p-2 font-bold active:border-brand"
+              >
+                <Avatar id={t.avatar} size="md" />
+                <span className="max-w-full truncate text-sm">{t.nickname}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void play()}
+          className="touch-manipulation rounded-2xl bg-answer-green py-4 text-2xl font-black text-white shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)]"
+        >
+          Jouer
         </button>
-      </motion.div>
-    </motion.div>
+      )}
+      {error && <p className="text-center font-bold text-answer-red">{error}</p>}
+      <button type="button" onClick={onClose} className="py-2 font-bold text-gray-500">
+        Annuler
+      </button>
+    </BottomSheet>
   );
 }
 

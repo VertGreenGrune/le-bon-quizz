@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { GamePhase, QuestionAudio, QuestionShowPayload } from '@lbq/shared';
-import { setDucked, useMuted } from './sounds';
+import { setDucked, useMuted, useSoundLevels } from './sounds';
 import { mediaUrl } from '../lib/mediaUrl';
 
 /** The part of `HTMLAudioElement` the clip player uses (a fake one in the unit tests). */
 export interface AudioLike {
   src: string;
   currentTime: number;
+  volume: number;
   readonly paused: boolean;
   preload: string;
   play(): Promise<void>;
@@ -34,6 +35,8 @@ export class ClipPlayer {
   private el: AudioLike | null = null;
   private wish: ClipWish | null = null;
   private muted = false;
+  /** « Extraits du quiz » level (T41), 0–1; 0 = silent like `muted`. */
+  private volume = 1;
   /** A one-shot clip (reveal) reached its end: don't restart it until `replay()`. */
   private finished = false;
   private wasPlaying = false;
@@ -49,10 +52,12 @@ export class ClipPlayer {
     return this.wasPlaying;
   }
 
-  update(wish: ClipWish | null, muted: boolean): void {
+  update(wish: ClipWish | null, muted: boolean, volume = 1): void {
     const prev = this.wish;
     this.wish = wish && wish.mode !== 'stopped' ? wish : null;
     this.muted = muted;
+    this.volume = Math.min(1, Math.max(0, volume));
+    if (this.el) this.el.volume = this.volume;
     if (this.wish && (prev?.key !== this.wish.key || prev.clip.url !== this.wish.clip.url)) {
       this.load(this.wish.clip);
     }
@@ -68,13 +73,14 @@ export class ClipPlayer {
   }
 
   dispose(): void {
-    this.update(null, this.muted);
+    this.update(null, this.muted, this.volume);
   }
 
   private load(clip: QuestionAudio) {
     if (!this.el) {
       const el = this.createAudio();
       el.preload = 'auto';
+      el.volume = this.volume;
       el.addEventListener('timeupdate', () => this.onTime(false));
       el.addEventListener('ended', () => this.onTime(true));
       // Some browsers ignore a seek before the metadata is known: seek again.
@@ -92,7 +98,12 @@ export class ClipPlayer {
 
   private apply() {
     const el = this.el;
-    const shouldPlay = !!this.wish && this.wish.mode === 'playing' && !this.muted && !this.finished;
+    const shouldPlay =
+      !!this.wish &&
+      this.wish.mode === 'playing' &&
+      !this.muted &&
+      this.volume > 0 &&
+      !this.finished;
     if (el) {
       if (shouldPlay && el.paused) this.tryPlay(el);
       else if (!shouldPlay && !el.paused) el.pause();
@@ -172,6 +183,7 @@ export function useQuestionClip(
   paused: boolean,
 ): { replay: () => void } {
   const muted = useMuted();
+  const { clips } = useSoundLevels();
   const player = useRef<ClipPlayer | null>(null);
   if (typeof Audio !== 'undefined') {
     player.current ??= new ClipPlayer(createClipElement, setDucked);
@@ -181,8 +193,8 @@ export function useQuestionClip(
   const wishJson = JSON.stringify(wish);
 
   useEffect(() => {
-    player.current?.update(JSON.parse(wishJson) as ClipWish | null, muted);
-  }, [wishJson, muted]);
+    player.current?.update(JSON.parse(wishJson) as ClipWish | null, muted, clips);
+  }, [wishJson, muted, clips]);
 
   useEffect(() => () => player.current?.dispose(), []);
 

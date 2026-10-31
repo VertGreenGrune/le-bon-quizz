@@ -47,6 +47,48 @@ export function writeMuted(storage: Pick<Storage, 'setItem'> | undefined, muted:
   }
 }
 
+/**
+ * Volume levels of the TV (T41), 0–1: « Musique et effets » (every sound of this file) and
+ * « Extraits du quiz » (the question's sound clip, `clipPlayer.ts`). « Tout couper » is `muted`.
+ */
+export interface SoundLevels {
+  music: number;
+  clips: number;
+}
+
+export const DEFAULT_LEVELS: SoundLevels = { music: 1, clips: 1 };
+
+const LEVEL_KEYS: Record<keyof SoundLevels, string> = {
+  music: 'lbq:host:music-volume',
+  clips: 'lbq:host:clip-volume',
+};
+
+/** A stored level (0–100); missing / unreadable / out of range → 100 %. */
+export function readLevels(storage: Pick<Storage, 'getItem'> | undefined): SoundLevels {
+  const read = (key: string, fallback: number) => {
+    try {
+      const raw = storage?.getItem(key);
+      const value = raw == null || raw === '' ? NaN : Number(raw);
+      return Number.isFinite(value) && value >= 0 && value <= 100 ? value / 100 : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  return {
+    music: read(LEVEL_KEYS.music, DEFAULT_LEVELS.music),
+    clips: read(LEVEL_KEYS.clips, DEFAULT_LEVELS.clips),
+  };
+}
+
+export function writeLevels(storage: Pick<Storage, 'setItem'> | undefined, levels: SoundLevels) {
+  try {
+    storage?.setItem(LEVEL_KEYS.music, String(Math.round(levels.music * 100)));
+    storage?.setItem(LEVEL_KEYS.clips, String(Math.round(levels.clips * 100)));
+  } catch {
+    // Not remembered, but the sliders still work for this page.
+  }
+}
+
 function localStorageOrUndefined(): Storage | undefined {
   try {
     return typeof localStorage === 'undefined' ? undefined : localStorage;
@@ -60,6 +102,10 @@ function localStorageOrUndefined(): Storage | undefined {
 /** Read lazily: touching `localStorage` at import time warns under Node (unit tests). */
 let muted: boolean | null = null;
 const isMuted = () => (muted ??= readMuted(localStorageOrUndefined()));
+let levels: SoundLevels | null = null;
+const getLevels = () => (levels ??= readLevels(localStorageOrUndefined()));
+/** The game sounds are silent: everything cut, or the music level at 0. */
+const musicSilent = () => isMuted() || getLevels().music === 0;
 const listeners = new Set<() => void>();
 /** One element per sound *file* (a theme swaps some files). */
 const elements = new Map<string, HTMLAudioElement>();
@@ -73,7 +119,7 @@ let ducked = false;
 const volumes = new Map<HTMLAudioElement, number>();
 
 function applyVolume(el: HTMLAudioElement) {
-  el.volume = (volumes.get(el) ?? 1) * (ducked ? DUCK_FACTOR : 1);
+  el.volume = (volumes.get(el) ?? 1) * getLevels().music * (ducked ? DUCK_FACTOR : 1);
 }
 
 export function setDucked(value: boolean) {
@@ -127,14 +173,14 @@ function tryPlay(el: HTMLAudioElement) {
 }
 
 function startLoop(name: SoundName) {
-  if (isMuted() || typeof Audio === 'undefined') return;
+  if (musicSilent() || typeof Audio === 'undefined') return;
   const el = element(name);
   el.loop = true;
   if (el.paused) tryPlay(el);
 }
 
 export function playSound(name: SoundName) {
-  if (isMuted() || typeof Audio === 'undefined') return;
+  if (musicSilent() || typeof Audio === 'undefined') return;
   const el = element(name);
   el.currentTime = 0;
   tryPlay(el);
@@ -151,19 +197,58 @@ export function stopAllSounds() {
   for (const el of elements.values()) el.pause();
 }
 
+/** Pauses or restarts the game sounds after « Tout couper » / the music level changed. */
+function applySilence() {
+  if (musicSilent()) for (const el of elements.values()) el.pause();
+  else if (wantedLoop) startLoop(wantedLoop);
+}
+
 export function setMuted(value: boolean) {
   muted = value;
   writeMuted(localStorageOrUndefined(), value);
-  if (value) for (const el of elements.values()) el.pause();
-  else if (wantedLoop) startLoop(wantedLoop);
+  applySilence();
   listeners.forEach((l) => l());
 }
 
+/** Sets one or both levels (0–1), remembered in `localStorage`, applied live. */
+export function setLevels(change: Partial<SoundLevels>) {
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  const prev = getLevels();
+  levels = {
+    music: clamp(change.music ?? prev.music),
+    clips: clamp(change.clips ?? prev.clips),
+  };
+  writeLevels(localStorageOrUndefined(), levels);
+  for (const el of elements.values()) applyVolume(el);
+  applySilence();
+  listeners.forEach((l) => l());
+}
+
+/** Current levels (outside React). */
+export const getSoundLevels = (): SoundLevels => getLevels();
+
+/** Step of the remote's « Musique − / + ». */
+export const MUSIC_STEP = 0.2;
+
+/** One « − / + » step, rounded to the step so 100 % → 80 % → … → 0 % → 20 %. */
+export function stepLevel(level: number, up: boolean): number {
+  const steps = Math.round(level / MUSIC_STEP) + (up ? 1 : -1);
+  return Math.min(1, Math.max(0, Math.round(steps * MUSIC_STEP * 100) / 100));
+}
+
+function subscribe(l: () => void) {
+  listeners.add(l);
+  return () => {
+    listeners.delete(l);
+  };
+}
+
 export function useMuted(): boolean {
-  return useSyncExternalStore((l) => {
-    listeners.add(l);
-    return () => listeners.delete(l);
-  }, isMuted);
+  return useSyncExternalStore(subscribe, isMuted);
+}
+
+export function useSoundLevels(): SoundLevels {
+  return useSyncExternalStore(subscribe, getLevels);
 }
 
 // ---------- Game → sounds ----------

@@ -63,6 +63,11 @@ export interface RankedPlayer {
   nickname: string;
   avatar: AvatarId;
   score: number;
+  /**
+   * `leaderboard` only (T41): what the player earned on the question just played, after jokers
+   * (« Double ou rien » lost, stolen by a « Voleur »… can make it negative; no answer = 0).
+   */
+  gained?: number;
   /** `leaderboard` of a game with jokers: the player's hand and the joker played last question. */
   jokers?: { hand: JokerType[]; used?: JokerType };
   /** « Survie »: hearts left (0 = ghost) and the question index they were eliminated at. */
@@ -82,6 +87,8 @@ export interface RankedTeam {
   name: string;
   score: number;
   playerCount: number;
+  /** `leaderboard` only (T41): what the team's score moved by on the question just played. */
+  gained?: number;
 }
 
 export interface StandingsPayload {
@@ -129,9 +136,12 @@ export const HostJudgePayload = hostAction({ correct: z.boolean() });
 export const HostRemotePayload = HostTokenPayload.extend({ revoke: z.literal(true).optional() });
 /** A phone opened the remote link `/remote/<PIN>#<remoteToken>`. */
 export const RemoteJoinPayload = z.object({ pin: Pin, remoteToken: z.string().min(1) });
-export const TvAction = z.enum(['mute', 'unmute', 'replay']);
+export const TvAction = z.enum(['mute', 'unmute', 'replay', 'music-down', 'music-up']);
 export type TvAction = z.infer<typeof TvAction>;
-/** Remote → TV: 🔇 / 🔊 the TV's sound, ↻ replay the question's sound clip. */
+/**
+ * Remote → TV: 🔇 / 🔊 the TV's sound (« Tout couper »), ↻ replay the question's sound clip,
+ * « Musique − / + » the « Musique et effets » level by 20 % (T41).
+ */
 export const RemoteTvPayload = RemoteJoinPayload.extend({ action: TvAction });
 
 /** `avatar` missing (older clients) → the server picks a random one. */

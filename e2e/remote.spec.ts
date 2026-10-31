@@ -144,10 +144,16 @@ test('the host drives the game from a phone remote', async ({ browser, baseURL }
   await expect(phone.getByRole('heading', { name: 'Bien joué !' })).toBeVisible();
 
   // ---- TV controls relayed ----
+  const tvSound = tv.getByRole('button', { name: 'Réglages du son' });
   await remote.getByRole('button', { name: 'Couper le son de la TV' }).click();
-  await expect(tv.getByRole('button', { name: 'Activer le son' })).toBeVisible();
+  await expect(tvSound).toContainText('🔇');
   await remote.getByRole('button', { name: 'Remettre le son de la TV' }).click();
-  await expect(tv.getByRole('button', { name: 'Couper le son' })).toBeVisible();
+  await expect(tvSound).toContainText('🔊');
+  // « Musique − » (T41): the TV's « Musique et effets » level goes down by 20 %.
+  await remote.getByRole('button', { name: 'Baisser la musique de la TV' }).click();
+  await expect
+    .poll(() => tv.evaluate(() => localStorage.getItem('lbq:host:music-volume')))
+    .toBe('80');
 
   // ---- To the podium ----
   await remote.getByTestId('remote-main').click(); // Suivant
