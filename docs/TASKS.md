@@ -2205,7 +2205,7 @@ solo / teams / « Survie », with the pause and both resyncs.
   `game/rejudge.ts`) with small hooks in `Game.ts`; the main agent resolves the leftovers at merge.
 
 ### T41 — UI fixes: separate volumes, points per question, phone full screen, PIN joker bar
-- **Status:** todo
+- **Status:** in-progress (T41 agent)
 - **Depends on:** — Runs in parallel with T42 (see « Wave 8 coordination »).
 - **Ports:** server 3041 / web 5241, test DB `lbq_test_t41`, e2e DB `lbq_e2e_t41`.
 - **Scope:** `apps/web/src/host/**` (sounds, header, leaderboard), `apps/web/src/player/**`
