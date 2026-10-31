@@ -2179,6 +2179,201 @@ background, the music and the confetti follow the quiz.
   ~2.6 MB of WAV (loaded only by the theme in use). (4) Emoji rendering (bats, pumpkins) varies by
   OS. Not tried on a real TV / real phones.
 
+## Phase 6 — Corrections after real games
+
+**User feedback (2026-10-31)**, 8 corrections, grouped in 4 tasks so parallel agents don't edit
+the same code: **T41** (TV + phone UI: 1, 2, 4, 5) ‖ **T42** (jokers timing: 3, 8) — then
+**T43** (cancel an answer: 6) ‖ **T44** (host accepts a rejected answer: 7). Same rules as before:
+claim on `main`, own worktree, ports `30<nn>` / `52<nn>`, test DB `lbq_test_t<nn>`, e2e DB
+`lbq_e2e_t<nn>`, shared Postgres (never `docker compose down`), French UI, every feature works in
+solo / teams / « Survie », with the pause and both resyncs.
+
+### Wave 8 coordination — T41 ‖ T42
+- **T41 owns the look** of the TV leaderboard, the host sound settings, the phone's full-screen
+  button and the phone answer-screen layout (joker bar placement). **T42 owns the joker rules**
+  (`apps/server/src/game/jokers.ts`, `packages/shared/src/jokers.ts`), the intro duration and the
+  joker bar's *content* (which jokers are playable when).
+- Both touch `apps/web/src/player/jokers.tsx` / `PlayPage.tsx`: T41 only changes *where* the bar
+  sits and how it collapses; T42 only *when* it shows and what it offers. In `Game.ts`, T41 only
+  adds `gained` to the leaderboard payload; T42 changes the intro timer and the joker hooks.
+- `packages/shared/src/events.ts`: both only **add** fields.
+
+### Wave 9 coordination — T43 ‖ T44 (after wave 8 is merged)
+- Both edit `Game.ts`, in different places: **T43** the answer path (`answer` / `recordAnswer`,
+  « everyone answered → reveal », Copieur), **T44** the reveal settlement (`enterReveal` and what
+  it scores). Keep the changes in new helpers / files where possible (`game/answerCancel.ts`,
+  `game/rejudge.ts`) with small hooks in `Game.ts`; the main agent resolves the leftovers at merge.
+
+### T41 — UI fixes: separate volumes, points per question, phone full screen, PIN joker bar
+- **Status:** todo
+- **Depends on:** — Runs in parallel with T42 (see « Wave 8 coordination »).
+- **Ports:** server 3041 / web 5241, test DB `lbq_test_t41`, e2e DB `lbq_e2e_t41`.
+- **Scope:** `apps/web/src/host/**` (sounds, header, leaderboard), `apps/web/src/player/**`
+  (layout, full screen), `apps/web/src/remote/**` (volume relay only), `apps/web/index.html` +
+  `public/manifest.webmanifest`, `packages/shared/src/events.ts` (additive), the leaderboard payload
+  in `apps/server/src/game/**`, PLAN.md.
+
+**1. Two volumes on the TV (« Musique » / « Extraits »).** Today one 🔊 / 🔇 toggle drives
+everything. Replace it with a small « 🔊 Son » popover in the TV header: two sliders 0–100 %
+— **Musique et effets** (lobby music, ticks, reveal, podium, joker / buzz sounds) and **Extraits
+du quiz** (the question's sound clip, blind tests) — plus « Tout couper ». Remembered in
+`localStorage` (two new keys for the levels, default 100 % / 100 %; the existing `lbq:host:muted`
+flag stays as « Tout couper »), applied live (`sounds.ts` volumes × music level, `clipPlayer` × clip level; ducking
+unchanged). The remote's 🔇 / 🔊 keep working (they toggle « Tout couper »); add « Musique − / + »
+on the remote only if cheap (relay `remote:tv` new actions, additive).
+
+**2. Points earned by each player after each question.** The TV leaderboard (and the « Survie »
+and team leaderboards) shows next to each player what they earned on the question just played:
+« +850 », « +0 », « −500 » (Double ou rien lost, stolen by a Voleur…) — big and readable, shown
+first while the previous ranking is displayed, then the rows re-order and the scores count up (the
+existing 1.2 s animation). Team mode: the team's « +n » too. Contract (additive): `RankedPlayer.gained?:
+number` (= this question's `pointsEarned` after jokers, absent before the first question / in the
+podium) and `RankedTeam.gained?`; also in the host resync. Points of players who didn't answer
+show « +0 ». Don't rely on the client's previous leaderboard (lost after a reload).
+
+**4. Phone in full screen.** A « ⛶ Plein écran » button on the join screen and in the phone's
+lobby (and a small icon in the header during the game) that calls the Fullscreen API on the tap
+(`document.documentElement.requestFullscreen({ navigationUI: 'hide' })`, keeps the wake lock);
+« Quitter le plein écran » when active; re-asked after the browser drops it (e.g. phone locked)
+with a small banner, never automatically. Hidden where unsupported (iPhone Safari): there, a hint
+« Sur iPhone : Partager → Sur l'écran d'accueil » and a **web app manifest**
+(`display: "fullscreen"`, `start_url: "/join"`, name « Le Bon Quizz », icons — reuse the favicon
+/ make a simple one) + `apple-mobile-web-app-capable` / `-status-bar-style` metas so the
+home-screen app opens without browser bars. Portrait lock when supported
+(`screen.orientation.lock('portrait')`, ignore failures).
+
+**5. « Point sur l'image »: the joker bar hides « Valider ».** Fix the layout of **every** phone
+answer screen so the joker bar never covers an action button: the bar takes its own space at the
+bottom (the answer area shrinks, `pb` = bar height, safe-area insets), and on screens that need
+the whole height (PIN with zoom, ORDER list, slider, typed answer with the keyboard open) the bar
+collapses to a small « 🃏 n » button that opens the bottom sheet. « Valider » always stays visible
+and tappable (check with the zoom buttons under the picture). e2e: PIN question with jokers on a
+Pixel 7 and an iPhone SE viewport — « Valider » is visible and clickable.
+
+**Tests:** sound levels (storage, migration of the old flag, clip vs music factors), leaderboard
+`gained` (server: per question, jokers / Voleur negative, absent player +0, team gain, resync),
+full-screen helper (supported / unsupported / dropped), layout e2e (PIN + ORDER + slider with
+jokers on 2 phone sizes), TV leaderboard screenshot with gains.
+
+### T42 — Jokers that hit the current question + jokers after answering
+- **Status:** todo
+- **Depends on:** — Runs in parallel with T41 (see « Wave 8 coordination »).
+- **Ports:** server 3042 / web 5242, test DB `lbq_test_t42`, e2e DB `lbq_e2e_t42`.
+- **Scope:** `apps/server/src/game/**` (jokers, intro timer), `packages/shared/src/jokers.ts` +
+  `game.ts` + `events.ts` (additive), `apps/web/src/player/**` (joker bar content / timing),
+  `apps/web/src/host/**` (intro screen countdown, announcements), PLAN.md §2 / §3.
+
+**3. Attacks land on the current question, with time to play them.**
+- **Longer intro in games with jokers:** `QUESTION_INTRO` lasts **8 s** (`JOKER_INTRO_MS`) instead
+  of 3 s when the game has jokers (« Survie » with haunts too), and a little longer for long
+  question texts (+1 s per 40 characters beyond 80, max 12 s) in every game, so people can read it.
+  The TV shows the question alone with « 🃏 Jouez vos jokers ! » and a countdown bar before the
+  choices / timer appear; the phones show the joker bar big during the intro. The host can still
+  skip it (« Passer »). Pause / resync as usual (the intro timer already freezes).
+- **Attacks hit now:** Gel and Brouilleur played during `QUESTION_INTRO` — or during `ANSWERING` on a
+  target who **hasn't answered yet** — apply to **this** question: Gel = the target's answers are
+  refused for 5 s from the start of ANSWERING (or from the moment it lands, if played during
+  ANSWERING); Brouilleur = the target's buttons turn grey and shuffled right away (`joker:state`
+  pushed to the target). A target who already answered → `JOKER_REFUSED` « … a déjà répondu »
+  (the joker stays in hand). Questions an attack can't hit (no right answer, Brouilleur on typed /
+  slider / ORDER / PIN…, buzzer, DRAW) → refused with a clear message instead of waiting for a later
+  question. « Survie » haunts (used between questions) keep landing on the target's next question
+  that takes them. Bouclier still blocks them. Voleur unchanged (settled at the reveal).
+- Update the joker descriptions in `JOKERS` (phone bottom sheet), PLAN.md §3, and the TV
+  announcements (« 🥶 Red a gelé Batou ! » now means this question).
+
+**8. Jokers while waiting for the others.** After answering, during `ANSWERING`, a player can still
+play **one** joker for this question (still one per question) among those that make sense:
+🥶 Gel, 🌀 Brouilleur (on players who haven't answered), 🦹 Voleur, ✖️2 Double ou rien, 🛡️ Bouclier,
+⏳ Sablier (applied to the recorded answer time). 🎯 50/50 and 🦜 Copieur stay « before answering »
+only (greyed with the reason). The « Réponse envoyée ! » screen shows the joker bar.
+`jokerAvailability` gains an « after answering » flag per joker (single table, as before).
+
+**Tests:** intro length (jokers / no jokers / long text, capped), Gel / Brouilleur during the intro
+hit the current question, during ANSWERING hit a target who hasn't answered, refused on a target who
+answered or a type they can't hit (joker kept in hand), Bouclier still blocks, haunts unchanged,
+each « after answering » joker (Double, Voleur, Bouclier, Sablier on the recorded time), 50/50 and
+Copieur refused after answering, team / Survie, pause during the intro, resyncs; e2e: Alice freezes
+Bob during the intro → Bob frozen on this question; Alice answers then plays Double ou rien.
+
+### T43 — Cancel an answer
+- **Status:** todo
+- **Depends on:** T41, T42 merged. Runs in parallel with T44 (see « Wave 9 coordination »).
+- **Ports:** server 3043 / web 5243, test DB `lbq_test_t43`, e2e DB `lbq_e2e_t43`.
+- **Scope:** `apps/server/src/game/**` (answer path, new `game/answerCancel.ts`),
+  `packages/shared/src/events.ts` (additive), `apps/web/src/player/**`, `apps/web/src/host/**`
+  (answer counter only), PLAN.md §3 / §4.
+
+**6. « Annuler ma réponse ».** During `ANSWERING`, the « Réponse envoyée ! » screen gets an
+« ↩︎ Annuler ma réponse » button: the answer is removed on the server (`player:unanswer
+{ pin, questionIndex }` → `Ack`), the phone goes back to the answer screen, and the next answer is
+scored from **its own** time (speed points from the new answer; no advantage). `answer:count`
+goes down. Rules:
+- **Everyone answered:** today the last answer reveals at once, leaving no time to cancel. Now the
+  server waits **2 s** (`ALL_ANSWERED_GRACE_MS`) after the last answer (TV: « Tout le monde a
+  répondu ! »), a cancel during that window stops the reveal; the timer running out still reveals.
+- **Not cancellable:** « Buzzer » questions (the host judges out loud), « Dessine-moi » (guesses),
+  « Mytho ! » vote (the lie can already be changed while writing; the vote stays final). Every other
+  type can be cancelled (incl. « Qui de nous ? » votes and the « select all » MCQ). A copied answer (Copieur) can't be cancelled by the
+  copier; if the **target** cancels, the copier's copy is removed too and re-copied when the target
+  answers again. A joker played before answering stays played (one per question); « after
+  answering » jokers (T42) stay too, and apply to the new answer.
+- Gel: a frozen player can't re-answer during the freeze. Pause: refused while paused
+  (`GAME_PAUSED`). Limit: 3 cancels per question per player (avoid spam).
+- Phones: one tap + a short confirmation-free undo; vibration. The TV shows nothing special (just
+  the counter).
+
+**Tests:** cancel → re-answer → points from the new time, count down, cancel in the 2 s grace stops
+the reveal, timer still reveals, refused types / states (buzzer, draw, bluff vote, paused, after
+reveal, frozen), Copieur target cancels → copy removed and redone, jokers kept, 3-cancel limit,
+team / Survie, rejoin while cancelled (phone gets the prompt again); e2e: answer, cancel, answer
+another choice, result matches the second answer.
+
+### T44 — The host accepts an answer that was refused
+- **Status:** todo
+- **Depends on:** T41, T42 merged. Runs in parallel with T43 (see « Wave 9 coordination »).
+- **Ports:** server 3044 / web 5244, test DB `lbq_test_t44`, e2e DB `lbq_e2e_t44`.
+- **Scope:** `apps/server/src/game/**` (reveal settlement, new `game/rejudge.ts`),
+  `apps/server/src/game/persistence.ts` (report snapshot), `packages/shared/src/events.ts`
+  (additive), `apps/web/src/host/**` (reveal screens), `apps/web/src/remote/**`,
+  `apps/web/src/player/**` (updated result), `apps/web/src/reports/**`, PLAN.md §3 / §4.
+
+**7. « Accepter aussi cette réponse ».** When the quiz's answer was set wrong, the host fixes the
+score at the end of the question, on the reveal screen (TV and remote):
+- **Choix multiple / vrai-faux:** each distribution bar gets « ✅ Accepter » (a refused choice
+  becomes right too; for vrai / faux, accepting the other choice makes both right). « Select all »
+  MCQ: accepting a choice adds it to the right set (players who ticked exactly the new set become
+  right).
+- **Réponse libre:** each refused typed group in the reveal list (show **all** groups on the remote,
+  not only the top 6) gets « ✅ Accepter ».
+- **Curseur:** « ✅ Accepter les réponses à ± n » (widen the margin) — optional if simple.
+- Other types (ORDER, PIN, BLUFF, buzzer, polls, DRAW): not offered.
+- Contract: `host:accept { pin, hostToken | remoteToken, questionIndex, choiceIndex? | text? |
+  margin? }` → `Ack`, REVEAL of that question only (`NOT_REVEALING` otherwise, i.e. not after
+  « Suivant »). Several accepts in a row are fine; no undo needed (or « Annuler » the last accept
+  if cheap).
+- **Re-scoring:** at `enterReveal`, keep a snapshot of everything the settlement changes (scores,
+  streaks, team scores, « Survie » hearts / eliminations / haunts, joker hands / results, Voleur
+  transfers). An accept restores the snapshot and re-runs the settlement with the extra accepted
+  answer(s): the newly right players get their time-based points (from their real answer time),
+  streak, streak bonus, jokers (Double ×2, Bouclier, Voleur…), team averages, « Survie » heart
+  given back (an elimination caused by this question is undone). Then re-send `question:reveal`
+  (with `accepted` marks), every `player:result` (a phone already on its result screen updates:
+  « ✅ Réponse acceptée par l'animateur ! » + the new points), `leaderboard` data and
+  `survival:state`; the saved `QuestionResult` (report) and `correctCount` follow. Jokers dealt for
+  streaks are re-dealt deterministically (same random draws).
+- TV: « ✅ Réponse acceptée » badge on the bar / group; the « 💡 Le saviez-vous ? » card unchanged.
+  Report: the question card shows « réponse acceptée par l'animateur : … ».
+- (Not in this task: saving the fix into the quiz itself — the host edits the quiz in the editor.)
+
+**Tests:** accept on MCQ (single / select all), vrai-faux, typed group, slider margin (if done);
+points from the real answer time, streak + bonus, Double / Bouclier / Voleur re-settled, team
+averages, « Survie » heart given back + elimination undone + game-end check, idempotent second
+accept, refused after « Suivant » / on other types / from a player, both resyncs carry the new
+reveal and results, saved report; e2e: MCQ where the quiz marks the wrong choice, Bob picked the
+real answer → host accepts from the remote → Bob's phone shows the accepted result and the
+leaderboard has his points.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
