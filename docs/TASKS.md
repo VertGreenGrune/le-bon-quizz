@@ -2407,7 +2407,7 @@ team / Survie, rejoin while cancelled (phone gets the prompt again); e2e: answer
 another choice, result matches the second answer.
 
 ### T44 — The host accepts an answer that was refused
-- **Status:** todo
+- **Status:** in-progress (T44 agent)
 - **Depends on:** T41, T42 merged. Runs in parallel with T43 (see « Wave 9 coordination »).
 - **Ports:** server 3044 / web 5244, test DB `lbq_test_t44`, e2e DB `lbq_e2e_t44`.
 - **Scope:** `apps/server/src/game/**` (reveal settlement, new `game/rejudge.ts`),
