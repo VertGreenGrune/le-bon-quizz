@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   QUESTION_INTRO_MS,
   QuizSchema,
@@ -76,7 +77,7 @@ describe('Game with media questions', () => {
         game.next(); // → LEADERBOARD
         game.next(); // → QUESTION_INTRO
       }
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       expect(game.phase).toBe('ANSWERING');
       game.next(); // → REVEAL
     }

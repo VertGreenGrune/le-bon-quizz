@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
@@ -102,7 +103,7 @@ describe('Game with the ORDER / PIN / WHO_OF_US / WORD_CLOUD types', () => {
   const goTo = (index: number) => {
     if (game.phase === 'LOBBY') game.start();
     while (game.questionIndex < index || game.phase !== 'QUESTION_INTRO') game.next();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
   const answer = (p: Player, a: AnswerInput) => game.answer(p.id, game.questionIndex, a);

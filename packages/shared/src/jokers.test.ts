@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { jokerAllowed, jokerAvailability } from './index.js';
+import {
+  introDurationMs,
+  jokerAllowed,
+  jokerAvailability,
+  jokerRefusal,
+  JOKER_INTRO_MS,
+  MAX_INTRO_MS,
+  QUESTION_INTRO_MS,
+} from './index.js';
 
 describe('jokerAvailability (T28 « Buzzer »)', () => {
   it('no joker on a buzzer question, whatever its type; a pending Gel still lands', () => {
@@ -9,6 +17,7 @@ describe('jokerAvailability (T28 « Buzzer »)', () => {
         unavailable: [],
         scramble: false,
         freeze: true,
+        afterAnswer: [],
       });
       expect(jokerAllowed(type, 'freeze', true)).toBe(false);
       expect(jokerAllowed(type, 'freeze')).toBe(true);
@@ -40,8 +49,51 @@ describe('jokerAvailability (T26 « Mytho ! »)', () => {
       jokers: true,
       unavailable: ['scramble', 'hourglass'],
       scramble: false,
+      afterAnswer: ['freeze', 'double', 'shield', 'thief'],
     });
     for (const joker of ['copy', 'fifty', 'double', 'freeze', 'shield', 'thief'] as const)
       expect(jokerAllowed('BLUFF', joker)).toBe(true);
+  });
+});
+
+describe('T42: jokers on the current question, after answering, intro length', () => {
+  it('Brouilleur only on shape questions, refused with a reason elsewhere', () => {
+    expect(jokerAllowed('MCQ', 'scramble')).toBe(true);
+    expect(jokerAllowed('TRUE_FALSE', 'scramble')).toBe(true);
+    for (const type of ['TYPE_ANSWER', 'SLIDER', 'ORDER', 'PIN', 'BLUFF'] as const) {
+      expect(jokerAllowed(type, 'scramble')).toBe(false);
+      expect(jokerRefusal(type, 'scramble')).toMatch(/Brouilleur/);
+    }
+  });
+
+  it('after answering: Gel, Brouilleur, Voleur, Double, Bouclier, Sablier — not 50/50 nor Copieur', () => {
+    expect(jokerAvailability('MCQ').afterAnswer).toEqual([
+      'freeze',
+      'scramble',
+      'double',
+      'shield',
+      'thief',
+      'hourglass',
+    ]);
+    expect(jokerAvailability('SLIDER').afterAnswer).not.toContain('scramble');
+    for (const joker of ['fifty', 'copy'] as const) {
+      expect(jokerAllowed('MCQ', joker, false, true)).toBe(false);
+      expect(jokerRefusal('MCQ', joker, { answered: true })).toBe('Seulement avant de répondre');
+      expect(jokerAllowed('MCQ', joker)).toBe(true);
+    }
+    expect(jokerAllowed('MCQ', 'double', false, true)).toBe(true);
+    expect(jokerRefusal('POLL', 'double')).toBe('Pas de joker sur cette question');
+    expect(jokerRefusal('MCQ', 'double', { buzzer: true })).toMatch(/buzzer/);
+  });
+
+  it('intro: 3 s, 8 s with jokers, + 1 s per 40 characters beyond 80, at most 12 s', () => {
+    expect(introDurationMs('Court ?', false)).toBe(QUESTION_INTRO_MS);
+    expect(introDurationMs('Court ?', true)).toBe(JOKER_INTRO_MS);
+    expect(introDurationMs('x'.repeat(80), false)).toBe(3000);
+    expect(introDurationMs('x'.repeat(81), false)).toBe(4000);
+    expect(introDurationMs('x'.repeat(120), false)).toBe(4000);
+    expect(introDurationMs('x'.repeat(121), true)).toBe(10_000);
+    expect(introDurationMs('x'.repeat(1000), true)).toBe(MAX_INTRO_MS);
+    expect(introDurationMs('x'.repeat(1000), false)).toBe(MAX_INTRO_MS);
   });
 });

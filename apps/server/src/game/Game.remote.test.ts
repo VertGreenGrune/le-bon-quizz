@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
@@ -94,7 +95,7 @@ describe('« Télécommande » (host remote, T39)', () => {
   const state = () => rec.last('game:state', 'all') as GameStatePayload;
   const toAnswering = () => {
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
 
@@ -233,7 +234,7 @@ describe('« Télécommande » (host remote, T39)', () => {
       game.remoteTokenFor();
       game.remoteConnected('remote');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       const leaked = rec.sent.filter(
         (s) =>
           s.to !== 'remote' &&
@@ -287,7 +288,7 @@ describe('« Télécommande » (host remote, T39)', () => {
         g.hostConnected('tv');
         const p = g.join('Alice', 'sock-a');
         g.start();
-        vi.advanceTimersByTime(QUESTION_INTRO_MS + 4_000);
+        vi.advanceTimersByTime(introOf(game) + 4_000);
         if (withPause) {
           g.pauseByHost();
           vi.advanceTimersByTime(30_000);
@@ -309,7 +310,7 @@ describe('« Télécommande » (host remote, T39)', () => {
       joinAll('Alice');
       game.start();
       game.pauseByHost();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS * 3);
+      vi.advanceTimersByTime(introOf(game) * 3);
       expect(game.phase).toBe('QUESTION_INTRO');
       game.resume();
       vi.advanceTimersByTime(RESUME_COUNTDOWN_MS + QUESTION_INTRO_MS);

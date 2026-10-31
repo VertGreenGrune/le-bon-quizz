@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerJokersPayload } from '@lbq/shared';
-import { announcement, eligibleTargets, jokerPlayable, noJokersHere, resultLine } from './jokers';
+import {
+  announcement,
+  answeredNow,
+  eligibleTargets,
+  jokerBlocked,
+  jokerPlayable,
+  noJokersHere,
+  resultLine,
+} from './jokers';
 
 const red = { id: 'r', nickname: 'Red', avatar: 'batman' as const };
 const batou = { id: 'b', nickname: 'Batou', avatar: 'robin' as const };
@@ -22,7 +30,7 @@ describe('joker texts', () => {
   it('announces attacks, blocked attacks and keeps Copieur secret', () => {
     expect(announcement({ questionIndex: 0, joker: 'freeze', by: red, target: batou })).toEqual({
       title: '🥶 Red a gelé Batou !',
-      detail: 'Bloqué 5 s à sa prochaine question',
+      detail: 'Bloqué 5 s sur cette question',
     });
     expect(
       announcement({ questionIndex: 0, joker: 'thief', by: red, target: batou, blocked: true })
@@ -63,5 +71,24 @@ describe('joker rules on the phone', () => {
     expect(eligibleTargets(state(), 'freeze', 0).map((p) => p.id)).toEqual(['b', 'c']);
     expect(eligibleTargets(state(), 'copy', 1).map((p) => p.id)).toEqual(['b', 'c']);
     expect(eligibleTargets(state(), 'thief', 1).map((p) => p.id)).toEqual(['r']);
+  });
+
+  it('after answering (T42): 50/50 and Copieur greyed with the reason, the others playable', () => {
+    const j = state({ questionType: 'MCQ', answered: ['me', 'b'] });
+    expect(answeredNow(j, 'me')).toBe(true);
+    expect(answeredNow(j, 'r')).toBe(false);
+    expect(answeredNow(j, null)).toBe(false);
+    expect(jokerBlocked(j, 'copy', true)).toBe('Seulement avant de répondre');
+    expect(jokerBlocked(j, 'fifty', true)).toBe('Seulement avant de répondre');
+    expect(jokerPlayable(j, 'double', true)).toBe(true);
+    expect(jokerPlayable(j, 'copy')).toBe(true);
+    expect(jokerBlocked(state({ questionType: 'SLIDER' }), 'scramble')).toMatch(/Brouilleur/);
+  });
+
+  it('Gel / Brouilleur only on players who have not answered yet (T42)', () => {
+    const j = state({ answered: ['b'] });
+    expect(eligibleTargets(j, 'freeze', 0).map((p) => p.id)).toEqual(['c']);
+    expect(eligibleTargets(j, 'scramble', 0).map((p) => p.id)).toEqual(['c']);
+    expect(eligibleTargets(j, 'thief', 0).map((p) => p.id)).toEqual(['b', 'c']);
   });
 });

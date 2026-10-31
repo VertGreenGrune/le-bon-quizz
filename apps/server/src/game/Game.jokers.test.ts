@@ -18,7 +18,7 @@ import {
 import { Game, type GameSettings, type GameTransport, type Player } from './Game.js';
 import { GameError } from './errors.js';
 import { e2eJokerHand } from './jokers.js';
-import { rightAnswer, wrongAnswer } from './testing.js';
+import { rightAnswer, wrongAnswer, introOf } from './testing.js';
 
 type Sent = { to: string; event: keyof ServerToClientEvents; payload: unknown };
 
@@ -98,7 +98,7 @@ describe('Jokers', () => {
   const answer = (p: Player, input: { choiceIndex: number } | object) =>
     game.answer(p.id, game.questionIndex, input as { choiceIndex: number });
   const toAnswering = () => {
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
   /** LEADERBOARD → next question's ANSWERING. */
@@ -152,16 +152,18 @@ describe('Jokers', () => {
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       hand(alice!, ['double', 'hourglass']);
-      hand(bob!, ['shield']);
+      hand(bob!, ['fifty', 'copy']);
       expectGameError(() => play(alice!, 'thief', bob), 'JOKER_REFUSED');
       expectGameError(() => game.useJoker(alice!.id, 1, 'double'), 'JOKER_REFUSED');
       play(alice!, 'double'); // QUESTION_INTRO is fine
       expectGameError(() => play(alice!, 'hourglass'), 'JOKER_REFUSED');
       toAnswering();
       answer(bob!, WRONG);
-      expectGameError(() => play(bob!, 'shield'), 'JOKER_REFUSED');
+      // After answering: 50/50 and Copieur are « before answering » only (T42).
+      expectGameError(() => play(bob!, 'fifty'), 'JOKER_REFUSED');
+      expectGameError(() => play(bob!, 'copy', alice), 'JOKER_REFUSED');
       expect(state(alice!).hand).toEqual(['hourglass']);
-      expect(state(bob!).hand).toEqual(['shield']); // refused = kept
+      expect(state(bob!).hand).toEqual(['fifty', 'copy']); // refused = kept
     });
 
     it('refuses a target that is yourself or unknown', () => {
@@ -298,16 +300,13 @@ describe('Jokers', () => {
   });
 
   describe('attacks', () => {
-    it('Gel: refuses the target’s answers for 5 s of its next question, pauses excluded', () => {
+    it('Gel during the intro: refuses the target’s answers for 5 s of this question, pauses excluded', () => {
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       hand(alice!, ['freeze']);
       play(alice!, 'freeze', bob);
       expect(used()).toMatchObject({ joker: 'freeze', target: { nickname: 'Bob' } });
       toAnswering();
-      answer(bob!, RIGHT); // not this question: the next one
-      answer(alice!, RIGHT);
-      nextQuestion();
       expect(state(bob!).effects.frozen).toMatchObject({
         ms: FREEZE_MS,
         by: { nickname: 'Alice' },
@@ -325,25 +324,20 @@ describe('Jokers', () => {
       expect(bob!.answer?.responseMs).toBe(FREEZE_MS);
     });
 
-    it('Brouilleur: grey shuffled buttons with the texts at the next choice question', () => {
+    it('Brouilleur: grey shuffled buttons with the texts, right away on this question', () => {
       create(DEMO_QUIZ);
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
-      toAnswering();
-      answer(alice!, RIGHT);
-      answer(bob!, RIGHT);
-      // Played on question 3 → hits question 4 (Joconde).
-      nextQuestion();
-      answer(alice!, RIGHT);
-      answer(bob!, RIGHT);
+      for (let i = 0; i < 3; i++) {
+        if (i > 0) nextQuestion();
+        else toAnswering();
+        answer(alice!, rightAnswer(game.currentQuestion!));
+        answer(bob!, rightAnswer(game.currentQuestion!));
+      }
       game.next();
-      game.next(); // Q3 intro
+      game.next(); // Q4 (Joconde) intro
       hand(alice!, ['scramble']);
       play(alice!, 'scramble', bob);
-      toAnswering();
-      answer(alice!, RIGHT);
-      answer(bob!, RIGHT);
-      nextQuestion(); // Q4
       const scrambled = state(bob!).effects.scrambled!;
       expect(scrambled.by.nickname).toBe('Alice');
       expect(scrambled.choices.map((c) => c.text).sort()).toEqual(
@@ -353,26 +347,76 @@ describe('Jokers', () => {
       expect(state(alice!).effects.scrambled).toBeUndefined();
     });
 
-    it('a pending Brouilleur skips the questions without buttons', () => {
+    it('Brouilleur is refused on questions without buttons (joker kept)', () => {
       create(DEMO_QUIZ);
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       for (let i = 0; i < 4; i++) {
         if (i > 0) nextQuestion();
         else toAnswering();
-        if (i === 3) {
-          hand(alice!, ['scramble']);
-          play(alice!, 'scramble', bob);
-        }
         answer(alice!, rightAnswer(game.currentQuestion!));
         answer(bob!, rightAnswer(game.currentQuestion!));
       }
       for (let i = 4; i < 7; i++) {
-        nextQuestion(); // poll, typed, slider: no scramble
-        expect(state(bob!).effects.scrambled).toBeUndefined();
+        game.next();
+        game.next(); // poll, typed, slider intro
+        hand(alice!, ['scramble']);
+        expectGameError(() => play(alice!, 'scramble', bob), 'JOKER_REFUSED');
+        expect(game.jokers!.leaderboardInfo(alice!.id)?.hand).toEqual(['scramble']);
+        toAnswering();
         answer(alice!, rightAnswer(game.currentQuestion!));
         answer(bob!, rightAnswer(game.currentQuestion!));
       }
+    });
+
+    it('Gel during ANSWERING: 5 s from when it lands, on a target who hasn’t answered', () => {
+      const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
+      game.start();
+      hand(alice!, ['freeze']);
+      toAnswering();
+      vi.advanceTimersByTime(4000);
+      play(alice!, 'freeze', bob);
+      expect(state(bob!).effects.frozen).toMatchObject({ ms: 4000 + FREEZE_MS });
+      vi.advanceTimersByTime(4000);
+      expectGameError(() => answer(bob!, RIGHT), 'FROZEN');
+      vi.advanceTimersByTime(1000);
+      answer(bob!, RIGHT);
+      expect(bob!.answer?.responseMs).toBe(4000 + FREEZE_MS);
+      answer(alice!, RIGHT);
+      answer(chloe!, RIGHT);
+    });
+
+    it('Gel / Brouilleur refused on a target who already answered (joker kept)', () => {
+      const [alice, bob] = joinAll('Alice', 'Bob');
+      game.start();
+      hand(alice!, ['freeze', 'scramble']);
+      toAnswering();
+      answer(bob!, RIGHT);
+      expect(state(alice!).answered).toEqual([bob!.id]);
+      for (const joker of ['freeze', 'scramble'] as const) {
+        try {
+          play(alice!, joker, bob);
+          throw new Error('expected a refusal');
+        } catch (err) {
+          expect((err as GameError).code).toBe('JOKER_REFUSED');
+          expect((err as GameError).message).toBe('Bob a déjà répondu');
+        }
+      }
+      expect(state(alice!).hand).toEqual(['freeze', 'scramble']);
+      expect(rec.sent.some((s) => s.event === 'joker:used')).toBe(false);
+    });
+
+    it('a « Survie » haunt still lands on the target’s next question', () => {
+      create(quiz, { mode: 'survival', jokers: true });
+      const [alice, bob] = joinAll('Alice', 'Bob');
+      game.start();
+      game.jokers!.haunt(alice!, 'freeze', bob!);
+      expect(state(bob!).effects.frozen).toBeUndefined();
+      toAnswering();
+      answer(alice!, RIGHT);
+      answer(bob!, RIGHT);
+      nextQuestion();
+      expect(state(bob!).effects.frozen).toMatchObject({ ms: FREEZE_MS });
     });
 
     it('one attack per target per question', () => {
@@ -397,13 +441,12 @@ describe('Jokers', () => {
       play(alice!, 'freeze', bob);
       expect(used()).toMatchObject({ joker: 'freeze', blocked: true });
       expect(state(bob!).shield).toBeUndefined();
+      expect(state(bob!).effects.frozen).toBeUndefined(); // blocked
       toAnswering();
       answer(bob!, WRONG);
       answer(alice!, RIGHT);
       expect(result(bob!)).toMatchObject({ correct: false, streak: 2 });
       expect(result(bob!).jokers).toEqual([{ kind: 'shieldSaved' }]);
-      nextQuestion();
-      expect(state(bob!).effects.frozen).toBeUndefined(); // blocked
     });
 
     it('Voleur: a right answer steals 10 % of the target score', () => {
@@ -474,6 +517,138 @@ describe('Jokers', () => {
       expect(result(alice!).pointsEarned).toBe(950);
       expect(result(bob!).pointsEarned).toBe(900);
       expect(result(alice!).jokers).toEqual([{ kind: 'hourglass', points: 50 }]);
+    });
+
+    describe('after answering (T42)', () => {
+      it('Double ou rien and Voleur played while waiting for the others', () => {
+        const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
+        game.start();
+        bob!.totalScore = 5000;
+        hand(alice!, ['double']);
+        hand(chloe!, ['thief']);
+        toAnswering();
+        answer(alice!, RIGHT);
+        answer(chloe!, RIGHT);
+        play(alice!, 'double');
+        play(chloe!, 'thief', bob);
+        expect(state(alice!).played).toEqual({ joker: 'double' });
+        answer(bob!, WRONG);
+        expect(result(alice!)).toMatchObject({ pointsEarned: 2000 });
+        expect(result(chloe!).jokers).toEqual([
+          { kind: 'stole', points: 500, player: expect.objectContaining({ nickname: 'Bob' }) },
+        ]);
+      });
+
+      it('Bouclier keeps the streak of a wrong answer already given, and arms the shield', () => {
+        const [alice, bob] = joinAll('Alice', 'Bob');
+        game.start();
+        hand(bob!, ['shield']);
+        bob!.streak = 4;
+        toAnswering();
+        answer(bob!, WRONG);
+        play(bob!, 'shield');
+        expect(state(bob!).shield).toBe(true);
+        answer(alice!, RIGHT);
+        expect(result(bob!)).toMatchObject({ correct: false, streak: 4 });
+      });
+
+      it('Sablier counts the recorded answer time half', () => {
+        const [alice, bob] = joinAll('Alice', 'Bob');
+        game.start();
+        hand(alice!, ['hourglass']);
+        toAnswering();
+        vi.advanceTimersByTime(4000);
+        answer(alice!, RIGHT); // at 4 s: 900
+        vi.advanceTimersByTime(3000);
+        play(alice!, 'hourglass'); // as at 2 s: 950
+        answer(bob!, RIGHT);
+        expect(result(alice!).pointsEarned).toBe(950);
+        expect(result(alice!).jokers).toEqual([{ kind: 'hourglass', points: 50 }]);
+      });
+
+      it('still one joker per question: one played before answering is the only one', () => {
+        const [alice, bob] = joinAll('Alice', 'Bob');
+        game.start();
+        hand(alice!, ['shield', 'double']);
+        play(alice!, 'shield');
+        toAnswering();
+        answer(alice!, RIGHT);
+        expectGameError(() => play(alice!, 'double'), 'JOKER_REFUSED');
+        answer(bob!, RIGHT);
+      });
+
+      it('team mode: Double after answering counts in the team average', () => {
+        create(quiz, { mode: 'teams', jokers: true });
+        const [r1, b1] = joinAll('R1', 'B1');
+        game.setTeam(r1!.id, 0);
+        game.setTeam(b1!.id, 1);
+        game.start();
+        hand(r1!, ['double']);
+        toAnswering();
+        answer(r1!, RIGHT);
+        play(r1!, 'double');
+        answer(b1!, RIGHT);
+        game.next();
+        const teams = (rec.last('leaderboard', 'host') as StandingsPayload).teams!;
+        expect(teams.find((t) => t.id === 0)?.score).toBe(2000);
+        expect(teams.find((t) => t.id === 1)?.score).toBe(1000);
+      });
+    });
+
+    describe('intro length (T42)', () => {
+      it('8 s with jokers, 3 s without, longer for long texts, 3 s on a poll', () => {
+        const long = { ...mcq('x'.repeat(161)) };
+        const poll: Question = {
+          text: 'Sondage ?',
+          type: 'POLL',
+          timeLimitSec: 20,
+          basePoints: 0,
+          choices: [{ text: 'A' }, { text: 'B' }],
+        };
+        create({ ...quiz, questions: [mcq('Q1'), long, poll] });
+        const [alice] = joinAll('Alice');
+        game.start();
+        expect(game.statePayload()).toMatchObject({ phase: 'QUESTION_INTRO', introMs: 8000 });
+        expect(game.statePayload().remainingMs).toBe(8000);
+        vi.advanceTimersByTime(7999);
+        expect(game.phase).toBe('QUESTION_INTRO');
+        vi.advanceTimersByTime(1);
+        expect(game.statePayload().introMs).toBeUndefined();
+        answer(alice!, RIGHT);
+        game.next();
+        game.next();
+        expect(introOf(game)).toBe(11_000); // 161 characters: 81 beyond 80 → + 3 s
+        vi.advanceTimersByTime(11_000);
+        answer(alice!, RIGHT);
+        game.next();
+        game.next();
+        expect(introOf(game)).toBe(QUESTION_INTRO_MS); // a poll takes no joker
+
+        create(quiz, { jokers: false });
+        joinAll('Alice');
+        game.start();
+        expect(introOf(game)).toBe(QUESTION_INTRO_MS);
+        create(quiz, { mode: 'survival' }); // haunts, without the Jokers option
+        joinAll('Alice');
+        game.start();
+        expect(introOf(game)).toBe(8000);
+      });
+
+      it('a pause during the intro freezes it; the state (and so the resyncs) has its length', () => {
+        const [alice, bob] = joinAll('Alice', 'Bob');
+        game.start();
+        vi.advanceTimersByTime(3000);
+        game.disconnect(bob!.socketId!);
+        vi.advanceTimersByTime(PAUSE_GRACE_MS + 10_000);
+        expect(game.phase).toBe('QUESTION_INTRO');
+        game.rejoin(bob!.sessionToken, 'sock-bob-2');
+        expect(game.statePayload()).toMatchObject({ introMs: 8000 }); // the resync sends it
+        vi.advanceTimersByTime(RESUME_COUNTDOWN_MS + 4999);
+        expect(game.phase).toBe('QUESTION_INTRO');
+        vi.advanceTimersByTime(1);
+        expect(game.phase).toBe('ANSWERING');
+        answer(alice!, RIGHT);
+      });
     });
 
     it('works on every question type that takes jokers (typed, slider)', () => {
@@ -640,7 +815,7 @@ describe('Jokers on the T27 question types', () => {
     game.join('Bob', 'sock-b');
     game.start();
     game.jokers!.setHand(alice.id, ['double', 'fifty']);
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expectGameError(() => game.useJoker(alice.id, 0, 'fifty'), 'JOKER_REFUSED');
     game.useJoker(alice.id, 0, 'double');
     const prompt = rec.last('question:prompt', 'sock-a') as { items: string[] };
@@ -656,11 +831,11 @@ describe('Jokers on the T27 question types', () => {
     const alice = game.join('Alice', 'sock-a');
     game.start();
     game.jokers!.setHand(alice.id, ['double']);
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     game.next(); // skip the ORDER question
     game.next();
     game.next();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.currentQuestion?.type).toBe('WORD_CLOUD');
     expectGameError(() => game.useJoker(alice.id, 1, 'double'), 'JOKER_REFUSED');
   });

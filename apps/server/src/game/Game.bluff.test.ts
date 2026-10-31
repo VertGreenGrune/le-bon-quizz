@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
@@ -96,7 +97,7 @@ describe('« Mytho ! » (BLUFF)', () => {
     game.answer(p.id, game.questionIndex, { choiceIndex: options().indexOf(text) });
   const toWriting = () => {
     game.start();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
   /** Alice, Bob, Chloé write their lies: the vote starts. */
@@ -221,7 +222,7 @@ describe('« Mytho ! » (BLUFF)', () => {
     expect(result(alice!)).toMatchObject({ correct: true, pointsEarned: 1000, streak: 1 });
     game.next();
     game.next();
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     lie(alice!, 'Bételgeuse Junior');
     lie(bob!, 'Bob');
     lie(chloe!, 'Lydia');
@@ -326,7 +327,7 @@ describe('« Mytho ! » (BLUFF)', () => {
       game.start();
       game.jokers!.setHand(dan!.id, ['copy']);
       game.useJoker(dan!.id, 0, 'copy', alice!.id);
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       for (const [p, t] of [
         [alice!, 'Frankenweenie'],
         [bob!, 'Hansel et Gretel'],
@@ -347,7 +348,7 @@ describe('« Mytho ! » (BLUFF)', () => {
       game.start();
       game.jokers!.setHand(dan!.id, ['copy']);
       game.useJoker(dan!.id, 0, 'copy', alice!.id);
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       lie(alice!, 'Frankenweenie');
       lie(bob!, 'Hansel et Gretel');
       lie(chloe!, 'Le Cavalier');
@@ -365,7 +366,7 @@ describe('« Mytho ! » (BLUFF)', () => {
       game.jokers!.setHand(alice!.id, ['fifty']);
       game.useJoker(alice!.id, 0, 'fifty');
       expect(state(alice!).effects).toEqual({}); // applied when the vote starts
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       lie(alice!, 'Frankenweenie');
       lie(bob!, 'Hansel et Gretel');
       lie(chloe!, 'Le Cavalier');

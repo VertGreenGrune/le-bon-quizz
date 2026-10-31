@@ -43,6 +43,37 @@ describe('hostReducer', () => {
     expect(s2.deadline).toBeNull();
   });
 
+  it('keeps the intro duration of a QUESTION_INTRO (T42), not after it', () => {
+    const intro = run([
+      {
+        type: 'state',
+        payload: {
+          phase: 'QUESTION_INTRO',
+          mode: 'solo',
+          questionIndex: 0,
+          totalQuestions: 3,
+          remainingMs: 6000,
+          introMs: 8000,
+          jokers: true,
+        },
+        now: 0,
+      },
+    ]);
+    expect(intro).toMatchObject({ introMs: 8000, deadline: 6000, jokers: true });
+    const answering = hostReducer(intro, {
+      type: 'state',
+      payload: {
+        phase: 'ANSWERING',
+        mode: 'solo',
+        questionIndex: 0,
+        totalQuestions: 3,
+        remainingMs: 20_000,
+      },
+      now: 6000,
+    });
+    expect(answering.introMs).toBeNull();
+  });
+
   it('resets answer count and reveal when the question changes, not within a question', () => {
     const s = run([
       {

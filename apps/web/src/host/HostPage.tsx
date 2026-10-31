@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { QUESTION_INTRO_MS, type ErrorPayload, type GamePhase as HostPhase } from '@lbq/shared';
+import {
+  QUESTION_INTRO_MS,
+  jokerAvailability,
+  type ErrorPayload,
+  type GamePhase as HostPhase,
+} from '@lbq/shared';
 import { parseGameOptions } from '../lib/gameOptions';
 import { getTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
@@ -185,7 +190,13 @@ export function HostPage() {
           index={state.questionIndex}
           total={state.totalQuestions}
           question={question}
-          progress={remainingMs != null ? 1 - remainingMs / QUESTION_INTRO_MS : null}
+          progress={
+            remainingMs != null ? 1 - remainingMs / (state.introMs ?? QUESTION_INTRO_MS) : null
+          }
+          remainingMs={remainingMs}
+          jokers={
+            state.jokers && !!question && jokerAvailability(question.type, !!question.buzzer).jokers
+          }
         />
       );
       break;

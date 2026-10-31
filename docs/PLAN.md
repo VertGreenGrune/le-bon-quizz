@@ -35,7 +35,11 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
                                          last question → PODIUM → ENDED
 ```
 
-- `QUESTION_INTRO`: question shown on host screen ~3 s, phones show "get ready".
+- `QUESTION_INTRO`: question shown alone on the host screen, phones show "get ready". Length
+  (`introDurationMs`, T42, sent as `game:state.introMs`): 3 s, **8 s** (`JOKER_INTRO_MS`) when the
+  game has the joker engine (Jokers option or « Survie ») and the question takes jokers — the TV
+  shows « 🃏 Jouez vos jokers ! » + countdown, the phones a big joker bar —, + 1 s per 40
+  characters of text beyond 80, at most 12 s. The host can skip it; it freezes with a pause.
 - `ANSWERING`: server starts timer (`timeLimitSec`); ends when timer expires or all answered.
 - `REVEAL`: correct answer + distribution sent to host; per-player result sent to each phone.
 - Host drives transitions with `host:next` (except the automatic end of `ANSWERING`).
@@ -176,10 +180,14 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   default there; code `apps/server/src/game/jokers.ts`, ids/names/constants
   `packages/shared/src/jokers.ts`). Each player gets 3 different random jokers at the start and
   1 random one more each time their streak reaches 3, 6, 9… (max 5 in hand). One joker per
-  question, played during `QUESTION_INTRO` / `ANSWERING` before answering, not while paused
-  (`JOKER_REFUSED` / `GAME_PAUSED` otherwise; a refused joker stays in hand). Which jokers a
-  question type takes comes from **one table**, `jokerAvailability(type)` in shared: `POLL` takes
-  none (bar hidden), `TRUE_FALSE` no 50/50.
+  question, played during `QUESTION_INTRO` / `ANSWERING`, not while paused (`JOKER_REFUSED` /
+  `GAME_PAUSED` otherwise; a refused joker stays in hand). **After answering** (T42), during
+  `ANSWERING`, the player can still play one (still one per question) among the jokers marked
+  `afterAnswer` (Gel, Brouilleur, Voleur, Double ou rien, Bouclier, Sablier); 50/50 and Copieur are
+  « before answering » only. Which jokers a question type takes comes from **one table**,
+  `jokerAvailability(type)` in shared (+ `afterAnswer` per type), and the refusal reasons from
+  `jokerRefusal` (server message = the phone's greyed-joker reason): `POLL` takes none (bar
+  hidden), `TRUE_FALSE` no 50/50, Brouilleur only on MCQ / TRUE_FALSE.
   - 🎯 **50/50** (`fifty`): hides `min(ceil(wrong / 2), wrong − 1)` wrong choices on that phone;
     SLIDER: a range half as wide containing the answer (random position); TYPE_ANSWER: the first
     letter of the first accepted answer (leading article skipped). Refused when it would hide
@@ -189,18 +197,24 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     own Gel)`. Target never answers → nothing. A copier is never awaited by itself (it waits for
     its target; a kicked target / copy loop → not awaited). The target stays secret (`joker:used`
     has no `target`).
-  - 🥶 **Gel** (`freeze`, attack): at the target's next question that takes jokers, its answers
-    are refused (`FROZEN`) during the first 5 s of `ANSWERING` (pauses excluded).
-  - 🌀 **Brouilleur** (`scramble`, attack): at the target's next question whose type has
-    `scramble: true` (MCQ / TRUE_FALSE), its phone gets grey buttons in a shuffled order labelled
-    with the choice texts.
+  - 🥶 **Gel** (`freeze`, attack, T42: **this** question): the target's answers are refused
+    (`FROZEN`) for 5 s — from the start of `ANSWERING` when played during the intro, from the
+    moment it lands when played during `ANSWERING` (`effects.frozen.ms` = elapsed ANSWERING time
+    when it ends; pauses excluded). « Mytho ! »: it blocks the vote (not the writing).
+  - 🌀 **Brouilleur** (`scramble`, attack, T42: **this** question, MCQ / TRUE_FALSE only): the
+    target's phone gets grey buttons in a shuffled order labelled with the choice texts, right
+    away (`joker:state` pushed).
+  - Gel / Brouilleur on a target who already answered → `JOKER_REFUSED` « X a déjà répondu »
+    (joker kept); on a type they can't hit → refused with the reason. « Survie » haunts (§ Survie)
+    still land on the target's **next** question that takes them.
   - ✖️2 **Double ou rien** (`double`): right → `pointsEarned` ×2 (streak bonus included); wrong /
     no answer → −500 (the total never goes below 0).
   - 🛡️ **Bouclier** (`shield`): arms a shield that blocks the next attack aimed at the player
     (announced `blocked`), and a wrong answer on this question keeps the streak.
   - 🦹 **Voleur** (`thief`, attack): if the thief is right, `round(10 % × target's total)` after
     this question's points moves from the target to the thief (both `pointsEarned` change).
-  - ⏳ **Sablier** (`hourglass`): speed points computed with `responseMs / 2`.
+  - ⏳ **Sablier** (`hourglass`): speed points computed with `responseMs / 2` (played after
+    answering: the recorded answer is scored again with half its time).
   Attacks (Gel, Brouilleur, Voleur): one per target per question; team mode: other teams only.
   Team averages use the points after the jokers (a negative member pulls the average down; a
   team score never goes below 0). Order at REVEAL: question points + streak bonus → Double →
@@ -297,7 +311,7 @@ Every client → server event takes an ack callback receiving
 | `player:avatars` | `{ pin }` | join screen, before joining: ack `{ taken: AvatarId[], started: boolean }` (avatars already in that game, shown dimmed as a hint; `started` → the join screen offers to take a disconnected player's place); `GAME_NOT_FOUND` |
 | `player:rejoin` | `{ pin, sessionToken }` | after disconnect; ack `{ playerId, nickname, avatar, totalScore }`, then server re-sends current `game:state` (+ `lobby:teams` in team mode, `question:prompt` if ANSWERING) |
 | `player:team` | `{ pin, teamId }` | team mode, LOBBY only (`GAME_ALREADY_STARTED` afterwards); can switch until the start |
-| `player:joker` | `{ pin, questionIndex, joker, targetId? }` | games with jokers (§3 "Jokers"): `joker` = `fifty` \| `copy` \| `freeze` \| `scramble` \| `double` \| `shield` \| `thief` \| `hourglass`, `targetId` for copy / freeze / scramble / thief; then `joker:used` + `joker:state`. `JOKER_REFUSED` (not in hand, one per question, already answered, wrong target / phase / question type), `GAME_PAUSED` |
+| `player:joker` | `{ pin, questionIndex, joker, targetId? }` | games with jokers (§3 "Jokers"): `joker` = `fifty` \| `copy` \| `freeze` \| `scramble` \| `double` \| `shield` \| `thief` \| `hourglass`, `targetId` for copy / freeze / scramble / thief; then `joker:used` + `joker:state`. `JOKER_REFUSED` (not in hand, one per question, 50/50 or Copieur after answering, Gel / Brouilleur on a target who answered, wrong target / phase / question type), `GAME_PAUSED` |
 | `player:buzz` | `{ pin, questionIndex }` | « Buzzer » question during ANSWERING: takes the hand (first processed wins). `BUZZER_TAKEN` (someone has it), `ALREADY_ANSWERED` (out after a wrong answer), `FROZEN` (Gel), `GAME_PAUSED`, `NOT_ANSWERING` |
 | `player:haunt` | `{ pin, haunt: 'freeze' \| 'scramble', targetId }` | « Survie » (§3): a ghost with a haunt in stock, on a living player (not oneself); then `joker:used` (`haunt: true`) + `survival:state`. `JOKER_REFUSED` (alive, no haunt, target a ghost / already haunted that way, LOBBY / PODIUM / ENDED), `GAME_PAUSED` |
 | `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `choiceIndexes` (« select all » MCQ only, 1–4 indexes; a single `choiceIndex` there, or `choiceIndexes` elsewhere → `INVALID_PAYLOAD`) \| `text` \| `value` \| `order` \| `point` \| `playerId` | accepted once, only during ANSWERING (`FROZEN` during a Gel, `ALREADY_ANSWERED` for a Copieur); `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER and WORD_CLOUD (cut at 20), `value` (in [min, max]) for SLIDER, `order` (permutation of the shown item indexes) for ORDER, `point { x, y }` (0–1) for PIN, `playerId` (a player of the game) for WHO_OF_US — another kind → `INVALID_PAYLOAD` « Dessine-moi »: a guess, ack `{ guess: 'found' \| 'close' \| 'wrong' }` (only `found` is recorded; the drawer → `INVALID_PAYLOAD`) |
@@ -306,7 +320,7 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `introMs` during QUESTION_INTRO = its whole length, T42) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -320,7 +334,7 @@ Every client → server event takes an ack callback receiving
 | `survival:state` | all | « Survie » only, from the lobby on, re-sent after each REVEAL, haunt, join, kick and in both rejoin resyncs: `{ hearts (at start), players: { id, nickname, avatar, hearts, eliminatedAt?, lastLoss?, haunts? }[], finished? }` |
 | `draw:strokes` | host (+ the drawer on rejoin) | « Dessine-moi »: `{ index, clear?, strokes: DrawStroke[] }` — new chunks of the drawing (`mergeStrokes`); `clear` = start from empty (« Tout effacer », or the whole drawing re-sent on `host:rejoin` / `player:rejoin`) |
 | `player:kicked` | that player | `{}` |
-| `joker:state` | each player | games with jokers, sent at the start, each question, each joker played, REVEAL, kick and in the rejoin resync: `{ questionIndex, questionType?, hand, played?: { joker, target? }, shield?, others: { id, nickname, avatar, teamId? }[], attacked: string[], effects }` — `effects` (this phone only) = `hiddenChoices?`, `sliderRange?`, `firstLetter?`, `frozen?: { ms, by }`, `scrambled?: { by, choices: { index, text }[] }`, `copied?` (`buzzer: true` on a « Buzzer » question: no joker playable) |
+| `joker:state` | each player | games with jokers, sent at the start, each question, each joker played, REVEAL, kick and in the rejoin resync: `{ questionIndex, questionType?, hand, played?: { joker, target? }, shield?, others: { id, nickname, avatar, teamId? }[], attacked: string[], answered?: string[], effects }` (`answered` = who already answered this question, re-sent on each answer, T42) — `effects` (this phone only) = `hiddenChoices?`, `sliderRange?`, `firstLetter?`, `frozen?: { ms, by }` (answers refused until `ms` of ANSWERING), `scrambled?: { by, choices: { index, text }[] }`, `copied?` (`buzzer: true` on a « Buzzer » question: no joker playable) |
 | `joker:used` | all | `{ questionIndex, joker, by, target?, blocked?, haunt? }` (TV announcement; no `target` for Copieur; `haunt: true` = a « Survie » ghost's Gel / Brouilleur; never re-sent) |
 | `remote:answer` | each remote | `{ index, answer: string[], pin?: { imageUrl, zone }, explanation? }` at each QUESTION_INTRO and in its resync — `answerText(q)` (« Dessine-moi »: the word drawn; [] without a right answer); never sent to the TV nor the phones |
 | `remote:revoked` | each remote | `{}` — the TV revoked the token (the socket leaves the rooms) |

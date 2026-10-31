@@ -22,7 +22,7 @@ import {
 import { Game, type GameSettings, type GameTransport, type Player } from './Game.js';
 import { GameError } from './errors.js';
 import { isNearMiss } from './matching.js';
-import { CLASSIC_QUIZ, rightAnswer, wrongAnswer } from './testing.js';
+import { CLASSIC_QUIZ, rightAnswer, wrongAnswer, introOf } from './testing.js';
 
 type Sent = { to: string; event: keyof ServerToClientEvents; payload: unknown };
 
@@ -97,7 +97,7 @@ describe('« Dessine-moi » (DRAW)', () => {
   const guess = (p: Player, text: string) => game.answer(p.id, game.questionIndex, { text });
   const drawerName = () => game.statePayload().draw?.drawer?.nickname;
   const toAnswering = () => {
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
   /** Skips to the intro of the next question (host presses « Suivant »). */
@@ -291,7 +291,7 @@ describe('« Dessine-moi » (DRAW)', () => {
     it('a game alone: nobody to guess, straight to the reveal', () => {
       joinAll('Alice');
       game.start();
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       expect(game.phase).toBe('REVEAL');
     });
   });

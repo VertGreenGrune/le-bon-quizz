@@ -8,8 +8,8 @@ import {
   JOKERS_AT_START,
   JOKERS_MAX,
   THIEF_SHARE,
-  jokerAllowed,
   jokerAvailability,
+  jokerRefusal,
   type AnswerInput,
   type GameMode,
   type GamePhase,
@@ -41,6 +41,11 @@ export interface JokerContext {
   /** Records an answer for a player as if they had sent it (Copieur). */
   recordAnswer(player: Player, given: AnswerInput, responseMs: number): void;
   /**
+   * Judges a recorded answer again with the current jokers (Sablier played after answering).
+   * Returns the Sablier's extra points.
+   */
+  rescore(player: Player, given: AnswerInput): number;
+  /**
    * « Mytho ! » vote: option indexes of the lies this player didn't write (null while the lies
    * are still being written).
    */
@@ -55,7 +60,7 @@ interface JokerHand {
   used: JokerType[];
   /** An armed Bouclier: blocks the next attack. */
   shield: boolean;
-  /** Attacks waiting for the player's next question (that they can hit). */
+  /** « Survie » haunts waiting for the player's next question (that they can hit). */
   pendingFreeze: LobbyMember | null;
   pendingScramble: LobbyMember | null;
   // ---- current question ----
@@ -122,7 +127,7 @@ export class Jokers {
     }
   }
 
-  /** QUESTION_INTRO: per-question state reset, pending attacks land if the type allows it. */
+  /** QUESTION_INTRO: per-question state reset, pending haunts land if the type allows it. */
   startQuestion(): void {
     this.attacked.clear();
     const q = this.ctx.question();
@@ -184,6 +189,8 @@ export class Jokers {
       if (!p || p.answer) continue;
       this.copyNow(p, copier, given, responseMs);
     }
+    // Who answered changed: the phones' Gel / Brouilleur target lists (T42).
+    if (this.withHands) this.sendStates();
   }
 
   /** Copieur: the player waits for this target (undefined = not copying, null = target gone). */
@@ -301,12 +308,11 @@ export class Jokers {
     if (this.ctx.paused()) throw new GameError('GAME_PAUSED', 'Partie en pause');
     const h = this.hands.get(player.id);
     if (!h) throw refuse('Pas de jokers dans cette partie');
-    if (player.answer) throw refuse('Tu as déjà répondu');
     if (h.played) throw refuse('Un seul joker par question');
     if (!h.hand.includes(joker)) throw refuse('Tu n’as pas ce joker');
-    if (q.buzzer) throw refuse('Pas de joker sur une question au buzzer');
-    if (!jokerAvailability(q.type).jokers) throw refuse('Pas de joker sur un sondage');
-    if (!jokerAllowed(q.type, joker)) throw refuse('Ce joker ne marche pas sur cette question');
+    // After answering (T42): only the jokers that still make sense (not 50/50 nor Copieur).
+    const why = jokerRefusal(q.type, joker, { buzzer: q.buzzer, answered: !!player.answer });
+    if (why) throw refuse(why);
 
     const info = JOKERS[joker];
     let target: Player | undefined;
@@ -320,6 +326,9 @@ export class Jokers {
       }
       if (info.attack && this.attacked.has(target.id))
         throw refuse('Ce joueur a déjà été attaqué sur cette question');
+      // Gel / Brouilleur hit this question: pointless on someone who already answered.
+      if ((joker === 'freeze' || joker === 'scramble') && target.answer)
+        throw refuse(`${target.nickname} a déjà répondu`);
     }
     // Computed before spending the joker: 50/50 may have nothing to hide.
     const fifty = joker === 'fifty' ? this.fiftyEffects(q, player.id) : null;
@@ -336,8 +345,8 @@ export class Jokers {
       if (th?.shield) {
         th.shield = false;
         blocked = true;
-      } else if (th && joker === 'freeze') th.pendingFreeze = member(player);
-      else if (th && joker === 'scramble') th.pendingScramble = member(player);
+      } else if (th && joker === 'freeze') this.freezeNow(target, th, member(player));
+      else if (th && joker === 'scramble') this.scrambleNow(q, th, member(player));
     }
     if (joker === 'shield') h.shield = true;
 
@@ -354,7 +363,32 @@ export class Jokers {
       const given = this.hands.get(target.id)?.given;
       if (target.answer && given) this.copyNow(player, h, given, target.answer.responseMs);
     }
+    // Sablier played after answering: the recorded answer time counts half.
+    if (joker === 'hourglass' && player.answer && h.given)
+      h.hourglassExtra = this.ctx.rescore(player, h.given);
     this.sendStates();
+  }
+
+  /**
+   * Gel on the current question (T42): answers refused for FREEZE_MS from the start of ANSWERING,
+   * or from now when it lands during ANSWERING. « Mytho ! »: it blocks the vote (the lie can
+   * still be written).
+   */
+  private freezeNow(target: Player, th: JokerHand, by: LobbyMember): void {
+    const q = this.ctx.question();
+    const writing = q?.type === 'BLUFF' && this.ctx.bluffLies?.(target.id) == null;
+    const from = this.ctx.phase() === 'ANSWERING' && !writing ? this.ctx.elapsedMs() : 0;
+    th.frozenMs = Math.max(th.frozenMs, from + FREEZE_MS);
+    th.effects.frozen = { ms: th.frozenMs, by };
+  }
+
+  /** Brouilleur on the current question (T42): grey shuffled buttons right away. */
+  private scrambleNow(q: Question, th: JokerHand, by: LobbyMember): void {
+    if (!('choices' in q)) return;
+    th.effects.scrambled = {
+      by,
+      choices: this.shuffled(q.choices.map((c, index) => ({ index, text: c.text }))),
+    };
   }
 
   /**
@@ -489,6 +523,7 @@ export class Jokers {
         .filter((p) => p.id !== player.id)
         .map((p) => ({ ...member(p), ...(p.teamId !== null && { teamId: p.teamId }) })),
       attacked: [...this.attacked],
+      answered: [...players.values()].filter((p) => p.answer).map((p) => p.id),
       effects: { ...h.effects },
     };
   }

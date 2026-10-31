@@ -7,6 +7,7 @@ import {
   type Question,
   type Quiz,
 } from '@lbq/shared';
+import type { Game } from './Game.js';
 import { isExtraQuestion } from './questionTypes/index.js';
 
 type ClassicQuestion = Extract<Question, { type: 'MCQ' | 'TRUE_FALSE' }>;
@@ -54,4 +55,9 @@ export function wrongAnswer(q: Question): AnswerInput {
       if (isMultipleAnswer(q)) return { choiceIndexes: [q.choices.findIndex((c) => !c.isCorrect)] };
       return { choiceIndex: q.choices.findIndex((c) => !c.isCorrect) };
   }
+}
+
+/** QUESTION_INTRO duration of the current question (3–12 s, T42), 0 outside the intro. */
+export function introOf(game: Game): number {
+  return game.statePayload().introMs ?? 0;
 }

@@ -59,7 +59,15 @@ describe('joker bar placement', () => {
 
   it('is hidden outside the question screens, while paused and without jokers here', () => {
     const s = phone({ type: 'PIN', imageUrl: 'x' });
-    expect(jokerBarMode(s, 'answered')).toBe('hidden');
+    // « Réponse envoyée ! » keeps the bar while the others answer (T42), not after the reveal.
+    expect(jokerBarMode(s, 'answered')).toBe('bar');
+    const revealed = playerReducer(s, {
+      type: 'state',
+      payload: state({ phase: 'REVEAL' }),
+      now: 0,
+    });
+    expect(jokerBarMode(revealed, 'answered')).toBe('hidden');
+    expect(jokerBarMode(revealed, 'result')).toBe('hidden');
     expect(jokerBarMode({ ...s, jokerGame: false }, 'answer')).toBe('hidden');
     const paused = playerReducer(s, {
       type: 'state',

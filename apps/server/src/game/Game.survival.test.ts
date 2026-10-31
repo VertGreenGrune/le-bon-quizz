@@ -21,7 +21,7 @@ import {
 import { Game, type GameSettings, type GameTransport, type Player } from './Game.js';
 import { GameError } from './errors.js';
 import { gameRecord } from './persistence.js';
-import { rightAnswer, wrongAnswer } from './testing.js';
+import { rightAnswer, wrongAnswer, introOf } from './testing.js';
 
 type Sent = { to: string; event: keyof ServerToClientEvents; payload: unknown };
 
@@ -107,7 +107,7 @@ describe('« Survie » mode', () => {
       if (game.phase === 'REVEAL') game.next();
       game.next();
     }
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
   /** Plays one question: each player answers (or not, `null`), then the host ends it. */
@@ -395,7 +395,7 @@ describe('« Survie » mode', () => {
       const [alice, bob, chloe, dan] = joinAll('Alice', 'Bob', 'Chloé', 'Dan');
       game.start();
       game.jokers!.setHand(dan!.id, ['shield']);
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       for (const [p, a] of [
         [alice!, RIGHT],
         [bob!, WRONG],
@@ -445,7 +445,7 @@ describe('« Survie » mode', () => {
       game.next();
       game.next();
       expect(game.phase).toBe('QUESTION_INTRO');
-      vi.advanceTimersByTime(QUESTION_INTRO_MS);
+      vi.advanceTimersByTime(introOf(game));
       answer(alice!, WRONG);
       answer(bob!, RIGHT);
       answer(chloe!, WRONG);

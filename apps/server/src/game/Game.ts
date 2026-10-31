@@ -5,7 +5,8 @@ import {
   MAX_PLAYERS_PER_GAME,
   PAUSE_GRACE_MS,
   PODIUM_SIZE,
-  QUESTION_INTRO_MS,
+  introDurationMs,
+  jokerAvailability,
   RESUME_COUNTDOWN_MS,
   SURVIVAL_DEFAULT_HEARTS,
   TEAM_NAMES,
@@ -235,7 +236,7 @@ export interface GameHooks {
  *
  * LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD → (next question | PODIUM) → ENDED
  *
- * QUESTION_INTRO ends by itself after QUESTION_INTRO_MS and ANSWERING when the timer expires or
+ * QUESTION_INTRO ends by itself after `introDurationMs` (3–12 s, T42) and ANSWERING when the timer expires or
  * every player has answered; the host may also skip both with `next()`.
  *
  * Pause: during QUESTION_INTRO / ANSWERING, a player who still has to answer (or the host screen)
@@ -343,6 +344,8 @@ export class Game {
                 this.phase === 'ANSWERING' ? Date.now() - this.answeringStartedAt : 0,
               recordAnswer: (player, given, responseMs) =>
                 this.recordAnswer(player, given, responseMs),
+              rescore: (player, given) =>
+                this.scoreAnswer(player, given, player.answer!.responseMs),
               bluffLies: (playerId) =>
                 this.setup.bluff?.stage === 'vote' ? otherLies(this.setup.bluff, playerId) : null,
               transport,
@@ -901,6 +904,23 @@ export class Game {
 
   /** Judges and stores an answer (sent by the player, or copied with a Copieur). */
   private recordAnswer(player: Player, given: AnswerInput, responseMs: number): void {
+    const extra = this.scoreAnswer(player, given, responseMs);
+    this.touch();
+    // Copieur: the copiers' answers are recorded too, before checking whether all answered.
+    this.recordingCopies++;
+    try {
+      this.jokers?.onAnswered(player, given, extra);
+    } finally {
+      this.recordingCopies--;
+    }
+    if (this.recordingCopies === 0) this.onAnswersChanged();
+  }
+
+  /**
+   * Judges an answer and stores it on the player (also again, when a Sablier is played after
+   * answering). Returns the Sablier's extra points.
+   */
+  private scoreAnswer(player: Player, given: AnswerInput, responseMs: number): number {
     const question = this.currentQuestion!;
     const limitMs = question.timeLimitSec * 1000;
     const points = (ms: number) => computePoints(question.basePoints, ms, limitMs);
@@ -911,17 +931,7 @@ export class Game {
         : judgeAnswer(question, given, timePoints);
     const scoringMs = this.jokers?.scoringMs(player.id, responseMs) ?? responseMs;
     player.answer = { ...judge(points(scoringMs)), responseMs };
-    const extra =
-      scoringMs === responseMs ? 0 : player.answer.points - judge(points(responseMs)).points;
-    this.touch();
-    // Copieur: the copiers' answers are recorded too, before checking whether all answered.
-    this.recordingCopies++;
-    try {
-      this.jokers?.onAnswered(player, given, extra);
-    } finally {
-      this.recordingCopies--;
-    }
-    if (this.recordingCopies === 0) this.onAnswersChanged();
+    return scoringMs === responseMs ? 0 : player.answer.points - judge(points(responseMs)).points;
   }
 
   // ---------- Queries ----------
@@ -995,6 +1005,8 @@ export class Game {
     } else if (this.phaseEndsAt !== null) {
       state.remainingMs = Math.max(0, this.phaseEndsAt - Date.now());
     }
+    if (this.phase === 'QUESTION_INTRO' && this.currentQuestion)
+      state.introMs = this.introMs(this.currentQuestion);
     if (this.phase === 'ANSWERING' && this.buzzer)
       state.buzzer = buzzerStatus(this.buzzer, this.players);
     if (this.isTimedPhase() && this.setup.draw)
@@ -1029,7 +1041,7 @@ export class Game {
       p.answer = null;
       p.lastResult = null;
     }
-    this.setPhase('QUESTION_INTRO', QUESTION_INTRO_MS);
+    this.setPhase('QUESTION_INTRO', this.introMs(question));
     this.broadcastState();
     this.transport.toHost('question:show', this.showPayload());
     const answer = this.remoteAnswerPayload();
@@ -1039,6 +1051,15 @@ export class Game {
     this.survival?.startQuestion();
     // Someone still offline from the previous phases: the question starts paused.
     this.checkPause({ immediate: true });
+  }
+
+  /**
+   * QUESTION_INTRO duration (T42): longer when players can play jokers on this question (or
+   * « Survie » haunts), and for long texts.
+   */
+  private introMs(question: Question): number {
+    const jokers = this.jokers !== null && jokerAvailability(question.type, question.buzzer).jokers;
+    return introDurationMs(question.text, jokers);
   }
 
   private enterAnswering(): void {

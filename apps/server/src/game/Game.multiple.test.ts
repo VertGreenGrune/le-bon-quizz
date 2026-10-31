@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { introOf } from './testing.js';
 import {
   QUESTION_INTRO_MS,
   type JokerType,
@@ -116,7 +117,7 @@ describe('Explanations and « select all » questions (T37)', () => {
   const reveal = () => rec.last('question:reveal', 'host') as QuestionRevealPayload;
   const jokerState = (p: Player) => rec.last('joker:state', p.socketId!) as PlayerJokersPayload;
   const toAnswering = () => {
-    vi.advanceTimersByTime(QUESTION_INTRO_MS);
+    vi.advanceTimersByTime(introOf(game));
     expect(game.phase).toBe('ANSWERING');
   };
   /** REVEAL / LEADERBOARD → next question's ANSWERING. */
@@ -341,12 +342,14 @@ describe('Explanations and « select all » questions (T37)', () => {
       create(scrambled, { jokers: true });
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
-      hand(alice!, ['scramble']);
-      play(alice!, 'scramble', bob); // lands on question 2
       toAnswering();
       answer(alice!, { choiceIndex: 0 });
       answer(bob!, { choiceIndex: 0 });
-      nextQuestion();
+      game.next();
+      game.next(); // question 2 intro
+      hand(alice!, ['scramble']);
+      play(alice!, 'scramble', bob); // hits this question (T42)
+      toAnswering();
       expect(prompt(bob!).multiple).toBe(true);
       const effect = jokerState(bob!).effects.scrambled!;
       expect(effect.choices.map((c) => c.text).sort()).toEqual(
