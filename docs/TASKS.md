@@ -2256,7 +2256,7 @@ full-screen helper (supported / unsupported / dropped), layout e2e (PIN + ORDER 
 jokers on 2 phone sizes), TV leaderboard screenshot with gains.
 
 ### T42 — Jokers that hit the current question + jokers after answering
-- **Status:** todo
+- **Status:** in-progress (T42 agent)
 - **Depends on:** — Runs in parallel with T41 (see « Wave 8 coordination »).
 - **Ports:** server 3042 / web 5242, test DB `lbq_test_t42`, e2e DB `lbq_e2e_t42`.
 - **Scope:** `apps/server/src/game/**` (jokers, intro timer), `packages/shared/src/jokers.ts` +
