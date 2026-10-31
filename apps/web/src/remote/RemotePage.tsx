@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router';
 import { TEAM_NAMES, type LobbyMember, type QuestionType, type TeamId } from '@lbq/shared';
+import { GainBadge } from '../components/GainBadge';
 import { Avatar } from '../components/Avatar';
 import { PinPicture, PinZoneMark } from '../components/PinPicture';
 import { QUESTION_TYPES } from '../editor/draft';
@@ -167,7 +168,7 @@ export function RemotePage() {
             {main.label}
           </button>
         )}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <TvButton
             label="🔇 Couper"
             title="Couper le son de la TV"
@@ -177,6 +178,16 @@ export function RemotePage() {
             label="🔊 Son"
             title="Remettre le son de la TV"
             onClick={() => remote.tv('unmute')}
+          />
+          <TvButton
+            label="🎶 −"
+            title="Baisser la musique de la TV"
+            onClick={() => remote.tv('music-down')}
+          />
+          <TvButton
+            label="🎶 +"
+            title="Monter la musique de la TV"
+            onClick={() => remote.tv('music-up')}
           />
           {question?.audio && (
             <TvButton
@@ -489,7 +500,7 @@ function Standings({
   top,
 }: {
   title: string;
-  top: { nickname: string; avatar: string; score: number }[];
+  top: { nickname: string; avatar: string; score: number; gained?: number }[];
 }) {
   return (
     <section className="flex flex-col gap-2">
@@ -500,6 +511,7 @@ function Standings({
             <span className="w-6 text-center text-lg font-black">{i + 1}</span>
             <Avatar id={p.avatar} size="sm" />
             <span className="flex-1 font-bold">{p.nickname}</span>
+            {p.gained !== undefined && <GainBadge gained={p.gained} instant />}
             <span className="font-black tabular-nums">{p.score}</span>
           </li>
         ))}

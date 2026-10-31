@@ -25,11 +25,12 @@ import { MORE_TYPES, MoreTypeHint, MoreTypeReveal } from './moreTypeScreens';
 import { BluffHint, BluffReveal } from './bluffScreens';
 import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { DrawIntroLine, DrawStage } from './drawScreens';
-import { TICK_FROM_SEC, useMuted } from './sounds';
+import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
 import { Hearts } from './survivalScreens';
 import { heartsText, survivalLabel } from '../lib/survival';
+import { GainBadge } from '../components/GainBadge';
 
 // ---------- Lobby ----------
 
@@ -422,7 +423,8 @@ function ListenBadge({
   atReveal: boolean;
   onReplay: () => void;
 }) {
-  const muted = useMuted();
+  const levels = useSoundLevels();
+  const muted = useMuted() || levels.clips === 0;
   return (
     <motion.div
       initial={{ scale: 0.7, opacity: 0 }}
@@ -790,6 +792,8 @@ export function LeaderboardScreen({
   );
   // The new rows carry the hearts after this question: the previous ones show them too.
   const heartsOf = new Map(top.map((p) => [p.nickname, p.survival]));
+  // What each one earned on this question (T41): shown from the first phase on.
+  const gainOf = new Map(top.map((p) => [p.nickname, p.gained]));
 
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
@@ -838,6 +842,13 @@ export function LeaderboardScreen({
                     />
                   )}
                   {p.jokers && <JokerIcons jokers={p.jokers} />}
+                  {gainOf.get(p.nickname) !== undefined && (
+                    <GainBadge
+                      gained={gainOf.get(p.nickname)!}
+                      instant={instant}
+                      delay={reorder ? 0.3 + i * 0.12 : i * 0.12 + 0.2}
+                    />
+                  )}
                   <span className="tabular-nums">
                     {showNew && reorder ? (
                       <CountUp value={p.score} from={prevScore.get(p.nickname) ?? 0} />

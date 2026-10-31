@@ -6,6 +6,7 @@ import { ClipPlayer, clipWish, type AudioLike, type ClipWish } from './clipPlaye
 class FakeAudio implements AudioLike {
   src = '';
   currentTime = 0;
+  volume = 1;
   paused = true;
   preload = '';
   plays = 0;
@@ -104,6 +105,22 @@ describe('ClipPlayer', () => {
     expect(audio.paused).toBe(false);
     player.update(wish(), true);
     expect(audio.paused).toBe(true);
+  });
+
+  it('follows the « Extraits du quiz » level, 0 = silent without ducking the music', () => {
+    const { audio, player, ducked } = setup();
+    player.update(wish(), false, 0.4);
+    expect(audio.volume).toBe(0.4);
+    expect(audio.paused).toBe(false);
+    player.update(wish(), false, 0.7);
+    expect(audio.volume).toBe(0.7);
+    audio.advance(2);
+    player.update(wish(), false, 0);
+    expect(audio.paused).toBe(true);
+    expect(ducked).toEqual([true, false]);
+    player.update(wish(), false, 1);
+    expect(audio.paused).toBe(false);
+    expect(audio.currentTime).toBe(32);
   });
 
   it('at the reveal, plays once; « Rejouer » starts it again', () => {

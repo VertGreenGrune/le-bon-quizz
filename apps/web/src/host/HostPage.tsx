@@ -27,7 +27,8 @@ import {
   QuestionIntroScreen,
   QuestionScreen,
 } from './screens';
-import { setMuted, useHostSounds, useMuted } from './sounds';
+import { useHostSounds } from './sounds';
+import { SoundButton } from './soundSettings';
 
 /**
  * Shared screen (TV/projector). `/host/new?quizId=<id>[&mode=teams&teams=<n>]` creates a game
@@ -269,7 +270,7 @@ export function HostPage() {
           {phase !== 'ENDED' && (
             <RemoteButton pin={pin} remotes={pairing.remotes} remoteToken={pairing.remoteToken} />
           )}
-          <MuteButton />
+          <SoundButton />
           {phase !== 'ENDED' && phase !== 'PODIUM' && (
             <button
               type="button"
@@ -367,23 +368,6 @@ function screenKeyFor(phase: HostPhase | null, questionIndex: number): string {
     case 'ENDED':
       return 'podium';
   }
-}
-
-/** Sound on/off, remembered in localStorage. */
-function MuteButton() {
-  const muted = useMuted();
-  return (
-    <button
-      type="button"
-      onClick={() => setMuted(!muted)}
-      aria-label={muted ? 'Activer le son' : 'Couper le son'}
-      title={muted ? 'Activer le son' : 'Couper le son'}
-      aria-pressed={muted}
-      className="rounded-lg border-2 border-white/60 px-3 py-1 text-xl hover:bg-white/10"
-    >
-      {muted ? '🔇' : '🔊'}
-    </button>
-  );
 }
 
 function Message({

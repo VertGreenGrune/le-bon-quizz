@@ -293,6 +293,8 @@ export class Game {
   /** Team mode: the teams offered in the lobby, then (from the start) the ones that have players. */
   private teamIds: TeamId[] = [];
   private readonly teamScores = new Map<TeamId, number>();
+  /** Team mode: what each team's score moved by on the last revealed question (leaderboard). */
+  private readonly teamGains = new Map<TeamId, number>();
   /** Players connected when the current ANSWERING phase started (team averages). */
   private readonly presentIds = new Set<string>();
   /**
@@ -1258,8 +1260,10 @@ export class Game {
         points.push(p.lastResult?.pointsEarned ?? 0);
       }
       // Jokers can make a member's points negative (Double ou rien, Voleur): never below 0.
-      const score = (this.teamScores.get(id) ?? 0) + teamQuestionPoints(points);
-      this.teamScores.set(id, Math.max(0, score));
+      const before = this.teamScores.get(id) ?? 0;
+      const score = Math.max(0, before + teamQuestionPoints(points));
+      this.teamScores.set(id, score);
+      this.teamGains.set(id, score - before);
     }
   }
 
@@ -1267,19 +1271,28 @@ export class Game {
     return [...this.players.values()].filter((p) => p.teamId === id);
   }
 
-  /** The teams in play, best first. */
-  private rankedTeams(): RankedTeam[] {
+  /** The teams in play, best first; `withGains`: what each one earned on the last question. */
+  private rankedTeams(withGains = false): RankedTeam[] {
     return rankTeams(
-      this.teamIds.map((id) => ({
-        id,
-        name: TEAM_NAMES[id],
-        score: this.teamScores.get(id) ?? 0,
-        playerCount: this.teamMembers(id).length,
-      })),
+      this.teamIds.map((id) => {
+        const gained = withGains ? this.teamGains.get(id) : undefined;
+        return {
+          id,
+          name: TEAM_NAMES[id],
+          score: this.teamScores.get(id) ?? 0,
+          playerCount: this.teamMembers(id).length,
+          ...(gained !== undefined && { gained }),
+        };
+      }),
     ).map(({ team }) => team);
   }
 
+  /**
+   * `leaderboard` (size = LEADERBOARD_SIZE, after a question) also tells what each player / team
+   * earned on that question (`gained`, T41); `podium` doesn't.
+   */
   private standingsPayload(size: number): StandingsPayload {
+    const leaderboard = size === LEADERBOARD_SIZE && this.questionIndex >= 0;
     const jokers = this.withJokers && size === LEADERBOARD_SIZE ? this.jokers : null;
     const survival = this.survival;
     const top = this.ranked(this.players.values())
@@ -1290,11 +1303,13 @@ export class Game {
           nickname: player.nickname,
           avatar: player.avatar,
           score: player.totalScore,
+          // Didn't answer / absent: +0. A player's points never move between REVEAL and here.
+          ...(leaderboard && { gained: player.lastResult?.pointsEarned ?? 0 }),
           ...(info && { jokers: info }),
           ...(survival && { survival: survival.info(player.id) }),
         };
       });
-    return this.mode === 'teams' ? { top, teams: this.rankedTeams() } : { top };
+    return this.mode === 'teams' ? { top, teams: this.rankedTeams(leaderboard) } : { top };
   }
 
   /** « Survie » only: everyone's hearts, to everyone by default. */

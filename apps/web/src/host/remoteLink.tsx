@@ -5,7 +5,7 @@ import type { ErrorPayload, ServerToClientEvents, TvAction } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
 import { joinOrigins } from './joinUrl';
 import { remoteToast, remoteUrl } from './remoteUrl';
-import { setMuted } from './sounds';
+import { getSoundLevels, setLevels, setMuted, stepLevel } from './sounds';
 
 /**
  * « 📱 Télécommande » on the TV (T39): how many remotes are connected (`remote:status`), a toast
@@ -48,7 +48,10 @@ export function useRemotePairing(pin: string | undefined, hostToken: string | nu
   return { remotes, toast: toast?.text ?? null, remoteToken };
 }
 
-/** Controls pressed on the remote, played on the TV: 🔇 / 🔊 and ↻ the sound clip. */
+/**
+ * Controls pressed on the remote, played on the TV: 🔇 / 🔊, ↻ the sound clip, « Musique − / + »
+ * (`MUSIC_STEP` of the « Musique et effets » level).
+ */
 export function useTvControls(onReplay: () => void): void {
   const replay = useRef(onReplay);
   replay.current = onReplay;
@@ -57,7 +60,9 @@ export function useTvControls(onReplay: () => void): void {
     const onControl: ServerToClientEvents['tv:control'] = ({ action }: { action: TvAction }) => {
       if (action === 'mute') setMuted(true);
       else if (action === 'unmute') setMuted(false);
-      else replay.current();
+      else if (action === 'music-down' || action === 'music-up') {
+        setLevels({ music: stepLevel(getSoundLevels().music, action === 'music-up') });
+      } else replay.current();
     };
     socket.on('tv:control', onControl);
     return () => {

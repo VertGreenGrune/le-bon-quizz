@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { phaseSound, readMuted, shouldTick, writeMuted } from './sounds';
+import {
+  DEFAULT_LEVELS,
+  phaseSound,
+  readLevels,
+  readMuted,
+  shouldTick,
+  stepLevel,
+  writeLevels,
+  writeMuted,
+} from './sounds';
 
 function memoryStorage() {
   const map = new Map<string, string>();
@@ -47,5 +56,42 @@ describe('host sounds', () => {
     expect(readMuted(broken)).toBe(false);
     expect(() => writeMuted(broken, true)).not.toThrow();
     expect(readMuted(undefined)).toBe(false);
+  });
+
+  it('remembers the two volume levels (100 % by default), independent of « Tout couper »', () => {
+    const storage = memoryStorage();
+    expect(readLevels(storage)).toEqual(DEFAULT_LEVELS);
+    // An old TV only had the mute flag: still muted, levels at 100 %.
+    writeMuted(storage, true);
+    expect(readLevels(storage)).toEqual({ music: 1, clips: 1 });
+    writeLevels(storage, { music: 0.25, clips: 0.8 });
+    expect(readLevels(storage)).toEqual({ music: 0.25, clips: 0.8 });
+    expect(readMuted(storage)).toBe(true);
+    writeLevels(storage, { music: 0, clips: 1 });
+    expect(readLevels(storage).music).toBe(0);
+
+    storage.setItem('lbq:host:music-volume', 'abc');
+    storage.setItem('lbq:host:clip-volume', '250');
+    expect(readLevels(storage)).toEqual({ music: 1, clips: 1 });
+    expect(readLevels(undefined)).toEqual(DEFAULT_LEVELS);
+    const broken = {
+      getItem: () => {
+        throw new Error('denied');
+      },
+      setItem: () => {
+        throw new Error('denied');
+      },
+    };
+    expect(readLevels(broken)).toEqual(DEFAULT_LEVELS);
+    expect(() => writeLevels(broken, DEFAULT_LEVELS)).not.toThrow();
+  });
+
+  it('« Musique − / + » of the remote moves by 20 % between 0 and 100 %', () => {
+    expect(stepLevel(1, false)).toBe(0.8);
+    expect(stepLevel(1, true)).toBe(1);
+    expect(stepLevel(0.2, false)).toBe(0);
+    expect(stepLevel(0, false)).toBe(0);
+    expect(stepLevel(0, true)).toBe(0.2);
+    expect(stepLevel(0.45, true)).toBe(0.6); // a slider value in between: snapped
   });
 });

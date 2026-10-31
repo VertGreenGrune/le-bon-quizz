@@ -235,8 +235,8 @@ describe('Game in team mode', () => {
 
       game.next(); // → LEADERBOARD
       expect(teams()).toEqual([
-        { id: 1, name: 'Équipe Bleue', score: 600, playerCount: 5 },
-        { id: 0, name: 'Équipe Rouge', score: 500, playerCount: 2 },
+        { id: 1, name: 'Équipe Bleue', score: 600, playerCount: 5, gained: 600 },
+        { id: 0, name: 'Équipe Rouge', score: 500, playerCount: 2, gained: 500 },
       ]);
       // Individual ranking (everyone, up to LEADERBOARD_SIZE) still comes with it.
       expect((rec.last('leaderboard', 'host') as StandingsPayload).top).toHaveLength(7);
@@ -319,8 +319,8 @@ describe('Game in team mode', () => {
       answer(b1!, RIGHT);
       game.next();
       expect(teams()).toEqual([
-        { id: 0, name: 'Équipe Rouge', score: 1600, playerCount: 1 },
-        { id: 1, name: 'Équipe Bleue', score: 1000, playerCount: 1 },
+        { id: 0, name: 'Équipe Rouge', score: 1600, playerCount: 1, gained: 1100 },
+        { id: 1, name: 'Équipe Bleue', score: 1000, playerCount: 1, gained: 1000 },
       ]);
       // The kicked player is still saved, with their team.
       expect(game.standings().find((s) => s.nickname === 'R2')).toMatchObject({ teamId: 0 });

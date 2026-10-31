@@ -9,6 +9,7 @@ import {
   type AvatarId,
 } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
+import { FullscreenButton } from '../components/FullscreenButton';
 import { initialAvatar } from './avatarChoice';
 import { errorMessage, normalizePin, reclaimErrorMessage } from './playerState';
 import { fetchJoinInfo, joinGame } from './playerStore';
@@ -223,6 +224,7 @@ export function JoinPage() {
           Reprendre la partie {existing.pin} ({existing.nickname})
         </Link>
       )}
+      <FullscreenButton variant="big" />
     </main>
   );
 }

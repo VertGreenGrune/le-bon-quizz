@@ -11,6 +11,7 @@ import {
 } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import { Confetti } from '../components/motion';
+import { GainBadge } from '../components/GainBadge';
 import { ShapeIcon, shapeBg } from '../components/shapes';
 import { competitionRanks } from '../lib/ranks';
 import { teamLobbyStatus } from './hostReducer';
@@ -182,6 +183,9 @@ export function TeamRanking({ teams, instant }: { teams: RankedTeam[]; instant: 
             <span className="text-xl font-bold opacity-90">
               {t.playerCount} joueur{t.playerCount > 1 ? 's' : ''}
             </span>
+            {t.gained !== undefined && (
+              <GainBadge gained={t.gained} instant={instant} delay={i * 0.15 + 0.3} />
+            )}
             <span className="tabular-nums">{t.score}</span>
           </motion.li>
         ))}

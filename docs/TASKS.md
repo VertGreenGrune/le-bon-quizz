@@ -2205,7 +2205,7 @@ solo / teams / « Survie », with the pause and both resyncs.
   `game/rejudge.ts`) with small hooks in `Game.ts`; the main agent resolves the leftovers at merge.
 
 ### T41 — UI fixes: separate volumes, points per question, phone full screen, PIN joker bar
-- **Status:** in-progress (T41 agent)
+- **Status:** done
 - **Depends on:** — Runs in parallel with T42 (see « Wave 8 coordination »).
 - **Ports:** server 3041 / web 5241, test DB `lbq_test_t41`, e2e DB `lbq_e2e_t41`.
 - **Scope:** `apps/web/src/host/**` (sounds, header, leaderboard), `apps/web/src/player/**`
@@ -2254,6 +2254,45 @@ Pixel 7 and an iPhone SE viewport — « Valider » is visible and clickable.
 `gained` (server: per question, jokers / Voleur negative, absent player +0, team gain, resync),
 full-screen helper (supported / unsupported / dropped), layout e2e (PIN + ORDER + slider with
 jokers on 2 phone sizes), TV leaderboard screenshot with gains.
+
+- **Summary:** **1. Volumes:** `host/sounds.ts` keeps two levels (`SoundLevels`, keys
+  `lbq:host:music-volume` / `lbq:host:clip-volume`, 0–100, default 100; `lbq:host:muted` stays
+  « Tout couper », so an old TV keeps its choice), applied live (game sounds × music level, 0 = not
+  played; `ClipPlayer.update(wish, muted, volume)`, clip level 0 = silent and no ducking);
+  `host/soundSettings.tsx` « 🔊 Son » popover in the TV header (two sliders + « Tout couper »)
+  replaces the 🔇 toggle; « (son coupé) » on the 🎵 badge also when the clip level is 0. Remote:
+  « 🎶 − / + » buttons (`TvAction` `music-down` / `music-up`, ±20 % via `stepLevel`). **2. Gains:**
+  `RankedPlayer.gained` = `lastResult.pointsEarned` (already after Double / Voleur, 0 without an
+  answer) and `RankedTeam.gained` (`Game.teamGains`, set in `scoreTeams`) in `leaderboard` only
+  (also in the host resync, never in `podium`); `components/GainBadge.tsx` (« +850 » green, « +0 »
+  grey, « −500 » red) on the TV ranking — shown from the first phase on, before the re-order — on
+  the team ranking and on the remote's top 5. **4. Full screen:** `lib/fullscreen.ts`
+  (`fullscreenSupport` = api / homeScreen (iPhone) / standalone / none, `enterFullscreen` with
+  `navigationUI: 'hide'` + portrait lock, failures ignored, `useFullscreen` with `dropped`),
+  `components/FullscreenButton.tsx`: « ⛶ Plein écran » / « 🗗 Quitter le plein écran » on `/join` and
+  in the phone lobby, ⛶ icon in the phone header, « ⛶ Revenir en plein écran » banner when the
+  browser dropped it (never automatic), iPhone hint « Partager → Sur l'écran d'accueil »;
+  `public/manifest.webmanifest` (`display: fullscreen`, `start_url: /join`, portrait) + Apple metas
+  + favicon in `index.html`; icons (the 4 answer shapes on the brand purple, PNG 192 / 512 / 180 +
+  SVG) drawn by the new `apps/web/scripts/generate-icons.mjs` (no dependency, deterministic).
+  **5. Joker bar:** `jokerBarMode(s, screen)` in `player/jokers.tsx` = hidden / `bar` (get ready,
+  shape buttons) / `chip` (PIN, ORDER, SLIDER, TYPE_ANSWER, WHO_OF_US, WORD_CLOUD, « Mytho ! »
+  writing): there the hand is a « 🃏 n » button in the phone header (`JokerChip`, opens « Mes
+  jokers » then the usual joker sheet; shared `BottomSheet`); the PIN picture fits the measured free
+  height (`pictureMaxHeight`, ResizeObserver) instead of a fixed 55vh; the ORDER list scrolls
+  (`layoutScroll`) above a pinned « Valider », tighter on short screens. Tests:
+  `Game.gained.test.ts` (per question, +0, resync, no podium gain, Double / Voleur negative, team
+  gain), 4 existing leaderboard expectations gain `gained`; web `sounds.test.ts` (levels, old flag,
+  `stepLevel`), `clipPlayer.test.ts` (clip level), `lib/fullscreen.test.ts`, `player/layout.test.ts`
+  (bar modes, picture height, gain format); e2e `e2e/layout.spec.ts` (jokers on a Pixel 7 + an iPhone
+  SE: PIN / ORDER (6 items) / slider « Valider » fully on screen and clickable, header chip → hand,
+  TV volumes stored, full-screen toggle, TV gains) and `e2e/remote.spec.ts` updated for the new TV
+  sound button + « Musique − ». Checked with screenshots (TV 1600×900, Pixel 7, iPhone SE).
+- **Notes:** (1) T42 (merge): the « when » of the joker bar now lives in `jokerBarMode`
+  (`player/jokers.tsx`) — add the `answered` screen there (as a `bar`); `JokerBar` / `JokerChip` /
+  `JokerHand` render the content. (2) The full-screen e2e only runs on Chromium (Playwright doesn't
+  emulate iPhone Safari); the home-screen app was not tried on a real iPhone. (3) The manifest
+  applies to the whole site; only the phone pages offer it. No migration.
 
 ### T42 — Jokers that hit the current question + jokers after answering
 - **Status:** in-progress (T42 agent)
@@ -2645,3 +2684,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   2 ordres, 2 PIN on a cropped public-domain equirectangular map of Europe, 1 « Qui de nous ? »,
   1 « Dessine-moi »), every one with a sourced explanation; 12 new free Commons pictures, 13 unused
   ones removed. Re-imported in place for loicmoster@hotmail.fr. Not played with a scripted game.
+- 2026-10-31, T41 agent (additive, PLAN.md §3 / §4 / §7): `RankedPlayer.gained?` and
+  `RankedTeam.gained?` (set in `leaderboard`, never in `podium`); `TvAction` gains `music-down` /
+  `music-up`. `ClipPlayer.update` takes a 3rd `volume` argument and `AudioLike` a `volume` (test
+  fakes must have it). Outside the listed scope: `apps/web/scripts/generate-icons.mjs` +
+  `public/icons/`, `components/GainBadge.tsx` / `FullscreenButton.tsx`, `lib/fullscreen.ts`,
+  `e2e/remote.spec.ts` (the TV's mute button became « 🔊 Son »).
