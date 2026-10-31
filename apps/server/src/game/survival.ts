@@ -34,6 +34,9 @@ interface Life {
   result: NonNullable<PlayerResultPayload['survival']> | null;
 }
 
+/** `Survival.snapshot()`. */
+export type SurvivalSnapshot = Map<string, Life>;
+
 const refuse = (message: string) => new GameError('JOKER_REFUSED', message);
 
 /**
@@ -100,6 +103,24 @@ export class Survival {
       }
       if (life.hearts === 0) result.ghost = true;
       life.result = result;
+    }
+  }
+
+  /** « ✅ Accepter » (T44): every life before the reveal's settlement. */
+  snapshot(): SurvivalSnapshot {
+    return new Map([...this.lives].map(([id, life]) => [id, { ...life }]));
+  }
+
+  /**
+   * Back to the lives before the settlement, to settle the question again. Haunts spent since
+   * the reveal stay spent (the Gel / Brouilleur already sits on its target).
+   */
+  restore(snapshot: SurvivalSnapshot): void {
+    for (const [id, saved] of snapshot) {
+      const now = this.lives.get(id);
+      const earned = now?.result?.hauntEarned ? 1 : 0;
+      const spent = now ? Math.max(0, saved.haunts + earned - now.haunts) : 0;
+      this.lives.set(id, { ...saved, haunts: Math.max(0, saved.haunts - spent) });
     }
   }
 

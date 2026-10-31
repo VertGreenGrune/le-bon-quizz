@@ -3,6 +3,7 @@
  * Keep in sync with docs/PLAN.md §4. Any change must be noted in docs/TASKS.md.
  */
 import { z } from 'zod';
+import type { AcceptedAnswers } from './accept.js';
 import { AvatarId } from './avatars.js';
 import { DRAW_MAX_CHUNKS, DrawStrokeSchema, type DrawStroke } from './draw.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
@@ -49,6 +50,8 @@ export const ErrorCode = z.enum([
   'BUZZER_TAKEN',
   /** « Annuler ma réponse »: not on this question / for a copied answer, or 3 cancels used. */
   'CANCEL_REFUSED',
+  /** `host:accept` outside the REVEAL of that question (e.g. after « Suivant »). */
+  'NOT_REVEALING',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -131,6 +134,19 @@ export const HostKickPayload = hostAction({ playerId: z.string().min(1) });
 export const HostMovePlayerPayload = hostAction({ playerId: z.string().min(1), teamId: TeamId });
 /** « Buzzer »: the host judges the answer said out loud by the player who has the hand. */
 export const HostJudgePayload = hostAction({ correct: z.boolean() });
+/**
+ * « ✅ Accepter » (T44), REVEAL of `questionIndex`: exactly one of `choiceIndex` (MCQ / TRUE_FALSE),
+ * `text` (TYPE_ANSWER: a typed group) or `margin` (SLIDER: accept the guesses at ± margin).
+ */
+export const HostAcceptPayload = hostAction({
+  questionIndex: z.number().int().min(0),
+  choiceIndex: z.number().int().min(0).max(3).optional(),
+  text: z.string().trim().min(1).max(TYPE_ANSWER_MAX_LENGTH).optional(),
+  margin: z.number().positive().optional(),
+}).refine(
+  (p) => [p.choiceIndex, p.text, p.margin].filter((v) => v !== undefined).length === 1,
+  'One of choiceIndex, text, margin',
+);
 /**
  * « 📱 Télécommande » dialog of the TV: the token to put in the remote's link (created the first
  * time); `revoke` = « Déconnecter la télécommande » (a new token, the paired remotes are dropped).
@@ -232,6 +248,7 @@ export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
 export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
 export type HostJudgePayload = z.infer<typeof HostJudgePayload>;
+export type HostAcceptPayload = z.infer<typeof HostAcceptPayload>;
 export type HostTokenPayload = z.infer<typeof HostTokenPayload>;
 export type HostRemotePayload = z.infer<typeof HostRemotePayload>;
 export type RemoteJoinPayload = z.infer<typeof RemoteJoinPayload>;
@@ -317,6 +334,14 @@ export interface ClientToServerEvents {
    * `INVALID_PAYLOAD` when nobody has the hand.
    */
   'host:judge': (p: HostJudgePayload, ack: (r: Ack) => void) => void;
+  /**
+   * « ✅ Accepter aussi cette réponse » (T44), REVEAL of that question only (`NOT_REVEALING`
+   * otherwise): the question is scored again with the extra right answer (points from each
+   * player's real answer time, streak, jokers, teams, « Survie »), then `question:reveal`, every
+   * `player:result` and `survival:state` are re-sent. `INVALID_PAYLOAD` on a type that doesn't
+   * take it (`acceptKind`). Accepting what is already right is a no-op.
+   */
+  'host:accept': (p: HostAcceptPayload, ack: (r: Ack) => void) => void;
 
   /**
    * In LOBBY: joins. In a started game: takes the place of the disconnected player with that
@@ -624,6 +649,8 @@ export interface TypedAnswerGroup {
   text: string;
   count: number;
   correct: boolean;
+  /** Made right by the host (« ✅ Réponse acceptée », T44). */
+  accepted?: true;
 }
 
 /** Type-specific part of a reveal, also saved in the game report (`QuestionResult.details`). */
@@ -662,6 +689,8 @@ export interface RevealDetails {
   draw?: DrawReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
+  /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
+  accepted?: AcceptedAnswers;
 }
 
 export interface DrawReveal {
@@ -702,9 +731,11 @@ export interface QuestionRevealPayload extends RevealDetails {
   distribution: number[];
   /** « 💡 Le saviez-vous ? »: the question's explanation (never sent before the reveal). */
   explanation?: string;
-  /** SLIDER: same as `slider.correct` / `slider.margin`. */
+  /** SLIDER: same as `slider.correct` / `slider.margin` (the accepted margin, T44). */
   correct?: number;
   margin?: number;
+  /** TYPE_ANSWER: every group of typed answers (not only the top 6), for the host to accept one. */
+  typedAnswers?: TypedAnswerGroup[];
 }
 
 export interface PlayerResultPayload {
@@ -780,6 +811,8 @@ export interface PlayerResultPayload {
   multiple?: { correctIndexes: number[]; yours?: number[] };
   /** « 💡 Le saviez-vous ? »: the question's explanation. */
   explanation?: string;
+  /** The answer was refused, then accepted by the host (T44): « ✅ Réponse acceptée … ». */
+  accepted?: true;
 }
 
 /** What a joker does to one phone's controls on the current question (that phone only). */

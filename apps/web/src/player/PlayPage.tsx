@@ -170,7 +170,8 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
     case 'waitingResult':
       return <Message title="Résultat…" subtitle="Regarde l'écran !" />;
     case 'result':
-      return <Result s={s} />;
+      // The host accepted the answer (T44): the screen plays again with the new result.
+      return <Result key={s.result?.accepted ? 'accepted' : 'judged'} s={s} />;
     case 'standings':
       return <Standings s={s} />;
     case 'podium':
@@ -636,6 +637,16 @@ function Result({ s }: { s: PlayerState }) {
         {drew ? '🎨' : r.correct ? '✓' : partial ? '≈' : idle ? '🔔' : '✗'}
       </motion.div>
       <h2 className="text-4xl font-black">{title}</h2>
+      {r.accepted && (
+        <motion.p
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="rounded-xl bg-white px-4 py-2 text-lg font-black text-answer-green shadow"
+          data-testid="accepted-note"
+        >
+          ✅ Réponse acceptée par l’animateur{'\u00a0'}!
+        </motion.p>
+      )}
       {r.buzzer && r.buzzer.answer.length > 0 && (
         <p className="font-bold">Bonne réponse : {r.buzzer.answer.join(' / ')}</p>
       )}

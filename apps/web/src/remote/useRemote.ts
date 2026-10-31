@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import type { Ack, ErrorPayload, ServerToClientEvents, TeamId, TvAction } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
+import type { AcceptInput } from '../host/accept';
 import { listenHostEvents } from '../host/useHostGame';
 import {
   forgetRemoteToken,
@@ -96,6 +97,11 @@ export function useRemote(pin: string, remoteToken: string | null) {
     judge: (correct: boolean) => {
       const a = auth();
       if (a) getSocket().emit('host:judge', { ...a, correct }, handleAck);
+    },
+    /** « ✅ Accepter » a refused answer at the reveal (T44). */
+    accept: (questionIndex: number, input: AcceptInput) => {
+      const a = auth();
+      if (a) getSocket().emit('host:accept', { ...a, questionIndex, ...input }, handleAck);
     },
     tv: (action: TvAction) => {
       const a = auth();

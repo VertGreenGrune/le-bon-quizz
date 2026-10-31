@@ -1,4 +1,5 @@
 import { hasRightAnswer, type GameQuestionReport, type GameSummary } from '@lbq/shared';
+import { formatValue } from '../lib/numbers';
 
 /**
  * A poll (or a « Qui de nous ? », a word cloud) has no right answer: left out of success rates
@@ -39,4 +40,19 @@ export function formatDuration(game: Pick<GameSummary, 'startedAt' | 'endedAt'>)
   if (min < 1) return '< 1 min';
   if (min < 60) return `${min} min`;
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
+}
+
+/**
+ * « Réponse acceptée par l'animateur : … » (T44): the answers the host accepted at the reveal,
+ * in words (null: none).
+ */
+export function acceptedText(q: Pick<GameQuestionReport, 'choices' | 'details'>): string | null {
+  const a = q.details.accepted;
+  if (!a) return null;
+  const parts = [
+    ...(a.choiceIndexes ?? []).map((i) => q.choices[i] ?? `choix ${i + 1}`),
+    ...(a.texts ?? []).map((t) => `« ${t} »`),
+    ...(a.margin !== undefined ? [`± ${formatValue(a.margin, q.details.slider?.unit)}`] : []),
+  ];
+  return parts.length > 0 ? parts.join(', ') : null;
 }

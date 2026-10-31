@@ -8,6 +8,7 @@ import type {
 } from '@lbq/shared';
 import { SOLO, type GameOptions } from '../lib/gameOptions';
 import { getSocket, type GameSocket } from '../lib/socket';
+import type { AcceptInput } from './accept';
 import { hostReducer, initialHostState, type HostAction } from './hostReducer';
 
 const tokenKey = (pin: string) => `lbq:host:${pin}`;
@@ -204,6 +205,11 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const a = auth();
     if (a) getSocket().emit('host:judge', { ...a, correct }, handleAck);
   };
+  /** « ✅ Accepter » a refused answer at the reveal of that question (T44). */
+  const accept = (questionIndex: number, input: AcceptInput) => {
+    const a = auth();
+    if (a) getSocket().emit('host:accept', { ...a, questionIndex, ...input }, handleAck);
+  };
   /** « ⏸ Pause » (QUESTION_INTRO / ANSWERING). */
   const pause = () => {
     const a = auth();
@@ -229,6 +235,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     pause,
     resume,
     judge,
+    accept,
     clearError: () => setError(null),
   };
 }

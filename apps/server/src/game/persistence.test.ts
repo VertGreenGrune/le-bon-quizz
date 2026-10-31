@@ -250,6 +250,43 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     });
   });
 
+  it('saves a question fixed with « ✅ Accepter » (T44) in the report', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const wrongKey: Question = {
+      text: 'Capitale de l’Australie ?',
+      type: 'MCQ',
+      timeLimitSec: 20,
+      basePoints: 1000,
+      choices: [
+        { text: 'Sydney', isCorrect: true },
+        { text: 'Canberra', isCorrect: false },
+      ],
+    };
+    const quiz: Quiz = { id: 'fix', title: 'Corrigé', questions: [wrongKey] };
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
+    const alice = game.join('Alice', 's1', 'batman');
+    game.start();
+    game.next();
+    game.answer(alice.id, 0, { choiceIndex: 1 });
+    game.accept(0, { choiceIndex: 1 });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, null)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({
+      correctIndexes: [0, 1],
+      correctCount: 1,
+      details: { accepted: { choiceIndexes: [1] } },
+    });
+    expect(report.results[0]).toMatchObject({ nickname: 'Alice', correctCount: 1, rank: 1 });
+    expect(report.results[0]!.score).toBeGreaterThan(0);
+  });
+
   it("launches the host's own quizzes and public ones, not another host's private one", async () => {
     const owner = await user('owner@test.fr');
     const other = await user('other@test.fr');

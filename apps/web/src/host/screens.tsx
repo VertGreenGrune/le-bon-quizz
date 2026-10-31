@@ -32,6 +32,8 @@ import { JokerIcons } from './jokerScreens';
 import { Hearts } from './survivalScreens';
 import { heartsText, survivalLabel } from '../lib/survival';
 import { GainBadge } from '../components/GainBadge';
+import { nextSliderMargin, type AcceptInput } from './accept';
+import { AcceptButton, AcceptedTag } from './acceptControls';
 
 // ---------- Lobby ----------
 
@@ -239,6 +241,7 @@ export function QuestionScreen({
   onJudge = () => {},
   draw = null,
   drawing = [],
+  onAccept,
 }: {
   question: QuestionShowPayload | null;
   remainingMs: number | null;
@@ -256,6 +259,8 @@ export function QuestionScreen({
   /** « Dessine-moi »: who draws / found it (`game:state.draw`) and the live drawing. */
   draw?: DrawStatus | null;
   drawing?: readonly DrawStroke[];
+  /** Reveal: « ✅ Accepter » a refused answer (T44; MCQ, vrai / faux, réponse libre, curseur). */
+  onAccept?: (input: AcceptInput) => void;
 }) {
   if (!question) {
     return <p className="m-auto animate-pulse text-3xl">Chargement de la question…</p>;
@@ -314,9 +319,9 @@ export function QuestionScreen({
             ) : MORE_TYPES.includes(reveal.type) ? (
               <MoreTypeReveal reveal={reveal} instant={instant} questionIndex={question.index} />
             ) : reveal.type === 'TYPE_ANSWER' ? (
-              <TypedAnswersReveal reveal={reveal} instant={instant} />
+              <TypedAnswersReveal reveal={reveal} instant={instant} onAccept={onAccept} />
             ) : reveal.type === 'SLIDER' ? (
-              <SliderReveal reveal={reveal} instant={instant} />
+              <SliderReveal reveal={reveal} instant={instant} onAccept={onAccept} />
             ) : (
               <>
                 <DistributionChart
@@ -325,6 +330,8 @@ export function QuestionScreen({
                   count={question.choices.length}
                   poll={reveal.type === 'POLL'}
                   instant={instant}
+                  accepted={reveal.accepted?.choiceIndexes ?? []}
+                  onAccept={reveal.type === 'POLL' ? undefined : onAccept}
                 />
                 {reveal.multiple && <AllFound count={reveal.multiple.allFound} instant={instant} />}
               </>
@@ -519,9 +526,11 @@ function AnswerHint({ question }: { question: QuestionShowPayload }) {
 function TypedAnswersReveal({
   reveal,
   instant,
+  onAccept,
 }: {
   reveal: QuestionRevealPayload;
   instant: boolean;
+  onAccept?: (input: AcceptInput) => void;
 }) {
   const top = reveal.topAnswers ?? [];
   return (
@@ -551,6 +560,12 @@ function TypedAnswersReveal({
                 {a.text}
               </span>
               <span className="tabular-nums opacity-90">× {a.count}</span>
+              {a.accepted ? (
+                <AcceptedTag />
+              ) : (
+                !a.correct &&
+                onAccept && <AcceptButton onClick={() => onAccept({ text: a.text })} />
+              )}
             </motion.li>
           ))}
         </ul>
@@ -560,9 +575,18 @@ function TypedAnswersReveal({
 }
 
 /** Curseur: an axis with each guess as a dot, the correct value and its margin band. */
-function SliderReveal({ reveal, instant }: { reveal: QuestionRevealPayload; instant: boolean }) {
+function SliderReveal({
+  reveal,
+  instant,
+  onAccept,
+}: {
+  reveal: QuestionRevealPayload;
+  instant: boolean;
+  onAccept?: (input: AcceptInput) => void;
+}) {
   const slider = reveal.slider;
   if (!slider) return null;
+  const wider = nextSliderMargin(reveal);
   const { min, max, correct, margin, unit } = slider;
   const pos = (v: number) => `${((Math.min(Math.max(v, min), max) - min) / (max - min)) * 100}%`;
   const low = Math.max(min, correct - margin);
@@ -610,6 +634,17 @@ function SliderReveal({ reveal, instant }: { reveal: QuestionRevealPayload; inst
           {margin > 0 && <span className="font-bold opacity-70"> ± {formatValue(margin)}</span>}
         </span>
       </div>
+      {(reveal.accepted?.margin !== undefined || (onAccept && wider !== null)) && (
+        <div className="flex items-center justify-center gap-3">
+          {reveal.accepted?.margin !== undefined && <AcceptedTag />}
+          {onAccept && wider !== null && (
+            <AcceptButton
+              label={`✅ Accepter les réponses à ± ${formatValue(wider, unit)}`}
+              onClick={() => onAccept({ margin: wider })}
+            />
+          )}
+        </div>
+      )}
       {reveal.closest && (
         <motion.p
           initial={instant ? false : { scale: 0.6, opacity: 0 }}
@@ -737,6 +772,8 @@ function DistributionChart({
   count,
   poll,
   instant,
+  accepted = [],
+  onAccept,
 }: {
   distribution: number[];
   correct: number[];
@@ -744,6 +781,9 @@ function DistributionChart({
   /** Poll: no right answer (no bar dimmed), percentages shown. */
   poll: boolean;
   instant: boolean;
+  /** Choices the host accepted (T44). */
+  accepted?: number[];
+  onAccept?: (input: AcceptInput) => void;
 }) {
   const max = Math.max(1, ...distribution);
   const votes = distribution.reduce((sum, n) => sum + n, 0);
@@ -774,6 +814,17 @@ function DistributionChart({
               <ShapeIcon shape={s.shape} className="size-7 fill-white" />
               {correct.includes(i) && <span className="ml-1 text-xl font-black">✓</span>}
             </div>
+            {onAccept && (
+              <div className="flex h-7 items-center">
+                {accepted.includes(i) ? (
+                  <AcceptedTag label="✅ Acceptée" />
+                ) : (
+                  !correct.includes(i) && (
+                    <AcceptButton onClick={() => onAccept({ choiceIndex: i })} />
+                  )
+                )}
+              </div>
+            )}
           </div>
         );
       })}

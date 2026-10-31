@@ -20,6 +20,7 @@ import {
   isScored,
   noAnswerCount,
   percentCorrect,
+  acceptedText,
 } from './reportStats';
 import { JokersBadge, JokersUsed, ModeBadge } from './ModeBadge';
 import { survivalLabel } from '../lib/survival';
@@ -270,6 +271,7 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
   const noAnswer = noAnswerCount(q);
   const tone = pct >= 70 ? 'bg-answer-green' : pct >= 40 ? 'bg-answer-yellow' : 'bg-answer-red';
   const plural = q.playerCount > 1 ? 's' : '';
+  const accepted = acceptedText(q);
   return (
     <li className="rounded-2xl bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start gap-3">
@@ -314,6 +316,14 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
         <SliderGuesses q={q} noAnswer={noAnswer} />
       ) : (
         <ChoiceBars q={q} noAnswer={noAnswer} />
+      )}
+      {accepted && (
+        <p
+          className="mt-2 rounded-lg bg-answer-green/10 px-3 py-2 text-sm font-semibold text-gray-700"
+          data-testid="report-accepted"
+        >
+          ✅ Réponse acceptée par l’animateur{'\u00a0'}: {accepted}
+        </p>
       )}
       {q.details.multiple && (
         <p className="mt-2 text-sm font-semibold text-gray-600">
