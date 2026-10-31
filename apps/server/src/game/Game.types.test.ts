@@ -98,7 +98,13 @@ describe('Game with every question type', () => {
   });
 
   const create = (settings?: GameSettings) => {
-    game = new Game('123456', quiz, rec.transport, {}, settings);
+    game = new Game(
+      '123456',
+      quiz,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, ...settings },
+    );
     return game;
   };
   const join = (...names: string[]) => names.map((n) => game.join(n, `sock-${n}`));

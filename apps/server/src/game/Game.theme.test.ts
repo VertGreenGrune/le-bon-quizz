@@ -29,7 +29,13 @@ describe('Game TV theme', () => {
 
   it('is classic (absent from game:state) by default', () => {
     const rec = recorder();
-    game = new Game('123456', DEMO_QUIZ, rec.transport);
+    game = new Game(
+      '123456',
+      DEMO_QUIZ,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
     expect(game.theme).toBe('classic');
     game.join('Alice', 's1');
     game.start();

@@ -80,7 +80,13 @@ describe('« Survie » mode', () => {
   const create = (settings: Partial<GameSettings> = {}, q: Quiz = quiz) => {
     game?.dispose();
     rec = recorder();
-    game = new Game('123456', q, rec.transport, {}, { mode: 'survival', ...settings });
+    game = new Game(
+      '123456',
+      q,
+      rec.transport,
+      {},
+      { mode: 'survival', allAnsweredGraceMs: 0, ...settings },
+    );
   };
 
   beforeEach(() => {
@@ -615,7 +621,13 @@ describe('« Survie » mode', () => {
     });
 
     it('solo / team games send no survival data', () => {
-      const solo = new Game('654321', quiz, rec.transport, {}, { mode: 'solo' });
+      const solo = new Game(
+        '654321',
+        quiz,
+        rec.transport,
+        {},
+        { mode: 'solo', allAnsweredGraceMs: 0 },
+      );
       rec.sent.length = 0;
       const p = solo.join('Zoé', 'sock-z');
       solo.start();

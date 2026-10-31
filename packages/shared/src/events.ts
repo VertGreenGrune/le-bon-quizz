@@ -47,6 +47,8 @@ export const ErrorCode = z.enum([
   'LIE_TOO_CLOSE',
   /** « Buzzer »: someone else has the hand (or buzzed first). */
   'BUZZER_TAKEN',
+  /** « Annuler ma réponse »: not on this question / for a copied answer, or 3 cancels used. */
+  'CANCEL_REFUSED',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -193,6 +195,12 @@ export const PlayerAnswerPayload = z.union([
 /** « Buzzer »: the player hits BUZZ on the current question. */
 export const PlayerBuzzPayload = z.object({ pin: Pin, questionIndex: z.number().int().min(0) });
 
+/** « Annuler ma réponse » (T43): removes the player's answer to the current question. */
+export const PlayerUnanswerPayload = z.object({
+  pin: Pin,
+  questionIndex: z.number().int().min(0),
+});
+
 /**
  * « Dessine-moi », the drawer only, ANSWERING: new stroke chunks (throttled by the phone);
  * `clear` empties the drawing first.
@@ -229,6 +237,7 @@ export type HostRemotePayload = z.infer<typeof HostRemotePayload>;
 export type RemoteJoinPayload = z.infer<typeof RemoteJoinPayload>;
 export type RemoteTvPayload = z.infer<typeof RemoteTvPayload>;
 export type PlayerBuzzPayload = z.infer<typeof PlayerBuzzPayload>;
+export type PlayerUnanswerPayload = z.infer<typeof PlayerUnanswerPayload>;
 export type PlayerDrawPayload = z.infer<typeof PlayerDrawPayload>;
 export type PlayerTeamPayload = z.infer<typeof PlayerTeamPayload>;
 export type PlayerJoinPayload = z.infer<typeof PlayerJoinPayload>;
@@ -333,6 +342,16 @@ export interface ClientToServerEvents {
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   /** « Dessine-moi »: a guess (`text`); the ack tells whether it is right (`guess`). */
   'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack<{ guess?: DrawGuess }>) => void) => void;
+  /**
+   * « Annuler ma réponse » (T43), ANSWERING: the answer is removed, the phone answers again (scored
+   * from the new answer's time). `CANCEL_REFUSED` on « Buzzer » / « Dessine-moi » / « Mytho ! »
+   * questions, for a copied answer (Copieur), without an answer or after MAX_ANSWER_CANCELS;
+   * `GAME_PAUSED`, `NOT_ANSWERING`. Ack: cancels left on this question.
+   */
+  'player:unanswer': (
+    p: PlayerUnanswerPayload,
+    ack: (r: Ack<{ cancelsLeft: number }>) => void,
+  ) => void;
   /**
    * « Dessine-moi », the drawer during ANSWERING: stroke chunks, relayed to the TV
    * (`draw:strokes`). `GAME_PAUSED` while paused (the canvas freezes), `INVALID_PAYLOAD` for the

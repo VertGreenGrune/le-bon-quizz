@@ -99,7 +99,13 @@ describe('Game in team mode', () => {
   });
 
   const create = (teamCount: TeamCount = 2) => {
-    game = new Game('123456', quiz, rec.transport, {}, { mode: 'teams', teamCount });
+    game = new Game(
+      '123456',
+      quiz,
+      rec.transport,
+      {},
+      { mode: 'teams', allAnsweredGraceMs: 0, teamCount },
+    );
     return game;
   };
 
@@ -153,7 +159,13 @@ describe('Game in team mode', () => {
       expectGameError(() => game.setTeam(alice!.id, 1), 'GAME_ALREADY_STARTED');
       expectGameError(() => game.shuffleTeams(), 'GAME_ALREADY_STARTED');
 
-      const solo = new Game('654321', quiz, rec.transport);
+      const solo = new Game(
+        '654321',
+        quiz,
+        rec.transport,
+        {},
+        { mode: 'solo', allAnsweredGraceMs: 0 },
+      );
       const p = solo.join('Zoé', 's9');
       expectGameError(() => solo.setTeam(p.id, 0), 'INVALID_PAYLOAD');
       expectGameError(() => solo.shuffleTeams(), 'INVALID_PAYLOAD');
@@ -392,7 +404,7 @@ describe('Game in team mode', () => {
   });
 
   it('solo games send no team data', () => {
-    game = new Game('123456', quiz, rec.transport);
+    game = new Game('123456', quiz, rec.transport, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     const alice = game.join('Alice', 's1');
     game.start();
     toAnswering();

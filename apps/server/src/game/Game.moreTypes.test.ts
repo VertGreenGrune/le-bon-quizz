@@ -95,7 +95,13 @@ describe('Game with the ORDER / PIN / WHO_OF_US / WORD_CLOUD types', () => {
   });
 
   const create = (settings?: GameSettings) => {
-    game = new Game('123456', quiz, rec.transport, {}, settings);
+    game = new Game(
+      '123456',
+      quiz,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, ...settings },
+    );
     return game;
   };
   const join = (...names: string[]) => names.map((n) => game.join(n, `sock-${n}`));

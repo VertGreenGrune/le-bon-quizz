@@ -1,4 +1,5 @@
 import {
+  answerCancellable,
   mergeStrokes,
   type AnswerInput,
   type AvatarId,
@@ -58,6 +59,8 @@ export interface PlayerState {
   selection: { questionIndex: number; indexes: number[] } | null;
   /** What the player answered (choice, text or slider value), for `questionIndex` only. */
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
+  /** « Annuler ma réponse » (T43): cancels left on `questionIndex` (absent: none used yet). */
+  cancels: { questionIndex: number; left: number } | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
   nickname: string;
   /** Own avatar (null until known: old session without it). */
@@ -100,6 +103,7 @@ export type PlayerAction =
   | { type: 'toggleChoice'; questionIndex: number; choiceIndex: number }
   | { type: 'answer'; questionIndex: number; answer: AnswerInput }
   | { type: 'answerRejected'; questionIndex: number }
+  | { type: 'answerCancelled'; questionIndex: number; cancelsLeft: number }
   | { type: 'result'; payload: PlayerResultPayload }
   | { type: 'podium'; top: RankedPlayer[]; teams?: RankedTeam[] }
   | { type: 'kicked' }
@@ -127,6 +131,7 @@ export const initialPlayerState: PlayerState = {
   drawing: null,
   selection: null,
   myAnswer: null,
+  cancels: null,
   result: null,
   nickname: '',
   avatar: null,
@@ -252,6 +257,14 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return state.myAnswer?.questionIndex === action.questionIndex
         ? { ...state, myAnswer: null }
         : state;
+
+    case 'answerCancelled':
+      // The ticks of a « select all » question stay, to adjust them.
+      return {
+        ...state,
+        myAnswer: state.myAnswer?.questionIndex === action.questionIndex ? null : state.myAnswer,
+        cancels: { questionIndex: action.questionIndex, left: action.cancelsLeft },
+      };
 
     case 'result':
       return {
@@ -396,6 +409,18 @@ export function buzzerView(s: PlayerState): 'open' | 'mine' | 'taken' | 'out' | 
   if (status?.wrong.some((p) => p.id === s.playerId)) return 'out';
   if (!status?.holder) return 'open';
   return status.holder.id === s.playerId ? 'mine' : 'taken';
+}
+
+/**
+ * « Annuler ma réponse » (T43): the answer to the current question can still be cancelled
+ * (not on « Buzzer » / « Dessine-moi » / « Mytho ! » questions, not paused, cancels left).
+ */
+export function canCancelAnswer(s: PlayerState): boolean {
+  const p = s.prompt;
+  if (s.phase !== 'ANSWERING' || s.paused || !p || p.index !== s.questionIndex) return false;
+  if (s.myAnswer?.questionIndex !== s.questionIndex || !answerCancellable(p.type, p.buzzer))
+    return false;
+  return s.cancels?.questionIndex !== s.questionIndex || s.cancels.left > 0;
 }
 
 /** « Select all » question: the shapes ticked on the current question (empty when none). */

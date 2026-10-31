@@ -61,7 +61,7 @@ describe('Game with media questions', () => {
       toSocket: (to, event, payload) => void sent.push({ to, event, payload }),
       detachSocket: () => {},
     };
-    game = new Game('123456', quiz, transport, {});
+    game = new Game('123456', quiz, transport, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
   });
 
   afterEach(() => {

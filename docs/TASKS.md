@@ -2374,7 +2374,7 @@ Bob during the intro → Bob frozen on this question; Alice answers then plays D
   (title line, size on the intro, `data-blocked`, `JokerSheet.blocked`), not its placement.
 
 ### T43 — Cancel an answer
-- **Status:** in-progress (T43 agent)
+- **Status:** done
 - **Depends on:** T41, T42 merged. Runs in parallel with T44 (see « Wave 9 coordination »).
 - **Ports:** server 3043 / web 5243, test DB `lbq_test_t43`, e2e DB `lbq_e2e_t43`.
 - **Scope:** `apps/server/src/game/**` (answer path, new `game/answerCancel.ts`),
@@ -2405,6 +2405,41 @@ the reveal, timer still reveals, refused types / states (buzzer, draw, bluff vot
 reveal, frozen), Copieur target cancels → copy removed and redone, jokers kept, 3-cancel limit,
 team / Survie, rejoin while cancelled (phone gets the prompt again); e2e: answer, cancel, answer
 another choice, result matches the second answer.
+
+- **Summary:** shared: `player:unanswer` (`PlayerUnanswerPayload { pin, questionIndex }`, ack
+  `{ cancelsLeft }`), error `CANCEL_REFUSED`, `ALL_ANSWERED_GRACE_MS` (2 s) / `MAX_ANSWER_CANCELS`
+  (3) in `game.ts`, `answerCancellable(type, buzzer)` in `quiz.ts` (all types but « Buzzer »
+  questions, DRAW, BLUFF). Server: `game/answerCancel.ts` (`checkCancellable` with the French
+  reasons, `AnswerCancels` per-question counter); `Game.unanswer` (NOT_ANSWERING / GAME_PAUSED /
+  CANCEL_REFUSED for a copier, without an answer, after 3 cancels) removes the answer and,
+  recursively, the Copieur copies of it (`Jokers.onUnanswered`: `given` / Sablier extra cleared,
+  `effects.copied` removed — redone by the existing `onAnswered` when the target answers again),
+  then re-sends `answer:count` + `joker:state`; jokers already played stay (one per question) and
+  apply to the new answer through the existing scoring hooks. « Everyone answered » now starts a
+  2 s timer (`onAnswersChanged` → `startAllAnsweredTimer`, cancellable types only) instead of
+  revealing at once; a cancel clears it, the phase timer / a phase change clears it
+  (`clearTimer`), a pause meanwhile hands the reveal to `endPause`. Socket handler
+  `player:unanswer`. Phone: `player/cancelAnswer.tsx` « ↩︎ Annuler ma réponse » on « Réponse
+  envoyée ! » (one tap, vibration, « Encore n annulations possibles », error line), reducer
+  `answerCancelled` (`myAnswer` cleared, « select all » ticks kept, `cancels` left) +
+  `canCancelAnswer`, store `cancelAnswer`; the answered screen is one `Message` + `AnsweredValue`
+  (fixes typed / slider answers, which showed an empty card since T27). TV: « ✅ Tout le monde a
+  répondu ! » under the counter during the grace. Tests: `Game.cancel.test.ts` (15: new time,
+  count, grace stopped by a cancel, timer during the grace, refusals incl. paused / after the end /
+  limit per question, rejoin prompt, BLUFF write + vote / DRAW / buzzer refused, WHO_OF_US + « select
+  all », Copieur removed + redone, Double kept + one joker per question, Sablier on the new time,
+  Gel after a cancel, team average, « Survie » heart kept), shared `cancel.test.ts`, web
+  `playerState.cancel.test.ts`; e2e `e2e/cancel.spec.ts` (Alice wrong → cancel → right, Bob cancels
+  during the grace → wrong, results + ranking follow). 644 unit tests + 18 e2e pass. Screenshots
+  checked (TV 1600×900 grace banner, Pixel 7 answered screen).
+- **Notes:** (1) The grace is `GameSettings.allAnsweredGraceMs` (default 2 s); the test files
+  written before T43 pass `allAnsweredGraceMs: 0` to keep their « last answer reveals » timing
+  (one-line constructor changes in every `Game.*.test.ts` + `persistence.test.ts` — T44 / merge:
+  new tests that expect an instant reveal need it too). (2) No grace on « Buzzer », DRAW and BLUFF
+  (nothing to cancel), nor when ANSWERING starts with nobody to wait for. (3) A refused cancel keeps
+  the « Réponse envoyée ! » screen with the error. (4) After a cancel the answer screen starts
+  empty (typed text / slider value not prefilled; « select all » ticks kept). No migration. Not
+  tried on real phones.
 
 ### T44 — The host accepts an answer that was refused
 - **Status:** in-progress (T44 agent)
@@ -2742,3 +2777,8 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   logic (big bar during the intro, bar kept on « Réponse envoyée ! » while ANSWERING, greyed jokers
   stay tappable and the sheet says why via `jokerBlocked`). `layout.test.ts` updated: the
   « answered » screen shows the bar during ANSWERING, hidden after the reveal. 623 unit + 17 e2e pass.
+- 2026-10-31, T43 agent (additive, PLAN.md §2–§4): `player:unanswer` (`PlayerUnanswerPayload`,
+  ack `{ cancelsLeft }`), error `CANCEL_REFUSED`, `ALL_ANSWERED_GRACE_MS` / `MAX_ANSWER_CANCELS`,
+  `answerCancellable`. Behaviour: when every awaited player answered a cancellable question, the
+  reveal comes **2 s later** (`GameSettings.allAnsweredGraceMs`, default 2000; older tests pass 0).
+  `Jokers.onUnanswered`. `PlayerState.cancels` (web).

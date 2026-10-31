@@ -47,7 +47,13 @@ describe('leaderboard gains (T41)', () => {
 
   const create = (settings: Partial<GameSettings> = {}) => {
     rec = recorder();
-    game = new Game('123456', quiz, rec.transport, {}, { mode: 'solo', ...settings });
+    game = new Game(
+      '123456',
+      quiz,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, ...settings },
+    );
   };
 
   beforeEach(() => {

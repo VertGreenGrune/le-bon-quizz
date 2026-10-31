@@ -3,7 +3,9 @@ import {
   DEFAULT_TEAM_COUNT,
   LEADERBOARD_SIZE,
   MAX_PLAYERS_PER_GAME,
+  ALL_ANSWERED_GRACE_MS,
   PAUSE_GRACE_MS,
+  answerCancellable,
   PODIUM_SIZE,
   introDurationMs,
   jokerAvailability,
@@ -60,6 +62,7 @@ import {
   newBuzzerRound,
   type BuzzerRound,
 } from './buzzer.js';
+import { AnswerCancels, checkCancellable } from './answerCancel.js';
 import { GameError } from './errors.js';
 import { checkVote, otherLies, startVote, writeLie } from './questionTypes/bluff.js';
 import {
@@ -224,6 +227,11 @@ export interface GameSettings {
   hearts?: number;
   /** TV theme chosen in the start dialog (T40); absent = the quiz's own theme. */
   theme?: QuizTheme;
+  /**
+   * Everyone answered: how long the reveal waits so answers can still be cancelled (T43,
+   * default ALL_ANSWERED_GRACE_MS; 0 = at once, tests written before T43).
+   */
+  allAnsweredGraceMs?: number;
 }
 
 export interface GameHooks {
@@ -237,7 +245,8 @@ export interface GameHooks {
  * LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD → (next question | PODIUM) → ENDED
  *
  * QUESTION_INTRO ends by itself after `introDurationMs` (3–12 s, T42) and ANSWERING when the timer expires or
- * every player has answered; the host may also skip both with `next()`.
+ * every player has answered (2 s later when answers can be cancelled, T43); the host may also skip
+ * both with `next()`.
  *
  * Pause: during QUESTION_INTRO / ANSWERING, a player who still has to answer (or the host screen)
  * offline for more than PAUSE_GRACE_MS freezes the timer at its value when they dropped. Once
@@ -287,6 +296,10 @@ export class Game {
   private buzzer: BuzzerRound | null = null;
   /** « Buzzer »: ANSWERING timer frozen while the player who has the hand answers out loud. */
   private hold: { remainingMs: number } | null = null;
+  /** « Annuler ma réponse » (T43): cancels used on the current question. */
+  private readonly cancels = new AnswerCancels();
+  /** Everyone answered: the reveal waits ALL_ANSWERED_GRACE_MS so they can still cancel (T43). */
+  private allAnsweredTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly mode: GameMode;
   /** TV theme (T40): the start dialog's override, else the quiz's theme. */
@@ -313,6 +326,7 @@ export class Game {
   private readonly drawRotation = newRotation();
   /** Random source (« Dessine-moi » words; tests can fix it). */
   private readonly random: () => number;
+  private readonly allAnsweredGraceMs: number;
 
   constructor(
     readonly pin: string,
@@ -324,6 +338,7 @@ export class Game {
     this.mode = settings.mode;
     this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
+    this.allAnsweredGraceMs = settings.allAnsweredGraceMs ?? ALL_ANSWERED_GRACE_MS;
     if (this.mode === 'teams') {
       const count = settings.teamCount ?? DEFAULT_TEAM_COUNT;
       this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
@@ -749,6 +764,39 @@ export class Game {
     return {};
   }
 
+  /**
+   * « Annuler ma réponse » (`player:unanswer`, T43): removes the player's answer (and the Copieur
+   * copies of it) so they can answer again, scored from the new answer's time. Jokers already
+   * played stay played and apply to the new answer.
+   */
+  unanswer(playerId: string, questionIndex: number): { cancelsLeft: number } {
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    const question = this.currentQuestion;
+    if (this.phase !== 'ANSWERING' || questionIndex !== this.questionIndex || !question)
+      throw new GameError('NOT_ANSWERING', 'Trop tard !');
+    if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
+    checkCancellable(question);
+    if (this.jokers?.copyTargetOf(player.id) !== undefined)
+      throw new GameError('CANCEL_REFUSED', 'Tu copies la réponse d’un autre joueur');
+    if (!player.answer) throw new GameError('CANCEL_REFUSED', 'Pas de réponse à annuler');
+    const cancelsLeft = this.cancels.take(player.id);
+    this.touch();
+    this.clearAllAnsweredTimer();
+    this.removeAnswer(player, new Set());
+    this.jokers?.sendStates();
+    this.onAnswersChanged();
+    return { cancelsLeft };
+  }
+
+  /** Removes an answer, and the copies of it (copiers of copiers too). */
+  private removeAnswer(player: Player, done: Set<string>): void {
+    if (done.has(player.id)) return;
+    done.add(player.id);
+    player.answer = null;
+    for (const copier of this.jokers?.onUnanswered(player) ?? []) this.removeAnswer(copier, done);
+  }
+
   /** « Dessine-moi »: a guess — recorded (and scored) only when right; a wrong one can be retried. */
   private guess(player: Player, given: AnswerInput): DrawGuess {
     const draw = this.setup.draw!;
@@ -1037,6 +1085,7 @@ export class Game {
     }
     this.buzzer = question.buzzer ? newBuzzerRound() : null;
     this.excused.clear();
+    this.cancels.reset();
     for (const p of this.players.values()) {
       p.answer = null;
       p.lastResult = null;
@@ -1365,7 +1414,32 @@ export class Game {
       }
       return;
     }
-    if (this.allAnswered()) this.finishAnswering();
+    if (!this.allAnswered()) return;
+    const q = this.currentQuestion;
+    // The last answers can still be cancelled for a moment (T43).
+    if (
+      this.phase === 'ANSWERING' &&
+      q &&
+      answerCancellable(q.type, q.buzzer) &&
+      this.allAnsweredGraceMs > 0
+    )
+      this.startAllAnsweredTimer();
+    else this.finishAnswering();
+  }
+
+  /** Everyone answered: reveal after the grace (2 s), unless an answer is cancelled. */
+  private startAllAnsweredTimer(): void {
+    if (this.allAnsweredTimer) return;
+    this.allAnsweredTimer = setTimeout(() => {
+      this.allAnsweredTimer = null;
+      // Paused meanwhile: the end of the pause reveals (`endPause`).
+      if (this.phase === 'ANSWERING' && !this.pause && this.allAnswered()) this.finishAnswering();
+    }, this.allAnsweredGraceMs);
+  }
+
+  private clearAllAnsweredTimer(): void {
+    if (this.allAnsweredTimer) clearTimeout(this.allAnsweredTimer);
+    this.allAnsweredTimer = null;
   }
 
   /** « Mytho ! » writing stage: the lies are what the question waits for. */
@@ -1694,6 +1768,7 @@ export class Game {
   private clearTimer(): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    this.clearAllAnsweredTimer();
   }
 
   private touch(): void {

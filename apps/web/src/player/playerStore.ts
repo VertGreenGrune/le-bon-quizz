@@ -261,6 +261,27 @@ export function sendAnswer(answer: AnswerInput) {
     });
 }
 
+/**
+ * « Annuler ma réponse » (T43): removes the answer on the server, back to the answer screen;
+ * resolves with the French error message, or null.
+ */
+export function cancelAnswer(): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  const { questionIndex } = state;
+  vibrate(30);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:unanswer', { pin: session.pin, questionIndex }, (err, res) => {
+        if (err) return resolve(errorMessage('TIMEOUT'));
+        if (!res.ok) return resolve(res.error.message);
+        dispatch({ type: 'answerCancelled', questionIndex, cancelsLeft: res.cancelsLeft });
+        resolve(null);
+      });
+  });
+}
+
 /** « Select all » question: ticks / unticks a shape (sent later with `validateChoices`). */
 export function toggleChoice(choiceIndex: number) {
   vibrate(20);

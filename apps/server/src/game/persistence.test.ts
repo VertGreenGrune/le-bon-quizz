@@ -64,7 +64,7 @@ async function expectCode(p: Promise<unknown>, code: string) {
 
 /** A finished game: Alice answers everything right, Bob never answers. */
 function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
-  const game = new Game('123456', quiz, noop);
+  const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
   const alice = game.join('Alice', 's1', 'batman');
   game.join('Bob', 's2', 'robin');
   game.start();
@@ -83,7 +83,7 @@ function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
 describe('gameRecord', () => {
   it('is null for anonymous hosts and games that never started', () => {
     expect(gameRecord(playedGame(), null, null)).toBeNull();
-    const lobby = new Game('111111', DEMO_QUIZ, noop);
+    const lobby = new Game('111111', DEMO_QUIZ, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     lobby.end();
     expect(gameRecord(lobby, 'host', null)).toBeNull();
   });
@@ -313,7 +313,13 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
   it('saves a team game: mode, team of each player, team ranking, CSV team column', async () => {
     const host = await user('host@test.fr');
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
-    const game = new Game('222222', DEMO_QUIZ, noop, {}, { mode: 'teams', teamCount: 3 });
+    const game = new Game(
+      '222222',
+      DEMO_QUIZ,
+      noop,
+      {},
+      { mode: 'teams', allAnsweredGraceMs: 0, teamCount: 3 },
+    );
     const alice = game.join('Alice', 's1');
     const bob = game.join('Bob', 's2');
     const chloe = game.join('Chloé', 's3');
@@ -355,7 +361,13 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
   it('saves the jokers played by each player: report, summary flag, CSV column', async () => {
     const host = await user('host@test.fr');
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
-    const game = new Game('333333', DEMO_QUIZ, noop, {}, { mode: 'solo', jokers: true });
+    const game = new Game(
+      '333333',
+      DEMO_QUIZ,
+      noop,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, jokers: true },
+    );
     const alice = game.join('Alice', 's1');
     game.join('Bob', 's2');
     game.start();
@@ -385,7 +397,13 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
   it('saves a « Survie » game: hearts, ghosts, survivor ranking, CSV column', async () => {
     const host = await user('host@test.fr');
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
-    const game = new Game('444444', DEMO_QUIZ, noop, {}, { mode: 'survival', hearts: 1 });
+    const game = new Game(
+      '444444',
+      DEMO_QUIZ,
+      noop,
+      {},
+      { mode: 'survival', allAnsweredGraceMs: 0, hearts: 1 },
+    );
     const alice = game.join('Alice', 's1');
     const bob = game.join('Bob', 's2');
     game.start();
@@ -439,12 +457,18 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect(quiz.questions).toEqual(questions);
 
     let prompt: QuestionPromptPayload | undefined;
-    const game = new Game('123456', quiz, {
-      ...noop,
-      toSocket: (_to, event, payload) => {
-        if (event === 'question:prompt') prompt = payload as QuestionPromptPayload;
+    const game = new Game(
+      '123456',
+      quiz,
+      {
+        ...noop,
+        toSocket: (_to, event, payload) => {
+          if (event === 'question:prompt') prompt = payload as QuestionPromptPayload;
+        },
       },
-    });
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
     const alice = game.join('Alice', 's1', 'batman');
     game.join('Bob', 's2', 'robin');
     game.start();
@@ -572,7 +596,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
     expect(quiz.questions).toEqual(questions);
 
-    const game = new Game('123456', quiz, noop);
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     const alice = game.join('Alice', 's1', 'batman');
     const bob = game.join('Bob', 's2', 'robin');
     game.start();

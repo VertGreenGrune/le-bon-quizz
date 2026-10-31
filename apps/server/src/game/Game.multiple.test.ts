@@ -95,7 +95,13 @@ describe('Explanations and « select all » questions (T37)', () => {
   const create = (q: Quiz = quiz, settings: Partial<GameSettings> = {}) => {
     game?.dispose();
     rec = recorder();
-    game = new Game('123456', q, rec.transport, {}, { mode: 'solo', ...settings });
+    game = new Game(
+      '123456',
+      q,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, ...settings },
+    );
   };
 
   beforeEach(() => {

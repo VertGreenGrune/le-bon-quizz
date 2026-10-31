@@ -40,7 +40,9 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   game has the joker engine (Jokers option or « Survie ») and the question takes jokers — the TV
   shows « 🃏 Jouez vos jokers ! » + countdown, the phones a big joker bar —, + 1 s per 40
   characters of text beyond 80, at most 12 s. The host can skip it; it freezes with a pause.
-- `ANSWERING`: server starts timer (`timeLimitSec`); ends when timer expires or all answered.
+- `ANSWERING`: server starts timer (`timeLimitSec`); ends when timer expires or all answered —
+  for the types whose answers can be cancelled (T43), **2 s** after the last answer
+  (`ALL_ANSWERED_GRACE_MS`, TV « ✅ Tout le monde a répondu ! »); a cancel meanwhile stops the reveal.
 - `REVEAL`: correct answer + distribution sent to host; per-player result sent to each phone.
 - Host drives transitions with `host:next` (except the automatic end of `ANSWERING`).
 - **Pause** (`Game.ts`): during `QUESTION_INTRO` / `ANSWERING`, a player who still has to answer
@@ -88,6 +90,17 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   → 0, `zoom` ×6 on a point → ×1, `pixelate` 8 blocks → full; only with `imageUrl`): the picture
   clears up over the answering time (frozen while paused), fully clear at `REVEAL`
   (`apps/web/src/components/RevealImage.tsx`). Scoring is unchanged (faster = more points).
+- **« Annuler ma réponse »** (T43, `apps/server/src/game/answerCancel.ts` + `Game.unanswer`):
+  during `ANSWERING` the « Réponse envoyée ! » screen offers « ↩︎ Annuler ma réponse »
+  (`player:unanswer`): the answer is removed (`answer:count` goes down), the phone goes back to the
+  answer screen and the next answer is scored from **its own** time. Every type except « Buzzer »
+  questions, `DRAW` and `BLUFF` (`answerCancellable` in shared); refused while paused
+  (`GAME_PAUSED`), for a Copieur's copied answer, and after `MAX_ANSWER_CANCELS` (3) per question
+  per player (`CANCEL_REFUSED`). Copieur: when the **target** cancels, the copies of its answer are
+  removed too (copiers of copiers included) and redone when it answers again. Jokers already played
+  stay played (still one per question) and apply to the new answer (Double, Bouclier, Voleur at the
+  reveal; a Sablier halves the new time); a player who cancelled can be hit by a Gel / Brouilleur
+  (no answer any more) and a frozen player can't answer again during the freeze.
 - **Explanation** (T37, any question type, optional): `explanation` (≤ 300 characters,
   `EXPLANATION_MAX_LENGTH`, trimmed, empty = none) — « 💡 Le saviez-vous ? ». Sent **only from
   REVEAL on** (`question:reveal.explanation` to the TV, `player:result.explanation` to each phone,
@@ -315,6 +328,7 @@ Every client → server event takes an ack callback receiving
 | `player:buzz` | `{ pin, questionIndex }` | « Buzzer » question during ANSWERING: takes the hand (first processed wins). `BUZZER_TAKEN` (someone has it), `ALREADY_ANSWERED` (out after a wrong answer), `FROZEN` (Gel), `GAME_PAUSED`, `NOT_ANSWERING` |
 | `player:haunt` | `{ pin, haunt: 'freeze' \| 'scramble', targetId }` | « Survie » (§3): a ghost with a haunt in stock, on a living player (not oneself); then `joker:used` (`haunt: true`) + `survival:state`. `JOKER_REFUSED` (alive, no haunt, target a ghost / already haunted that way, LOBBY / PODIUM / ENDED), `GAME_PAUSED` |
 | `player:answer` | `{ pin, questionIndex }` + exactly one of `choiceIndex` \| `choiceIndexes` (« select all » MCQ only, 1–4 indexes; a single `choiceIndex` there, or `choiceIndexes` elsewhere → `INVALID_PAYLOAD`) \| `text` \| `value` \| `order` \| `point` \| `playerId` | accepted once, only during ANSWERING (`FROZEN` during a Gel, `ALREADY_ANSWERED` for a Copieur); `choiceIndex` for MCQ / TRUE_FALSE / POLL, `text` (≤ 40) for TYPE_ANSWER and WORD_CLOUD (cut at 20), `value` (in [min, max]) for SLIDER, `order` (permutation of the shown item indexes) for ORDER, `point { x, y }` (0–1) for PIN, `playerId` (a player of the game) for WHO_OF_US — another kind → `INVALID_PAYLOAD` « Dessine-moi »: a guess, ack `{ guess: 'found' \| 'close' \| 'wrong' }` (only `found` is recorded; the drawer → `INVALID_PAYLOAD`) |
+| `player:unanswer` | `{ pin, questionIndex }` | « Annuler ma réponse » (T43, §3), ANSWERING: removes the answer; ack `{ cancelsLeft }`. `CANCEL_REFUSED` (« Buzzer » / DRAW / BLUFF question, copied answer, no answer, 3 cancels used), `GAME_PAUSED`, `NOT_ANSWERING` |
 | `player:draw` | `{ pin, questionIndex, strokes: DrawStroke[] (≤ 20), clear? }` | « Dessine-moi », the drawer during ANSWERING: stroke chunks (`{ id, color, size, erase?, points }`, a known `id` = points appended), relayed to the TV as `draw:strokes`. `GAME_PAUSED`, `NOT_ANSWERING`, `INVALID_PAYLOAD` (not the drawer, drawing too big) |
 
 ### Server → clients

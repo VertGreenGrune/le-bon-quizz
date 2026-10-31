@@ -91,7 +91,13 @@ describe('Game « Buzzer » questions', () => {
   const create = (settings?: GameSettings) => {
     game?.dispose();
     rec = recorder();
-    game = new Game('123456', BUZZER_QUIZ, rec.transport, {}, settings);
+    game = new Game(
+      '123456',
+      BUZZER_QUIZ,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, ...settings },
+    );
   };
 
   beforeEach(() => {
