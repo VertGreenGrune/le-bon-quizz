@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   SHAPES,
+  answerCancellable,
   type BuzzerStatus,
   type DrawStatus,
   type DrawStroke,
@@ -381,6 +382,20 @@ export function QuestionScreen({
           </span>
         </div>
       </div>
+
+      {/* The last answers can still be cancelled for 2 s before the reveal (T43). */}
+      {!reveal &&
+        answerTotal > 0 &&
+        answered >= answerTotal &&
+        answerCancellable(question.type, !!question.buzzer) && (
+          <motion.p
+            initial={instant ? false : { scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="self-center rounded-full bg-panel px-8 py-3 text-3xl font-black"
+          >
+            ✅ Tout le monde a répondu !
+          </motion.p>
+        )}
 
       {question.choices.length > 0 && (
         <AnswerGrid

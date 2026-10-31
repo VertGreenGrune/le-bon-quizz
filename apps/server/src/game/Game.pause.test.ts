@@ -46,7 +46,13 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
   beforeEach(() => {
     vi.useFakeTimers();
     rec = recorder();
-    game = new Game('123456', CLASSIC_QUIZ, rec.transport);
+    game = new Game(
+      '123456',
+      CLASSIC_QUIZ,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
   });
 
   afterEach(() => {
@@ -186,7 +192,13 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
 
   it('responseMs excludes the pause: same points as without a pause', () => {
     const play = (withPause: boolean) => {
-      const g = new Game('654321', CLASSIC_QUIZ, recorder().transport);
+      const g = new Game(
+        '654321',
+        CLASSIC_QUIZ,
+        recorder().transport,
+        {},
+        { mode: 'solo', allAnsweredGraceMs: 0 },
+      );
       const [alice, bob] = ['Alice', 'Bob'].map((n) => g.join(n, `s-${n}`));
       g.start();
       vi.advanceTimersByTime(introOf(game) + 3_000);
@@ -340,7 +352,13 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
 
   it('works with every question type: same points with or without a pause', () => {
     const play = (withPause: boolean) => {
-      const g = new Game('111111', DEMO_QUIZ, recorder().transport);
+      const g = new Game(
+        '111111',
+        DEMO_QUIZ,
+        recorder().transport,
+        {},
+        { mode: 'solo', allAnsweredGraceMs: 0 },
+      );
       const [alice, bob] = ['Alice', 'Bob'].map((n) => g.join(n, `s-${n}`));
       let bobSocket = 's-Bob';
       g.start();
@@ -376,7 +394,13 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
   it('team mode: team scores identical with or without a pause', () => {
     const play = (withPause: boolean) => {
       const r = recorder();
-      const g = new Game('222222', CLASSIC_QUIZ, r.transport, {}, { mode: 'teams' });
+      const g = new Game(
+        '222222',
+        CLASSIC_QUIZ,
+        r.transport,
+        {},
+        { mode: 'teams', allAnsweredGraceMs: 0 },
+      );
       const [r1, r2, b1] = ['R1', 'R2', 'B1'].map((n) => g.join(n, `s-${n}`));
       g.setTeam(r1!.id, 0);
       g.setTeam(r2!.id, 0);

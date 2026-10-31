@@ -82,7 +82,7 @@ describe('« Télécommande » (host remote, T39)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     rec = recorder();
-    game = new Game('123456', QUIZ, rec.transport);
+    game = new Game('123456', QUIZ, rec.transport, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     game.hostConnected('tv');
   });
 
@@ -284,7 +284,13 @@ describe('« Télécommande » (host remote, T39)', () => {
 
     it('gives the same points as without a pause', () => {
       const pointsAfter = (withPause: boolean): number => {
-        const g = new Game('654321', QUIZ, recorder().transport);
+        const g = new Game(
+          '654321',
+          QUIZ,
+          recorder().transport,
+          {},
+          { mode: 'solo', allAnsweredGraceMs: 0 },
+        );
         g.hostConnected('tv');
         const p = g.join('Alice', 'sock-a');
         g.start();

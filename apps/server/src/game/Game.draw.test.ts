@@ -75,7 +75,13 @@ describe('« Dessine-moi » (DRAW)', () => {
   const create = (quiz: Quiz = quizOf(draw()), settings: Partial<GameSettings> = {}) => {
     game?.dispose();
     rec = recorder();
-    game = new Game('123456', quiz, rec.transport, {}, { mode: 'solo', ...settings });
+    game = new Game(
+      '123456',
+      quiz,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0, ...settings },
+    );
   };
 
   beforeEach(() => {

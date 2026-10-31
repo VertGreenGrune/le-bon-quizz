@@ -10,6 +10,7 @@ import {
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
   PlayerBuzzPayload,
+  PlayerUnanswerPayload,
   PlayerDrawPayload,
   PlayerHauntPayload,
   PlayerJoinPayload,
@@ -428,6 +429,14 @@ export function registerSocketHandlers(
       handler(socket, PlayerAnswerPayload, ({ pin, questionIndex, ...answer }) => {
         const { game, playerId } = asPlayer(pin);
         return game.answer(playerId, questionIndex, answer);
+      }),
+    );
+
+    socket.on(
+      'player:unanswer',
+      handler(socket, PlayerUnanswerPayload, ({ pin, questionIndex }) => {
+        const { game, playerId } = asPlayer(pin);
+        return game.unanswer(playerId, questionIndex);
       }),
     );
 

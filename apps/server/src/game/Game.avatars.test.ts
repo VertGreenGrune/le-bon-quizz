@@ -34,7 +34,13 @@ describe('Game avatars', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     rec = recorder();
-    game = new Game('123456', DEMO_QUIZ, rec.transport);
+    game = new Game(
+      '123456',
+      DEMO_QUIZ,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
   });
 
   afterEach(() => {
@@ -110,7 +116,7 @@ describe('Game avatars', () => {
     const sliderIndex = DEMO_QUIZ.questions.findIndex((q) => q.type === 'SLIDER');
     const quiz = { ...DEMO_QUIZ, questions: [DEMO_QUIZ.questions[sliderIndex]!] };
     game.dispose();
-    game = new Game('123456', quiz, rec.transport);
+    game = new Game('123456', quiz, rec.transport, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     const alice = game.join('Alice', 's1', 'freeze');
     game.start();
     game.next();
@@ -123,7 +129,13 @@ describe('Game avatars', () => {
 
   it('team mode: members carry their avatar', () => {
     game.dispose();
-    game = new Game('123456', DEMO_QUIZ, rec.transport, {}, { mode: 'teams' });
+    game = new Game(
+      '123456',
+      DEMO_QUIZ,
+      rec.transport,
+      {},
+      { mode: 'teams', allAnsweredGraceMs: 0 },
+    );
     const alice = game.join('Alice', 's1', 'catwoman');
     game.setTeam(alice.id, 1);
     const teams = rec.last<LobbyTeamsPayload>('lobby:teams').teams;

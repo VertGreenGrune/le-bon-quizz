@@ -81,7 +81,7 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     // Answering (after the ~3 s intro): shape buttons, a text field or a slider.
     for (const [i, phone] of phones.entries()) {
       await answerOnPhone(phone, question, PLAYERS[i]!.plan(q));
-      // The last answer triggers the reveal right away, so its "sent" screen may be skipped.
+      // The last phone's "sent" screen only lasts the 2 s before the reveal: not checked.
       if (i < phones.length - 1) await expect(phone.getByText('Réponse envoyée !')).toBeVisible();
 
       if (q === RELOAD_AT && i === 0) {
@@ -93,7 +93,7 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
       }
     }
 
-    // Everybody answered → server reveals immediately (no need to wait for the timer).
+    // Everybody answered → server reveals 2 s later (no need to wait for the timer).
     for (const [i, phone] of phones.entries()) {
       const heading = resultHeading(question, PLAYERS[i]!.plan(q));
       await expect(phone.getByRole('heading', { name: heading })).toBeVisible();

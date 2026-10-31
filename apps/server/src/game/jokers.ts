@@ -193,6 +193,26 @@ export class Jokers {
     if (this.withHands) this.sendStates();
   }
 
+  /**
+   * « Annuler ma réponse » (T43): the player's answer was removed. Returns the copiers whose copy
+   * of it must go too (they copy again when the player answers again). Jokers already played stay.
+   */
+  onUnanswered(player: Player): Player[] {
+    const h = this.hands.get(player.id);
+    if (h) {
+      h.given = null;
+      h.hourglassExtra = 0;
+    }
+    const copiers: Player[] = [];
+    for (const [id, copier] of this.hands) {
+      const p = this.ctx.players().get(id);
+      if (copier.copyTargetId !== player.id || !p?.answer) continue;
+      delete copier.effects.copied;
+      copiers.push(p);
+    }
+    return copiers;
+  }
+
   /** Copieur: the player waits for this target (undefined = not copying, null = target gone). */
   copyTargetOf(playerId: string): Player | null | undefined {
     const id = this.hands.get(playerId)?.copyTargetId;

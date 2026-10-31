@@ -372,6 +372,14 @@ export function isMultipleAnswer(q: Question): boolean {
   return q.type === 'MCQ' && !q.buzzer && q.choices.filter((c) => c.isCorrect).length >= 2;
 }
 
+/**
+ * « Annuler ma réponse » (T43): every type but « Buzzer » questions (judged out loud), « Dessine-moi »
+ * (guesses) and « Mytho ! » (the lie can be changed while writing, the vote is final).
+ */
+export function answerCancellable(type: QuestionType, buzzer?: boolean): boolean {
+  return !buzzer && type !== 'DRAW' && type !== 'BLUFF';
+}
+
 /** The question's explanation, or undefined when it has none (empty / blank). */
 export function questionExplanation(q: Question): string | undefined {
   return q.explanation?.trim() || undefined;

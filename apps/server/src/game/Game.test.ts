@@ -45,7 +45,13 @@ describe('Game state machine', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     rec = recorder();
-    game = new Game('123456', DEMO_QUIZ, rec.transport);
+    game = new Game(
+      '123456',
+      DEMO_QUIZ,
+      rec.transport,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
   });
 
   afterEach(() => {
@@ -264,7 +270,13 @@ describe('Game state machine', () => {
 
     it('adds +100 per consecutive correct answer, capped at +500, reset on wrong / no answer', () => {
       game.dispose();
-      game = new Game('123456', streakQuiz, rec.transport);
+      game = new Game(
+        '123456',
+        streakQuiz,
+        rec.transport,
+        {},
+        { mode: 'solo', allAnsweredGraceMs: 0 },
+      );
       const [alice, bob] = joinAll('Alice', 'Bob');
       const ids = [alice!.id, bob!.id];
       game.start();
@@ -349,7 +361,13 @@ describe('Game state machine', () => {
 
   it('records the start time and calls onEnded exactly once', () => {
     const onEnded = vi.fn();
-    const g = new Game('654321', DEMO_QUIZ, rec.transport, { onEnded });
+    const g = new Game(
+      '654321',
+      DEMO_QUIZ,
+      rec.transport,
+      { onEnded },
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
     expect(g.startedAt).toBeNull();
     g.start();
     expect(g.startedAt).toBeInstanceOf(Date);

@@ -54,6 +54,13 @@ export const PODIUM_SIZE = 3;
 export const PAUSE_GRACE_MS = 2000;
 /** 3-2-1 countdown before a paused game resumes (`game:resuming`). */
 export const RESUME_COUNTDOWN_MS = 3000;
+/**
+ * Everyone answered (T43): the reveal waits this long, so the last players can still cancel
+ * their answer (« Annuler ma réponse »). The timer running out still reveals at once.
+ */
+export const ALL_ANSWERED_GRACE_MS = 2000;
+/** « Annuler ma réponse »: at most this many cancels per question per player. */
+export const MAX_ANSWER_CANCELS = 3;
 /** After this long in pause, the host screen highlights « Continuer sans ». */
 export const PAUSE_HINT_MS = 60_000;
 

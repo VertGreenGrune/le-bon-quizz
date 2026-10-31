@@ -43,6 +43,7 @@ import {
 } from './draw';
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
+import { CancelAnswerButton } from './cancelAnswer';
 import { getTheme, useTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
@@ -535,58 +536,52 @@ function answerLabel(s: PlayerState): string | null {
 function Answered({ s }: { s: PlayerState }) {
   if (s.prompt?.type === 'BLUFF') return <BluffAnswered s={s} />;
   if (s.prompt?.type === 'DRAW' || foundTheWord(s)) return <DrawFound s={s} />;
-  if (s.myAnswer && 'choiceIndexes' in s.myAnswer) {
-    return (
-      <Message title="Réponse envoyée !" subtitle="On attend les autres…">
-        <ShapeList indexes={s.myAnswer.choiceIndexes} />
-      </Message>
-    );
-  }
-  const more = s.myAnswer && !('choiceIndex' in s.myAnswer) && <MoreAnswered s={s} />;
-  if (more) {
-    return (
-      <Message title="Réponse envoyée !" subtitle="On attend les autres…">
-        {more}
-      </Message>
-    );
-  }
+  return (
+    <Message title="Réponse envoyée !" subtitle="On attend les autres…">
+      <AnsweredValue s={s} />
+      <CancelAnswerButton s={s} />
+    </Message>
+  );
+}
+
+/** What the player answered, big on the « Réponse envoyée ! » screen. */
+function AnsweredValue({ s }: { s: PlayerState }) {
+  if (s.myAnswer && 'choiceIndexes' in s.myAnswer)
+    return <ShapeList indexes={s.myAnswer.choiceIndexes} />;
+  const a = s.myAnswer;
+  if (a && ('order' in a || 'point' in a || 'playerId' in a)) return <MoreAnswered s={s} />;
   const label = answerLabel(s);
   if (label !== null) {
     return (
-      <Message title="Réponse envoyée !" subtitle="On attend les autres…">
-        <motion.p
-          initial={{ scale: 1.4, rotate: -6 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 350, damping: 12 }}
-          className="max-w-full break-words rounded-2xl bg-white px-6 py-4 text-3xl font-black text-brand"
-        >
-          {label}
-        </motion.p>
-      </Message>
+      <motion.p
+        initial={{ scale: 1.4, rotate: -6 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 12 }}
+        className="max-w-full break-words rounded-2xl bg-white px-6 py-4 text-3xl font-black text-brand"
+      >
+        {label}
+      </motion.p>
     );
   }
-  const a = s.myAnswer;
   const shape = SHAPES[a && 'choiceIndex' in a ? a.choiceIndex : 0] ?? SHAPES[0];
   return (
-    <Message title="Réponse envoyée !" subtitle="On attend les autres…">
-      <div className="relative">
-        <motion.div
-          className={`absolute inset-0 rounded-2xl ${shapeBg[shape.color]}`}
-          initial={{ scale: 1, opacity: 0.6 }}
-          animate={{ scale: 1.8, opacity: 0 }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
-          aria-hidden="true"
-        />
-        <motion.div
-          className={`relative rounded-2xl p-6 ${shapeBg[shape.color]}`}
-          initial={{ scale: 1.6, rotate: -10 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 350, damping: 12 }}
-        >
-          <ShapeIcon shape={shape.shape} className="size-20 fill-white" />
-        </motion.div>
-      </div>
-    </Message>
+    <div className="relative">
+      <motion.div
+        className={`pointer-events-none absolute inset-0 rounded-2xl ${shapeBg[shape.color]}`}
+        initial={{ scale: 1, opacity: 0.6 }}
+        animate={{ scale: 1.8, opacity: 0 }}
+        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeOut' }}
+        aria-hidden="true"
+      />
+      <motion.div
+        className={`relative rounded-2xl p-6 ${shapeBg[shape.color]}`}
+        initial={{ scale: 1.6, rotate: -10 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 12 }}
+      >
+        <ShapeIcon shape={shape.shape} className="size-20 fill-white" />
+      </motion.div>
+    </div>
   );
 }
 
