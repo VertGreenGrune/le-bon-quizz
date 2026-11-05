@@ -31,7 +31,7 @@
       ]
     },
     {
-      "text": "Disney En VO, le petit monstre vert s'appelle Mike. Et dans la version française ?",
+      "text": "Disney 👾 En VO, le petit monstre vert s'appelle Mike. Et dans la version française ?",
       "imageUrl": "images/17-deguisements.jpg",
       "timeLimitSec": 25,
       "basePoints": 1000,
@@ -68,7 +68,7 @@
       ]
     },
     {
-      "text": "Mytho ! 🤥 SOS Fantômes (1984), que ne doivent JAMAIS faire les chasseurs de fantômes avec leurs packs de protons",
+      "text": "Mytho ! 🤥 SOS Fantômes (1984), que ne doivent JAMAIS faire les chasseurs de fantômes avec leurs packs de protons ?",
       "imageUrl": "images/25-ecto-1.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
@@ -78,7 +78,7 @@
       "voteTimeSec": 20
     },
     {
-      "text": "Vrai ou faux : le masque de Michael Myers (Halloween, 1978) est un masque du capitaine Kirk(star trek) repeint en blanc.",
+      "text": "Vrai ou faux : le masque de Michael Myers (Halloween, 1978) est celui du capitaine Kirk (Star Trek), repeint en blanc.",
       "imageUrl": "images/23-chat-noir.jpg",
       "timeLimitSec": 15,
       "basePoints": 1000,
@@ -147,7 +147,7 @@
       ]
     },
     {
-      "text": "Dans Casper quel est l'objectif principal de la « machine Lazarus » ?",
+      "text": "Dans Casper, quel est l'objectif principal de la « machine Lazarus » ?",
       "imageUrl": "images/29-friendly-ghost.jpg",
       "timeLimitSec": 45,
       "basePoints": 2000,
@@ -155,7 +155,7 @@
       "type": "MCQ",
       "choices": [
         {
-          "text": "Pour enfermer les fantomes",
+          "text": "Pour enfermer les fantômes",
           "isCorrect": false
         },
         {
@@ -163,17 +163,17 @@
           "isCorrect": true
         },
         {
-          "text": "Pour rendre les fantomes visibles",
+          "text": "Pour rendre les fantômes visibles",
           "isCorrect": false
         },
         {
-          "text": "Pour détruire les fantomes",
+          "text": "Pour détruire les fantômes",
           "isCorrect": false
         }
       ]
     },
     {
-      "text": "Le Voyage de Chihiro 🏮 quelle méthode Zeniba utilise-t-elle pour s'assurer la  loyauté absolue de ses employés ?",
+      "text": "Le Voyage de Chihiro 🏮 Quelle méthode Zeniba utilise-t-elle pour s'assurer la loyauté absolue de ses employés ?",
       "imageUrl": "images/10-dogo-onsen.jpg",
       "timeLimitSec": 30,
       "basePoints": 1000,
@@ -238,7 +238,7 @@
       }
     },
     {
-      "text": "Demon Slayer 🗡️ Le soleil tue les démons. Comment Tanjirō transporte-t-il sa soeur transformé pendant la journée ?",
+      "text": "Demon Slayer 🗡️ Le soleil tue les démons. Comment Tanjirō transporte-t-il sa sœur transformée pendant la journée ?",
       "imageUrl": "images/14-foret-nikko.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
@@ -275,8 +275,8 @@
       "typoTolerance": true
     },
     {
-      "text": "Dans Le Château ambulant, Où se trouve le Prince Justin",
-      "imageUrl": "images/16-22d405fa.jpg",
+      "text": "Dans Le Château ambulant, où se trouve le prince Justin ?",
+      "imageUrl": "images/16-ghibli.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
       "explanation": "Karl Tastroff… comme « catastrophe » ! En VO, c'est le professeur E. Gadd. Avec son aspirateur, l'Ectoblast, Luigi capture les fantômes du manoir pour délivrer Mario, prisonnier du roi Boo.",
@@ -306,7 +306,7 @@
       ]
     },
     {
-      "text": "Trouve cet animal déguisé pour halloween",
+      "text": "Trouve cet animal déguisé pour Halloween",
       "timeLimitSec": 90,
       "basePoints": 1000,
       "type": "DRAW",
