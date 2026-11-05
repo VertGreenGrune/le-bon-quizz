@@ -5,11 +5,12 @@
   "coverImageUrl": "images/27-skeleton-dance.jpg",
   "questions": [
     {
-      "type": "MCQ",
-      "text": "Rébus 🧩 : 🎃 + 👑 = ? Indice : il s'ennuie de son propre Halloween et veut kidnapper le Père Noël.",
+      "text": "Rébus 🧩 : 🎃 + 👑 = ? Indice : il s'ennuie et veut kidnapper le Père Noël.",
       "imageUrl": "images/01-citrouilles.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "explanation": "Jack est le « Roi des citrouilles » d'Halloween Town dans L'Étrange Noël de monsieur Jack (1993). En VO, c'est Danny Elfman, le compositeur du film, qui chante pour lui.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Oogie Boogie",
@@ -27,26 +28,26 @@
           "text": "Le maire d'Halloween",
           "isCorrect": false
         }
-      ],
-      "explanation": "Jack est le « Roi des citrouilles » d'Halloween Town dans L'Étrange Noël de monsieur Jack (1993). En VO, c'est Danny Elfman, le compositeur du film, qui chante pour lui."
+      ]
     },
     {
-      "type": "TYPE_ANSWER",
-      "text": "Monstres & Cie 👾 En VO, le petit monstre vert à un seul œil s'appelle Mike Wazowski. Et dans la version française ?",
+      "text": "Disney En VO, le petit monstre vert s'appelle Mike. Et dans la version française ?",
       "imageUrl": "images/17-deguisements.jpg",
       "timeLimitSec": 25,
       "basePoints": 1000,
+      "explanation": "Bob Razowski ! Et la petite Boo devient Bouh. À Monstropolis, l'énergie vient des cris des enfants… jusqu'à ce que Bob et Sulli découvrent que leurs rires sont bien plus puissants.",
+      "type": "TYPE_ANSWER",
       "acceptedAnswers": ["Bob Razowski", "Bob", "Razowski"],
-      "typoTolerance": true,
-      "explanation": "Bob Razowski ! Et la petite Boo devient Bouh. À Monstropolis, l'énergie vient des cris des enfants… jusqu'à ce que Bob et Sulli découvrent que leurs rires sont bien plus puissants."
+      "typoTolerance": true
     },
     {
-      "type": "MCQ",
       "text": "Pac-Man 👾 Les quatre fantômes s'appellent Blinky, Pinky, Inky et Clyde. Lequel est orange ?",
       "imageUrl": "images/03-pac-man.jpg",
-      "imageEffect": "pixelate",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "imageEffect": "pixelate",
+      "explanation": "Clyde est orange, Blinky rouge, Pinky rose et Inky bleu. Chacun chasse à sa façon : Blinky vous suit à la trace, Pinky essaie de vous couper la route… et Clyde se balade un peu au hasard. Pac-Man (Namco) est sorti en 1980.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Blinky",
@@ -64,25 +65,25 @@
           "text": "Clyde",
           "isCorrect": true
         }
-      ],
-      "explanation": "Clyde est orange, Blinky rouge, Pinky rose et Inky bleu. Chacun chasse à sa façon : Blinky vous suit à la trace, Pinky essaie de vous couper la route… et Clyde se balade un peu au hasard. Pac-Man (Namco) est sorti en 1980."
+      ]
     },
     {
-      "type": "BLUFF",
-      "text": "Mytho ! 🤥 SOS Fantômes (1984), en VF : comment s'appelle le géant tout blanc qui marche sur New York ?",
+      "text": "Mytho ! 🤥 SOS Fantômes (1984), que ne doivent JAMAIS faire les chasseurs de fantômes avec leurs packs de protons",
       "imageUrl": "images/25-ecto-1.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
-      "truth": "Bibendum Chamallow",
-      "voteTimeSec": 20,
-      "explanation": "En VO, c'est le Stay Puft Marshmallow Man. Forcé de choisir la forme du destructeur, Ray pense à la mascotte de guimauve de son enfance, la chose la plus inoffensive qui soit… raté ! En photo : l'Ecto-1, la voiture des chasseurs de fantômes."
+      "explanation": "Egon répète qu'il ne faut jamais croiser les effluves (\"Don't cross the streams\") sous peine de provoquer une inversion ionique totale. Ils finiront pourtant par le faire à la toute fin pour vaincre Gozer.",
+      "type": "BLUFF",
+      "truth": "Croiser les effluves",
+      "voteTimeSec": 20
     },
     {
-      "type": "TRUE_FALSE",
-      "text": "Vrai ou faux : le masque de Michael Myers (Halloween, 1978) est un masque du capitaine Kirk repeint en blanc.",
+      "text": "Vrai ou faux : le masque de Michael Myers (Halloween, 1978) est un masque du capitaine Kirk(star trek) repeint en blanc.",
       "imageUrl": "images/23-chat-noir.jpg",
       "timeLimitSec": 15,
       "basePoints": 1000,
+      "explanation": "Vrai ! Avec un tout petit budget, l'équipe de John Carpenter a acheté un masque de William Shatner (le capitaine Kirk) pour moins de deux dollars, a agrandi les trous des yeux et l'a peint en blanc.",
+      "type": "TRUE_FALSE",
       "choices": [
         {
           "text": "Vrai",
@@ -92,15 +93,15 @@
           "text": "Faux",
           "isCorrect": false
         }
-      ],
-      "explanation": "Vrai ! Avec un tout petit budget, l'équipe de John Carpenter a acheté un masque de William Shatner (le capitaine Kirk) pour moins de deux dollars, a agrandi les trous des yeux et l'a peint en blanc."
+      ]
     },
     {
-      "type": "MCQ",
       "text": "Scooby-Doo 🐕 Le nom « Scooby-Doo » vient des paroles d'une chanson. Laquelle ?",
       "imageUrl": "images/05-mystery-machine.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "explanation": "Fred Silverman, le patron des programmes de CBS, a eu le déclic en entendant Sinatra chanter « doo-be-doo-be-doo » à la fin de Strangers in the Night (1966). La série est arrivée en 1969. En photo : une réplique de la Mystery Machine.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Strangers in the Night (Frank Sinatra)",
@@ -118,77 +119,77 @@
           "text": "What a Wonderful World (Louis Armstrong)",
           "isCorrect": false
         }
-      ],
-      "explanation": "Fred Silverman, le patron des programmes de CBS, a eu le déclic en entendant Sinatra chanter « doo-be-doo-be-doo » à la fin de Strangers in the Night (1966). La série est arrivée en 1969. En photo : une réplique de la Mystery Machine."
+      ]
     },
     {
-      "type": "TYPE_ANSWER",
-      "text": "Scooby-Doo 🔍 En VF, Shaggy s'appelle Sammy. Et Velma, la fille à lunettes qui résout toutes les énigmes ?",
+      "text": "Scooby-Doo 🔍 En VF, Shaggy s'appelle Sammy. Quel est le nom VF de Velma, la fille à lunettes ?",
       "imageUrl": "images/04-dogue-allemand.jpg",
       "timeLimitSec": 25,
       "basePoints": 1000,
+      "explanation": "Véra ! Daphné et Fred, eux, gardent leur prénom. Scooby est un dogue allemand (en photo) : son dessinateur, Iwao Takamoto, a pris le contre-pied de tous les critères de la race.",
+      "type": "TYPE_ANSWER",
       "acceptedAnswers": ["Véra", "Vera Dinkley"],
-      "typoTolerance": true,
-      "explanation": "Véra ! Daphné et Fred, eux, gardent leur prénom. Scooby est un dogue allemand (en photo) : son dessinateur, Iwao Takamoto, a pris le contre-pied de tous les critères de la race."
+      "typoTolerance": true
     },
     {
-      "type": "ORDER",
       "text": "Frissons au cinéma 🎬 Remettez ces films dans l'ordre de sortie, du plus ancien au plus récent.",
       "imageUrl": "images/09-stanley-hotel.jpg",
       "timeLimitSec": 40,
       "basePoints": 1000,
+      "explanation": "1984, 1988, 1993, 1995, 2005. Hocus Pocus a fait un flop à sa sortie, avant de devenir un classique d'Halloween grâce aux rediffusions à la télé, au point d'avoir une suite en 2022.",
+      "type": "ORDER",
       "items": [
         "SOS Fantômes",
         "Beetlejuice",
         "Hocus Pocus : Les Trois Sorcières",
         "Casper",
         "Les Noces funèbres"
-      ],
-      "explanation": "1984, 1988, 1993, 1995, 2005. Hocus Pocus a fait un flop à sa sortie, avant de devenir un classique d'Halloween grâce aux rediffusions à la télé, au point d'avoir une suite en 2022."
+      ]
     },
     {
-      "type": "MCQ",
-      "text": "Casper (1995) 👻 Ses trois oncles fantômes s'appellent Stretch, Stinkie et Fatso en VO. Et en VF ?",
+      "text": "Dans Casper quel est l'objectif principal de la « machine Lazarus » ?",
       "imageUrl": "images/29-friendly-ghost.jpg",
-      "timeLimitSec": 20,
+      "timeLimitSec": 45,
       "basePoints": 2000,
+      "explanation": "Teigneux, Crado et Bouffi. Casper est né en 1945 dans un dessin animé des studios Famous (en photo) : un petit fantôme qui ne veut faire peur à personne. Le film de 1995 est l'un des premiers à avoir un héros entièrement en images de synthèse.",
+      "type": "MCQ",
       "choices": [
         {
-          "text": "Teigneux, Crado et Bouffi",
+          "text": "Pour enfermer les fantomes",
+          "isCorrect": false
+        },
+        {
+          "text": "Pour ramener les défunts à la vie",
           "isCorrect": true
         },
         {
-          "text": "Grincheux, Puant et Gros-Lard",
+          "text": "Pour rendre les fantomes visibles",
           "isCorrect": false
         },
         {
-          "text": "Bougon, Crasseux et Glouton",
-          "isCorrect": false
-        },
-        {
-          "text": "Râleur, Cracra et Goinfre",
+          "text": "Pour détruire les fantomes",
           "isCorrect": false
         }
-      ],
-      "explanation": "Teigneux, Crado et Bouffi. Casper est né en 1945 dans un dessin animé des studios Famous (en photo) : un petit fantôme qui ne veut faire peur à personne. Le film de 1995 est l'un des premiers à avoir un héros entièrement en images de synthèse."
+      ]
     },
     {
-      "type": "TYPE_ANSWER",
-      "text": "Le Voyage de Chihiro 🏮 En VF, comment s'appelle l'esprit masqué tout noir qui suit Chihiro dans les bains ?",
+      "text": "Le Voyage de Chihiro 🏮 quelle méthode Zeniba utilise-t-elle pour s'assurer la  loyauté absolue de ses employés ?",
       "imageUrl": "images/10-dogo-onsen.jpg",
-      "imageEffect": "zoom",
       "timeLimitSec": 30,
       "basePoints": 1000,
-      "acceptedAnswers": ["Sans-Visage", "Kaonashi"],
-      "typoTolerance": true,
-      "explanation": "Sans-Visage (Kaonashi en japonais). Les bains de Yubaba s'inspirent en partie de vieux bains japonais comme le Dōgo Onsen de Matsuyama (en photo). Le film a reçu l'Oscar du meilleur film d'animation en 2003."
+      "imageEffect": "zoom",
+      "explanation": "Sans-Visage (Kaonashi en japonais). Les bains de Yubaba s'inspirent en partie de vieux bains japonais comme le Dōgo Onsen de Matsuyama (en photo). Le film a reçu l'Oscar du meilleur film d'animation en 2003.",
+      "type": "TYPE_ANSWER",
+      "acceptedAnswers": ["Elle vole leurs noms", "vole de nom"],
+      "typoTolerance": true
     },
     {
-      "type": "MCQ",
-      "text": "Mon voisin Totoro 🌳 En VF, comment s'appellent les petites boules de suie aux grands yeux ?",
+      "text": "Mon voisin Totoro, comment s'appellent les petites boules de suie aux grands yeux ?",
       "imageUrl": "images/16-foret-automne.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "explanation": "Les noiraudes (susuwatari en japonais) quittent la maison quand la famille éclate de rire. Miyazaki les a fait revenir dans Le Voyage de Chihiro, où elles portent le charbon de Kamaji.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Les poussiérots",
@@ -206,59 +207,43 @@
           "text": "Les suies-suies",
           "isCorrect": false
         }
-      ],
-      "explanation": "Les noiraudes (susuwatari en japonais) quittent la maison quand la famille éclate de rire. Miyazaki les a fait revenir dans Le Voyage de Chihiro, où elles portent le charbon de Kamaji."
+      ]
     },
     {
-      "type": "MCQ",
       "text": "Death Note 📓 Ryuk, le dieu de la mort qui suit Light, est accro à un fruit du monde des humains. Lequel ?",
       "imageUrl": "images/12-kohada-koheiji.jpg",
-      "imageEffect": "blur",
-      "timeLimitSec": 20,
+      "timeLimitSec": 45,
       "basePoints": 1000,
-      "choices": [
-        {
-          "text": "Les kakis",
-          "isCorrect": false
-        },
-        {
-          "text": "Les fraises",
-          "isCorrect": false
-        },
-        {
-          "text": "Les pommes",
-          "isCorrect": true
-        },
-        {
-          "text": "Les pêches",
-          "isCorrect": false
-        }
-      ],
-      "explanation": "Les pommes ! Privé de pommes, Ryuk se tord dans tous les sens ; celles du monde des dieux de la mort sont, dit-il, sèches comme du sable. En photo : le fantôme Kohada Koheiji, peint par Hokusai (vers 1831)."
+      "imageEffect": "blur",
+      "explanation": "Les pommes ! Privé de pommes, Ryuk se tord dans tous les sens ; celles du monde des dieux de la mort sont, dit-il, sèches comme du sable. En photo : le fantôme Kohada Koheiji, peint par Hokusai (vers 1831).",
+      "type": "BLUFF",
+      "truth": "Pommes",
+      "voteTimeSec": 20
     },
     {
-      "type": "SLIDER",
       "text": "Jujutsu Kaisen 🩸 Sukuna, le roi des fléaux, a été découpé en doigts maudits. Combien de doigts ?",
       "imageUrl": "images/13-takiyasha.jpg",
-      "imageEffect": "zoom",
       "timeLimitSec": 25,
       "basePoints": 1000,
+      "imageEffect": "zoom",
+      "explanation": "Vingt doigts : Sukuna avait quatre bras ! Yuji Itadori avale le premier pour sauver ses amis et devient son hôte. En photo : la sorcière Takiyasha et son squelette géant, estampe d'Utagawa Kuniyoshi (vers 1844).",
+      "type": "SLIDER",
       "slider": {
-        "min": 0,
         "max": 50,
+        "min": 0,
         "step": 1,
-        "correct": 20,
+        "unit": "doigts",
         "margin": 2,
-        "unit": "doigts"
-      },
-      "explanation": "Vingt doigts : Sukuna avait quatre bras ! Yuji Itadori avale le premier pour sauver ses amis et devient son hôte. En photo : la sorcière Takiyasha et son squelette géant, estampe d'Utagawa Kuniyoshi (vers 1844)."
+        "correct": 20
+      }
     },
     {
-      "type": "MCQ",
-      "text": "Demon Slayer 🗡️ Le soleil tue les démons. Comment Tanjirō transporte-t-il Nezuko pendant la journée ?",
+      "text": "Demon Slayer 🗡️ Le soleil tue les démons. Comment Tanjirō transporte-t-il sa soeur transformé pendant la journée ?",
       "imageUrl": "images/14-foret-nikko.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "explanation": "Dans une caisse en bois portée sur le dos, où Nezuko se fait toute petite. Elle porte aussi un bâillon de bambou pour ne mordre personne. Demon Slayer (Kimetsu no Yaiba) a été publié de 2016 à 2020.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Sous un grand parapluie rouge",
@@ -276,36 +261,39 @@
           "text": "Cachée sous sa cape",
           "isCorrect": false
         }
-      ],
-      "explanation": "Dans une caisse en bois portée sur le dos, où Nezuko se fait toute petite. Elle porte aussi un bâillon de bambou pour ne mordre personne. Demon Slayer (Kimetsu no Yaiba) a été publié de 2016 à 2020."
+      ]
     },
     {
-      "type": "TYPE_ANSWER",
       "text": "Pokémon 👻 Le Pokémon spectre Fantominus évolue en Spectrum… puis en quel Pokémon ?",
       "imageUrl": "images/15-sekien-ten.jpg",
-      "imageEffect": "pixelate",
       "timeLimitSec": 25,
       "basePoints": 1000,
+      "imageEffect": "pixelate",
+      "explanation": "Ectoplasma (Gengar en VO). Pour l'obtenir, il faut échanger son Spectrum avec un ami ! Dans les premiers jeux, les fantômes hantent la Tour Pokémon de Lavanville. En photo : un yōkai dessiné par Toriyama Sekien en 1776.",
+      "type": "TYPE_ANSWER",
       "acceptedAnswers": ["Ectoplasma", "Gengar"],
-      "typoTolerance": true,
-      "explanation": "Ectoplasma (Gengar en VO). Pour l'obtenir, il faut échanger son Spectrum avec un ami ! Dans les premiers jeux, les fantômes hantent la Tour Pokémon de Lavanville. En photo : un yōkai dessiné par Toriyama Sekien en 1776."
+      "typoTolerance": true
     },
     {
-      "type": "BLUFF",
-      "text": "Mytho ! 🤥 Luigi's Mansion : en VF, comment s'appelle le savant qui donne à Luigi un aspirateur à fantômes ?",
-      "imageUrl": "images/11-maison-hantee.jpg",
+      "text": "Dans Le Château ambulant, Où se trouve le Prince Justin",
+      "imageUrl": "images/16-22d405fa.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
-      "truth": "Professeur Karl Tastroff",
-      "voteTimeSec": 20,
-      "explanation": "Karl Tastroff… comme « catastrophe » ! En VO, c'est le professeur E. Gadd. Avec son aspirateur, l'Ectoblast, Luigi capture les fantômes du manoir pour délivrer Mario, prisonnier du roi Boo."
+      "explanation": "Karl Tastroff… comme « catastrophe » ! En VO, c'est le professeur E. Gadd. Avec son aspirateur, l'Ectoblast, Luigi capture les fantômes du manoir pour délivrer Mario, prisonnier du roi Boo.",
+      "type": "PIN",
+      "zone": {
+        "x": 0.8145,
+        "y": 0.2422,
+        "radius": 0.07
+      }
     },
     {
-      "type": "TRUE_FALSE",
       "text": "Vrai ou faux : dans Minecraft, une citrouille sur la tête permet de regarder un Enderman sans le fâcher.",
       "imageUrl": "images/03-champ-de-citrouilles.jpg",
       "timeLimitSec": 15,
       "basePoints": 1000,
+      "explanation": "Vrai ! Sans citrouille, croiser le regard d'un Enderman le rend furieux. Le prix à payer : la citrouille cache une bonne partie de l'écran. Les Endermen sont arrivés dans le jeu en 2011.",
+      "type": "TRUE_FALSE",
       "choices": [
         {
           "text": "Vrai",
@@ -315,53 +303,51 @@
           "text": "Faux",
           "isCorrect": false
         }
-      ],
-      "explanation": "Vrai ! Sans citrouille, croiser le regard d'un Enderman le rend furieux. Le prix à payer : la citrouille cache une bonne partie de l'écran. Les Endermen sont arrivés dans le jeu en 2011."
+      ]
     },
     {
-      "type": "WHO_OF_US",
-      "text": "Pause 🎬 Qui de nous mourrait le premier dans un film d'horreur ?",
-      "imageUrl": "images/22-maison-charmed.jpg",
-      "timeLimitSec": 20,
-      "basePoints": 0,
-      "majorityBonus": true,
-      "explanation": "Dans Scream (1996), Randy énonce les règles pour survivre dans un film d'horreur. L'une d'elles : ne jamais dire « Je reviens tout de suite ! »."
+      "text": "Trouve cet animal déguisé pour halloween",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "type": "DRAW",
+      "words": ["chat sorcière", "chien vampire", "serpent diable"]
     },
     {
-      "type": "SLIDER",
       "text": "Harry Potter 🏰 Nick Quasi-Sans-Tête a raté de peu sa décapitation. Combien de coups de hache émoussée a-t-il reçus ?",
       "imageUrl": "images/19-chateau-cantacuzino.jpg",
       "timeLimitSec": 25,
       "basePoints": 2000,
+      "explanation": "Quarante-cinq coups, et sa tête tient encore par un lambeau de peau : voilà pourquoi le club des Chasseurs sans tête refuse de l'accueillir. Dans La Chambre des secrets, Harry fête avec lui son 500e anniversaire de mort.",
+      "type": "SLIDER",
       "slider": {
-        "min": 1,
         "max": 100,
+        "min": 1,
         "step": 1,
-        "correct": 45,
+        "unit": "coups",
         "margin": 5,
-        "unit": "coups"
-      },
-      "explanation": "Quarante-cinq coups, et sa tête tient encore par un lambeau de peau : voilà pourquoi le club des Chasseurs sans tête refuse de l'accueillir. Dans La Chambre des secrets, Harry fête avec lui son 500e anniversaire de mort."
+        "correct": 45
+      }
     },
     {
-      "type": "TYPE_ANSWER",
       "text": "Harry Potter 🚽 Quel fantôme pleurnichard hante les toilettes des filles du deuxième étage de Poudlard ?",
       "imageUrl": "images/20-toilettes.jpg",
       "timeLimitSec": 25,
       "basePoints": 1000,
+      "explanation": "Mimi Geignarde (Moaning Myrtle en VO) est morte dans ces toilettes en croisant le regard du Basilic, libéré de la Chambre des secrets par Tom Jedusor cinquante ans plus tôt.",
+      "type": "TYPE_ANSWER",
       "acceptedAnswers": ["Mimi Geignarde", "Mimi", "Mimi la Geignarde"],
-      "typoTolerance": true,
-      "explanation": "Mimi Geignarde (Moaning Myrtle en VO) est morte dans ces toilettes en croisant le regard du Basilic, libéré de la Chambre des secrets par Tom Jedusor cinquante ans plus tôt."
+      "typoTolerance": true
     },
     {
-      "type": "MCQ",
       "text": "Lesquels de ces personnages sont des fantômes ? (plusieurs réponses)",
       "imageUrl": "images/27-skeleton-dance.jpg",
       "timeLimitSec": 25,
       "basePoints": 1000,
+      "explanation": "La Chose est une main vivante, pas un fantôme ! Les Boo, eux, cachent leur visage quand Mario les regarde et avancent dès qu'il a le dos tourné. En photo : The Skeleton Dance (Disney, 1929), l'ancêtre des dessins animés d'Halloween.",
+      "type": "MCQ",
       "choices": [
         {
-          "text": "Casper",
+          "text": "Desastre",
           "isCorrect": true
         },
         {
@@ -369,22 +355,22 @@
           "isCorrect": false
         },
         {
-          "text": "Mimi Geignarde",
+          "text": "Danny Fenton",
           "isCorrect": true
         },
         {
           "text": "Les Boo (Super Mario)",
           "isCorrect": true
         }
-      ],
-      "explanation": "La Chose est une main vivante, pas un fantôme ! Les Boo, eux, cachent leur visage quand Mario les regarde et avancent dès qu'il a le dos tourné. En photo : The Skeleton Dance (Disney, 1929), l'ancêtre des dessins animés d'Halloween."
+      ]
     },
     {
-      "type": "MCQ",
       "text": "Gremlins (1984) 🌙 Trois règles à respecter avec un mogwaï comme Gizmo. Laquelle n'en fait PAS partie ?",
       "imageUrl": "images/12-maison-kansas.jpg",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "explanation": "La lumière vive le blesse (le soleil le tue), l'eau le fait se multiplier, et un repas après minuit le transforme en gremlin. Le film se passe à Noël, dans la petite ville de Kingston Falls.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Ne jamais l'exposer à la lumière",
@@ -402,16 +388,16 @@
           "text": "Ne jamais le nourrir après minuit",
           "isCorrect": false
         }
-      ],
-      "explanation": "La lumière vive le blesse (le soleil le tue), l'eau le fait se multiplier, et un repas après minuit le transforme en gremlin. Le film se passe à Noël, dans la petite ville de Kingston Falls."
+      ]
     },
     {
-      "type": "MCQ",
       "text": "Qui a dit ? 🗣️ « Je ne bois jamais… de vin. »",
       "imageUrl": "images/23-chauve-souris.jpg",
-      "imageEffect": "blur",
       "timeLimitSec": 20,
       "basePoints": 1000,
+      "imageEffect": "blur",
+      "explanation": "Réplique culte de Bela Lugosi dans Dracula (1931) : « I never drink… wine. » Lugosi avait déjà joué le comte au théâtre, à Broadway, et il a été enterré avec sa cape.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Gomez Addams",
@@ -429,50 +415,39 @@
           "text": "Le monstre de Frankenstein",
           "isCorrect": false
         }
-      ],
-      "explanation": "Réplique culte de Bela Lugosi dans Dracula (1931) : « I never drink… wine. » Lugosi avait déjà joué le comte au théâtre, à Broadway, et il a été enterré avec sa cape."
+      ]
     },
     {
-      "type": "BLUFF",
       "text": "Mytho ! 🤥 Le roman Frankenstein (1818) de Mary Shelley a un sous-titre : « Frankenstein ou… » quoi ?",
       "imageUrl": "images/24-mary-shelley.jpg",
       "timeLimitSec": 45,
       "basePoints": 1000,
+      "explanation": "Frankenstein ou le Prométhée moderne : comme Prométhée, qui vola le feu aux dieux, Victor Frankenstein défie la nature. Et la créature n'a pas de nom : Frankenstein, c'est le savant, pas le monstre !",
+      "type": "BLUFF",
       "truth": "Le Prométhée moderne",
-      "voteTimeSec": 20,
-      "explanation": "Frankenstein ou le Prométhée moderne : comme Prométhée, qui vola le feu aux dieux, Victor Frankenstein défie la nature. Et la créature n'a pas de nom : Frankenstein, c'est le savant, pas le monstre !"
+      "voteTimeSec": 20
     },
     {
-      "type": "PIN",
       "text": "Point sur l'image 📍 En 1816, Mary Shelley a imaginé Frankenstein au bord d'un lac. Pointez ce lac !",
       "imageUrl": "images/carte-europe.png",
       "timeLimitSec": 30,
       "basePoints": 1000,
+      "explanation": "Le lac Léman ! À la villa Diodati, près de Genève, Lord Byron lance un défi : chacun écrit une histoire de fantômes. Mary Shelley, 18 ans, en tire Frankenstein, et John Polidori Le Vampire. Il fait si froid qu'on parle de « l'année sans été ».",
+      "type": "PIN",
       "zone": {
         "x": 0.3567,
         "y": 0.5523,
         "radius": 0.03
-      },
-      "explanation": "Le lac Léman ! À la villa Diodati, près de Genève, Lord Byron lance un défi : chacun écrit une histoire de fantômes. Mary Shelley, 18 ans, en tire Frankenstein, et John Polidori Le Vampire. Il fait si froid qu'on parle de « l'année sans été »."
+      }
     },
     {
-      "type": "TYPE_ANSWER",
-      "text": "Le Fantôme de l'Opéra 🎭 Dans le roman de Gaston Leroux (1910), quel est le prénom du Fantôme ?",
-      "imageUrl": "images/26-palais-garnier.jpg",
-      "imageEffect": "zoom",
-      "timeLimitSec": 25,
-      "basePoints": 2000,
-      "acceptedAnswers": ["Erik", "Éric"],
-      "typoTolerance": true,
-      "explanation": "Erik, un génie défiguré caché dans les dessous du Palais Garnier (en photo), au bord d'un lac souterrain. Ce « lac » existe : une immense citerne sous l'Opéra, où les pompiers de Paris viennent s'entraîner."
-    },
-    {
-      "type": "MCQ",
       "text": "Le Horla (1887) de Maupassant 👁️ Quel phénomène prouve au narrateur qu'un être invisible vit chez lui ?",
       "imageUrl": "images/27-maupassant.jpg",
-      "imageEffect": "pixelate",
       "timeLimitSec": 25,
       "basePoints": 2000,
+      "imageEffect": "pixelate",
+      "explanation": "La nuit, quelqu'un boit l'eau, et même le lait, de sa carafe, alors qu'il est seul et que tout est fermé. Maupassant (en photo, par Nadar) a écrit deux versions de cette nouvelle, en 1886 et 1887.",
+      "type": "MCQ",
       "choices": [
         {
           "text": "Ses miroirs se brisent la nuit",
@@ -490,27 +465,38 @@
           "text": "Son chien refuse d'entrer dans la chambre",
           "isCorrect": false
         }
-      ],
-      "explanation": "La nuit, quelqu'un boit l'eau, et même le lait, de sa carafe, alors qu'il est seul et que tout est fermé. Maupassant (en photo, par Nadar) a écrit deux versions de cette nouvelle, en 1886 et 1887."
+      ]
     },
     {
-      "type": "PIN",
+      "text": "Le Fantôme de l'Opéra 🎭 Dans le roman de Gaston Leroux (1910), quel est le prénom du Fantôme ?",
+      "imageUrl": "images/26-palais-garnier.jpg",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "imageEffect": "zoom",
+      "explanation": "Erik, un génie défiguré caché dans les dessous du Palais Garnier (en photo), au bord d'un lac souterrain. Ce « lac » existe : une immense citerne sous l'Opéra, où les pompiers de Paris viennent s'entraîner.",
+      "type": "TYPE_ANSWER",
+      "acceptedAnswers": ["Erik", "Éric"],
+      "typoTolerance": true
+    },
+    {
       "text": "Point sur l'image 📍 Le château du comte Dracula se trouve en Transylvanie. Pointez la Transylvanie sur la carte.",
       "imageUrl": "images/carte-europe.png",
       "timeLimitSec": 30,
       "basePoints": 1000,
+      "explanation": "La Transylvanie est au cœur de la Roumanie, entourée par les Carpates. Bram Stoker n'y est jamais allé : il s'est documenté dans les bibliothèques. Le château de Bran, vendu aux touristes comme « le château de Dracula », n'a presque rien à voir avec le roman.",
+      "type": "PIN",
       "zone": {
         "x": 0.6981,
         "y": 0.5467,
         "radius": 0.04
-      },
-      "explanation": "La Transylvanie est au cœur de la Roumanie, entourée par les Carpates. Bram Stoker n'y est jamais allé : il s'est documenté dans les bibliothèques. Le château de Bran, vendu aux touristes comme « le château de Dracula », n'a presque rien à voir avec le roman."
+      }
     },
     {
-      "type": "DRAW",
       "text": "Dessine-moi 🎨 Un joueur dessine en secret une star d'Halloween de la pop culture, les autres devinent en l'écrivant !",
       "timeLimitSec": 90,
       "basePoints": 1000,
+      "explanation": "Astuce de dessinateur : commencez par le détail qui se reconnaît au premier coup d'œil : la cape de Dracula, les boulons de Frankenstein, la grande bouche de Pac-Man, le masque de Ghostface…",
+      "type": "DRAW",
       "words": [
         "Casper",
         "Dracula",
@@ -524,15 +510,15 @@
         "Jack Skellington",
         "Mercredi Addams",
         "La Chose"
-      ],
-      "explanation": "Astuce de dessinateur : commencez par le détail qui se reconnaît au premier coup d'œil : la cape de Dracula, les boulons de Frankenstein, la grande bouche de Pac-Man, le masque de Ghostface…"
+      ]
     },
     {
-      "type": "ORDER",
       "text": "Finale 🏆 Les grands classiques qui font peur : remettez-les dans l'ordre de publication, du plus ancien au plus récent.",
       "imageUrl": "images/07-edgar-poe.jpg",
       "timeLimitSec": 45,
       "basePoints": 2000,
+      "explanation": "1818, 1843, 1887, 1897, 1910, 1986. C'est Charles Baudelaire qui a traduit Le Chat noir et les autres contes de Poe (en photo) en français, dans les années 1850.",
+      "type": "ORDER",
       "items": [
         "Frankenstein (Mary Shelley)",
         "Le Chat noir (Edgar Allan Poe)",
@@ -540,8 +526,7 @@
         "Dracula (Bram Stoker)",
         "Le Fantôme de l'Opéra (Gaston Leroux)",
         "Ça (Stephen King)"
-      ],
-      "explanation": "1818, 1843, 1887, 1897, 1910, 1986. C'est Charles Baudelaire qui a traduit Le Chat noir et les autres contes de Poe (en photo) en français, dans les années 1850."
+      ]
     }
   ]
 }
