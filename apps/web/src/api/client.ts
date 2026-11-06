@@ -12,9 +12,12 @@ import type {
   PublicUser,
   QuizDetail,
   QuizInput,
+  QuizShareInfo,
   QuizSummary,
   RegisterBody,
   ResetPasswordBody,
+  SharedQuizSummary,
+  ShareQuizBody,
   UploadImageResponse,
 } from '@lbq/shared';
 
@@ -88,6 +91,18 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
       remove: (id: string) => request<void>('DELETE', `/quizzes/${encodeURIComponent(id)}`),
       duplicate: (id: string) =>
         request<QuizDetail>('POST', `/quizzes/${encodeURIComponent(id)}/duplicate`),
+      /** T45: quizzes other hosts shared with me. */
+      shared: () => request<SharedQuizSummary[]>('GET', '/shared-quizzes'),
+      shares: (id: string) =>
+        request<QuizShareInfo[]>('GET', `/quizzes/${encodeURIComponent(id)}/shares`),
+      share: (id: string, body: ShareQuizBody) =>
+        request<QuizShareInfo>('POST', `/quizzes/${encodeURIComponent(id)}/shares`, body),
+      /** Owner removes a share, or the shared host leaves (`userId` = themselves). */
+      unshare: (id: string, userId: string) =>
+        request<void>(
+          'DELETE',
+          `/quizzes/${encodeURIComponent(id)}/shares/${encodeURIComponent(userId)}`,
+        ),
     },
     library: {
       list: ({ search, sort }: LibraryQuery = {}) => {

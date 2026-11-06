@@ -30,6 +30,10 @@ export const ApiErrorCode = z.enum([
   'RESET_TOKEN_INVALID',
   /** `POST /auth/change-password`: the current password is wrong. */
   'WRONG_PASSWORD',
+  /** T45 `POST /quizzes/:id/shares`: no host account with that e-mail. */
+  'USER_NOT_FOUND',
+  /** T45 `PUT /quizzes/:id`: someone else saved the quiz since `expectedUpdatedAt` (409). */
+  'QUIZ_CONFLICT',
   'FILE_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE',
   'INTERNAL',
@@ -105,6 +109,11 @@ export interface AuthResponse {
  */
 export const QuizInput = QuizSchema.omit({ id: true }).extend({
   visibility: QuizVisibility.optional(),
+  /**
+   * PUT only (T45, co-editing): the `updatedAt` the editor loaded. When the quiz was saved by
+   * someone else since, the PUT answers 409 `QUIZ_CONFLICT` instead of overwriting their work.
+   */
+  expectedUpdatedAt: z.iso.datetime().optional(),
 });
 export type QuizInput = z.infer<typeof QuizInput>;
 
@@ -128,6 +137,46 @@ export type QuizDetail = Quiz & {
   theme: QuizTheme;
   createdAt: string;
   updatedAt: string;
+  /** T45: what the current host may do with it (`owner` for their own quizzes and copies). */
+  access: QuizAccess;
+  /** T45: name of the owner (the current host for their own quizzes). */
+  ownerName: string;
+};
+
+// ---------- Sharing (T45) ----------
+
+/** `viewer` « Peut lancer » (see, launch, copy) · `editor` « Peut modifier » (also edit). */
+export const QuizShareRole = z.enum(['viewer', 'editor']);
+export type QuizShareRole = z.infer<typeof QuizShareRole>;
+export type QuizAccess = 'owner' | QuizShareRole;
+
+export const QUIZ_SHARE_ROLE_NAMES: Record<QuizShareRole, string> = {
+  viewer: 'Peut lancer',
+  editor: 'Peut modifier',
+};
+
+/**
+ * Body of `POST /quizzes/:id/shares` (owner only): shares with an existing host account, or
+ * changes the role of an existing share. 404 `USER_NOT_FOUND` when no account has that e-mail.
+ */
+export const ShareQuizBody = z.object({
+  email: Email,
+  role: QuizShareRole.default('viewer'),
+});
+export type ShareQuizBody = z.input<typeof ShareQuizBody>;
+
+/** Item of `GET /quizzes/:id/shares` (owner only) and response of `POST`. */
+export interface QuizShareInfo {
+  user: { id: string; name: string; email: string };
+  role: QuizShareRole;
+  createdAt: string;
+}
+
+/** Item of `GET /shared-quizzes`: quizzes other hosts shared with the current host. */
+export type SharedQuizSummary = QuizSummary & {
+  role: QuizShareRole;
+  ownerName: string;
+  sharedAt: string;
 };
 
 // ---------- Library (public quizzes of the other hosts) ----------

@@ -220,6 +220,8 @@ describe('new question types', () => {
 
   it('loads every type of a saved quiz into the editor and saves it unchanged', () => {
     const draft = fromDetail({
+      access: 'owner',
+      ownerName: 'Moi',
       ...DEMO_QUIZ,
       visibility: 'PRIVATE',
       theme: 'classic',
@@ -233,6 +235,8 @@ describe('new question types', () => {
   it('keeps the visibility: private for a new quiz, as saved otherwise', () => {
     expect(emptyQuiz().visibility).toBe('PRIVATE');
     const draft = fromDetail({
+      access: 'owner',
+      ownerName: 'Moi',
       ...DEMO_QUIZ,
       visibility: 'PUBLIC',
       theme: 'classic',
@@ -275,6 +279,8 @@ describe('media (sound clip, picture effect)', () => {
     });
     if (!res.ok) return;
     const back = fromDetail({
+      access: 'owner',
+      ownerName: 'Moi',
       ...res.data,
       id: 'x',
       visibility: 'PRIVATE',
@@ -299,6 +305,8 @@ describe('media (sound clip, picture effect)', () => {
 
   it('a saved question without media gets no effect and no sound', () => {
     const draft = fromDetail({
+      access: 'owner',
+      ownerName: 'Moi',
       ...DEMO_QUIZ,
       visibility: 'PRIVATE',
       theme: 'classic',

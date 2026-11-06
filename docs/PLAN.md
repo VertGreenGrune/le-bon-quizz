@@ -315,7 +315,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + quizzes shared with the host (T45) + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -386,6 +386,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), theme (`QuizTheme` enum, default
   `classic`, T40), createdAt, updatedAt
+- `QuizShare` (T45) — quizId → Quiz, userId → User (primary key = both, cascades on delete), role
+  (`ShareRole`: `viewer` « Peut lancer » | `editor` « Peut modifier »), createdAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
   `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD` | `BLUFF` | `DRAW`), timeLimitSec (default 20),
   basePoints (default 1000), config? (JSON: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
@@ -440,7 +442,17 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
   (body `QuizInput` = `QuizSchema` without `id` + optional `visibility` — absent = `PRIVATE` on
   creation, unchanged on update — and optional `theme`, same rule with `classic`; PUT replaces all
-  questions). `QuizDetail`, `QuizSummary` and `LibraryQuiz` have `theme` (copies keep it). Owner only, public or not.
+  questions). `QuizDetail`, `QuizSummary` and `LibraryQuiz` have `theme` (copies keep it).
+  Access (T45): GET + duplicate = owner or any shared host; PUT = owner or `editor` (an editor's
+  `visibility` is ignored); DELETE = owner only (others: 404). `QuizDetail.access` (`owner` |
+  `editor` | `viewer`) + `ownerName`. Co-editing: PUT may carry `expectedUpdatedAt` (the
+  `updatedAt` the client loaded) → 409 `QUIZ_CONFLICT` if the quiz was saved in between.
+- Sharing (T45, owner only — others 404): `GET /quizzes/:id/shares` → `QuizShareInfo[]`
+  (`{ user: { id, name, email }, role, createdAt }`); `POST /quizzes/:id/shares` `{ email, role? }`
+  (default `viewer`; again = change the role) → 201 `QuizShareInfo`, 404 `USER_NOT_FOUND`, 400 for
+  one's own e-mail; `DELETE /quizzes/:id/shares/:userId` → 204 (also allowed for the shared host
+  itself: « Ne plus voir »). `GET /shared-quizzes` → `SharedQuizSummary[]` (`QuizSummary` + `role`,
+  `ownerName`, `sharedAt`), never in `GET /quizzes`.
   `QuizSummary` has `visibility` and `playCount` (games played with it by any host); copies
   (duplicate, library copy) are always `PRIVATE`, title + " (copie)"
 - `GET /library?search=&sort=popular|newest` → `LibraryQuiz[]`: `PUBLIC` quizzes of the **other**
@@ -477,7 +489,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/forgot-password` (« Mot de passe oublié ? » on `/login`), `/reset-password?token=` (link of
   the e-mail: new password ×2 → logged in → `/editor`), `/account` « Mon compte » (change
   password; link in the editor header, auth required)
-- `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
+- `/editor`, `/editor/new`, `/editor/:quizId` → quiz list (+ « 👥 Partagés avec moi », T45) / editor
+  (auth required; « 👥 Partager » for the owner, read-only + « Copier dans mes quiz » for a viewer)
 - `/reports` → past games, `/reports/:gameId` → game report (auth required)
 - `/library` → public quizzes of the other hosts: search, sort, launch, copy (auth required)
 

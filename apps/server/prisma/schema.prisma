@@ -20,6 +20,7 @@ model User {
   sessions            Session[]
   gameSessions        GameSession[]
   passwordResetTokens PasswordResetToken[]
+  quizShares          QuizShare[]
 }
 
 /// Host login session. `id` is the SHA-256 of the opaque token given to the client.
@@ -61,6 +62,7 @@ model Quiz {
   updatedAt     DateTime       @updatedAt
   questions     Question[]
   gameSessions  GameSession[]
+  shares        QuizShare[]
 
   @@index([ownerId])
   @@index([visibility, createdAt])
@@ -69,6 +71,25 @@ model Quiz {
 enum QuizVisibility {
   PRIVATE
   PUBLIC
+}
+
+/// T45: a quiz shared by its owner with another host account.
+model QuizShare {
+  quizId    String
+  quiz      Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// viewer = see, launch, copy; editor = also edit the quiz.
+  role      ShareRole @default(viewer)
+  createdAt DateTime  @default(now())
+
+  @@id([quizId, userId])
+  @@index([userId])
+}
+
+enum ShareRole {
+  viewer
+  editor
 }
 
 enum QuizTheme {
