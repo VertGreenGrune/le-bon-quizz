@@ -61,11 +61,11 @@ test('share a quiz, co-edit it, conflict, read-only viewer', async ({ browser })
   await dialog.getByLabel('Adresse e-mail de l’animateur').fill(email('Bruno'));
   await dialog.getByLabel('Droits', { exact: true }).selectOption('editor');
   await dialog.getByRole('button', { name: 'Partager', exact: true }).click();
-  await expect(dialog.getByText(email('Bruno'))).toBeVisible();
+  await expect(dialog.getByText(email('Bruno'), { exact: true })).toBeVisible();
   await dialog.getByLabel('Adresse e-mail de l’animateur').fill(email('Chloe'));
   await dialog.getByLabel('Droits', { exact: true }).selectOption('viewer');
   await dialog.getByRole('button', { name: 'Partager', exact: true }).click();
-  await expect(dialog.getByText(email('Chloe'))).toBeVisible();
+  await expect(dialog.getByText(email('Chloe'), { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: 'Fermer' }).click();
 
   // ---- Bruno edits it from « Partagés avec moi » ----
