@@ -239,6 +239,49 @@ under `deploy:` (next to `runs-on`).
 - **Secrets:** `fly secrets list`, `fly secrets set KEY=value` (restarts the app),
   `fly secrets unset KEY`.
 
+## Self-hosting (Docker Compose + Caddy) — instead of Fly.io
+
+`docker-compose.prod.yml` runs the same image on your own server (a PC, a NAS, a VPS) behind
+[Caddy](https://caddyserver.com), which serves HTTPS. **HTTPS is required:** in production the
+session cookie is `Secure`, so over plain `http://<IP>` hosts can't log in (players can still
+join, but the editor and « Animer » need an account).
+
+1. **Docker** on the server, and the image. GitHub Actions publishes it on every push to `main`
+   (`.github/workflows/image.yml`) as `ghcr.io/vertgreengrune/le-bon-quizz:latest` (+
+   `sha-<commit>`). The repository is private, so the package is too: create a GitHub token
+   (Settings → Developer settings → Personal access tokens → **classic**, scope
+   `read:packages` only) and, once on the server,
+   `echo <token> | docker login ghcr.io -u <github user> --password-stdin`. The server only needs
+   `docker-compose.prod.yml`, `deploy/Caddyfile`, `.env.prod` and `prod-data/` (no source code).
+2. **Settings:** `cp .env.prod.example .env.prod` and fill it in. Two ways for the address:
+   - **A public domain** (recommended: `quiz.example.fr`, or a free DuckDNS name) whose DNS points
+     at the server, ports **80 and 443** reachable from the internet (router port forwarding):
+     `SITE_ADDRESS=quiz.example.fr`, `TLS_MODE=<your e-mail>` → Caddy gets a free Let's Encrypt
+     certificate and renews it.
+   - **LAN only** (no domain): `SITE_ADDRESS=<server IP>`, `TLS_MODE=internal` → Caddy signs its
+     own certificate; each phone / browser warns once (« Continuer vers le site ») unless you
+     install Caddy's root certificate (`docker compose -f docker-compose.prod.yml exec caddy cat
+/data/caddy/pki/authorities/local/root.crt`). Firebase's Google sign-in may refuse an IP
+     address: prefer a domain if you use Firebase.
+   - `CORS_ORIGIN`, `PUBLIC_URL`, `PUBLIC_WEB_URL` = `https://<SITE_ADDRESS>`.
+3. **Firebase** (if `FIREBASE_*` are set): add `SITE_ADDRESS` to Authentication → Paramètres →
+   Domaines autorisés.
+4. **Database:** `DATABASE_URL` (pooled) + `DATABASE_URL_UNPOOLED` (direct). Apply the migrations:
+   `docker compose -f docker-compose.prod.yml run --rm migrate` (a no-op when already applied).
+   Pointing at the same Neon database as development means sharing accounts and quizzes with it;
+   create a Neon branch for production if you want them apart.
+5. **Uploaded media:** pictures and sounds live in `./prod-data/uploads` on the server. Quizzes
+   imported in development point at files of `apps/server/uploads`: copy them there
+   (`cp apps/server/uploads/* prod-data/uploads/`), or run `quiz:import` with
+   `UPLOAD_DIR=prod-data/uploads`.
+6. **Start:** `docker compose -f docker-compose.prod.yml pull && docker compose -f
+docker-compose.prod.yml up -d`, then open
+   `https://<SITE_ADDRESS>`. Logs: `docker compose -f docker-compose.prod.yml logs -f app caddy`.
+   Update: `pull`, `run --rm migrate`, `up -d`. Roll back: `LBQ_TAG=sha-<commit>` in front of
+   the same commands. Games in progress are lost on restart (in memory), as on Fly. Without the
+   registry, build on the server instead:
+   `docker build -t ghcr.io/vertgreengrune/le-bon-quizz:latest .` from a clone, then `up -d`.
+
 ## Reference — runtime configuration
 
 | Variable                                  | Where                     | Value in production                          |

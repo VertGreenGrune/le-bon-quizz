@@ -2918,3 +2918,6 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `AuthConfig` / `FirebaseWebConfig` / `FirebaseLoginBody`, `PublicUser.firebase?`, 3 error codes;
   `User.passwordHash` is now **nullable** (code reading it must handle null). Migration
   `20261106140000_firebase_auth`. New deps: `jose` (server), `firebase` (web).
+- 2026-11-06, main agent (no contract change): self-hosting with `docker-compose.prod.yml` (app +
+  Caddy for HTTPS, one-shot `migrate` service), `deploy/Caddyfile`, `.env.prod.example`, DEPLOY.md
+  « Self-hosting (Docker Compose + Caddy) ». Fly.io deployment unchanged.
