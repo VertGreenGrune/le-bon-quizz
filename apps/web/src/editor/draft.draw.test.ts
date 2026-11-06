@@ -60,6 +60,8 @@ describe('editor model of a « Dessine-moi » question', () => {
       theme: 'classic',
       createdAt: '',
       updatedAt: '',
+      access: 'owner',
+      ownerName: 'Moi',
       questions: [
         { type: 'DRAW', text: 'Dessine', words: ['chat'], timeLimitSec: 60, basePoints: 2000 },
       ],

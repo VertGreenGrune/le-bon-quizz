@@ -2,10 +2,12 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   ChangePasswordBody,
+  FirebaseLoginBody,
   ForgotPasswordBody,
   LoginBody,
   RegisterBody,
   ResetPasswordBody,
+  type AuthConfig,
   type AuthResponse,
 } from '@lbq/shared';
 import {
@@ -52,8 +54,87 @@ export async function authRoutes(app: FastifyInstance, deps: ApiDeps) {
   const { prisma } = deps;
   const mailer = deps.mailer ?? createLogMailer(app.log);
   const limits = deps.rateLimits ?? createAuthRateLimits();
+  const firebase = deps.firebase;
 
-  app.post('/auth/register', async (request, reply) => {
+  // T46: with Firebase Auth, passwords live at Firebase: the local password endpoints are off.
+  const local = {
+    onRequest: async () => {
+      if (firebase) {
+        throw new ApiError(
+          404,
+          'LOCAL_AUTH_DISABLED',
+          'Connexion par Firebase : utilisez « Continuer avec Google » ou votre e-mail Firebase.',
+        );
+      }
+    },
+  };
+
+  app.get('/auth/config', async () =>
+    firebase ? ({ firebase: firebase.config } satisfies AuthConfig) : ({} satisfies AuthConfig),
+  );
+
+  /**
+   * Firebase ID token → our own session (same cookie as `/auth/login`). The account is found by
+   * its Firebase uid; at the first sign-in an existing account with the same e-mail is linked
+   * (only when Firebase verified the address, so nobody can take over an account by signing up
+   * at Firebase with someone else's e-mail); otherwise a new account is created.
+   */
+  app.post('/auth/firebase', async (request, reply) => {
+    if (!firebase) {
+      throw new ApiError(
+        404,
+        'NOT_FOUND',
+        'La connexion Firebase n’est pas activée sur ce serveur.',
+      );
+    }
+    const { idToken, name } = parse(FirebaseLoginBody, request.body);
+    let identity;
+    try {
+      identity = await firebase.verify(idToken);
+    } catch (err) {
+      request.log.info({ err }, 'Firebase ID token refused');
+      throw new ApiError(
+        401,
+        'FIREBASE_TOKEN_INVALID',
+        'Connexion refusée ou expirée, reconnectez-vous.',
+      );
+    }
+    const { uid, email, emailVerified } = identity;
+    let user = await prisma.user.findUnique({ where: { firebaseUid: uid } });
+    if (!user) {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        if (!emailVerified) {
+          throw new ApiError(
+            403,
+            'EMAIL_NOT_VERIFIED',
+            'Un compte existe déjà avec cette adresse : confirmez-la avec le lien reçu par e-mail, puis reconnectez-vous.',
+          );
+        }
+        user = await prisma.user.update({ where: { id: existing.id }, data: { firebaseUid: uid } });
+      } else {
+        const fallbackName = email.split('@')[0]!.slice(0, 60) || 'Animateur';
+        try {
+          user = await prisma.user.create({
+            data: { email, name: name ?? identity.name ?? fallbackName, firebaseUid: uid },
+          });
+        } catch (err) {
+          // Two sign-ins at once: the other request created it.
+          if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002')) {
+            throw err;
+          }
+          user = await prisma.user.findUnique({ where: { firebaseUid: uid } });
+          if (!user)
+            throw new ApiError(409, 'EMAIL_TAKEN', 'Un compte existe déjà avec cet e-mail');
+        }
+      }
+    }
+    const token = await createSession(prisma, user.id);
+    setSessionCookie(reply, token);
+    return { user: toPublicUser(user), token } satisfies AuthResponse;
+  });
+
+  app.post('/auth/register', local, async (request, reply) => {
     const { email, name, password } = parse(RegisterBody, request.body);
     let user;
     try {
@@ -71,7 +152,7 @@ export async function authRoutes(app: FastifyInstance, deps: ApiDeps) {
     return reply.status(201).send({ user: toPublicUser(user), token } satisfies AuthResponse);
   });
 
-  app.post('/auth/login', async (request, reply) => {
+  app.post('/auth/login', local, async (request, reply) => {
     const { email, password } = parse(LoginBody, request.body);
     const key = `${request.ip}|${email}`;
     if (limits.login.blocked(key)) {
@@ -104,7 +185,7 @@ export async function authRoutes(app: FastifyInstance, deps: ApiDeps) {
   app.get('/auth/me', { onRequest: requireAuth(prisma) }, async (request) => currentUser(request));
 
   // Always 204: the answer never tells whether an account exists for this e-mail.
-  app.post('/auth/forgot-password', async (request, reply) => {
+  app.post('/auth/forgot-password', local, async (request, reply) => {
     const { email } = parse(ForgotPasswordBody, request.body);
     const limited = limits.resetByEmail.blocked(email) || limits.resetByIp.blocked(request.ip);
     limits.resetByEmail.hit(email);
@@ -137,7 +218,7 @@ export async function authRoutes(app: FastifyInstance, deps: ApiDeps) {
     return reply.status(204).send();
   });
 
-  app.post('/auth/reset-password', async (request, reply) => {
+  app.post('/auth/reset-password', local, async (request, reply) => {
     const { token, password } = parse(ResetPasswordBody, request.body);
     const id = hashToken(token);
     const passwordHash = await hashPassword(password);
@@ -165,20 +246,27 @@ export async function authRoutes(app: FastifyInstance, deps: ApiDeps) {
     return { user: toPublicUser(user), token: session } satisfies AuthResponse;
   });
 
-  app.post('/auth/change-password', { onRequest: requireAuth(prisma) }, async (request, reply) => {
-    const { currentPassword, newPassword } = parse(ChangePasswordBody, request.body);
-    const { id } = currentUser(request);
-    const user = await prisma.user.findUniqueOrThrow({ where: { id } });
-    if (!(await verifyPassword(currentPassword, user.passwordHash))) {
-      throw new ApiError(400, 'WRONG_PASSWORD', 'Mot de passe actuel incorrect');
-    }
-    await prisma.user.update({
-      where: { id },
-      data: { passwordHash: await hashPassword(newPassword) },
-    });
-    // Other devices are logged out; this one stays logged in.
-    await deleteUserSessions(prisma, id, getRequestToken(request) ?? undefined);
-    await prisma.passwordResetToken.deleteMany({ where: { userId: id, usedAt: null } });
-    return reply.status(204).send();
-  });
+  app.post(
+    '/auth/change-password',
+    { onRequest: [local.onRequest, requireAuth(prisma)] },
+    async (request, reply) => {
+      const { currentPassword, newPassword } = parse(ChangePasswordBody, request.body);
+      const { id } = currentUser(request);
+      const user = await prisma.user.findUniqueOrThrow({ where: { id } });
+      if (
+        !(await verifyPassword(currentPassword, user.passwordHash ?? DUMMY_HASH)) ||
+        !user.passwordHash
+      ) {
+        throw new ApiError(400, 'WRONG_PASSWORD', 'Mot de passe actuel incorrect');
+      }
+      await prisma.user.update({
+        where: { id },
+        data: { passwordHash: await hashPassword(newPassword) },
+      });
+      // Other devices are logged out; this one stays logged in.
+      await deleteUserSessions(prisma, id, getRequestToken(request) ?? undefined);
+      await prisma.passwordResetToken.deleteMany({ where: { userId: id, usedAt: null } });
+      return reply.status(204).send();
+    },
+  );
 }

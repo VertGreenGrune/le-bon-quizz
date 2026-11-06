@@ -1,4 +1,4 @@
-**/node_modules
+﻿**/node_modules
 **/dist
 **/src/generated
 **/uploads
@@ -13,3 +13,5 @@ test-results
 e2e
 docs
 content
+prod-data
+deploy

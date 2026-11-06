@@ -13,8 +13,15 @@ export function toPublicUser(u: {
   email: string;
   name: string;
   createdAt: Date;
+  firebaseUid?: string | null;
 }): PublicUser {
-  return { id: u.id, email: u.email, name: u.name, createdAt: u.createdAt.toISOString() };
+  return {
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    createdAt: u.createdAt.toISOString(),
+    ...(u.firebaseUid ? { firebase: true as const } : {}),
+  };
 }
 
 export async function createSession(prisma: PrismaClient, userId: string): Promise<string> {

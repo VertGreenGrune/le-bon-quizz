@@ -1,8 +1,10 @@
 import type {
   ApiErrorBody,
   ApiErrorCode,
+  AuthConfig,
   AuthResponse,
   ChangePasswordBody,
+  FirebaseLoginBody,
   ForgotPasswordBody,
   GameReport,
   GameSummary,
@@ -12,9 +14,12 @@ import type {
   PublicUser,
   QuizDetail,
   QuizInput,
+  QuizShareInfo,
   QuizSummary,
   RegisterBody,
   ResetPasswordBody,
+  SharedQuizSummary,
+  ShareQuizBody,
   UploadImageResponse,
 } from '@lbq/shared';
 
@@ -71,6 +76,10 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
       login: (body: LoginBody) => request<AuthResponse>('POST', '/auth/login', body),
       logout: () => request<void>('POST', '/auth/logout'),
       me: () => request<PublicUser>('GET', '/auth/me'),
+      /** T46: `{ firebase }` when the server uses Firebase Auth, `{}` for local accounts. */
+      config: () => request<AuthConfig>('GET', '/auth/config'),
+      /** T46: exchanges a Firebase ID token for our session (cookie). */
+      firebase: (body: FirebaseLoginBody) => request<AuthResponse>('POST', '/auth/firebase', body),
       /** Always resolves (neutral answer), unless the server can't be reached. */
       forgotPassword: (body: ForgotPasswordBody) =>
         request<void>('POST', '/auth/forgot-password', body),
@@ -88,6 +97,18 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
       remove: (id: string) => request<void>('DELETE', `/quizzes/${encodeURIComponent(id)}`),
       duplicate: (id: string) =>
         request<QuizDetail>('POST', `/quizzes/${encodeURIComponent(id)}/duplicate`),
+      /** T45: quizzes other hosts shared with me. */
+      shared: () => request<SharedQuizSummary[]>('GET', '/shared-quizzes'),
+      shares: (id: string) =>
+        request<QuizShareInfo[]>('GET', `/quizzes/${encodeURIComponent(id)}/shares`),
+      share: (id: string, body: ShareQuizBody) =>
+        request<QuizShareInfo>('POST', `/quizzes/${encodeURIComponent(id)}/shares`, body),
+      /** Owner removes a share, or the shared host leaves (`userId` = themselves). */
+      unshare: (id: string, userId: string) =>
+        request<void>(
+          'DELETE',
+          `/quizzes/${encodeURIComponent(id)}/shares/${encodeURIComponent(userId)}`,
+        ),
     },
     library: {
       list: ({ search, sort }: LibraryQuery = {}) => {

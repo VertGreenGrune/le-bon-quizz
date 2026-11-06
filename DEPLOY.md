@@ -144,6 +144,38 @@ tentatives ». Counters are in memory (reset by a deploy / restart).
 In dev nothing real is sent: without `SMTP_URL` the server uses **Mailpit**
 (`docker compose up -d mailpit`), inbox at http://localhost:8025.
 
+## 4c. Firebase Auth — « Continuer avec Google » (optional)
+
+Without it the app keeps its own accounts (e-mail + password). With it, hosts sign in with
+**Google** or an **e-mail / password managed by Firebase** (Firebase sends the confirmation and
+« mot de passe oublié » e-mails, so §4b is then only a fallback). Free tier (Spark) is enough.
+
+1. <https://console.firebase.google.com> → **Créer un projet** (e.g. `le-bon-quizz`; Google
+   Analytics not needed).
+2. **Paramètres du projet** (⚙️) → **Vos applications** → icône **Web** `</>` → name « Le Bon
+   Quizz » (no Hosting) → note `apiKey`, `authDomain`, `projectId`, `appId`. These values are
+   public (they are in every web page), not secrets.
+3. **Authentication** → **Commencer** → **Méthode de connexion**: enable **Google** (choose the
+   support e-mail) and **Adresse e-mail/Mot de passe** (not « lien par e-mail »).
+4. **Authentication** → **Paramètres** → **Domaines autorisés**: `localhost` is there; add the
+   production domain (`lebonquizz.fly.dev`, custom domain) and, for dev on the LAN, the PC's IP
+   (e.g. `192.168.1.45`) — note: Google sign-in needs a secure context, so on a plain-HTTP LAN
+   IP only the e-mail login works; use `localhost` on the PC.
+5. Optional: **Authentication** → **Modèles** → set the language to French and the sender name.
+6. Configure the server (dev: root `.env`; Fly: `fly secrets set` or `[env]` in `fly.toml`):
+   ```
+   FIREBASE_PROJECT_ID=le-bon-quizz
+   FIREBASE_API_KEY=AIza…
+   FIREBASE_AUTH_DOMAIN=le-bon-quizz.firebaseapp.com   # optional (this is the default)
+   FIREBASE_APP_ID=1:…:web:…                            # optional
+   ```
+   Restart: the log says `Host accounts: Firebase Auth (project …)`. No web rebuild needed.
+
+Existing accounts: at the first Firebase sign-in with the **same e-mail**, the account (quizzes,
+games, shares) is linked — immediately with Google, after clicking the confirmation e-mail with an
+e-mail / password account. Turning Firebase off again (unset the variables) brings back the local
+logins; accounts created by Firebase then have no local password (« Mot de passe oublié »).
+
 ## 5. First deploy
 
 ```powershell
@@ -210,18 +242,62 @@ under `deploy:` (next to `runs-on`).
 - **Secrets:** `fly secrets list`, `fly secrets set KEY=value` (restarts the app),
   `fly secrets unset KEY`.
 
+## Self-hosting (Docker Compose + Caddy) — instead of Fly.io
+
+`docker-compose.prod.yml` runs the same image on your own server (a PC, a NAS, a VPS) behind
+[Caddy](https://caddyserver.com), which serves HTTPS. **HTTPS is required:** in production the
+session cookie is `Secure`, so over plain `http://<IP>` hosts can't log in (players can still
+join, but the editor and « Animer » need an account).
+
+1. **Docker** on the server, and the image. GitHub Actions publishes it on every push to `main`
+   (`.github/workflows/image.yml`) as `ghcr.io/vertgreengrune/le-bon-quizz:latest` (+
+   `sha-<commit>`). The repository is private, so the package is too: create a GitHub token
+   (Settings → Developer settings → Personal access tokens → **classic**, scope
+   `read:packages` only) and, once on the server,
+   `echo <token> | docker login ghcr.io -u <github user> --password-stdin`. The server only needs
+   `docker-compose.prod.yml`, `deploy/Caddyfile`, `.env.prod` and `prod-data/` (no source code).
+2. **Settings:** `cp .env.prod.example .env.prod` and fill it in. Two ways for the address:
+   - **A public domain** (recommended: `quiz.example.fr`, or a free DuckDNS name) whose DNS points
+     at the server, ports **80 and 443** reachable from the internet (router port forwarding):
+     `SITE_ADDRESS=quiz.example.fr`, `TLS_MODE=<your e-mail>` → Caddy gets a free Let's Encrypt
+     certificate and renews it.
+   - **LAN only** (no domain): `SITE_ADDRESS=<server IP>`, `TLS_MODE=internal` → Caddy signs its
+     own certificate; each phone / browser warns once (« Continuer vers le site ») unless you
+     install Caddy's root certificate (`docker compose -f docker-compose.prod.yml exec caddy cat
+/data/caddy/pki/authorities/local/root.crt`). Firebase's Google sign-in may refuse an IP
+     address: prefer a domain if you use Firebase.
+   - `CORS_ORIGIN`, `PUBLIC_URL`, `PUBLIC_WEB_URL` = `https://<SITE_ADDRESS>`.
+3. **Firebase** (if `FIREBASE_*` are set): add `SITE_ADDRESS` to Authentication → Paramètres →
+   Domaines autorisés.
+4. **Database:** `DATABASE_URL` (pooled) + `DATABASE_URL_UNPOOLED` (direct). Apply the migrations:
+   `docker compose -f docker-compose.prod.yml run --rm migrate` (a no-op when already applied).
+   Pointing at the same Neon database as development means sharing accounts and quizzes with it;
+   create a Neon branch for production if you want them apart.
+5. **Uploaded media:** pictures and sounds live in `./prod-data/uploads` on the server. Quizzes
+   imported in development point at files of `apps/server/uploads`: copy them there
+   (`cp apps/server/uploads/* prod-data/uploads/`), or run `quiz:import` with
+   `UPLOAD_DIR=prod-data/uploads`.
+6. **Start:** `docker compose -f docker-compose.prod.yml pull && docker compose -f
+docker-compose.prod.yml up -d`, then open
+   `https://<SITE_ADDRESS>`. Logs: `docker compose -f docker-compose.prod.yml logs -f app caddy`.
+   Update: `pull`, `run --rm migrate`, `up -d`. Roll back: `LBQ_TAG=sha-<commit>` in front of
+   the same commands. Games in progress are lost on restart (in memory), as on Fly. Without the
+   registry, build on the server instead:
+   `docker build -t ghcr.io/vertgreengrune/le-bon-quizz:latest .` from a clone, then `up -d`.
+
 ## Reference — runtime configuration
 
-| Variable                    | Where                     | Value in production                          |
-| --------------------------- | ------------------------- | -------------------------------------------- |
-| `DATABASE_URL`              | secret                    | set by `fly mpg attach`                      |
-| `SENTRY_DSN`                | secret                    | server DSN (optional)                        |
-| `SMTP_URL`, `MAIL_FROM`     | secret                    | SMTP provider + sender (§4b, optional)       |
-| `PUBLIC_WEB_URL`            | `fly.toml`                | `https://lebonquizz.fly.dev` (e-mail links)  |
-| `NODE_ENV`                  | `fly.toml` / image        | `production` (Secure cookie)                 |
-| `PORT`                      | `fly.toml` / image        | `8080`                                       |
-| `WEB_DIST_DIR`              | image                     | `/app/public` (web app served by the server) |
-| `UPLOAD_DIR`                | `fly.toml` / image        | `/data/uploads` (volume)                     |
-| `TRUST_PROXY`               | `fly.toml`                | `true` (`https` behind Fly's proxy)          |
-| `CORS_ORIGIN`, `PUBLIC_URL` | `fly.toml`                | `https://lebonquizz.fly.dev`                 |
-| `VITE_SENTRY_DSN`           | `fly.toml` `[build.args]` | browser DSN (optional, public)               |
+| Variable                                  | Where                     | Value in production                          |
+| ----------------------------------------- | ------------------------- | -------------------------------------------- |
+| `DATABASE_URL`                            | secret                    | set by `fly mpg attach`                      |
+| `SENTRY_DSN`                              | secret                    | server DSN (optional)                        |
+| `SMTP_URL`, `MAIL_FROM`                   | secret                    | SMTP provider + sender (§4b, optional)       |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY` | secret / `fly.toml`       | Firebase Auth on (§4c, optional)             |
+| `PUBLIC_WEB_URL`                          | `fly.toml`                | `https://lebonquizz.fly.dev` (e-mail links)  |
+| `NODE_ENV`                                | `fly.toml` / image        | `production` (Secure cookie)                 |
+| `PORT`                                    | `fly.toml` / image        | `8080`                                       |
+| `WEB_DIST_DIR`                            | image                     | `/app/public` (web app served by the server) |
+| `UPLOAD_DIR`                              | `fly.toml` / image        | `/data/uploads` (volume)                     |
+| `TRUST_PROXY`                             | `fly.toml`                | `true` (`https` behind Fly's proxy)          |
+| `CORS_ORIGIN`, `PUBLIC_URL`               | `fly.toml`                | `https://lebonquizz.fly.dev`                 |
+| `VITE_SENTRY_DSN`                         | `fly.toml` `[build.args]` | browser DSN (optional, public)               |

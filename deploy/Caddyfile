@@ -1,5 +1,12 @@
-# HTTPS for $DOMAIN (free Let's Encrypt certificate, renewed by Caddy), WebSockets included.
-{$DOMAIN} {
+# Caddy in front of Le Bon Quizz (docker-compose.prod.yml). Values come from .env.prod:
+#   SITE_ADDRESS  quiz.example.fr (public domain → free Let's Encrypt certificate)
+#                 or the server's LAN IP / name (e.g. 192.168.1.50) with TLS_MODE=internal
+#   TLS_MODE      an e-mail for Let's Encrypt, or `internal` (Caddy's own certificate authority:
+#                 browsers warn until its root certificate is trusted, see DEPLOY.md)
+# (deploy/docker-compose.yml + SELF-HOSTING.md use deploy/Caddyfile.selfhost instead.)
+{$SITE_ADDRESS} {
+	tls {$TLS_MODE:internal}
 	encode zstd gzip
+	# Socket.IO's WebSockets are proxied as-is.
 	reverse_proxy app:8080
 }

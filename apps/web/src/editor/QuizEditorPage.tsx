@@ -6,6 +6,8 @@ import { EditorShell, btn } from './EditorShell';
 import { QuestionEditor } from './QuestionEditor';
 import { ImageField } from './ImageField';
 import { VisibilityField } from './visibility';
+import { ShareDialog } from './ShareDialog';
+import type { QuizAccess } from '@lbq/shared';
 import { ThemeField } from '../themes/ThemePicker';
 import { StartGameDialog } from '../components/StartGameDialog';
 import { hostUrl, type GameOptions } from '../lib/gameOptions';
@@ -19,6 +21,10 @@ import {
   type QuizDraft,
   hasMedia,
 } from './draft';
+
+/** What the server told us about the loaded quiz (T45): who may do what, and its version. */
+type Meta = { access: QuizAccess; ownerName: string; updatedAt: string | null };
+const NEW_META: Meta = { access: 'owner', ownerName: '', updatedAt: null };
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready' };
 
@@ -39,6 +45,11 @@ export function QuizEditorPage() {
   const [saving, setSaving] = useState(false);
   /** "Lancer la partie" clicked: the Solo / Équipes dialog is open. */
   const [starting, setStarting] = useState(false);
+  const [meta, setMeta] = useState<Meta>(NEW_META);
+  const [sharing, setSharing] = useState(false);
+  const [copying, setCopying] = useState(false);
+  /** The server refused a save because someone else saved in between (409 QUIZ_CONFLICT). */
+  const [conflict, setConflict] = useState(false);
   const loadedId = useRef<string | null>(quizId);
 
   // Load on mount and when the URL changes to another quiz (not after our own create → navigate).
@@ -51,6 +62,8 @@ export function QuizEditorPage() {
       (quiz) => {
         if (cancelled) return;
         const d = fromDetail(quiz);
+        setMeta({ access: quiz.access, ownerName: quiz.ownerName, updatedAt: quiz.updatedAt });
+        setConflict(false);
         setQuizId(quiz.id);
         setDraft(d);
         setSaved(JSON.stringify(d));
@@ -97,9 +110,14 @@ export function QuizEditorPage() {
     setSaving(true);
     try {
       const quiz = quizId
-        ? await api.quizzes.update(quizId, result.data)
+        ? await api.quizzes.update(quizId, {
+            ...result.data,
+            ...(meta.updatedAt ? { expectedUpdatedAt: meta.updatedAt } : {}),
+          })
         : await api.quizzes.create(result.data);
       const d = fromDetail(quiz);
+      setMeta({ access: quiz.access, ownerName: quiz.ownerName, updatedAt: quiz.updatedAt });
+      setConflict(false);
       setDraft(d);
       setSaved(JSON.stringify(d));
       if (!quizId) {
@@ -110,6 +128,7 @@ export function QuizEditorPage() {
       setBanner({ kind: 'ok', text: 'Quiz enregistré.' });
       return quiz.id;
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'QUIZ_CONFLICT') setConflict(true);
       setBanner({ kind: 'error', text: (err as Error).message });
       return null;
     } finally {
@@ -119,8 +138,39 @@ export function QuizEditorPage() {
 
   async function startGame(options: GameOptions) {
     setStarting(false);
-    const id = dirty || !quizId ? await save() : quizId;
+    const id = canEdit && (dirty || !quizId) ? await save() : quizId;
     if (id) navigate(hostUrl(id, options));
+  }
+
+  /** Conflict: drop the local changes and load the version saved by the other host. */
+  async function reload() {
+    if (!quizId) return;
+    try {
+      const quiz = await api.quizzes.get(quizId);
+      const d = fromDetail(quiz);
+      setMeta({ access: quiz.access, ownerName: quiz.ownerName, updatedAt: quiz.updatedAt });
+      setDraft(d);
+      setSaved(JSON.stringify(d));
+      setErrors({});
+      setConflict(false);
+      setBanner({ kind: 'ok', text: 'Dernière version chargée.' });
+    } catch (err) {
+      setBanner({ kind: 'error', text: (err as Error).message });
+    }
+  }
+
+  /** Viewer: « Copier dans mes quiz » → an editable private copy. */
+  async function copy() {
+    if (!quizId) return;
+    setCopying(true);
+    try {
+      const quiz = await api.quizzes.duplicate(quizId);
+      navigate(`/editor/${quiz.id}`);
+    } catch (err) {
+      setBanner({ kind: 'error', text: (err as Error).message });
+    } finally {
+      setCopying(false);
+    }
   }
 
   if (load.status !== 'ready') {
@@ -142,6 +192,8 @@ export function QuizEditorPage() {
     );
   }
 
+  const canEdit = meta.access !== 'viewer';
+  const isOwner = meta.access === 'owner';
   const question = draft.questions[current] ?? draft.questions[0]!;
   const index = draft.questions[current] ? current : 0;
   const setQuestion = (q: DraftQuestion) =>
@@ -151,14 +203,25 @@ export function QuizEditorPage() {
     <EditorShell
       actions={
         <>
-          <button
-            type="button"
-            className={btn.secondary}
-            onClick={save}
-            disabled={saving || (!dirty && !!quizId)}
-          >
-            {saving ? 'Enregistrement…' : dirty || !quizId ? 'Enregistrer' : 'Enregistré ✓'}
-          </button>
+          {isOwner && quizId && (
+            <button type="button" className={btn.secondary} onClick={() => setSharing(true)}>
+              👥 Partager
+            </button>
+          )}
+          {canEdit ? (
+            <button
+              type="button"
+              className={btn.secondary}
+              onClick={save}
+              disabled={saving || (!dirty && !!quizId)}
+            >
+              {saving ? 'Enregistrement…' : dirty || !quizId ? 'Enregistrer' : 'Enregistré ✓'}
+            </button>
+          ) : (
+            <button type="button" className={btn.secondary} onClick={copy} disabled={copying}>
+              {copying ? 'Copie…' : 'Copier dans mes quiz'}
+            </button>
+          )}
           <button
             type="button"
             className={btn.start}
@@ -188,117 +251,143 @@ export function QuizEditorPage() {
               className={`flex-1 rounded-lg px-4 py-2 font-semibold ${banner.kind === 'error' ? 'bg-red-50 text-answer-red' : 'bg-green-50 text-answer-green'}`}
             >
               {banner.text}
+              {conflict && (
+                <button type="button" className={`${btn.secondary} ml-3`} onClick={reload}>
+                  ↻ Charger la dernière version
+                </button>
+              )}
             </p>
           )}
         </div>
 
-        <section className="grid gap-4 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-[1fr_16rem]">
-          <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-bold text-gray-600">Titre du quiz</span>
-              <input
-                value={draft.title}
-                maxLength={95}
-                onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-                placeholder="Ex. : Culture générale"
-                aria-invalid={!!errors.title}
-                className={`rounded-lg border-2 px-3 py-2 text-xl font-bold outline-none focus:border-brand ${errors.title ? 'border-answer-red' : 'border-gray-300'}`}
-              />
-              {errors.title && (
-                <span className="text-sm font-semibold text-answer-red">{errors.title}</span>
+        {!isOwner && (
+          <p
+            data-testid="shared-access"
+            className="rounded-xl bg-indigo-50 px-4 py-3 font-semibold text-indigo-900"
+          >
+            👥 Quiz de {meta.ownerName} partagé avec vous ·{' '}
+            {meta.access === 'editor'
+              ? 'vous pouvez le modifier et le lancer (seul son auteur gère la visibilité et le partage).'
+              : 'vous pouvez le lancer ou en faire une copie, pas le modifier.'}
+          </p>
+        )}
+
+        <fieldset disabled={!canEdit} className="contents">
+          <section className="grid gap-4 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-[1fr_16rem]">
+            <div className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-bold text-gray-600">Titre du quiz</span>
+                <input
+                  value={draft.title}
+                  maxLength={95}
+                  onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+                  placeholder="Ex. : Culture générale"
+                  aria-invalid={!!errors.title}
+                  className={`rounded-lg border-2 px-3 py-2 text-xl font-bold outline-none focus:border-brand ${errors.title ? 'border-answer-red' : 'border-gray-300'}`}
+                />
+                {errors.title && (
+                  <span className="text-sm font-semibold text-answer-red">{errors.title}</span>
+                )}
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-bold text-gray-600">Description (facultative)</span>
+                <textarea
+                  value={draft.description ?? ''}
+                  maxLength={500}
+                  rows={2}
+                  onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                  className="resize-y rounded-lg border-2 border-gray-300 px-3 py-2 outline-none focus:border-brand"
+                />
+                {errors.description && (
+                  <span className="text-sm font-semibold text-answer-red">
+                    {errors.description}
+                  </span>
+                )}
+              </label>
+              {isOwner && (
+                <VisibilityField
+                  value={draft.visibility ?? 'PRIVATE'}
+                  onChange={(visibility) => setDraft((d) => ({ ...d, visibility }))}
+                  hasMedia={hasMedia(draft)}
+                />
               )}
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-bold text-gray-600">Description (facultative)</span>
-              <textarea
-                value={draft.description ?? ''}
-                maxLength={500}
-                rows={2}
-                onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-                className="resize-y rounded-lg border-2 border-gray-300 px-3 py-2 outline-none focus:border-brand"
+              <ThemeField
+                value={draft.theme ?? 'classic'}
+                onChange={(theme) => setDraft((d) => ({ ...d, theme }))}
               />
-              {errors.description && (
-                <span className="text-sm font-semibold text-answer-red">{errors.description}</span>
-              )}
-            </label>
-            <VisibilityField
-              value={draft.visibility ?? 'PRIVATE'}
-              onChange={(visibility) => setDraft((d) => ({ ...d, visibility }))}
-              hasMedia={hasMedia(draft)}
+            </div>
+            <ImageField
+              label="Image de couverture"
+              value={draft.coverImageUrl}
+              onChange={(coverImageUrl) => setDraft((d) => ({ ...d, coverImageUrl }))}
             />
-            <ThemeField
-              value={draft.theme ?? 'classic'}
-              onChange={(theme) => setDraft((d) => ({ ...d, theme }))}
+          </section>
+
+          <div className="grid gap-4 md:grid-cols-[14rem_1fr]">
+            <nav aria-label="Questions" className="flex flex-col gap-2">
+              {errors.questions && (
+                <p className="text-sm font-semibold text-answer-red">{errors.questions}</p>
+              )}
+              <ol className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible">
+                {draft.questions.map((q, i) => {
+                  const errCount = questionErrorCount(errors, i);
+                  return (
+                    <li key={i} className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setCurrent(i)}
+                        aria-current={i === index}
+                        className={`flex w-40 items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 text-left shadow-sm md:w-full ${i === index ? 'border-brand' : 'border-transparent hover:border-gray-300'}`}
+                      >
+                        <span className="text-sm font-black text-gray-400">{i + 1}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {q.text.trim() || (
+                            <span className="text-gray-400 italic">Sans titre</span>
+                          )}
+                        </span>
+                        {errCount > 0 && (
+                          <span
+                            title={`${errCount} erreur(s)`}
+                            className="rounded-full bg-answer-red px-1.5 text-xs font-bold text-white"
+                          >
+                            !
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+              <button
+                type="button"
+                className={btn.secondary}
+                disabled={draft.questions.length >= 100}
+                onClick={() => {
+                  setDraft((d) => addQuestion(d, index));
+                  setCurrent(index + 1);
+                }}
+              >
+                + Ajouter une question
+              </button>
+            </nav>
+
+            <QuestionEditor
+              key={index}
+              index={index}
+              total={draft.questions.length}
+              question={question}
+              errors={errors}
+              onChange={setQuestion}
+              onDraftChange={(fn, nextIndex) => {
+                setDraft(fn);
+                setCurrent(nextIndex);
+                setErrors({});
+              }}
             />
           </div>
-          <ImageField
-            label="Image de couverture"
-            value={draft.coverImageUrl}
-            onChange={(coverImageUrl) => setDraft((d) => ({ ...d, coverImageUrl }))}
-          />
-        </section>
-
-        <div className="grid gap-4 md:grid-cols-[14rem_1fr]">
-          <nav aria-label="Questions" className="flex flex-col gap-2">
-            {errors.questions && (
-              <p className="text-sm font-semibold text-answer-red">{errors.questions}</p>
-            )}
-            <ol className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:overflow-visible">
-              {draft.questions.map((q, i) => {
-                const errCount = questionErrorCount(errors, i);
-                return (
-                  <li key={i} className="shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setCurrent(i)}
-                      aria-current={i === index}
-                      className={`flex w-40 items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 text-left shadow-sm md:w-full ${i === index ? 'border-brand' : 'border-transparent hover:border-gray-300'}`}
-                    >
-                      <span className="text-sm font-black text-gray-400">{i + 1}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                        {q.text.trim() || <span className="text-gray-400 italic">Sans titre</span>}
-                      </span>
-                      {errCount > 0 && (
-                        <span
-                          title={`${errCount} erreur(s)`}
-                          className="rounded-full bg-answer-red px-1.5 text-xs font-bold text-white"
-                        >
-                          !
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-            <button
-              type="button"
-              className={btn.secondary}
-              disabled={draft.questions.length >= 100}
-              onClick={() => {
-                setDraft((d) => addQuestion(d, index));
-                setCurrent(index + 1);
-              }}
-            >
-              + Ajouter une question
-            </button>
-          </nav>
-
-          <QuestionEditor
-            key={index}
-            index={index}
-            total={draft.questions.length}
-            question={question}
-            errors={errors}
-            onChange={setQuestion}
-            onDraftChange={(fn, nextIndex) => {
-              setDraft(fn);
-              setCurrent(nextIndex);
-              setErrors({});
-            }}
-          />
-        </div>
+        </fieldset>
       </main>
+      {sharing && quizId && <ShareDialog quizId={quizId} onClose={() => setSharing(false)} />}
       {starting && (
         <StartGameDialog
           quizTheme={draft.theme ?? 'classic'}

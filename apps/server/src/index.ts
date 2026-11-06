@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents } from '@lbq/shared';
 import { registerSocketHandlers } from './socket/index.js';
 import { registerApi } from './api/index.js';
+import { createFirebaseVerifier, firebaseConfigFromEnv } from './auth/firebase.js';
 import { createPrisma } from './db.js';
 import { createPrismaPersistence } from './game/persistence.js';
 import { e2eJokerHand } from './game/jokers.js';
@@ -26,6 +27,7 @@ await app.register(cors, {
 
 const prisma = createPrisma();
 app.addHook('onClose', () => prisma.$disconnect());
+const firebaseConfig = firebaseConfigFromEnv(process.env);
 await registerApi(app, {
   prisma,
   uploadDir: path.resolve(process.env.UPLOAD_DIR ?? 'uploads'),
@@ -33,7 +35,15 @@ await registerApi(app, {
   mailer: mailerFromEnv(process.env, app.log),
   // Links in e-mails: PUBLIC_WEB_URL, else the single allowed web origin, else the request's.
   publicWebUrl: process.env.PUBLIC_WEB_URL || process.env.CORS_ORIGIN,
+  ...(firebaseConfig && {
+    firebase: { config: firebaseConfig, verify: createFirebaseVerifier(firebaseConfig.projectId) },
+  }),
 });
+app.log.info(
+  firebaseConfig
+    ? `Host accounts: Firebase Auth (project ${firebaseConfig.projectId})`
+    : 'Host accounts: local (set FIREBASE_PROJECT_ID + FIREBASE_API_KEY for Firebase Auth)',
+);
 
 app.get('/health', async () => ({ status: 'ok' }));
 

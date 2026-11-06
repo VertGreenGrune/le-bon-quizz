@@ -1,0 +1,6 @@
+# Caddy for deploy/docker-compose.yml (SELF-HOSTING.md): HTTPS for $DOMAIN (free Let's Encrypt
+# certificate, renewed by Caddy), WebSockets included.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080
+}
