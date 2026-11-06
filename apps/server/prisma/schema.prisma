@@ -14,7 +14,10 @@ model User {
   id                  String               @id @default(cuid())
   email               String               @unique
   name                String
-  passwordHash        String
+  /// Null for accounts created through Firebase (T46): they have no password here.
+  passwordHash        String?
+  /// T46: Firebase Auth user id (`sub` of its ID tokens), set at the first Firebase sign-in.
+  firebaseUid         String?              @unique
   createdAt           DateTime             @default(now())
   quizzes             Quiz[]
   sessions            Session[]

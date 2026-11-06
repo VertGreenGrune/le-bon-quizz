@@ -1,3 +1,5 @@
+import type { FirebaseWebConfig } from '@lbq/shared';
+import type { FirebaseVerifier } from '../auth/firebase.js';
 import { mkdirSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
@@ -26,6 +28,11 @@ export interface ApiDeps {
   publicWebUrl?: string;
   /** In-memory limits of login / reset requests; default: fresh ones. */
   rateLimits?: AuthRateLimits;
+  /**
+   * T46: Firebase Auth. Set = hosts sign in with Firebase (`POST /auth/firebase`) and the
+   * e-mail / password endpoints answer 404 `LOCAL_AUTH_DISABLED`; absent = local accounts.
+   */
+  firebase?: { config: FirebaseWebConfig; verify: FirebaseVerifier };
 }
 
 /** REST API of PLAN.md §6 under `/api`, plus static `/uploads/`. */

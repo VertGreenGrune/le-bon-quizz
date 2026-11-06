@@ -1,8 +1,10 @@
 import type {
   ApiErrorBody,
   ApiErrorCode,
+  AuthConfig,
   AuthResponse,
   ChangePasswordBody,
+  FirebaseLoginBody,
   ForgotPasswordBody,
   GameReport,
   GameSummary,
@@ -74,6 +76,10 @@ export function createApiClient(baseUrl: string, fetchFn: FetchFn = (...a) => fe
       login: (body: LoginBody) => request<AuthResponse>('POST', '/auth/login', body),
       logout: () => request<void>('POST', '/auth/logout'),
       me: () => request<PublicUser>('GET', '/auth/me'),
+      /** T46: `{ firebase }` when the server uses Firebase Auth, `{}` for local accounts. */
+      config: () => request<AuthConfig>('GET', '/auth/config'),
+      /** T46: exchanges a Firebase ID token for our session (cookie). */
+      firebase: (body: FirebaseLoginBody) => request<AuthResponse>('POST', '/auth/firebase', body),
       /** Always resolves (neutral answer), unless the server can't be reached. */
       forgotPassword: (body: ForgotPasswordBody) =>
         request<void>('POST', '/auth/forgot-password', body),

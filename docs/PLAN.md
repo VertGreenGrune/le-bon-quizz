@@ -379,7 +379,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 
 ## 5. Data model (Prisma, `apps/server/prisma/schema.prisma`)
 
-- `User` — id, email (unique, lowercased), name, passwordHash (scrypt), createdAt
+- `User` — id, email (unique, lowercased), name, passwordHash? (scrypt; null for accounts
+  created through Firebase), firebaseUid? (unique, T46), createdAt
 - `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
 - `PasswordResetToken` — id (= SHA-256 of the token in the e-mailed link), userId, expiresAt
   (1 hour), usedAt? (single use), createdAt; a new request deletes the user's unused ones
@@ -439,6 +440,20 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   session revoked) or 400 `RESET_TOKEN_INVALID`; `POST /auth/change-password`
   `{ currentPassword, newPassword }` (logged in) → 204 (other sessions revoked, this one kept) or
   400 `WRONG_PASSWORD`
+- **Firebase Auth** (T46, `apps/server/src/auth/firebase.ts`): on when the server has
+  `FIREBASE_PROJECT_ID` + `FIREBASE_API_KEY`. `GET /auth/config` → `AuthConfig` (`{ firebase:
+  FirebaseWebConfig }`, or `{}` for local accounts — the web app reads it, nothing is baked in
+  the build). The web app signs in with the Firebase SDK (Google popup or e-mail / password) and
+  sends the ID token: `POST /auth/firebase` `{ idToken, name? }` → `AuthResponse` + the usual
+  `lbq_session` cookie (so sockets, quizzes, sharing… are unchanged). The token is checked
+  without a service account (`jose`, Google's public keys, RS256, `aud` = project id, `iss` =
+  `https://securetoken.google.com/<project>`, `auth_time` in the past). Account = the one with
+  that `firebaseUid`, else the one with that e-mail — **linked only if Firebase verified the
+  e-mail** (403 `EMAIL_NOT_VERIFIED` otherwise: the web app sends the confirmation e-mail) —,
+  else a new one (name from the body, the token, or the e-mail). Invalid token → 401
+  `FIREBASE_TOKEN_INVALID`; local mode → 404. In Firebase mode register / login /
+  forgot-password / reset-password / change-password answer 404 `LOCAL_AUTH_DISABLED`
+  (passwords and reset e-mails are Firebase's); `PublicUser.firebase: true` for linked accounts
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
   (body `QuizInput` = `QuizSchema` without `id` + optional `visibility` — absent = `PRIVATE` on
   creation, unchanged on update — and optional `theme`, same rule with `classic`; PUT replaces all
@@ -485,7 +500,10 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   (or `mode=survival&hearts=<n>`; no `theme` = the quiz's) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
   of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic
   game)
-- `/login`, `/register` → host account (`?next=` = page to return to)
+- `/login`, `/register` → host account (`?next=` = page to return to); with Firebase (T46) also
+  « Continuer avec Google », the e-mail forms go through Firebase (`apps/web/src/lib/firebase.ts`,
+  SDK loaded lazily, never on the phones), « Mot de passe oublié » = Firebase's reset e-mail,
+  « Mon compte » changes the Firebase password (nothing to change for a Google account)
 - `/forgot-password` (« Mot de passe oublié ? » on `/login`), `/reset-password?token=` (link of
   the e-mail: new password ×2 → logged in → `/editor`), `/account` « Mon compte » (change
   password; link in the editor header, auth required)
