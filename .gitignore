@@ -5,6 +5,7 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 *.log
 .DS_Store
 .vite/
@@ -13,3 +14,6 @@ test-results/
 
 # Personal launcher (contains this PC's public address)
 start-lbq.cmd
+
+# Self-hosted production data (docker-compose.prod.yml)
+prod-data/
