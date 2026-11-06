@@ -246,7 +246,13 @@ under `deploy:` (next to `runs-on`).
 session cookie is `Secure`, so over plain `http://<IP>` hosts can't log in (players can still
 join, but the editor and « Animer » need an account).
 
-1. **Docker** on the server, and this repository (`git clone`).
+1. **Docker** on the server, and the image. GitHub Actions publishes it on every push to `main`
+   (`.github/workflows/image.yml`) as `ghcr.io/vertgreengrune/le-bon-quizz:latest` (+
+   `sha-<commit>`). The repository is private, so the package is too: create a GitHub token
+   (Settings → Developer settings → Personal access tokens → **classic**, scope
+   `read:packages` only) and, once on the server,
+   `echo <token> | docker login ghcr.io -u <github user> --password-stdin`. The server only needs
+   `docker-compose.prod.yml`, `deploy/Caddyfile`, `.env.prod` and `prod-data/` (no source code).
 2. **Settings:** `cp .env.prod.example .env.prod` and fill it in. Two ways for the address:
    - **A public domain** (recommended: `quiz.example.fr`, or a free DuckDNS name) whose DNS points
      at the server, ports **80 and 443** reachable from the internet (router port forwarding):
@@ -268,10 +274,13 @@ join, but the editor and « Animer » need an account).
    imported in development point at files of `apps/server/uploads`: copy them there
    (`cp apps/server/uploads/* prod-data/uploads/`), or run `quiz:import` with
    `UPLOAD_DIR=prod-data/uploads`.
-6. **Start:** `docker compose -f docker-compose.prod.yml up -d --build`, then open
+6. **Start:** `docker compose -f docker-compose.prod.yml pull && docker compose -f
+docker-compose.prod.yml up -d`, then open
    `https://<SITE_ADDRESS>`. Logs: `docker compose -f docker-compose.prod.yml logs -f app caddy`.
-   Update: `git pull`, `run --rm migrate`, `up -d --build`. Games in progress are lost on restart
-   (in memory), as on Fly.
+   Update: `pull`, `run --rm migrate`, `up -d`. Roll back: `LBQ_TAG=sha-<commit>` in front of
+   the same commands. Games in progress are lost on restart (in memory), as on Fly. Without the
+   registry, build on the server instead:
+   `docker build -t ghcr.io/vertgreengrune/le-bon-quizz:latest .` from a clone, then `up -d`.
 
 ## Reference — runtime configuration
 

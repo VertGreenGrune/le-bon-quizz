@@ -1,14 +1,18 @@
 # Self-hosted production: the app (web + API + sockets) behind Caddy, which serves HTTPS.
 # Needs `.env.prod` (copy `.env.prod.example`). Steps: DEPLOY.md, « Self-hosting (Docker Compose + Caddy) ».
 #
+# The image is built by GitHub Actions (.github/workflows/image.yml) and pulled from GHCR
+# (private repository: `docker login ghcr.io` once, see DEPLOY.md). LBQ_TAG picks a version
+# (`sha-<commit>` to roll back; default latest).
+#
+#   docker compose -f docker-compose.prod.yml pull               # get the new image
 #   docker compose -f docker-compose.prod.yml run --rm migrate   # apply the DB migrations
-#   docker compose -f docker-compose.prod.yml up -d --build      # start / update
+#   docker compose -f docker-compose.prod.yml up -d              # start / update
 #   docker compose -f docker-compose.prod.yml logs -f app
 name: lebonquizz-prod
 services:
   app:
-    build: .
-    image: lebonquizz:prod
+    image: ghcr.io/vertgreengrune/le-bon-quizz:${LBQ_TAG:-latest}
     restart: unless-stopped
     env_file: .env.prod
     environment:
@@ -49,8 +53,7 @@ services:
   # One-shot: `docker compose -f docker-compose.prod.yml run --rm migrate`. Migrations need the
   # direct connection (Neon's pooled URL goes through PgBouncer).
   migrate:
-    image: lebonquizz:prod
-    build: .
+    image: ghcr.io/vertgreengrune/le-bon-quizz:${LBQ_TAG:-latest}
     env_file: .env.prod
     profiles: [tools]
     command:
