@@ -107,7 +107,8 @@ docker build -t lebonquizz .                # production image (web + API + Sock
 ```
 
 CI runs on GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Deployment to
-Fly.io (app + Managed Postgres + Sentry), step by step: [DEPLOY.md](DEPLOY.md).
+Fly.io (app + Managed Postgres + Sentry), step by step: [DEPLOY.md](DEPLOY.md). Own Linux
+server (Docker Compose: app + Postgres + Caddy HTTPS, every quiz imported): [SELF-HOSTING.md](SELF-HOSTING.md).
 
 ## Repository layout
 
@@ -118,4 +119,5 @@ packages/shared/   Types and zod schemas — the contract between web and server
 e2e/               Playwright tests
 docs/              PLAN.md (architecture), TASKS.md (task board)
 Dockerfile, fly.toml, DEPLOY.md   production image and Fly.io deployment
+deploy/, SELF-HOSTING.md         own server: docker-compose (app + Postgres + Caddy) and guide
 ```

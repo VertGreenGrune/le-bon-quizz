@@ -11,6 +11,8 @@ await build({
     index: 'src/index.ts',
     instrument: 'src/instrument.ts', // Sentry, preloaded with `node --import`
     seed: 'prisma/seed.ts',
+    // `node dist/import-quiz.js <folder> <email>` on a server (SELF-HOSTING.md).
+    'import-quiz': 'scripts/import-quiz.ts',
   },
   outdir: 'dist',
   bundle: true,

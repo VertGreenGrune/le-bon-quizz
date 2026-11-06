@@ -1,0 +1,71 @@
+# Self-hosting on one Linux server: the app (web + API + sockets), PostgreSQL and Caddy (HTTPS).
+# Step by step: SELF-HOSTING.md. From this folder:
+#   cp .env.example .env   # then set DOMAIN and POSTGRES_PASSWORD
+#   docker compose up -d --build
+name: lebonquizz-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lbq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: lbq
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lbq -d lbq']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # SMTP_URL / MAIL_FROM (optional) come from deploy/.env.
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: '8080'
+      DATABASE_URL: postgresql://lbq:${POSTGRES_PASSWORD}@db:5432/lbq
+      TRUST_PROXY: 'true'
+      PUBLIC_URL: https://${DOMAIN:?set DOMAIN in deploy/.env}
+      PUBLIC_WEB_URL: https://${DOMAIN}
+      CORS_ORIGIN: https://${DOMAIN}
+      UPLOAD_DIR: /data/uploads
+    # Database migrations on every start (nothing to do when up to date), then the server.
+    command:
+      - sh
+      - -c
+      - ./node_modules/.bin/prisma migrate deploy && exec node --enable-source-maps --import ./dist/instrument.js dist/index.js
+    volumes:
+      - uploads:/data
+      # The bundled quizzes (quiz.json + pictures + music), read by `node dist/import-quiz.js`.
+      - ../content/quizzes:/content:ro
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

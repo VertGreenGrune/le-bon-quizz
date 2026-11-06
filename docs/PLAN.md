@@ -508,5 +508,8 @@ reconnection are the hard parts.
   uploads, `release_command` = `prisma migrate deploy`, Managed Postgres via `DATABASE_URL`.
 - **Sentry:** server `src/instrument.ts` (`SENTRY_DSN`), web `src/lib/sentry.ts`
   (`VITE_SENTRY_DSN` at build time); both off when unset.
+- **Own server:** `deploy/docker-compose.yml` (app built from the `Dockerfile`, Postgres 17, Caddy
+  for HTTPS; migrations at every start; `content/quizzes` mounted read-only at `/content`, imported
+  with `node dist/import-quiz.js` — bundled by `build.mjs`). Step by step: `SELF-HOSTING.md`.
 - **CI:** `.github/workflows/ci.yml` (Prettier, typecheck, tests with a Postgres service, build,
   Playwright e2e, Docker build); `deploy.yml` (manual `flyctl deploy`). Steps: `DEPLOY.md`.

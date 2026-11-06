@@ -2839,3 +2839,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   « everyone answered » grace broke 2 T44 tests that expected an instant reveal: they now pass
   `allAnsweredGraceMs: 0` (`Game.accept.test.ts`, the T44 case of `persistence.test.ts`).
   669 unit + 19 e2e pass.
+- 2026-11-06, main agent (self-hosting, no contract change): `deploy/docker-compose.yml` (app +
+  Postgres 17 + Caddy HTTPS, `prisma migrate deploy` at start, `content/quizzes` mounted at
+  `/content`), `deploy/Caddyfile`, `deploy/.env.example`, guide `SELF-HOSTING.md` (server, firewall,
+  Docker, deploy key, start, import the 6 quizzes or copy the local database + uploads, updates,
+  backups). `apps/server/build.mjs` also bundles `scripts/import-quiz.ts` → `dist/import-quiz.js`;
+  `.dockerignore` excludes `content`. Tested with Docker on the PC (ports 8081 / 8443, `localhost`):
+  build, HTTPS, migrations, both quiz paths, 73 media served.

@@ -1,5 +1,8 @@
 # Deploying Le Bon Quizz (Fly.io)
 
+> On your own Linux server instead (Docker Compose + HTTPS, e.g. a free Oracle Cloud VM), with
+> every bundled quiz: see [SELF-HOSTING.md](SELF-HOSTING.md).
+
 Production = **one Fly app** running one Docker image (`Dockerfile`) that serves the web app,
 the REST API and Socket.IO on the same origin, plus **Fly Managed Postgres** and a small
 **volume** for uploaded images. Errors go to **Sentry** (optional).
