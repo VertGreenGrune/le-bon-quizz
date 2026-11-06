@@ -2530,6 +2530,26 @@ leaderboard has his points.
   `Game.ts`; `player.answer` is replaced during an accept (REVEAL only, never during ANSWERING).
   No migration. Not tried on real phones / a real TV.
 
+## Phase 7 — Accounts online
+
+**User requirements (2026-11-06):** the database moves online (Neon, done by the main agent:
+`.env` `DATABASE_URL` / `DATABASE_URL_UNPOOLED`, `prisma.config.ts` reads the root `.env`), then
+**quiz sharing between hosts with co-editing**, then **Firebase Auth** (T46, to be specified).
+
+### T45 — Share a quiz with another host (+ co-editing)
+- **Status:** in-progress (main agent, worktree `task/T45-quiz-sharing`)
+- **Depends on:** — Ports: server 3045 / web 5245, test DB `lbq_test_t45`, e2e DB `lbq_e2e_t45`.
+- **Design (decided):** the owner shares a quiz with an existing host account by e-mail, with a
+  role: **« Peut lancer »** (`viewer`: see, launch, copy) or **« Peut modifier »** (`editor`: also
+  edit questions / title / cover / theme). Only the owner deletes the quiz, changes its
+  visibility and manages the shares; a shared host can leave (« Ne plus voir »). New Prisma
+  model `QuizShare` (quizId, userId, role, createdAt; cascades). REST: `GET/POST
+  /quizzes/:id/shares`, `DELETE /quizzes/:id/shares/:userId`, `GET /shared-quizzes`;
+  `GET/PUT /quizzes/:id` and `duplicate` open to shared hosts by role; `host:create` accepts a
+  shared quiz. `QuizDetail` gains `access` (owner / editor / viewer) + `ownerName`. Co-editing
+  safety: PUT takes `expectedUpdatedAt` → 409 `QUIZ_CONFLICT` when someone saved in between.
+  Editor: « 👥 Partager » dialog, « Partagés avec moi » section in « Mes quiz ».
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
