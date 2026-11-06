@@ -315,7 +315,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + quizzes shared with the host (T45) + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -379,13 +379,16 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 
 ## 5. Data model (Prisma, `apps/server/prisma/schema.prisma`)
 
-- `User` — id, email (unique, lowercased), name, passwordHash (scrypt), createdAt
+- `User` — id, email (unique, lowercased), name, passwordHash? (scrypt; null for accounts
+  created through Firebase), firebaseUid? (unique, T46), createdAt
 - `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
 - `PasswordResetToken` — id (= SHA-256 of the token in the e-mailed link), userId, expiresAt
   (1 hour), usedAt? (single use), createdAt; a new request deletes the user's unused ones
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), theme (`QuizTheme` enum, default
   `classic`, T40), createdAt, updatedAt
+- `QuizShare` (T45) — quizId → Quiz, userId → User (primary key = both, cascades on delete), role
+  (`ShareRole`: `viewer` « Peut lancer » | `editor` « Peut modifier »), createdAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
   `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD` | `BLUFF` | `DRAW`), timeLimitSec (default 20),
   basePoints (default 1000), config? (JSON: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
@@ -437,10 +440,34 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   session revoked) or 400 `RESET_TOKEN_INVALID`; `POST /auth/change-password`
   `{ currentPassword, newPassword }` (logged in) → 204 (other sessions revoked, this one kept) or
   400 `WRONG_PASSWORD`
+- **Firebase Auth** (T46, `apps/server/src/auth/firebase.ts`): on when the server has
+  `FIREBASE_PROJECT_ID` + `FIREBASE_API_KEY`. `GET /auth/config` → `AuthConfig` (`{ firebase:
+  FirebaseWebConfig }`, or `{}` for local accounts — the web app reads it, nothing is baked in
+  the build). The web app signs in with the Firebase SDK (Google popup or e-mail / password) and
+  sends the ID token: `POST /auth/firebase` `{ idToken, name? }` → `AuthResponse` + the usual
+  `lbq_session` cookie (so sockets, quizzes, sharing… are unchanged). The token is checked
+  without a service account (`jose`, Google's public keys, RS256, `aud` = project id, `iss` =
+  `https://securetoken.google.com/<project>`, `auth_time` in the past). Account = the one with
+  that `firebaseUid`, else the one with that e-mail — **linked only if Firebase verified the
+  e-mail** (403 `EMAIL_NOT_VERIFIED` otherwise: the web app sends the confirmation e-mail) —,
+  else a new one (name from the body, the token, or the e-mail). Invalid token → 401
+  `FIREBASE_TOKEN_INVALID`; local mode → 404. In Firebase mode register / login /
+  forgot-password / reset-password / change-password answer 404 `LOCAL_AUTH_DISABLED`
+  (passwords and reset e-mails are Firebase's); `PublicUser.firebase: true` for linked accounts
 - `GET/POST /quizzes`, `GET/PUT/DELETE /quizzes/:id`, `POST /quizzes/:id/duplicate`
   (body `QuizInput` = `QuizSchema` without `id` + optional `visibility` — absent = `PRIVATE` on
   creation, unchanged on update — and optional `theme`, same rule with `classic`; PUT replaces all
-  questions). `QuizDetail`, `QuizSummary` and `LibraryQuiz` have `theme` (copies keep it). Owner only, public or not.
+  questions). `QuizDetail`, `QuizSummary` and `LibraryQuiz` have `theme` (copies keep it).
+  Access (T45): GET + duplicate = owner or any shared host; PUT = owner or `editor` (an editor's
+  `visibility` is ignored); DELETE = owner only (others: 404). `QuizDetail.access` (`owner` |
+  `editor` | `viewer`) + `ownerName`. Co-editing: PUT may carry `expectedUpdatedAt` (the
+  `updatedAt` the client loaded) → 409 `QUIZ_CONFLICT` if the quiz was saved in between.
+- Sharing (T45, owner only — others 404): `GET /quizzes/:id/shares` → `QuizShareInfo[]`
+  (`{ user: { id, name, email }, role, createdAt }`); `POST /quizzes/:id/shares` `{ email, role? }`
+  (default `viewer`; again = change the role) → 201 `QuizShareInfo`, 404 `USER_NOT_FOUND`, 400 for
+  one's own e-mail; `DELETE /quizzes/:id/shares/:userId` → 204 (also allowed for the shared host
+  itself: « Ne plus voir »). `GET /shared-quizzes` → `SharedQuizSummary[]` (`QuizSummary` + `role`,
+  `ownerName`, `sharedAt`), never in `GET /quizzes`.
   `QuizSummary` has `visibility` and `playCount` (games played with it by any host); copies
   (duplicate, library copy) are always `PRIVATE`, title + " (copie)"
 - `GET /library?search=&sort=popular|newest` → `LibraryQuiz[]`: `PUBLIC` quizzes of the **other**
@@ -473,11 +500,15 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   (or `mode=survival&hearts=<n>`; no `theme` = the quiz's) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
   of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic
   game)
-- `/login`, `/register` → host account (`?next=` = page to return to)
+- `/login`, `/register` → host account (`?next=` = page to return to); with Firebase (T46) also
+  « Continuer avec Google », the e-mail forms go through Firebase (`apps/web/src/lib/firebase.ts`,
+  SDK loaded lazily, never on the phones), « Mot de passe oublié » = Firebase's reset e-mail,
+  « Mon compte » changes the Firebase password (nothing to change for a Google account)
 - `/forgot-password` (« Mot de passe oublié ? » on `/login`), `/reset-password?token=` (link of
   the e-mail: new password ×2 → logged in → `/editor`), `/account` « Mon compte » (change
   password; link in the editor header, auth required)
-- `/editor`, `/editor/new`, `/editor/:quizId` → quiz list / editor (auth required)
+- `/editor`, `/editor/new`, `/editor/:quizId` → quiz list (+ « 👥 Partagés avec moi », T45) / editor
+  (auth required; « 👥 Partager » for the owner, read-only + « Copier dans mes quiz » for a viewer)
 - `/reports` → past games, `/reports/:gameId` → game report (auth required)
 - `/library` → public quizzes of the other hosts: search, sort, launch, copy (auth required)
 

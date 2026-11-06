@@ -141,6 +141,38 @@ tentatives ». Counters are in memory (reset by a deploy / restart).
 In dev nothing real is sent: without `SMTP_URL` the server uses **Mailpit**
 (`docker compose up -d mailpit`), inbox at http://localhost:8025.
 
+## 4c. Firebase Auth — « Continuer avec Google » (optional)
+
+Without it the app keeps its own accounts (e-mail + password). With it, hosts sign in with
+**Google** or an **e-mail / password managed by Firebase** (Firebase sends the confirmation and
+« mot de passe oublié » e-mails, so §4b is then only a fallback). Free tier (Spark) is enough.
+
+1. <https://console.firebase.google.com> → **Créer un projet** (e.g. `le-bon-quizz`; Google
+   Analytics not needed).
+2. **Paramètres du projet** (⚙️) → **Vos applications** → icône **Web** `</>` → name « Le Bon
+   Quizz » (no Hosting) → note `apiKey`, `authDomain`, `projectId`, `appId`. These values are
+   public (they are in every web page), not secrets.
+3. **Authentication** → **Commencer** → **Méthode de connexion**: enable **Google** (choose the
+   support e-mail) and **Adresse e-mail/Mot de passe** (not « lien par e-mail »).
+4. **Authentication** → **Paramètres** → **Domaines autorisés**: `localhost` is there; add the
+   production domain (`lebonquizz.fly.dev`, custom domain) and, for dev on the LAN, the PC's IP
+   (e.g. `192.168.1.45`) — note: Google sign-in needs a secure context, so on a plain-HTTP LAN
+   IP only the e-mail login works; use `localhost` on the PC.
+5. Optional: **Authentication** → **Modèles** → set the language to French and the sender name.
+6. Configure the server (dev: root `.env`; Fly: `fly secrets set` or `[env]` in `fly.toml`):
+   ```
+   FIREBASE_PROJECT_ID=le-bon-quizz
+   FIREBASE_API_KEY=AIza…
+   FIREBASE_AUTH_DOMAIN=le-bon-quizz.firebaseapp.com   # optional (this is the default)
+   FIREBASE_APP_ID=1:…:web:…                            # optional
+   ```
+   Restart: the log says `Host accounts: Firebase Auth (project …)`. No web rebuild needed.
+
+Existing accounts: at the first Firebase sign-in with the **same e-mail**, the account (quizzes,
+games, shares) is linked — immediately with Google, after clicking the confirmation e-mail with an
+e-mail / password account. Turning Firebase off again (unset the variables) brings back the local
+logins; accounts created by Firebase then have no local password (« Mot de passe oublié »).
+
 ## 5. First deploy
 
 ```powershell
@@ -209,16 +241,17 @@ under `deploy:` (next to `runs-on`).
 
 ## Reference — runtime configuration
 
-| Variable                    | Where                     | Value in production                          |
-| --------------------------- | ------------------------- | -------------------------------------------- |
-| `DATABASE_URL`              | secret                    | set by `fly mpg attach`                      |
-| `SENTRY_DSN`                | secret                    | server DSN (optional)                        |
-| `SMTP_URL`, `MAIL_FROM`     | secret                    | SMTP provider + sender (§4b, optional)       |
-| `PUBLIC_WEB_URL`            | `fly.toml`                | `https://lebonquizz.fly.dev` (e-mail links)  |
-| `NODE_ENV`                  | `fly.toml` / image        | `production` (Secure cookie)                 |
-| `PORT`                      | `fly.toml` / image        | `8080`                                       |
-| `WEB_DIST_DIR`              | image                     | `/app/public` (web app served by the server) |
-| `UPLOAD_DIR`                | `fly.toml` / image        | `/data/uploads` (volume)                     |
-| `TRUST_PROXY`               | `fly.toml`                | `true` (`https` behind Fly's proxy)          |
-| `CORS_ORIGIN`, `PUBLIC_URL` | `fly.toml`                | `https://lebonquizz.fly.dev`                 |
-| `VITE_SENTRY_DSN`           | `fly.toml` `[build.args]` | browser DSN (optional, public)               |
+| Variable                                  | Where                     | Value in production                          |
+| ----------------------------------------- | ------------------------- | -------------------------------------------- |
+| `DATABASE_URL`                            | secret                    | set by `fly mpg attach`                      |
+| `SENTRY_DSN`                              | secret                    | server DSN (optional)                        |
+| `SMTP_URL`, `MAIL_FROM`                   | secret                    | SMTP provider + sender (§4b, optional)       |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY` | secret / `fly.toml`       | Firebase Auth on (§4c, optional)             |
+| `PUBLIC_WEB_URL`                          | `fly.toml`                | `https://lebonquizz.fly.dev` (e-mail links)  |
+| `NODE_ENV`                                | `fly.toml` / image        | `production` (Secure cookie)                 |
+| `PORT`                                    | `fly.toml` / image        | `8080`                                       |
+| `WEB_DIST_DIR`                            | image                     | `/app/public` (web app served by the server) |
+| `UPLOAD_DIR`                              | `fly.toml` / image        | `/data/uploads` (volume)                     |
+| `TRUST_PROXY`                             | `fly.toml`                | `true` (`https` behind Fly's proxy)          |
+| `CORS_ORIGIN`, `PUBLIC_URL`               | `fly.toml`                | `https://lebonquizz.fly.dev`                 |
+| `VITE_SENTRY_DSN`                         | `fly.toml` `[build.args]` | browser DSN (optional, public)               |

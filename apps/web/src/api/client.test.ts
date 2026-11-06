@@ -37,6 +37,23 @@ describe('createApiClient', () => {
     await expect(ok.quizzes.remove('x')).resolves.toBeUndefined();
   });
 
+  it('T46: reads the auth config and exchanges a Firebase ID token', async () => {
+    const fetchFn = vi.fn(async () => json(200, {}));
+    const api = createApiClient('', fetchFn);
+    await api.auth.config();
+    await api.auth.firebase({ idToken: 'tok', name: 'Léa' });
+    expect(fetchFn).toHaveBeenNthCalledWith(1, '/api/auth/config', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    expect(fetchFn).toHaveBeenNthCalledWith(2, '/api/auth/firebase', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ idToken: 'tok', name: 'Léa' }),
+      headers: { 'content-type': 'application/json' },
+    });
+  });
+
   it('builds the library query string', async () => {
     const fetchFn = vi.fn(async (_url: RequestInfo | URL) => json(200, []));
     const api = createApiClient('', fetchFn);

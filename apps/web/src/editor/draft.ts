@@ -217,7 +217,7 @@ export function toDraftQuestion(q: Question): DraftQuestion {
 }
 
 export function fromDetail(quiz: QuizDetail): QuizDraft {
-  const { id: _id, createdAt: _c, updatedAt: _u, ...input } = quiz;
+  const { id: _id, createdAt: _c, updatedAt: _u, access: _a, ownerName: _o, ...input } = quiz;
   return {
     ...input,
     description: input.description ?? '',

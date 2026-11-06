@@ -6,6 +6,7 @@ import { SESSION_COOKIE, getUserBySessionToken } from './session.js';
 
 export * from './password.js';
 export * from './session.js';
+export * from './firebase.js';
 
 declare module 'fastify' {
   interface FastifyRequest {

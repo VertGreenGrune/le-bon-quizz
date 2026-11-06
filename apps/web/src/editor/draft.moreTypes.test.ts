@@ -97,6 +97,8 @@ describe('editor model of the ORDER / PIN / WHO_OF_US / WORD_CLOUD questions', (
       { ...base, basePoints: 0, text: 'Mot', type: 'WORD_CLOUD' },
     ];
     const draft = fromDetail({
+      access: 'owner',
+      ownerName: 'Moi',
       id: 'x',
       title: 'T',
       visibility: 'PRIVATE',

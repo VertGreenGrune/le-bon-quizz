@@ -2530,6 +2530,76 @@ leaderboard has his points.
   `Game.ts`; `player.answer` is replaced during an accept (REVEAL only, never during ANSWERING).
   No migration. Not tried on real phones / a real TV.
 
+## Phase 7 — Accounts online
+
+**User requirements (2026-11-06):** the database moves online (Neon, done by the main agent:
+`.env` `DATABASE_URL` / `DATABASE_URL_UNPOOLED`, `prisma.config.ts` reads the root `.env`), then
+**quiz sharing between hosts with co-editing**, then **Firebase Auth** (T46, to be specified).
+
+### T45 — Share a quiz with another host (+ co-editing)
+- **Status:** done
+- **Depends on:** — Ports: server 3045 / web 5245, test DB `lbq_test_t45`, e2e DB `lbq_e2e_t45`.
+- **Design (decided):** the owner shares a quiz with an existing host account by e-mail, with a
+  role: **« Peut lancer »** (`viewer`: see, launch, copy) or **« Peut modifier »** (`editor`: also
+  edit questions / title / cover / theme). Only the owner deletes the quiz, changes its
+  visibility and manages the shares; a shared host can leave (« Ne plus voir »). New Prisma
+  model `QuizShare` (quizId, userId, role, createdAt; cascades). REST: `GET/POST
+  /quizzes/:id/shares`, `DELETE /quizzes/:id/shares/:userId`, `GET /shared-quizzes`;
+  `GET/PUT /quizzes/:id` and `duplicate` open to shared hosts by role; `host:create` accepts a
+  shared quiz. `QuizDetail` gains `access` (owner / editor / viewer) + `ownerName`. Co-editing
+  safety: PUT takes `expectedUpdatedAt` → 409 `QUIZ_CONFLICT` when someone saved in between.
+  Editor: « 👥 Partager » dialog, « Partagés avec moi » section in « Mes quiz ».
+- **Summary:** shared (`api.ts`): `QuizShareRole` / `QuizAccess` / `QUIZ_SHARE_ROLE_NAMES`,
+  `ShareQuizBody`, `QuizShareInfo`, `SharedQuizSummary`, `QuizInput.expectedUpdatedAt?`,
+  `QuizDetail.access` + `ownerName` (**required**), error codes `USER_NOT_FOUND` / `QUIZ_CONFLICT`.
+  DB: `QuizShare` + enum `ShareRole`, migration `20261106100144_quiz_shares`. Server
+  (`quizzes.service.ts`): `getQuizForUser` (owner or shared, replaces `getQuizForOwner`),
+  `getPlayableQuiz` (own / shared / public → `host:create`), `updateQuiz` (owner or editor,
+  visibility owner-only, conditional update on `updatedAt` → 409), `listShares` / `shareQuiz`
+  (upsert by e-mail) / `removeShare` (owner or self) / `listSharedQuizzes`; routes in
+  `quizzes.routes.ts`. Web: `editor/ShareDialog.tsx` (e-mail + role, list with role change /
+  « Retirer »), editor page access modes (owner: « 👥 Partager »; editor: banner « Quiz de X »,
+  no visibility switch; viewer: read-only `fieldset`, « Copier dans mes quiz »), conflict banner
+  with « ↻ Charger la dernière version », « 👥 Partagés avec moi » in « Mes quiz » (role badge,
+  author, Lancer / Modifier or Voir / Copier / « Ne plus voir »). Tests: `api/sharing.test.ts`
+  (8, Postgres), web fixtures; e2e `e2e/sharing.spec.ts` (share by e-mail incl. unknown address,
+  editor edits, owner's stale save → conflict → reload, viewer read-only + copy, leave).
+- **Notes:** (1) Sharing needs the other host to have an account (no invitation e-mail). (2) Shared
+  games are saved in the history of whoever hosted them (unchanged). (3) No live co-editing: the
+  last save wins only if nobody saved in between, otherwise the conflict banner. **After merging,
+  run `pnpm --filter @lbq/server db:migrate`** (applies to Neon through `DATABASE_URL_UNPOOLED`).
+
+### T46 — Firebase Auth (Google + e-mail / password)
+- **Status:** done
+- **Depends on:** T45 (stacked on its branch). Ports: server 3046 / web 5246, test DB `lbq_test_t46`.
+- **Design (decided with the user, 2026-11-06):** hosts sign in with **Google** or an **e-mail /
+  password managed by Firebase**; Firebase only when the server is configured for it, otherwise the
+  local accounts stay (dev, e2e tests, demo). Existing accounts are **linked by e-mail** at the first
+  Firebase sign-in, only when Firebase verified the address. Players are unchanged (anonymous).
+- **Summary:** shared (`api.ts`): `FirebaseLoginBody`, `FirebaseWebConfig`, `AuthConfig`,
+  `PublicUser.firebase?`, error codes `FIREBASE_TOKEN_INVALID` / `EMAIL_NOT_VERIFIED` /
+  `LOCAL_AUTH_DISABLED`. DB: `User.passwordHash` nullable + `User.firebaseUid` (unique), migration
+  `20261106140000_firebase_auth`. Server: `auth/firebase.ts` (`createFirebaseVerifier` — `jose`,
+  Google's JWKS, no service account; `firebaseConfigFromEnv`: `FIREBASE_PROJECT_ID` +
+  `FIREBASE_API_KEY`, optional `FIREBASE_AUTH_DOMAIN` / `FIREBASE_APP_ID`), `ApiDeps.firebase`,
+  `GET /auth/config`, `POST /auth/firebase` (uid → verified e-mail link → new account, P2002 race),
+  local password endpoints → 404 `LOCAL_AUTH_DISABLED` in Firebase mode, startup log of the mode.
+  Web: `lib/firebase.ts` (lazy SDK chunks, Google popup, e-mail sign-in / sign-up + verification
+  e-mail, reset e-mail, password change with re-authentication, French error messages),
+  `AuthContext` (`firebase` config from the server, `login` / `register` through Firebase when on,
+  `loginWithGoogle`, `EMAIL_NOT_VERIFIED` → confirmation e-mail sent + message, Firebase sign-out),
+  « Continuer avec Google » on `/login` and `/register`, `/forgot-password` and « Mon compte »
+  follow the mode. Docs: PLAN.md §5–§7, DEPLOY.md §4c (Firebase console steps), `.env.example`.
+  Tests: `auth/firebase.test.ts` (tokens signed by a local key: valid, unverified, wrong project /
+  issuer / key, expired, no e-mail, future `auth_time`; env config), `api/firebase.test.ts`
+  (Postgres: config, creation, same uid, names, link only when verified + quizzes kept, invalid
+  token, local endpoints off, password-less account can't log in locally), web client + error
+  messages. e2e unchanged (local mode).
+- **Notes:** (1) Not tried against a real Firebase project yet (no project when written). (2) Google
+  sign-in needs a secure context: on the plain-HTTP LAN dev URL use `localhost` on the PC (the phones
+  never sign in). (3) A local session opened before Firebase was turned on stays valid until logout.
+  **After merging, run `pnpm --filter @lbq/server db:migrate`.**
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
@@ -2839,3 +2909,12 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   « everyone answered » grace broke 2 T44 tests that expected an instant reveal: they now pass
   `allAnsweredGraceMs: 0` (`Game.accept.test.ts`, the T44 case of `persistence.test.ts`).
   669 unit + 19 e2e pass.
+- 2026-11-06, main agent (T45, REST only): `QuizDetail.access` / `ownerName` are **required**
+  (fixtures building a `QuizDetail` must set them; `fromDetail` drops them); new sharing types and
+  endpoints (PLAN.md §5–§7); `getQuizForOwner` → `getQuizForUser`. Migration
+  `20261106100144_quiz_shares`. Outside scope: `apps/server/prisma.config.ts` loads the root
+  `.env` (Neon) unless `DATABASE_URL` is given.
+- 2026-11-06, main agent (T46, REST only, additive): `GET /auth/config`, `POST /auth/firebase`,
+  `AuthConfig` / `FirebaseWebConfig` / `FirebaseLoginBody`, `PublicUser.firebase?`, 3 error codes;
+  `User.passwordHash` is now **nullable** (code reading it must handle null). Migration
+  `20261106140000_firebase_auth`. New deps: `jose` (server), `firebase` (web).
