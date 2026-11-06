@@ -2569,6 +2569,37 @@ leaderboard has his points.
   last save wins only if nobody saved in between, otherwise the conflict banner. **After merging,
   run `pnpm --filter @lbq/server db:migrate`** (applies to Neon through `DATABASE_URL_UNPOOLED`).
 
+### T46 — Firebase Auth (Google + e-mail / password)
+- **Status:** done
+- **Depends on:** T45 (stacked on its branch). Ports: server 3046 / web 5246, test DB `lbq_test_t46`.
+- **Design (decided with the user, 2026-11-06):** hosts sign in with **Google** or an **e-mail /
+  password managed by Firebase**; Firebase only when the server is configured for it, otherwise the
+  local accounts stay (dev, e2e tests, demo). Existing accounts are **linked by e-mail** at the first
+  Firebase sign-in, only when Firebase verified the address. Players are unchanged (anonymous).
+- **Summary:** shared (`api.ts`): `FirebaseLoginBody`, `FirebaseWebConfig`, `AuthConfig`,
+  `PublicUser.firebase?`, error codes `FIREBASE_TOKEN_INVALID` / `EMAIL_NOT_VERIFIED` /
+  `LOCAL_AUTH_DISABLED`. DB: `User.passwordHash` nullable + `User.firebaseUid` (unique), migration
+  `20261106140000_firebase_auth`. Server: `auth/firebase.ts` (`createFirebaseVerifier` — `jose`,
+  Google's JWKS, no service account; `firebaseConfigFromEnv`: `FIREBASE_PROJECT_ID` +
+  `FIREBASE_API_KEY`, optional `FIREBASE_AUTH_DOMAIN` / `FIREBASE_APP_ID`), `ApiDeps.firebase`,
+  `GET /auth/config`, `POST /auth/firebase` (uid → verified e-mail link → new account, P2002 race),
+  local password endpoints → 404 `LOCAL_AUTH_DISABLED` in Firebase mode, startup log of the mode.
+  Web: `lib/firebase.ts` (lazy SDK chunks, Google popup, e-mail sign-in / sign-up + verification
+  e-mail, reset e-mail, password change with re-authentication, French error messages),
+  `AuthContext` (`firebase` config from the server, `login` / `register` through Firebase when on,
+  `loginWithGoogle`, `EMAIL_NOT_VERIFIED` → confirmation e-mail sent + message, Firebase sign-out),
+  « Continuer avec Google » on `/login` and `/register`, `/forgot-password` and « Mon compte »
+  follow the mode. Docs: PLAN.md §5–§7, DEPLOY.md §4c (Firebase console steps), `.env.example`.
+  Tests: `auth/firebase.test.ts` (tokens signed by a local key: valid, unverified, wrong project /
+  issuer / key, expired, no e-mail, future `auth_time`; env config), `api/firebase.test.ts`
+  (Postgres: config, creation, same uid, names, link only when verified + quizzes kept, invalid
+  token, local endpoints off, password-less account can't log in locally), web client + error
+  messages. e2e unchanged (local mode).
+- **Notes:** (1) Not tried against a real Firebase project yet (no project when written). (2) Google
+  sign-in needs a secure context: on the plain-HTTP LAN dev URL use `localhost` on the PC (the phones
+  never sign in). (3) A local session opened before Firebase was turned on stays valid until logout.
+  **After merging, run `pnpm --filter @lbq/server db:migrate`.**
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
@@ -2883,3 +2914,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   endpoints (PLAN.md §5–§7); `getQuizForOwner` → `getQuizForUser`. Migration
   `20261106100144_quiz_shares`. Outside scope: `apps/server/prisma.config.ts` loads the root
   `.env` (Neon) unless `DATABASE_URL` is given.
+- 2026-11-06, main agent (T46, REST only, additive): `GET /auth/config`, `POST /auth/firebase`,
+  `AuthConfig` / `FirebaseWebConfig` / `FirebaseLoginBody`, `PublicUser.firebase?`, 3 error codes;
+  `User.passwordHash` is now **nullable** (code reading it must handle null). Migration
+  `20261106140000_firebase_auth`. New deps: `jose` (server), `firebase` (web).

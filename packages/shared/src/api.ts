@@ -34,6 +34,15 @@ export const ApiErrorCode = z.enum([
   'USER_NOT_FOUND',
   /** T45 `PUT /quizzes/:id`: someone else saved the quiz since `expectedUpdatedAt` (409). */
   'QUIZ_CONFLICT',
+  /** T46 `POST /auth/firebase`: the Firebase ID token is invalid or expired (401). */
+  'FIREBASE_TOKEN_INVALID',
+  /**
+   * T46 `POST /auth/firebase`: an account already exists with this e-mail but the Firebase
+   * address isn't verified yet, so it can't be linked (403) — verify it, then sign in again.
+   */
+  'EMAIL_NOT_VERIFIED',
+  /** T46: e-mail / password endpoints of the server are off — sign in with Firebase (404). */
+  'LOCAL_AUTH_DISABLED',
   'FILE_TOO_LARGE',
   'UNSUPPORTED_MEDIA_TYPE',
   'INTERNAL',
@@ -85,11 +94,41 @@ export type ForgotPasswordBody = z.infer<typeof ForgotPasswordBody>;
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBody>;
 export type ChangePasswordBody = z.infer<typeof ChangePasswordBody>;
 
+/**
+ * T46 `POST /auth/firebase`: the Firebase ID token of a signed-in user (Google or e-mail /
+ * password) → `AuthResponse` (our own session, as for `/auth/login`). `name` = the name typed on
+ * the « Créer un compte » form, used when the account is created and the token has none.
+ */
+export const FirebaseLoginBody = z.object({
+  idToken: z.string().min(1).max(8192),
+  name: z.string().trim().min(1).max(60).optional(),
+});
+export type FirebaseLoginBody = z.infer<typeof FirebaseLoginBody>;
+
+/** Web config of the Firebase project (public values, from the Firebase console). */
+export interface FirebaseWebConfig {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  appId?: string;
+}
+
+/**
+ * T46 `GET /auth/config` (no login): how hosts sign in on this server. `firebase` set = Firebase
+ * Auth (Google + e-mail / password, the e-mail / password endpoints of the server are off);
+ * absent = local accounts (`/auth/register`, `/auth/login`…), e.g. in dev and the e2e tests.
+ */
+export interface AuthConfig {
+  firebase?: FirebaseWebConfig;
+}
+
 export interface PublicUser {
   id: string;
   email: string;
   name: string;
   createdAt: string;
+  /** T46: the account signs in with Firebase (no password on our server). */
+  firebase?: true;
 }
 
 /**

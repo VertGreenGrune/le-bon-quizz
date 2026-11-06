@@ -2,11 +2,14 @@ import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ForgotPasswordBody } from '@lbq/shared';
 import { api } from '../api';
+import { firebaseErrorMessage, isFirebaseError, sendPasswordReset } from '../lib/firebase';
 import { validate, type FieldErrors } from '../api/validation';
 import { AuthCard, FormError, FormNotice, TextField, submitBtn } from './AuthCard';
+import { useAuth } from './AuthContext';
 
 /** `/forgot-password`: asks for a reset link. Same answer whether the account exists or not. */
 export function ForgotPasswordPage() {
+  const { firebase } = useAuth();
   const [params] = useSearchParams();
   const [email, setEmail] = useState(params.get('email') ?? '');
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -26,10 +29,16 @@ export function ForgotPasswordPage() {
     setErrors({});
     setBusy(true);
     try {
-      await api.auth.forgotPassword(body.data);
+      if (firebase) {
+        // T46: Firebase sends the link (its own page to choose the password). Unknown address →
+        // same neutral answer, like the local reset.
+        await sendPasswordReset(firebase, body.data.email).catch((err: unknown) => {
+          if (!isFirebaseError(err, 'auth/user-not-found')) throw err;
+        });
+      } else await api.auth.forgotPassword(body.data);
       setSent(true);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Erreur inattendue');
+      setFormError(firebaseErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -44,7 +53,8 @@ export function ForgotPasswordPage() {
             choisir un nouveau mot de passe.
           </FormNotice>
           <p className="text-sm text-gray-600">
-            Le lien est valable 1 heure. Pensez à regarder dans les courriers indésirables.
+            Le lien est valable {firebase ? 'quelques heures' : '1 heure'}. Pensez à regarder dans
+            les courriers indésirables.
           </p>
         </>
       ) : (
@@ -63,7 +73,7 @@ export function ForgotPasswordPage() {
             error={errors.email}
           />
           {formError && <FormError>{formError}</FormError>}
-          <button type="submit" disabled={busy} className={submitBtn}>
+          <button type="submit" disabled={busy || firebase === undefined} className={submitBtn}>
             {busy ? '…' : 'Recevoir le lien'}
           </button>
         </>
