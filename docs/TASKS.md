@@ -2600,6 +2600,14 @@ leaderboard has his points.
   never sign in). (3) A local session opened before Firebase was turned on stays valid until logout.
   **After merging, run `pnpm --filter @lbq/server db:migrate`.**
 
+### T47 — Show the game on a Fire TV (« 📺 Afficher sur la TV »)
+- **Status:** in-progress (main agent, worktree `task/T47-fire-tv`)
+- **Depends on:** — Ports: server 3047 / web 5247, test DB `lbq_test_t47`.
+- **User requirement (2026-11-07):** cast the host screen to a Fire TV (no Google Cast there).
+  **Decided:** the Fire TV opens `/tv` in its browser (Silk), which shows a 4-digit code; the host
+  types it in « 📺 Afficher sur la TV » (TV header) → the TV becomes the host screen and the host's
+  device switches to the « Télécommande ».
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
