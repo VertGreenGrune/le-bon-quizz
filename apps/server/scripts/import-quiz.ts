@@ -2,12 +2,12 @@
  * `pnpm --filter @lbq/server quiz:import <folder> <owner email> [--base-url <url>]`
  *
  * Imports `<folder>/quiz.json` as a private quiz of that host (updated in place if they already
- * have a quiz with this title). Media are copied into UPLOAD_DIR and referenced from
+ * have a quiz with this title). Media are stored in the database and referenced from
  * `--base-url` (default PUBLIC_URL, else http://localhost:<PORT>). See `quizImport.ts`.
  */
 import path from 'node:path';
 import { createPrisma } from '../src/db.js';
-import { prepareQuiz, saveImportedQuiz, uploadDirStore } from './quizImport.js';
+import { databaseStore, prepareQuiz, saveImportedQuiz } from './quizImport.js';
 
 const args = process.argv.slice(2);
 const baseUrlAt = args.indexOf('--base-url');
@@ -23,11 +23,10 @@ if (!folderArg || !email || !baseUrl) {
 
 // pnpm --filter runs this in apps/server: resolve the folder from where pnpm was launched.
 const folder = path.resolve(process.env.INIT_CWD ?? process.cwd(), folderArg);
-const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? 'uploads');
 
 const prisma = createPrisma();
 try {
-  const input = await prepareQuiz(folder, uploadDirStore(uploadDir, baseUrl), (m) =>
+  const input = await prepareQuiz(folder, databaseStore(prisma, baseUrl), (m) =>
     console.warn(`⚠️  ${m}`),
   );
   const { quiz, created } = await saveImportedQuiz(prisma, email, input);

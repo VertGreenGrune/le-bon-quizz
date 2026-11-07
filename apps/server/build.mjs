@@ -13,6 +13,8 @@ await build({
     seed: 'prisma/seed.ts',
     // `node dist/import-quiz.js <folder> <email>` on a server (SELF-HOSTING.md).
     'import-quiz': 'scripts/import-quiz.ts',
+    // `node dist/media-to-db.js <old upload dir>`: copies uploaded files into the database.
+    'media-to-db': 'scripts/media-to-db.ts',
   },
   outdir: 'dist',
   bundle: true,

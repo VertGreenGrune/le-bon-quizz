@@ -2,14 +2,14 @@
  * Quiz import (T23): a folder with a `quiz.json` (`QuizInput`, media given as paths relative to
  * the folder) becomes a private quiz of a host. Used by `scripts/import-quiz.ts`.
  */
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { QuizInput, type QuizDetail } from '@lbq/shared';
 import { createQuiz, updateQuiz } from '../src/api/quizzes.service.js';
 import { sniffAudioType, sniffImageType } from '../src/api/uploads.routes.js';
 import type { PrismaClient } from '../src/db.js';
+import { hashedMediaName, saveMedia } from '../src/media.js';
 
 export type MediaKind = 'image' | 'audio';
 
@@ -19,22 +19,28 @@ export type MediaStore = (file: string, kind: MediaKind) => Promise<string>;
 const isUrl = (s: string) => /^https?:\/\//i.test(s);
 
 /**
- * Media store writing into the server's upload dir (served at `<baseUrl>/uploads/`). Files are
- * named after their content hash, so importing the same quiz again reuses the same files.
+ * Media store saving through `save` (the database in production, served at
+ * `<baseUrl>/uploads/`). Files are named after their content hash, so importing the same quiz
+ * again reuses the same files.
  */
-export function uploadDirStore(uploadDir: string, baseUrl: string): MediaStore {
+export function mediaStore(
+  save: (name: string, data: Buffer) => Promise<void>,
+  baseUrl: string,
+): MediaStore {
   return async (file, kind) => {
     const data = await readFile(file);
     const ext = kind === 'image' ? sniffImageType(data) : sniffAudioType(data);
     if (!ext)
       throw new Error(`${file}: format ${kind === 'image' ? 'd’image' : 'audio'} non reconnu`);
-    const name = `${createHash('sha256').update(data).digest('hex').slice(0, 32)}.${ext}`;
-    await mkdir(uploadDir, { recursive: true });
-    const target = path.join(uploadDir, name);
-    if (!existsSync(target)) await writeFile(target, data);
+    const name = hashedMediaName(data, ext);
+    await save(name, data);
     return `${baseUrl.replace(/\/+$/, '')}/uploads/${name}`;
   };
 }
+
+/** Media store writing into the `Media` table. */
+export const databaseStore = (prisma: PrismaClient, baseUrl: string) =>
+  mediaStore((name, data) => saveMedia(prisma, name, data), baseUrl);
 
 type Json = Record<string, unknown>;
 

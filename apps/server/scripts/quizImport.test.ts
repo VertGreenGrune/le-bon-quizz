@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { QuizInput } from '@lbq/shared';
 import { createPrisma, type PrismaClient } from '../src/db.js';
-import { prepareQuiz, saveImportedQuiz, uploadDirStore } from './quizImport.js';
+import { mediaStore, prepareQuiz, saveImportedQuiz } from './quizImport.js';
 
 const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
 const WAV = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVEfmt ')]);
@@ -38,7 +38,12 @@ const question = (extra: object = {}) => ({
   ...extra,
 });
 
-const store = () => uploadDirStore(uploads, 'http://localhost:3001/');
+const store = () =>
+  mediaStore(async (name, data) => {
+    mkdirSync(uploads, { recursive: true });
+    const file = path.join(uploads, name);
+    if (!existsSync(file)) writeFileSync(file, data);
+  }, 'http://localhost:3001/');
 
 describe('prepareQuiz', () => {
   it('copies local media into the upload dir and rewrites them as URLs', async () => {

@@ -260,3 +260,13 @@ model QuestionResult {
 
   @@unique([gameSessionId, index])
 }
+
+/// Uploaded pictures and sounds (served at `/uploads/<name>`), stored in the database so the
+/// server keeps no files of its own. `name` = content hash (or random id) + extension.
+model Media {
+  name        String   @id
+  contentType String
+  size        Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+}

@@ -5,7 +5,7 @@
  * The test database is migrated and wiped by these tests — never point it at real data.
  */
 import { execSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -584,6 +584,12 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       expect(served.statusCode).toBe(200);
       expect(served.headers['x-content-type-options']).toBe('nosniff');
       expect(served.rawPayload.equals(png)).toBe(true);
+      // Stored in the database, not in the upload dir.
+      const name = new URL(url).pathname.split('/').pop()!;
+      expect(await prisma.media.findUnique({ where: { name } })).toMatchObject({
+        size: png.length,
+      });
+      expect(readdirSync(uploadDir)).toEqual([]);
     });
 
     it('stores a sound up to 10 MB, rejects non-audio and bigger files', async () => {

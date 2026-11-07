@@ -1,10 +1,8 @@
-import { randomUUID } from 'node:crypto';
-import { writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { AUDIO_UPLOAD_MAX_BYTES, UPLOAD_MAX_BYTES, type UploadImageResponse } from '@lbq/shared';
 import type { ApiDeps } from './index.js';
 import { ApiError } from './errors.js';
+import { hashedMediaName, saveMedia } from '../media.js';
 
 /**
  * Detects the image type from its magic bytes (the client-declared mimetype is not trusted,
@@ -39,8 +37,8 @@ function publicBaseUrl(request: FastifyRequest, configured?: string): string {
   return (configured ?? `${request.protocol}://${request.host}`).replace(/\/+$/, '');
 }
 
-// Local-disk storage served at /uploads/ (phase 2). S3-compatible storage: see T9 follow-up.
-export async function uploadRoutes(app: FastifyInstance, { uploadDir, publicUrl }: ApiDeps) {
+// Stored in the database (`Media`), served at /uploads/ by `media.ts`.
+export async function uploadRoutes(app: FastifyInstance, { prisma, publicUrl }: ApiDeps) {
   const upload = (
     route: string,
     maxBytes: number,
@@ -53,8 +51,8 @@ export async function uploadRoutes(app: FastifyInstance, { uploadDir, publicUrl 
       const data = await file.toBuffer(); // throws 413 above maxBytes
       const ext = sniff(data);
       if (!ext) throw new ApiError(415, 'UNSUPPORTED_MEDIA_TYPE', `Formats acceptés : ${formats}`);
-      const name = `${randomUUID()}.${ext}`;
-      await writeFile(path.join(uploadDir, name), data);
+      const name = hashedMediaName(data, ext);
+      await saveMedia(prisma, name, data);
       const url = `${publicBaseUrl(request, publicUrl)}/uploads/${name}`;
       return reply.status(201).send({ url } satisfies UploadImageResponse);
     });

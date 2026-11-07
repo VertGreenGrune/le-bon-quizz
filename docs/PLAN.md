@@ -403,6 +403,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
   at start), startedAt, endedAt
 - `PlayerResult` — id, gameSessionId, nickname, avatar? (null for games saved before avatars), score, correctCount, rank, teamId? (team mode), jokersUsed (`String[]`, default empty: joker ids played, in order), hearts? / eliminatedAt? (« Survie »: hearts left, question index of the elimination — null for a survivor)
 - `TeamResult` — id, gameSessionId, teamId, name, score, playerCount, rank (team mode)
+- `Media` — name (id: content hash + extension, the file name of `/uploads/<name>`), contentType,
+  size, data (bytes), createdAt: uploaded pictures and sounds
 - `QuestionResult` — id, gameSessionId, index, type (default MCQ), text, choices[],
   correctIndexes[], distribution[], playerCount, correctCount, answerCount? (null for older games
   = sum of distribution), details? (JSON `RevealDetails`: typed answers / slider guesses / order /
@@ -475,7 +477,10 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   `playCount` — no questions, so never the answers. `POST /library/:id/copy` → 201
   `QuizDetail`: private copy owned by the current host (404 if the quiz is not public)
 - `POST /uploads/image` (multipart, field `file`, PNG/JPEG/GIF/WebP ≤ 5 MB, checked by magic
-  bytes) → 201 `{ url }`; stored on local disk and served at `/uploads/` (S3 later).
+  bytes) → 201 `{ url }`; stored **in the database** (`Media`: name = content hash + extension,
+  bytes, type) and served at `/uploads/<name>` (`apps/server/src/media.ts`: memory cache, byte
+  ranges, cached a year by browsers; a file still in the old `UPLOAD_DIR` is served from there —
+  `media:to-db` copies them into the database).
   `POST /uploads/audio`: same, MP3/OGG/M4A/AAC/WAV ≤ 10 MB (`AUDIO_UPLOAD_MAX_BYTES`)
 - `GET /games` (history, `GameSummary` with `winner`, `mode`, `jokers?: true`, `hearts?` for « Survie »), `GET /games/:id` (report: ranking
   with `teamId`, `avatar` (null before T20) + per-question `questions` with `type`, `answerCount`, `details`, empty for games

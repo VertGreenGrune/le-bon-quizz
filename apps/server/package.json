@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "quiz:import": "node --env-file-if-exists=../../.env --import tsx scripts/import-quiz.ts"
+    "quiz:import": "node --env-file-if-exists=../../.env --import tsx scripts/import-quiz.ts",
+    "media:to-db": "node --env-file-if-exists=../../.env --import tsx scripts/media-to-db.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",

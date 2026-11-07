@@ -2932,3 +2932,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   (GHCR image, external DB e.g. Neon, `SITE_ADDRESS` / `TLS_MODE`) keeps `deploy/Caddyfile`;
   `deploy/docker-compose.yml` (builds on the server, own Postgres, bundled quizzes, `DOMAIN`) uses
   `deploy/Caddyfile.selfhost`. `.dockerignore` excludes `content`, `prod-data` and `deploy`.
+- 2026-11-06, main agent (no contract change): uploaded pictures / sounds are stored **in the
+  database** (`Media` model, migration `20261106180000_media`) instead of `UPLOAD_DIR`; served at
+  the same `/uploads/<name>` URLs by `apps/server/src/media.ts` (memory cache 128 MB, byte ranges,
+  falls back to files still in `UPLOAD_DIR`). Uploads and `quiz:import` write to the table
+  (content-hash names); `media:to-db` (`dist/media-to-db.js`) copies an old upload dir into it.
+  `ApiDeps.uploadDir` is optional; `@fastify/static` no longer serves `/uploads/`.
