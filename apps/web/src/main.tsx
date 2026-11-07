@@ -18,6 +18,7 @@ import { GameReportPage } from './reports/GameReportPage';
 import { JoinPage } from './player/JoinPage';
 import { PlayPage } from './player/PlayPage';
 import { RemotePage } from './remote/RemotePage';
+import { TvPage } from './tv/TvPage';
 
 // Routes are added by their owning tasks: /host/:pin (T2), /join + /play (T3), /editor (T6), /reports (T12), /library (T16), /remote/:pin (T39).
 createRoot(document.getElementById('root')!).render(
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/join" element={<JoinPage />} />
         <Route path="/play" element={<PlayPage />} />
         <Route path="/remote/:pin" element={<RemotePage />} />
+        <Route path="/tv" element={<TvPage />} />
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/register" element={<AuthPage mode="register" />} />

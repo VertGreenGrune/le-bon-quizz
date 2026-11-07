@@ -23,6 +23,8 @@ import { ComebackToasts, PauseOverlay, nicknameList } from './pauseScreens';
 import { TeamLobby, TeamPodiumScreen } from './teamScreens';
 import { EliminationMoment, SurvivalBadge } from './survivalScreens';
 import { useQuestionClip } from './clipPlayer';
+import { CastButton, isTvScreen } from './castToTv';
+import { useWakeLock } from '../player/useWakeLock';
 import { RemoteButton, RemoteToast, useRemotePairing, useTvControls } from './remoteLink';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -111,6 +113,8 @@ export function HostPage() {
   );
   // « 📱 Télécommande » (T39): pairing, and the TV controls pressed on the remote.
   const pairing = useRemotePairing(pin, hostToken);
+  const [onTv] = useState(isTvScreen);
+  useWakeLock(onTv);
   useTvControls(clip.replay);
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
@@ -278,6 +282,9 @@ export function HostPage() {
             <span className="rounded bg-panel px-3 py-1" data-testid="offline-players">
               📵 {nicknameList(offline)} {offline.length > 1 ? 'sont' : 'est'} hors ligne
             </span>
+          )}
+          {phase !== 'ENDED' && !onTv && hostToken && (
+            <CastButton pin={pin} hostToken={hostToken} remoteToken={pairing.remoteToken} />
           )}
           {phase !== 'ENDED' && (
             <RemoteButton pin={pin} remotes={pairing.remotes} remoteToken={pairing.remoteToken} />

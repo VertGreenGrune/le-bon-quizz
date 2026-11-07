@@ -327,7 +327,13 @@ Every client → server event takes an ack callback receiving
 | `host:resume` | `{ pin, hostToken }` | « Continuer sans… » while paused: the missing players become absent for the current question, then `game:resuming` (no-op when not paused) |
 | `host:pause` | `{ pin, hostToken }` | « ⏸ Pause » (T39), QUESTION_INTRO / ANSWERING only (`NOT_ANSWERING` otherwise): see §2 « Manual pause » |
 | `host:remote` | `{ pin, hostToken, revoke?: true }` | TV only: ack `{ remoteToken }` (created the first time); `revoke` = new token, paired remotes get `remote:revoked` and are dropped |
+| `host:cast` | `{ pin, hostToken, code }` | « 📺 Afficher sur la TV » (T47), TV only: the `/tv` page showing that 4-digit `code` gets `tv:paired { pin, hostToken }` and becomes the host screen (`host:rejoin`); the code is used up. `TV_NOT_FOUND` for an unknown code (5 wrong codes / minute per socket, then refused) |
 | `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED), `remote:status` |
+
+### TV page → server (« 📺 Afficher sur la TV », T47)
+| Event | Payload | Notes |
+|---|---|---|
+| `tv:register` | `{ code? }` | `/tv` page waiting for a game: ack `{ code }` (4 digits, unique among the waiting TVs; the given one again after a reconnection when still free). In memory (`socket/tvPairing.ts`), dropped on disconnect / once paired |
 
 ### Remote → server (« Télécommande », T39)
 | Event | Payload | Notes |
@@ -372,6 +378,7 @@ Every client → server event takes an ack callback receiving
 | `remote:revoked` | each remote | `{}` — the TV revoked the token (the socket leaves the rooms) |
 | `remote:status` | host room | `{ remotes }` — remotes connected (TV indicator + toast), also in the host resync |
 | `tv:control` | the TV sockets | `{ action }` from `remote:tv` |
+| `tv:paired` | that `/tv` page | `{ pin, hostToken }` (T47): save the token, open `/host/<pin>` |
 | `error` | sender | `{ code, message }` |
 
 Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow ●`, `3 = green ■`.
@@ -499,6 +506,10 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   browser drops it), `lib/fullscreen.ts`; iPhone Safari (no API): « Sur l'écran d'accueil » hint +
   web app manifest (`public/manifest.webmanifest`, `display: fullscreen`, `start_url: /join`, icons
   from `scripts/generate-icons.mjs`)
+- `/tv` → « 📺 Afficher sur la TV » (T47): a TV browser (Fire TV: Silk) shows a 4-digit code; the
+  host types it in the TV header's « 📺 Afficher sur la TV » dialog → this page becomes the host
+  screen (same document, so the « 🔊 Activer le son » press unlocks the sound; wake lock) and the
+  host's device reloads as the « Télécommande ». Linked from the home page
 - `/remote/:pin#<remoteToken>` → « Télécommande » (T39): the host's phone drives the game (token
   kept in `localStorage` `lbq:remote:<pin>`, removed from the address bar)
 - `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`

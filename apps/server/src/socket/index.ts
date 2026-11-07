@@ -1,6 +1,7 @@
 import type { Server, Socket } from 'socket.io';
 import {
   HostAcceptPayload,
+  HostCastPayload,
   HostActionPayload,
   HostCreatePayload,
   HostJudgePayload,
@@ -20,6 +21,7 @@ import {
   PlayerTeamPayload,
   RemoteJoinPayload,
   RemoteTvPayload,
+  TvRegisterPayload,
   roomAll,
   roomHost,
   type Ack,
@@ -33,6 +35,7 @@ import { GameError } from '../game/errors.js';
 import type { Game, GameTransport } from '../game/Game.js';
 import { GameManager } from '../game/GameManager.js';
 import { SESSION_COOKIE } from '../auth/session.js';
+import { TvPairing } from './tvPairing.js';
 import { demoOnlyPersistence, gameRecord, type GamePersistence } from '../game/persistence.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -147,6 +150,7 @@ export function registerSocketHandlers(
   };
 
   setInterval(() => games.sweep(), SWEEP_INTERVAL_MS).unref();
+  const tvs = new TvPairing();
 
   io.on('connection', (socket) => {
     let session: Session | null = null;
@@ -337,6 +341,23 @@ export function registerSocketHandlers(
       })),
     );
 
+    socket.on(
+      'host:cast',
+      handler(socket, HostCastPayload, ({ pin, hostToken, code }) => {
+        asHost(pin, hostToken);
+        const tv = tvs.claim(code, socket.id);
+        io.to(tv).emit('tv:paired', { pin, hostToken });
+        return {};
+      }),
+    );
+
+    // ---------- « 📺 Afficher sur la TV » (T47) ----------
+
+    socket.on(
+      'tv:register',
+      handler(socket, TvRegisterPayload, ({ code }) => ({ code: tvs.register(socket.id, code) })),
+    );
+
     // ---------- « Télécommande » (T39) ----------
 
     socket.on(
@@ -486,7 +507,10 @@ export function registerSocketHandlers(
       }),
     );
 
-    socket.on('disconnect', leaveSession);
+    socket.on('disconnect', () => {
+      leaveSession();
+      tvs.disconnected(socket.id);
+    });
   });
 
   return games;

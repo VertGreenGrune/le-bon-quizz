@@ -2601,12 +2601,25 @@ leaderboard has his points.
   **After merging, run `pnpm --filter @lbq/server db:migrate`.**
 
 ### T47 — Show the game on a Fire TV (« 📺 Afficher sur la TV »)
-- **Status:** in-progress (main agent, worktree `task/T47-fire-tv`)
+- **Status:** done
 - **Depends on:** — Ports: server 3047 / web 5247, test DB `lbq_test_t47`.
 - **User requirement (2026-11-07):** cast the host screen to a Fire TV (no Google Cast there).
   **Decided:** the Fire TV opens `/tv` in its browser (Silk), which shows a 4-digit code; the host
   types it in « 📺 Afficher sur la TV » (TV header) → the TV becomes the host screen and the host's
   device switches to the « Télécommande ».
+- **Summary:** shared (additive): `tv:register { code? }` → `{ code }`, `host:cast { pin,
+  hostToken, code }`, `tv:paired { pin, hostToken }`, error `TV_NOT_FOUND`, `TvCode`. Server:
+  `socket/tvPairing.ts` (`TvPairing`: unique 4-digit codes per waiting socket, kept across a
+  reconnection, used up when paired, 5 wrong codes / minute per socket), handlers in
+  `socket/index.ts`. Web: `/tv` (`tv/TvPage.tsx`: big code sized in `vh` for a 960 × 540 TV
+  browser, « 🔊 Activer le son (appuie sur OK) » focused for the TV remote, wake lock, re-registers
+  on reconnection; `tv:paired` → host token saved → `/host/<pin>`), « 📺 Je suis la TV » link on
+  the home page; TV header « 📺 Afficher sur la TV » (`host/castToTv.tsx`: the `/tv` address on the
+  LAN origins, code field, errors; on success the device reloads as `/remote/<pin>#token`), hidden
+  on a paired TV (`isTvScreen`), which also keeps its screen on. Tests: `tvPairing.test.ts`,
+  socket test (cast, wrong code, bad token, code used up, TV rejoins as host), `castToTv.test.ts`,
+  e2e `e2e/fire-tv.spec.ts` (960 × 540 TV, wrong then right code, TV = host screen, PC = remote
+  starts the game with a phone). No migration. Not tried on a real Fire TV (Silk).
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
