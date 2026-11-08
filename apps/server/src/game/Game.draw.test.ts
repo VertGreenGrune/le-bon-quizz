@@ -235,7 +235,7 @@ describe('« Dessine-moi » (DRAW)', () => {
   });
 
   describe('scoring', () => {
-    it('guessers by speed, the drawer +200 per finder; ends when everyone found', () => {
+    it('guessers by speed, the drawer gets basePoints when everyone found; ends then', () => {
       const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
       game.start();
       toAnswering();
@@ -247,7 +247,7 @@ describe('« Dessine-moi » (DRAW)', () => {
       expect(result(chloe!)).toMatchObject({ correct: true, pointsEarned: 750 });
       expect(result(alice!)).toMatchObject({
         correct: false,
-        pointsEarned: 400,
+        pointsEarned: 1000,
         streak: 0,
         draw: { drew: true, found: false, finders: 2, word: 'Licorne' },
       });
@@ -257,13 +257,13 @@ describe('« Dessine-moi » (DRAW)', () => {
       ]);
     });
 
-    it('the drawer’s bonus stops at basePoints; a 0-point question gives nothing', () => {
+    it('the drawer’s bonus is basePoints when all find; a 0-point question gives nothing', () => {
       create(quizOf(draw(), draw(['Licorne'], 0)));
       const players = joinAll('A', 'B', 'C', 'D', 'E', 'F', 'G');
       game.start();
       toAnswering();
       for (const p of players.slice(1)) guess(p, 'licorne');
-      expect(result(players[0]!).pointsEarned).toBe(1000); // 6 finders, capped
+      expect(result(players[0]!).pointsEarned).toBe(1000); // 6 finders out of 6
       nextQuestion();
       toAnswering();
       const drawer = players[1]!;
@@ -314,8 +314,9 @@ describe('« Dessine-moi » (DRAW)', () => {
     guess(bob!, 'licorne');
     guess(dan!, 'licorne');
     vi.advanceTimersByTime(90_000); // Chloé never finds
-    // Red: (Alice 400 + Dan 1000) / 2; Blue: (Bob 1000 + Chloé 0) / 2.
-    expect(result(alice!).team).toEqual({ id: 0, score: 700, rank: 1 });
+    // Alice: 2 guessers out of 3 found → 667. Red: (667 + Dan 1000) / 2; Blue: (Bob 1000 + 0) / 2.
+    expect(result(alice!).pointsEarned).toBe(667);
+    expect(result(alice!).team).toEqual({ id: 0, score: 834, rank: 1 });
     expect(result(chloe!).team).toEqual({ id: 1, score: 500, rank: 2 });
   });
 

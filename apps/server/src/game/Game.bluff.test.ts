@@ -178,13 +178,13 @@ describe('« Mytho ! » (BLUFF)', () => {
     vote(alice!, 'Vincent');
     vote(bob!, 'Le Cavalier');
     expect(game.phase).toBe('REVEAL');
-    expect(result(alice!)).toMatchObject({ correct: true, pointsEarned: 1500 });
-    expect(result(bob!)).toMatchObject({ correct: false, pointsEarned: 500 });
-    expect(result(chloe!)).toMatchObject({ correct: false, pointsEarned: 500 });
+    expect(result(alice!)).toMatchObject({ correct: true, pointsEarned: 1250 });
+    expect(result(bob!)).toMatchObject({ correct: false, pointsEarned: 250 });
+    expect(result(chloe!)).toMatchObject({ correct: false, pointsEarned: 250 });
     expect(result(chloe!).bluff?.fellFor?.map((p) => p.nickname)).toEqual(['Alice', 'Bob']);
   });
 
-  it('scores: +1000 for the truth, +500 per player fooled, even without voting', () => {
+  it('scores: +1000 for the truth, +250 per player fooled (+500 at most), even without voting', () => {
     const [alice, bob, chloe] = threeLies();
     vote(bob!, 'Frankenweenie');
     vote(chloe!, 'Frankenweenie');
@@ -192,9 +192,9 @@ describe('« Mytho ! » (BLUFF)', () => {
     expect(game.phase).toBe('REVEAL');
     expect(result(alice!)).toMatchObject({
       correct: false,
-      pointsEarned: 1000,
+      pointsEarned: 500,
       streak: 0,
-      bluff: { found: false, lie: 'Frankenweenie', fooledPoints: 1000, truth: 'Vincent' },
+      bluff: { found: false, lie: 'Frankenweenie', fooledPoints: 500, truth: 'Vincent' },
     });
     expect(result(alice!).bluff!.fooled.map((p) => p.nickname)).toEqual(['Bob', 'Chloé']);
     expect(result(bob!)).toMatchObject({ correct: false, pointsEarned: 0 });
@@ -311,13 +311,13 @@ describe('« Mytho ! » (BLUFF)', () => {
     lie(chloe!, 'Le Cavalier');
     vote(alice!, 'Vincent'); // 1000
     vote(bob!, 'Le Cavalier'); // 0
-    vote(chloe!, 'Frankenweenie'); // 0, fools… for Alice: +500
+    vote(chloe!, 'Frankenweenie'); // 0, fools… for Alice: +250
     game.next();
     const board = rec.last('leaderboard', 'host') as StandingsPayload;
-    // Rouge: (1500 + 0) / 2 = 750; Bleue: Chloé fooled Bob = 500.
+    // Rouge: (1250 + 0) / 2 = 625; Bleue: Chloé fooled Bob = 250.
     expect(board.teams?.map((t) => [t.id, t.score])).toEqual([
-      [0, 750],
-      [1, 500],
+      [0, 625],
+      [1, 250],
     ]);
   });
 
@@ -346,7 +346,7 @@ describe('« Mytho ! » (BLUFF)', () => {
       vote(bob!, 'Batman 3');
       vote(chloe!, 'Vincent');
       expect(game.phase).toBe('REVEAL'); // Dan voted through Alice
-      expect(result(dan!)).toMatchObject({ correct: true, pointsEarned: 1500 });
+      expect(result(dan!)).toMatchObject({ correct: true, pointsEarned: 1250 });
     });
 
     it('a copied vote for your own lie scores nothing', () => {
@@ -363,7 +363,7 @@ describe('« Mytho ! » (BLUFF)', () => {
       expect(result(dan!)).toBeUndefined();
       vote(bob!, 'Vincent');
       vote(chloe!, 'Vincent');
-      expect(result(dan!)).toMatchObject({ correct: false, pointsEarned: 500 }); // fooled Alice
+      expect(result(dan!)).toMatchObject({ correct: false, pointsEarned: 250 }); // fooled Alice
     });
 
     it('50/50 hides half of the others’ lies, never the truth nor your own', () => {

@@ -1,5 +1,5 @@
 import {
-  DRAW_FINDER_SHARE,
+  drawerShare,
   DRAW_MAX_POINTS,
   DRAW_MAX_STROKES,
   DRAW_WORDS,
@@ -25,8 +25,8 @@ import type { Answer, Player } from '../Game.js';
  * DRAW — « Dessine-moi » (PLAN.md §3, Pictionary-like). One player (rotating) gets the secret
  * word and draws on their phone; the strokes are relayed to the TV as vector chunks. The others
  * type guesses (`player:answer { text }`): a wrong guess isn't recorded (they try again), a right
- * one is the scored answer (time-based points). The drawer earns `basePoints` ×
- * DRAW_FINDER_SHARE per player who found it, up to `basePoints`.
+ * one is the scored answer (time-based points). The drawer earns
+ * `basePoints` × the share of the guessers who found it (`drawerShare`).
  */
 export interface DrawState {
   word: string;
@@ -159,9 +159,18 @@ function finders(players: Iterable<Player>): Player[] {
     .sort((a, b) => a.answer!.responseMs - b.answer!.responseMs);
 }
 
-/** Drawer's points: DRAW_FINDER_SHARE × basePoints per finder, up to basePoints. */
-export function drawerPoints(q: DrawQuestion, finderCount: number): number {
-  return Math.min(q.basePoints, finderCount * Math.round(q.basePoints * DRAW_FINDER_SHARE));
+/**
+ * Drawer's points: `basePoints` × the share of the guessers who found the word. Guessers = the
+ * other players still connected, plus those who found it (an absent player doesn't count).
+ */
+export function drawerPoints(q: DrawQuestion, finderCount: number, guesserCount: number): number {
+  return drawerShare(q.basePoints, finderCount, guesserCount);
+}
+
+function guessers(state: DrawState, players: Iterable<Player>): number {
+  return [...players].filter(
+    (p) => p.id !== state.drawerId && (p.socketId !== null || p.answer?.correct),
+  ).length;
 }
 
 /** Points that don't come from the player's own answer: the drawer's. */
@@ -171,7 +180,9 @@ export function drawBonus(
   player: Player,
   players: Iterable<Player>,
 ): number {
-  return player.id === state.drawerId ? drawerPoints(q, finders(players).length) : 0;
+  if (player.id !== state.drawerId) return 0;
+  const all = [...players];
+  return drawerPoints(q, finders(all).length, guessers(state, all));
 }
 
 /** `game:state.draw`. */

@@ -2991,3 +2991,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
 - 2026-11-08, main agent (T48, additive): `host:quizzes`, `host:chain` (`HostChainPayload`,
   `ChainQuiz`), `GameStatePayload.round?`; `GamePersistence.listQuizzes` (**required** — test
   persistences implementing the interface must add it); `GameSettings.ownerId?` / `carry?`.
+- 2026-11-08, main agent (scoring rebalance, user feedback): « Mytho ! » fooling = +250 per player
+  fooled, +500 at most (`BLUFF_FOOL_SHARE` 0.25, new `BLUFF_FOOL_MAX_SHARE`, `bluffFoolPoints`);
+  « Dessine-moi » drawer = `basePoints` × share of the guessers who found the word (`drawerShare`,
+  replaces `DRAW_FINDER_SHARE`), so everyone finding it = full points whatever the group size.

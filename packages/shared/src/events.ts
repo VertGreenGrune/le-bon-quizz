@@ -858,7 +858,7 @@ export interface PlayerResultPayload {
   buzzer?: { answer: string[]; won: boolean; wrong: boolean; winner?: LobbyMember };
   /**
    * DRAW: the word; `drew` = this player was the drawer (streak unchanged; `pointsEarned` =
-   * DRAW_FINDER_SHARE × basePoints per finder); `finders` = players who found it.
+   * `drawerShare`: basePoints × share of the guessers who found it); `finders` = players who found it.
    */
   draw?: { word: string; drawer?: LobbyMember; drew: boolean; found: boolean; finders: number };
   /**

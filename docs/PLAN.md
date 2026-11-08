@@ -159,7 +159,8 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     after normalization, first spelling kept) + the truth, shuffled once, are the options; each
     phone votes `{ choiceIndex }` (the scored answer, through `recordAnswer`), never for its own
     lie (`INVALID_PAYLOAD`). Finding the truth = `basePoints` (correct, streak); each player who
-    voted for your lie = `basePoints × BLUFF_FOOL_SHARE` (+500), added at the reveal even without
+    voted for your lie = `basePoints × BLUFF_FOOL_SHARE` (+250), at most `basePoints ×
+    BLUFF_FOOL_MAX_SHARE` (+500) in all (`bluffFoolPoints`), added at the reveal even without
     a vote. No time points. Phones never get which option is true before the reveal. A kicked
     player's lie is dropped while writing. Jokers: Copieur copies the vote (a copied vote for
     one's own lie scores nothing), 50/50 hides half of the others' lies once the vote starts, Gel
@@ -178,7 +179,8 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     `'close'` = « Presque ! »: one typo more than accepted, or a word of the answer), a right one
     is the scored answer (time-based points, streak; `game:state.draw.found` tells everyone who
     found it, never what was typed). ANSWERING ends when every guesser found it or on the timer.
-    The drawer scores `basePoints × DRAW_FINDER_SHARE` (+200) per finder, up to `basePoints`, is
+    The drawer scores `basePoints` × the share of the guessers who found it (`drawerShare`;
+    guessers = the other players connected, + those who found it — everyone found = `basePoints`), is
     left out of the answer count, keeps their streak, and is awaited like any player (offline →
     pause; drawing refused while paused). No joker (pending attacks wait), no buzzer; « Survie »:
     never costs a heart (a ghost who finds it earns a haunt). Rejoin: the TV and the drawer's

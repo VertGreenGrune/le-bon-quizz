@@ -59,18 +59,29 @@ export const BLUFF_MAX_LENGTH = 40;
 /** « Mytho ! »: default writing time (`timeLimitSec`) and voting time (`voteTimeSec`). */
 export const BLUFF_DEFAULT_WRITE_SEC = 45;
 export const BLUFF_DEFAULT_VOTE_SEC = 20;
-/** « Mytho ! »: each player fooled by your lie earns you this share of `basePoints` (+500). */
-export const BLUFF_FOOL_SHARE = 0.5;
+/** « Mytho ! »: each player fooled by your lie earns you this share of `basePoints` (+250)… */
+export const BLUFF_FOOL_SHARE = 0.25;
+/** …up to this share of `basePoints` in all (+500): a « Mytho ! » is worth at most 1500. */
+export const BLUFF_FOOL_MAX_SHARE = 0.5;
 /** « Dessine-moi »: words of the editor (one drawn at random; none = the built-in list). */
 export const DRAW_WORD_MAX_LENGTH = 30;
 export const DRAW_MAX_WORDS = 30;
 /** « Dessine-moi »: default drawing time (`timeLimitSec`). */
 export const DRAW_DEFAULT_SEC = 90;
 /**
- * « Dessine-moi »: the drawer earns this share of `basePoints` per player who found the word
- * (+200), up to `basePoints` (1000).
+ * « Dessine-moi »: the drawer earns `basePoints` × the share of the guessers who found the word
+ * (everyone → `basePoints`, whatever the number of players).
  */
-export const DRAW_FINDER_SHARE = 0.2;
+export function drawerShare(basePoints: number, finders: number, guessers: number): number {
+  return guessers > 0 ? Math.round((basePoints * Math.min(finders, guessers)) / guessers) : 0;
+}
+/** « Mytho ! »: points for fooling `fooled` players. */
+export function bluffFoolPoints(basePoints: number, fooled: number): number {
+  return Math.min(
+    fooled * Math.round(basePoints * BLUFF_FOOL_SHARE),
+    Math.round(basePoints * BLUFF_FOOL_MAX_SHARE),
+  );
+}
 /** Explanation shown from the reveal on (TV, phones, report), every question type. */
 export const EXPLANATION_MAX_LENGTH = 300;
 /** A slider has at most this many positions ((max − min) / step). */
@@ -283,7 +294,7 @@ const WordCloudQuestion = z.object({ ...questionBase, type: z.literal('WORD_CLOU
 /**
  * « Mytho ! » (Fibbage-like): `timeLimitSec` = time to write a lie (default 45 s), then
  * `voteTimeSec` to vote. Finding `truth` = `basePoints`; each player fooled by your lie =
- * `basePoints × BLUFF_FOOL_SHARE`. Points don't depend on the speed.
+ * `bluffFoolPoints` (+250 each, +500 at most). Points don't depend on the speed.
  */
 const BluffQuestion = z.object({
   ...questionBase,
@@ -296,7 +307,7 @@ const BluffQuestion = z.object({
 /**
  * « Dessine-moi » (T30): the server picks one of `words` (or of the built-in `DRAW_WORDS` when
  * empty) and a drawer; the TV shows the live drawing instead of a picture (no `imageUrl`).
- * Guessers score the time-based points; the drawer `basePoints × DRAW_FINDER_SHARE` per finder.
+ * Guessers score the time-based points; the drawer `drawerShare` (basePoints × share of guessers who found it).
  */
 const DrawQuestion = z
   .object({
