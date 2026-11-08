@@ -1,0 +1,505 @@
+{
+  "title": "One Piece × Hunter × Hunter",
+  "description": "30 questions de tous niveaux sur les deux mangas du Weekly Shōnen Jump : rébus, blind tests, buzzers, cartes, « Mytho ! » et un « Dessine-moi ».",
+  "coverImageUrl": "images/chapeau-de-paille.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Rébus 🧩 🐟 + 🧍 + 🏝️ = quel lieu de One Piece ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "L'île des Hommes-Poissons",
+          "isCorrect": true
+        },
+        {
+          "text": "Water Seven",
+          "isCorrect": false
+        },
+        {
+          "text": "Skypiea",
+          "isCorrect": false
+        },
+        {
+          "text": "Amazon Lily",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "L'île des Hommes-Poissons est à 10 000 mètres sous la mer, au pied de Red Line. L'équipage y descend en bulle juste avant d'entrer dans le Nouveau Monde."
+    },
+    {
+      "type": "POLL",
+      "text": "Sondage 🗳️ Pour commencer : tu es plutôt…",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "One Piece 🏴‍☠️"
+        },
+        {
+          "text": "Hunter × Hunter 🎣"
+        },
+        {
+          "text": "Les deux, mon capitaine !"
+        },
+        {
+          "text": "Je découvre ce soir"
+        }
+      ],
+      "explanation": "One Piece (Eiichirō Oda) a commencé en 1997 dans le Weekly Shōnen Jump, Hunter × Hunter (Yoshihiro Togashi) en 1998, dans le même magazine."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel fruit du démon Luffy a-t-il mangé (son nom officiel avant le chapitre 1044) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Le Gomu Gomu no Mi",
+          "isCorrect": true
+        },
+        {
+          "text": "Le Mera Mera no Mi",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Bara Bara no Mi",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Hito Hito no Mi",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le Gomu Gomu no Mi (fruit du caoutchouc) était en réalité un nom de couverture : le Gouvernement mondial appelait ainsi le Hito Hito no Mi, modèle Nika, révélé au chapitre 1044."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Gon a 12 ans quand il passe l'examen de Hunter.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Gon Freecss a 12 ans au début de l'histoire, tout comme Kirua. Il quitte l'île de la Baleine pour devenir Hunter et retrouver son père, Ging."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Réponse libre ✍️ Quel est le nom de famille de Kirua, célèbre famille d'assassins ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Zoldik", "Zoldyck", "Zaoldyeck"],
+      "typoTolerance": true,
+      "explanation": "La famille Zoldik vit sur le mont Kukuru, derrière la « Porte de l'Épreuve » dont chaque battant pèse au moins 2 tonnes. Kirua en est l'héritier désigné."
+    },
+    {
+      "type": "MCQ",
+      "text": "Photo floutée 🔍 Ce chapeau rappelle celui de Luffy. Qui le lui a confié ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "imageUrl": "images/chapeau-de-paille.jpg",
+      "imageEffect": "blur",
+      "choices": [
+        {
+          "text": "Shanks le Roux",
+          "isCorrect": true
+        },
+        {
+          "text": "Gol D. Roger",
+          "isCorrect": false
+        },
+        {
+          "text": "Monkey D. Garp",
+          "isCorrect": false
+        },
+        {
+          "text": "Portgas D. Ace",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Shanks laisse son chapeau à Luffy, enfant, au village de Fuchsia, en lui faisant promettre de le lui rendre une fois devenu un grand pirate. Le chapeau appartenait avant à Gol D. Roger."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Réponse libre ✍️ Comment s'appelle l'énergie vitale que maîtrisent les Hunters (3 lettres) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Nen", "Le Nen"],
+      "typoTolerance": true,
+      "explanation": "Le Nen permet de contrôler l'aura, l'énergie vitale. Ses quatre principes de base sont le Ten, le Zetsu, le Ren et le Hatsu."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Curseur 💰 Quelle est la toute première prime de Luffy, après Arlong Park (en millions de berrys) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "correct": 30,
+        "margin": 5,
+        "unit": "M ฿"
+      },
+      "explanation": "30 millions de berrys : sa prime tombe après la défaite d'Arlong, dont la prime était de 20 millions. Elle passe à 100 millions après Alabasta."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? 🧭 Qui se perdrait en allant chercher du pain, comme Zoro ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Le sens de l'orientation catastrophique de Roronoa Zoro est un running gag depuis East Blue : il se perd même sur un bateau."
+    },
+    {
+      "type": "MCQ",
+      "text": "Plusieurs réponses ✅ Lesquels de ces personnages font partie de la Brigade fantôme ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Feitan",
+          "isCorrect": true
+        },
+        {
+          "text": "Nobunaga",
+          "isCorrect": true
+        },
+        {
+          "text": "Shizuku",
+          "isCorrect": true
+        },
+        {
+          "text": "Biscuit Krueger",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "La Brigade fantôme (Genei Ryodan) compte 13 membres dirigés par Chrollo Lucifer. Biscuit Krueger, elle, est une Hunter qui entraîne Gon et Kirua sur Greed Island."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dit ? 💬 « Les rêves des hommes… ne meurent jamais ! »",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Marshall D. Teach (Barbe Noire)",
+          "isCorrect": true
+        },
+        {
+          "text": "Monkey D. Luffy",
+          "isCorrect": false
+        },
+        {
+          "text": "Gol D. Roger",
+          "isCorrect": false
+        },
+        {
+          "text": "Edward Newgate (Barbe Blanche)",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Barbe Noire prononce cette phrase dans un bar de Mock Town, sur l'île de Jaya, devant Luffy et Zoro qui viennent de se laisser humilier par Bellamy."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Zoom 🔎 Quel personnage de Hunter × Hunter se bat avec ce genre de jouet (en métal, et très lourd) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "imageUrl": "images/yoyo.jpg",
+      "imageEffect": "zoom",
+      "acceptedAnswers": ["Kirua", "Killua", "Kirua Zoldik", "Killua Zoldyck"],
+      "typoTolerance": true,
+      "explanation": "Les yo-yos de Kirua pèsent chacun environ 50 kg : c'est pour ça que personne d'autre n'arrive à les soulever lors de l'examen de Hunter."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 À Orange Town, comment s'appelle le chien qui garde la boutique de son maître disparu ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Chouchou",
+      "voteTimeSec": 20,
+      "explanation": "Chouchou garde l'animalerie de son maître, mort de maladie, et refuse de la quitter. Luffy le défend contre le pirate Baggy le Clown."
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur la carte 📍 Dans quelle ville du Japon est né Eiichirō Oda, l'auteur de One Piece ?",
+      "imageUrl": "images/carte-japon.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "zone": {
+        "x": 0.1175,
+        "y": 0.8245,
+        "radius": 0.05
+      },
+      "explanation": "Oda est né à Kumamoto, sur l'île de Kyūshū, en 1975. Après le séisme de 2016, la préfecture a installé des statues des membres de l'équipage dans ses villes."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Blind test au buzzer 🔔 Quel est le titre du tout premier générique de One Piece ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "audio": {
+        "url": "audio/we-are.mp3",
+        "startSec": 0,
+        "durationSec": 20
+      },
+      "acceptedAnswers": ["We Are!", "We Are"],
+      "typoTolerance": true,
+      "explanation": "« We Are! » est chanté par Hiroshi Kitadani, sur une musique de Kōhei Tanaka. C'est le générique des épisodes 1 à 47."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez dans l'ordre 🏴‍☠️ Dans quel ordre ces pirates ont-ils rejoint l'équipage de Luffy ?",
+      "timeLimitSec": 35,
+      "basePoints": 1000,
+      "items": ["Roronoa Zoro", "Usopp", "Tony Tony Chopper", "Nico Robin", "Brook", "Jinbe"],
+      "explanation": "Zoro est recruté à Shells Town, Usopp au village de Sirop, Chopper sur l'île de Drum, Robin après Alabasta, Brook à Thriller Bark et Jinbe à Wano."
+    },
+    {
+      "type": "MCQ",
+      "text": "À quel type de Nen appartient Gon ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Renforcement",
+          "isCorrect": true
+        },
+        {
+          "text": "Émission",
+          "isCorrect": false
+        },
+        {
+          "text": "Transformation",
+          "isCorrect": false
+        },
+        {
+          "text": "Spécialisation",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Gon est du type Renforcement : lors du test de la divination par l'eau, le volume d'eau du verre augmente. Son « Jajanken » vient de là."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le Vogue Merry a été construit par Franky.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Le Vogue Merry a été conçu par Merry, le majordome de Kaya, au village de Sirop. Franky construit le bateau suivant, le Thousand Sunny, avec le bois d'Adam."
+    },
+    {
+      "type": "WORD_CLOUD",
+      "text": "Nuage de mots ☁️ Quel pouvoir de fruit du démon (ou de Nen) aimerais-tu avoir ?",
+      "timeLimitSec": 25,
+      "basePoints": 0,
+      "explanation": "Il existe trois grandes familles de fruits du démon : Paramecia, Zoan et Logia. Tous font perdre la capacité de nager."
+    },
+    {
+      "type": "MCQ",
+      "text": "Pixelisé 🟦 Ce chewing-gum rappelle le pouvoir d'un personnage. Lequel, et comment s'appelle-t-il ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "imageUrl": "images/chewing-gum.jpg",
+      "imageEffect": "pixelate",
+      "choices": [
+        {
+          "text": "Hisoka : « Bungee Gum »",
+          "isCorrect": true
+        },
+        {
+          "text": "Kurapika : « Emperor Time »",
+          "isCorrect": false
+        },
+        {
+          "text": "Gon : « Jajanken »",
+          "isCorrect": false
+        },
+        {
+          "text": "Kirua : « Godspeed »",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le Bungee Gum de Hisoka a les propriétés du caoutchouc et du chewing-gum à la fois. Sa « Texture surprise » lui permet de reproduire n'importe quelle surface."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Réponse libre ✍️ Comment s'appelle la dernière île de Grand Line, où Gol D. Roger a laissé son trésor ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Laugh Tale", "Raftel", "Rough Tell"],
+      "typoTolerance": true,
+      "explanation": "Laugh Tale a longtemps été appelée Raftel. Son vrai nom est révélé au chapitre 967 : Roger l'a baptisée ainsi en riant de ce qu'il y a trouvé."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Sur quelle île Gon a-t-il grandi, élevé par sa tante Mito ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "L'île de la Baleine",
+      "voteTimeSec": 20,
+      "explanation": "Gon a grandi sur l'île de la Baleine avec sa tante Mito et son arrière-grand-mère. Il y revient à la fin de l'arc de l'Élection."
+    },
+    {
+      "type": "MCQ",
+      "text": "Écoutez à la révélation 🎵 Qui chante « departure! », le générique de Hunter × Hunter (2011) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "audio": {
+        "url": "audio/departure.mp3",
+        "startSec": 0,
+        "durationSec": 20
+      },
+      "audioOnReveal": true,
+      "choices": [
+        {
+          "text": "Masatoshi Ono",
+          "isCorrect": true
+        },
+        {
+          "text": "Hiroshi Kitadani",
+          "isCorrect": false
+        },
+        {
+          "text": "Ali Project",
+          "isCorrect": false
+        },
+        {
+          "text": "Kana Nishino",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Masatoshi Ono, chanteur du groupe de metal Galneryus, chante « departure! » (2011). Hiroshi Kitadani est la voix de « We Are! » dans One Piece."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Curseur 📺 Combien d'épisodes compte l'anime Hunter × Hunter de 2011 ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "slider": {
+        "min": 100,
+        "max": 200,
+        "step": 1,
+        "correct": 148,
+        "margin": 5,
+        "unit": "épisodes"
+      },
+      "explanation": "148 épisodes, de 2011 à 2014, produits par Madhouse. L'anime s'arrête à la fin de l'arc de l'Élection, là où en était alors le manga."
+    },
+    {
+      "type": "PIN",
+      "text": "Point sur la carte 📍 Dans quelle ville est né Yoshihiro Togashi, l'auteur de Hunter × Hunter ?",
+      "imageUrl": "images/carte-japon.jpg",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "zone": {
+        "x": 0.5735,
+        "y": 0.4482,
+        "radius": 0.05
+      },
+      "explanation": "Togashi est né en 1966 à Shinjō, dans la préfecture de Yamagata, au nord de Honshū. Il est aussi l'auteur de YuYu Hakusho."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Au buzzer 🔔 Quel membre de la famille Zoldik abrite la mystérieuse créature Nanika ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "acceptedAnswers": ["Alluka", "Arluka", "Aruka", "Alluka Zoldyck", "Alluka Zoldik"],
+      "typoTolerance": true,
+      "explanation": "Alluka peut exaucer n'importe quel vœu grâce à Nanika, mais chaque demande a un prix terrible. Kirua est le seul à qui Nanika obéit sans contrepartie."
+    },
+    {
+      "type": "MCQ",
+      "text": "Avant One Piece, Eiichirō Oda a été l'assistant de quel mangaka ?",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Nobuhiro Watsuki (Kenshin le vagabond)",
+          "isCorrect": true
+        },
+        {
+          "text": "Akira Toriyama (Dragon Ball)",
+          "isCorrect": false
+        },
+        {
+          "text": "Yoshihiro Togashi (YuYu Hakusho)",
+          "isCorrect": false
+        },
+        {
+          "text": "Hirohiko Araki (JoJo's Bizarre Adventure)",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Oda a travaillé pour Nobuhiro Watsuki pendant Kenshin le vagabond. Il cite Akira Toriyama comme sa grande influence, mais n'a jamais été son assistant."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Floutée 🔍 Comment s'appelle le Roi des Fourmis-Chimères ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "imageUrl": "images/fourmis.jpg",
+      "imageEffect": "blur",
+      "acceptedAnswers": ["Meruem", "Méruem", "Merum"],
+      "typoTolerance": true,
+      "explanation": "Son nom, choisi par la Reine, signifie « la lumière qui illumine tout ». Ses parties de gungi contre Komugi, une jeune championne aveugle, le transforment."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un objet de One Piece ou de Hunter × Hunter !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Chapeau de paille",
+        "Fruit du démon",
+        "Canne à pêche",
+        "Yo-yo",
+        "Drapeau pirate",
+        "Sabre",
+        "Bateau pirate",
+        "Escargophone",
+        "Gâteau",
+        "Carte à jouer",
+        "Fourmi",
+        "Squelette"
+      ],
+      "explanation": "L'escargophone (den den mushi) sert de téléphone dans One Piece. Les cartes à jouer sont l'arme favorite de Hisoka."
+    },
+    {
+      "type": "ORDER",
+      "text": "Finale 🏁 Remettez ces îles dans l'ordre où l'équipage de Luffy les visite.",
+      "timeLimitSec": 40,
+      "basePoints": 2000,
+      "items": [
+        "Alabasta",
+        "Skypiea",
+        "Water Seven",
+        "Thriller Bark",
+        "L'île des Hommes-Poissons",
+        "Dressrosa"
+      ],
+      "explanation": "Alabasta (arc de Crocodile), Skypiea (île céleste), Water Seven, Thriller Bark (Gecko Moria), l'île des Hommes-Poissons après l'ellipse de deux ans, puis Dressrosa (Doflamingo)."
+    }
+  ]
+}

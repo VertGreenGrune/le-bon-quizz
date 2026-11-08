@@ -1,0 +1,3 @@
+# Your own music files stay on your disk (never committed).
+*
+!.gitignore
