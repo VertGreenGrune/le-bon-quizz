@@ -2603,6 +2603,133 @@ leaderboard has his points.
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
+## Phase 8 — Feedback after real games (2026-11-09)
+
+**User feedback (2026-11-09)**, 5 changes, one task each. Same rules as before: claim on `main`,
+own worktree, ports `30<nn>` / `52<nn>`, test DB `lbq_test_t<nn>` (local Postgres — **never the
+Neon database of `.env`**: pass `DATABASE_URL` / `TEST_DATABASE_URL` explicitly), French UI, works
+in solo / teams / « Survie », with the pause and both resyncs.
+
+**Parallel:** T47 ‖ T48 ‖ T49 ‖ T50 ‖ T51 can all run at once — small overlaps, all additive:
+`packages/shared/src/events.ts` (each task only adds fields), `apps/web/src/host/screens.tsx`
+(T47 lobby only, T50 ORDER reveal only — keep the ORDER reveal in `host/moreTypeScreens.tsx`),
+`Game.ts` (T47 `game:state`, T49 prompt, T50 nothing or a hook, T51 joker settlement). T48 is the
+only one touching `content/**`; T49 doesn't edit quiz content.
+
+### T47 — Quiz title in the lobby
+- **Status:** in-progress (main agent)
+- **Depends on:** — Ports 3047 / 5247.
+- **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` (`game:state`),
+  `apps/web/src/host/**` (lobby screen), `apps/web/src/player/**` (lobby only),
+  `apps/web/src/remote/**` (header), PLAN.md §4.
+- **Requirement:** while waiting for players (LOBBY), the TV shows the **quiz title** big, above or
+  beside the PIN / QR code (themed title font, wraps on 2 lines, ellipsis beyond; the demo quiz
+  shows « Le Bon Quizz — Démo »). Also small on the phone lobby (« Quiz : … ») and in the remote's
+  header. Keep it visible on the TV header during the game (small, optional if it clutters).
+- **Contract (additive):** `GameStatePayload.quizTitle?: string` (sent in every `game:state`, so
+  both resyncs have it). Never anything else of the quiz.
+- **Tests:** server (title in `game:state` + resyncs, demo), host reducer, e2e lobby shows the title.
+
+### T48 — Content: shuffle the right answers + slider ranges (content only)
+- **Status:** in-progress (main agent)
+- **Depends on:** — Ports 3048 / 5248.
+- **Scope:** `content/quizzes/*/quiz.json` (+ the README / CREDITS lines that cite a choice
+  position), `packages/shared/src/demoQuiz.ts` if needed, a new content check test
+  (`apps/server/scripts/contentQuizzes.test.ts` or similar). App code untouched.
+- **Problem:** in the quizzes written by Claude the right answer is too often the **first (red ▲)**
+  choice (e.g. `halloween`: 7 of 9 MCQ with the answer in slot 1), and slider answers sit near the
+  **middle** of their range (positions 0.3–0.55 of [min, max]), where the slider starts.
+- **Fix:**
+  1. **MCQ:** reorder the choices of every MCQ in every content quiz so the right answer is spread
+     over the 4 slots (roughly even per quiz, no slot > 40 %, never the same slot 3 times in a
+     row); « select all » questions too (their right choices not all at the top). Vrai / faux keep
+     « Vrai » first. Polls / « Qui de nous ? » untouched. Explanations / texts that say « la
+     réponse A / rouge » must follow.
+  2. **SLIDER:** change `min` / `max` (keep `correct`, `margin`, `step`, `unit`) so the right
+     answer lands at a varied position, between 10 % and 90 % of the range but **never 35–65 %**,
+     and the margin band doesn't contain the middle. The range must stay plausible (e.g. years
+     1900–2000 → 1950–2030 for 2005).
+  3. **Guard:** a unit test that loads every `content/quizzes/*/quiz.json` and fails when a quiz
+     has > 40 % of its MCQ answers in one slot (quizzes with ≥ 5 MCQ) or a slider answer in
+     35–65 % of its range — so future generated quizzes follow the rule. Add the rule to the
+     « Content » notes in CLAUDE.md (one line: « shuffle the right answer's slot; slider answer
+     away from the middle »).
+- **Re-import:** after merge, the main agent re-imports the 6 quizzes for loicmoster@hotmail.fr
+  (Neon, `quiz:import`, updated in place). Not inside the worktree.
+
+### T49 — Slider: random start position, never on the answer
+- **Status:** in-progress (main agent)
+- **Depends on:** — Ports 3049 / 5249.
+- **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` (prompt),
+  `apps/web/src/player/**` (slider answer), PLAN.md §3 / §4.
+- **Problem:** the phone slider starts at the middle of the range (`PlayPage.tsx`
+  `SliderAnswer`), which is often inside the right margin.
+- **Fix (decided):** the **server** picks a start value per question (same for every phone, kept
+  across a reload), random on the step grid, at least `margin + 10 % of the range` away from the
+  right answer (if impossible, the end farthest from it); sent as
+  `question:prompt.slider.start` — it never tells where the answer is (only one random point it
+  isn't at). With a 50/50 (`effects.sliderRange`) the start is clamped into the narrowed range.
+  The editor's live preview unchanged. The value shown starts at `start`; « Valider » sends
+  whatever is shown (as today — a player can validate without moving).
+- **Tests:** server (start on a step, far from the answer for margins 0 / large, deterministic per
+  question, in resyncs, no other field leaked), web (initial value from `start`, clamped by 50/50).
+
+### T50 — « Remettre dans l'ordre »: show every player's order at the reveal
+- **Status:** in-progress (main agent)
+- **Depends on:** — Ports 3050 / 5250.
+- **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/questionTypes/order.ts`,
+  `apps/web/src/host/moreTypeScreens.tsx` (ORDER reveal), `apps/web/src/remote/**` (optional),
+  `apps/web/src/reports/moreTypeCards.tsx`, PLAN.md §4.
+- **Requirement:** at the REVEAL of an ORDER question, after the right order, the TV shows **each
+  player's answer**: one row per player (avatar + nickname + their list as item letters / short
+  labels, each item green when in the right place, red otherwise, « n / m » and the points), best
+  first; players without an answer listed last « pas de réponse ». Up to 15 players must fit on
+  1600×900 (compact rows, 2 columns if needed). Animated in one after the other (instant after a
+  reload). The report's ORDER card shows the same table.
+- **Contract (additive):** `RevealDetails.order.answers?: { nickname, avatar, order: number[] (item
+  indexes in the right-order list, as the player placed them), placed: number, points: number }[]`
+  (saved in the report details too).
+- **Tests:** server (answers in the reveal + saved details, no answer, kicked player, rejoin),
+  web (row colouring helper), e2e: 2 phones answer differently → both rows on the TV.
+
+### T51 — New « Voleur »: the wheel of fortune
+- **Status:** in-progress (main agent)
+- **Depends on:** — Ports 3051 / 5251.
+- **Scope:** `packages/shared/src/jokers.ts` + `events.ts` (additive), `apps/server/src/game/jokers.ts`
+  (+ hooks in `Game.ts`), `apps/server/src/game/rejudge.ts` (re-settlement), `apps/web/src/host/**`
+  (wheel), `apps/web/src/player/**` (joker sheet + result), `apps/web/src/remote/**` (result
+  line), sounds (`generate-sounds.mjs`, CC0), PLAN.md §3 / §4.
+- **User requirement:** the player plays « Voleur »; **when the answer is revealed, a wheel spins
+  on the TV with every player**. The player it lands on loses **10 % of their points, given to the
+  thief**. If it lands on **the thief**, the thief loses 10 % of their own points.
+- **Design (decided — user may adjust):**
+  - **No target** any more: 🦹 Voleur is played like Double ou rien (one joker per question,
+    before or after answering, as now). It no longer depends on the thief's answer being right.
+    Not an attack any more (no « already answered » refusal, no team restriction).
+  - **Wheel = every player of the game** (thief included, connected or not, ghosts included in
+    « Survie », kicked players excluded), equal slices, drawn **on the server** at the REVEAL
+    settlement, after question points + streak bonus + Double ou rien, through the settlement's
+    random source (`ReplayRandom`, so a T44 « Accepter » re-settlement draws the same player).
+  - Points = `round(10 % × drawn player's total after this question's points)`; another player →
+    moved to the thief; the thief → lost (never below 0). A 🛡️ Bouclier of the drawn player
+    blocks the theft (« protégé ! », nothing moves). Several thieves on one question: one wheel
+    each, in the order played. Team averages / leaderboard `gained` use the points after the wheel.
+  - **TV:** at the reveal (after the distribution / explanation), a big wheel with the avatars
+    spins ~4 s and lands on the drawn player + sound, then « 🦹 Red vole 120 pts à Bob ! » /
+    « 🦹 Pas de chance, Red se vole lui-même : −120 ! » / « 🛡️ Bob était protégé ». After a host
+    reload in REVEAL: the result only, no spin. `prefers-reduced-motion`: no spin.
+  - **Phones:** joker sheet text updated, no target picker; result lines (« Tu as volé 120 pts à
+    Bob », « Bob t'a volé 120 pts », « La roue t'a désigné : −120 »).
+  - Contract: `QuestionRevealPayload.wheels?: { thief: LobbyMember, candidates: LobbyMember[],
+    drawn: LobbyMember, points: number, blocked?: true }[]`; `JokerResult` gains
+    `{ kind: 'selfRobbed'; points }` (`stole` / `stolen` kept); `player:joker` for `thief` without
+    `targetId` (a `targetId` sent by an old phone is ignored). Update `JOKERS.thief` (description),
+    `jokerAvailability` (`thief` no longer `attack`), PLAN.md §3 « Jokers ».
+- **Tests:** draw among all players (deterministic random), other player / self / Bouclier, two
+  thieves, floor at 0, team averages, « Survie » ghosts in the wheel, re-settlement by an accept
+  draws the same player, resyncs; web wheel helpers (slice → angle); e2e: a thief → the TV wheel →
+  the result line on both phones.
+
 ---
 
 ## Contract changes / cross-task notes
