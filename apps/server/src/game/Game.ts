@@ -243,6 +243,25 @@ export interface GameSettings {
    * default ALL_ANSWERED_GRACE_MS; 0 = at once, tests written before T43).
    */
   allAnsweredGraceMs?: number;
+  /** Logged-in host who created the room (null: anonymous, demo only) — « Quiz suivant » (T47). */
+  hostUserId?: string | null;
+  /** « Quiz suivant » (T47): the room of the previous quiz (PIN, tokens, sockets, players). */
+  room?: RoomCarry;
+}
+
+/**
+ * What a room keeps from one quiz to the next (« 🔁 Quiz suivant », T47): the tokens, the
+ * connected TV / remotes and the players (identity and connection only, scores start again).
+ */
+export interface RoomCarry {
+  round: number;
+  hostToken: string;
+  remoteToken: string | null;
+  hostSockets: string[];
+  remoteSockets: string[];
+  hostGoneSince: number | null;
+  players: Player[];
+  transport: GameTransport;
 }
 
 export interface GameHooks {
@@ -267,7 +286,12 @@ export interface GameHooks {
  * per question the average of its present members' points (PLAN.md §3).
  */
 export class Game {
-  readonly hostToken = randomUUID();
+  readonly hostToken: string;
+  /** 1 for the first quiz of the room, +1 at each « Quiz suivant » (T47). */
+  readonly round: number;
+  readonly hostUserId: string | null;
+  /** The start options (« ↻ Rejouer ce quiz » reuses them, T47). */
+  readonly options: Pick<GameSettings, 'mode' | 'teamCount' | 'jokers' | 'hearts' | 'theme'>;
   readonly players = new Map<string, Player>();
   phase: GamePhase = 'LOBBY';
   questionIndex = -1;
@@ -350,6 +374,12 @@ export class Game {
     private readonly hooks: GameHooks = {},
     settings: GameSettings = { mode: 'solo' },
   ) {
+    const room = settings.room;
+    this.hostToken = room?.hostToken ?? randomUUID();
+    this.round = room?.round ?? 1;
+    this.hostUserId = settings.hostUserId ?? null;
+    const { mode, teamCount, jokers, hearts, theme } = settings;
+    this.options = { mode, teamCount, jokers, hearts, theme };
     this.mode = settings.mode;
     this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
@@ -359,6 +389,31 @@ export class Game {
       const count = settings.teamCount ?? DEFAULT_TEAM_COUNT;
       this.teamIds = ([0, 1, 2, 3] as const).slice(0, count);
       for (const id of this.teamIds) this.teamScores.set(id, 0);
+    }
+    if (room) {
+      this.remoteToken = room.remoteToken;
+      for (const sid of room.hostSockets) this.hostSockets.add(sid);
+      for (const sid of room.remoteSockets) this.remoteSockets.add(sid);
+      this.hostGoneSince = room.hostGoneSince;
+      for (const p of room.players) {
+        // Same identity and connection; everything else starts again. A team is kept if it
+        // still exists in this quiz.
+        const teamId = p.teamId !== null && this.teamIds.includes(p.teamId) ? p.teamId : null;
+        this.players.set(p.id, {
+          id: p.id,
+          sessionToken: p.sessionToken,
+          nickname: p.nickname,
+          avatar: p.avatar,
+          socketId: p.socketId,
+          offlineSince: p.offlineSince,
+          totalScore: 0,
+          correctCount: 0,
+          streak: 0,
+          answer: null,
+          lastResult: null,
+          teamId,
+        });
+      }
     }
     this.withJokers = !!settings.jokers;
     this.jokers =
@@ -407,6 +462,11 @@ export class Game {
 
   get currentQuestion(): Question | undefined {
     return this.quiz.questions[this.questionIndex];
+  }
+
+  /** A TV (host screen) is connected. */
+  get hostOnline(): boolean {
+    return this.hostSockets.size > 0;
   }
 
   get paused(): boolean {
@@ -1096,6 +1156,7 @@ export class Game {
       totalQuestions: this.totalQuestions,
       ...(this.withJokers && { jokers: true as const }),
       ...(this.theme !== 'classic' && { theme: this.theme }),
+      ...(this.round > 1 && { round: this.round, quizTitle: this.quiz.title }),
     };
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;
@@ -1112,6 +1173,29 @@ export class Game {
     if (this.isTimedPhase() && this.setup.draw)
       state.draw = drawStatus(this.setup.draw, this.players);
     return state;
+  }
+
+  /** « Quiz suivant » (T47): what the next quiz of this room keeps (kicked players are left out). */
+  carryOver(): RoomCarry {
+    return {
+      round: this.round + 1,
+      hostToken: this.hostToken,
+      remoteToken: this.remoteToken,
+      hostSockets: [...this.hostSockets],
+      remoteSockets: [...this.remoteSockets],
+      hostGoneSince: this.hostGoneSince,
+      players: [...this.players.values()],
+      transport: this.transport,
+    };
+  }
+
+  /** « Quiz suivant » (T47): tells everyone in the room about the new lobby. */
+  announceLobby(): void {
+    this.broadcastState();
+    this.sendLobbyPlayers();
+    this.sendTeams();
+    this.sendSurvival();
+    this.sendRemoteStatus();
   }
 
   /** Clears pending timers. Call before dropping the game. */

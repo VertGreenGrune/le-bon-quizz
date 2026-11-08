@@ -2606,7 +2606,7 @@ leaderboard has his points.
 ## Phase 8 — Party nights
 
 ### T47 — Next quiz in the same room (players stay, same PIN)
-- **Status:** todo
+- **Status:** done
 - **Depends on:** — (everything merged). Run alone: touches server, shared, TV, remote, phones.
 - **Ports:** server 3047 / web 5247, test DB `lbq_test_t47`, e2e DB `lbq_e2e_t47`.
 
@@ -2668,6 +2668,41 @@ phone session kept at ENDED; e2e — host + 2 phones play the demo quiz to the p
 suivant » → pick a quiz (Équipes) → the same phones are in the new lobby without typing anything,
 pick a team, play it to the podium; a phone reloaded in the new lobby comes back; `/reports` shows
 two games.
+
+- **Summary:** shared: `host:nextquiz` (`HostNextQuizPayload` = host or remote token + the
+  `host:create` options, `quizId` optional), `GameStatePayload.round?` / `quizTitle?`. Server:
+  `GameManager.nextRound(pin, quiz, hooks, settings)` ends the current quiz (PODIUM / ENDED only,
+  `GAME_ALREADY_STARTED` otherwise → saved through its own `onEnded`), then puts a **fresh `Game`**
+  under the same PIN built from `Game.carryOver()` (`RoomCarry`: round + 1, `hostToken`,
+  `remoteToken`, TV / remote socket ids, `hostGoneSince`, non-kicked players, transport —
+  `GameSettings.room`); players keep id / nickname / avatar / session token / socket, everything
+  else from zero, `teamId` kept if that team exists in the new quiz; `announceLobby()` broadcasts
+  `game:state`, `lobby:players`, `lobby:teams`, `survival:state`, `remote:status`. `Game.hostUserId`
+  (from `host:create`) is the user the next quiz is loaded for, so a remote can do it; `Game.options`
+  are reused by « ↻ Rejouer ce quiz » (no `quizId`). `GameManager.sweep` keeps an ENDED room while
+  a TV is connected (`Game.hostOnline`). Web: TV « 🔁 Quiz suivant » at PODIUM / ENDED →
+  `host/nextQuiz.tsx` (`NextQuizDialog`: « ↻ Rejouer ce quiz », tabs Mes quiz / Partagés avec moi /
+  Bibliothèque (search) / Démo, anonymous host → Démo only + « Se connecter »; then
+  `StartGameDialog` with the new `initial` / `title` props, prefilled by `currentOptions(state)`),
+  lobby « 🔁 Quiz suivant : <titre> »; remote « ↻ Rejouer ce quiz » (with a confirmation); host,
+  remote and phone reducers reset on a new `round` (`round`, `quizTitle` in their state; the remote
+  drops its answer); phone keeps its session at ENDED (« en attente du prochain quiz… »; a refused
+  rejoin there just forgets the session instead of « Partie introuvable »), lobby title « Quiz
+  suivant : … ». Tests: `Game.nextQuiz.test.ts` (6: PODIUM path with tokens / players / reset /
+  rejoin / broadcast / saved once each, ENDED path + kicked left out + new player + round 3,
+  refused while playing, teams kept or dropped, ENDED room kept while the TV is connected, no
+  `round` in the first quiz), `socket/nextQuiz.test.ts` (3, real Socket.IO: refused during a
+  question / for another host's quiz / for a player, from the remote with the room host's access,
+  teams, phone rejoin with its first token, one saved record per quiz, anonymous → demo only,
+  replay keeps mode / hearts / jokers / theme), web `host/nextQuiz.test.ts` (reducers, remote
+  answer, `currentOptions`); e2e `e2e/next-quiz.spec.ts` (TV + 2 phones: quiz ended early → picker →
+  Démo → Équipes, same URL / PIN, phones in the team lobby without typing, a phone reload comes
+  back, team quiz skipped to the podium → « ↻ Rejouer ce quiz » keeps the teams).
+- **Deviations / notes:** (1) `round` / `quizTitle` are optional and only sent from the second
+  quiz on (absent = round 1), so existing `game:state` fixtures stay valid. (2) The TV doesn't know
+  the first quiz's title (« ↻ Rejouer ce quiz » shows it from the second quiz on). (3) The remote
+  only replays; picking another quiz is on the TV. (4) Reports: one `GameSession` per quiz, nothing
+  links the quizzes of one room. No migration.
 
 ---
 
@@ -3004,3 +3039,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   falls back to files still in `UPLOAD_DIR`). Uploads and `quiz:import` write to the table
   (content-hash names); `media:to-db` (`dist/media-to-db.js`) copies an old upload dir into it.
   `ApiDeps.uploadDir` is optional; `@fastify/static` no longer serves `/uploads/`.
+- 2026-11-08, T47 (additive, PLAN.md §2 / §4 / §5 / §7): `host:nextquiz` (`HostNextQuizPayload`),
+  `GameStatePayload.round?` / `quizTitle?`. Server: `Game.hostToken` is set in the constructor
+  (`GameSettings.room` carries it), new `GameSettings.hostUserId` / `room`, `Game.round`,
+  `hostUserId`, `options`, `hostOnline`, `carryOver()`, `announceLobby()`,
+  `GameManager.nextRound`; an ENDED game is no longer swept while a TV is connected. Web:
+  `StartGameDialog` gains `initial` / `title`; the phone no longer clears its session at ENDED.

@@ -24,6 +24,10 @@ import {
 export interface HostGameState {
   /** null until the first `game:state` arrives. */
   phase: GamePhase | null;
+  /** « Quiz suivant » (T47): number of the quiz played in this room (1 = the first one). */
+  round: number;
+  /** From the second quiz of the room on: its title. */
+  quizTitle: string | null;
   mode: GameMode;
   /** TV theme (T40, `game:state.theme`). */
   theme: QuizTheme;
@@ -89,6 +93,8 @@ export type HostAction =
 
 export const initialHostState: HostGameState = {
   phase: null,
+  round: 1,
+  quizTitle: null,
   mode: 'solo',
   theme: 'classic',
   jokers: false,
@@ -122,6 +128,17 @@ export const initialHostState: HostGameState = {
 export function hostReducer(state: HostGameState, action: HostAction): HostGameState {
   switch (action.type) {
     case 'state': {
+      const round = action.payload.round ?? 1;
+      // « Quiz suivant » (T47): a new quiz in the same room — nothing of the previous one stays
+      // (the lobby players / teams are re-sent right after, keep them meanwhile).
+      if (round !== state.round)
+        state = {
+          ...initialHostState,
+          round,
+          players: state.players,
+          teams: state.teams,
+          comebacks: state.comebacks,
+        };
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const newQuestion = questionIndex !== state.questionIndex;
       const paused = action.payload.paused ?? null;
@@ -133,6 +150,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         ...state,
         phase,
         mode,
+        quizTitle: action.payload.quizTitle ?? null,
         theme: action.payload.theme ?? 'classic',
         jokers: !!action.payload.jokers,
         questionIndex,

@@ -130,6 +130,15 @@ function hostAction<S extends z.ZodRawShape>(shape: S) {
   ]);
 }
 export const HostActionPayload = hostAction({});
+/**
+ * « 🔁 Quiz suivant » (T47), PODIUM / ENDED: a new quiz in the same room (same PIN, players kept),
+ * with the options of `host:create`. No `quizId` = « ↻ Rejouer ce quiz »: the same quiz, and the
+ * current game's options for the ones not given.
+ */
+export const HostNextQuizPayload = hostAction({
+  ...HostCreatePayload.shape,
+  quizId: z.string().min(1).optional(),
+});
 export const HostKickPayload = hostAction({ playerId: z.string().min(1) });
 export const HostMovePlayerPayload = hostAction({ playerId: z.string().min(1), teamId: TeamId });
 /** « Buzzer »: the host judges the answer said out loud by the player who has the hand. */
@@ -244,6 +253,7 @@ export const PlayerHauntPayload = z.object({
 });
 
 export type HostCreatePayload = z.infer<typeof HostCreatePayload>;
+export type HostNextQuizPayload = z.infer<typeof HostNextQuizPayload>;
 export type HostActionPayload = z.infer<typeof HostActionPayload>;
 export type HostKickPayload = z.infer<typeof HostKickPayload>;
 export type HostMovePlayerPayload = z.infer<typeof HostMovePlayerPayload>;
@@ -298,6 +308,7 @@ export interface ClientToServerEvents {
   'host:next': (p: HostActionPayload, ack: (r: Ack) => void) => void;
   'host:kick': (p: HostKickPayload, ack: (r: Ack) => void) => void;
   'host:end': (p: HostActionPayload, ack: (r: Ack) => void) => void;
+  'host:nextquiz': (p: HostNextQuizPayload, ack: (r: Ack) => void) => void;
   /** Team mode, LOBBY only: puts a player in another team. */
   'host:moveplayer': (p: HostMovePlayerPayload, ack: (r: Ack) => void) => void;
   /** Team mode, LOBBY only: random balanced teams for every player. */
@@ -435,6 +446,13 @@ export interface GameStatePayload {
    * word, in order (never what they typed).
    */
   draw?: DrawStatus;
+  /**
+   * « Quiz suivant » (T47): number of the quiz played in this room, from the second one on
+   * (absent = 1). When it changes, clients drop everything from the previous quiz.
+   */
+  round?: number;
+  /** From the second quiz of the room on (T47): its title, for the lobbies. */
+  quizTitle?: string;
 }
 
 export interface DrawStatus {

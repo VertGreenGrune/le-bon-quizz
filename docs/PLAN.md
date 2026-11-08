@@ -35,6 +35,14 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
                                          last question → PODIUM → ENDED
 ```
 
+- **« 🔁 Quiz suivant »** (T47, `GameManager.nextRound`): at PODIUM / ENDED the host (TV picker, or
+  « ↻ Rejouer ce quiz » from the TV / remote) sends `host:nextquiz`: the current quiz ends (saved as
+  its own `GameSession`), and a new `Game` takes its place under the **same PIN** — same
+  `hostToken`, `remoteToken`, TV / remote sockets, and every non-kicked player (same id, nickname,
+  avatar, session token; score, streak, jokers, hearts from zero; a team kept if it still exists) —
+  in LOBBY of the new quiz (new players can join). `game:state.round` (absent = 1) tells clients to
+  drop the previous quiz. An ENDED room is kept while its TV is connected; phones keep their
+  session at ENDED (« en attente du prochain quiz »).
 - `QUESTION_INTRO`: question shown alone on the host screen, phones show "get ready". Length
   (`introDurationMs`, T42, sent as `game:state.introMs`): 3 s, **8 s** (`JOKER_INTRO_MS`) when the
   game has the joker engine (Jokers option or « Survie ») and the question takes jokers — the TV
@@ -327,6 +335,7 @@ Every client → server event takes an ack callback receiving
 | `host:resume` | `{ pin, hostToken }` | « Continuer sans… » while paused: the missing players become absent for the current question, then `game:resuming` (no-op when not paused) |
 | `host:pause` | `{ pin, hostToken }` | « ⏸ Pause » (T39), QUESTION_INTRO / ANSWERING only (`NOT_ANSWERING` otherwise): see §2 « Manual pause » |
 | `host:remote` | `{ pin, hostToken, revoke?: true }` | TV only: ack `{ remoteToken }` (created the first time); `revoke` = new token, paired remotes get `remote:revoked` and are dropped |
+| `host:nextquiz` | `{ pin, hostToken, quizId?, mode?, teamCount?, jokers?, hearts?, theme? }` | « 🔁 Quiz suivant » (T47, §2), PODIUM / ENDED only (`GAME_ALREADY_STARTED` otherwise): same options and access rules as `host:create`, checked with the **room's host user** (also from a remote); no `quizId` = « ↻ Rejouer ce quiz » with the current options unless given. The room keeps its PIN, tokens and players; then `game:state` (LOBBY, `round`, `quizTitle`), `lobby:players`, `lobby:teams`, `survival:state`, `remote:status` |
 | `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED), `remote:status` |
 
 ### Remote → server (« Télécommande », T39)
@@ -352,7 +361,7 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `introMs` during QUESTION_INTRO = its whole length, T42) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `introMs` during QUESTION_INTRO = its whole length, T42; `round` + `quizTitle` from the second quiz of the room on, T47 — a new `round` = drop everything from the previous quiz) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -416,7 +425,8 @@ Quiz loading, socket auth and result saving go through `GamePersistence`
 (`apps/server/src/game/persistence.ts`). When a game reaches ENDED, a logged-in host's game
 (if it left the lobby) is saved as `GameSession` + `PlayerResult`s + `QuestionResult`s (+ `TeamResult`s); anonymous
 demo games are not. A game reaches ENDED by `host:end` (any phase), or through the sweep (`GameManager.sweep`, every
-minute) when abandoned: no host screen connected for 10 min, or no activity for 2 h. Players
+minute) when abandoned: no host screen connected for 10 min, or no activity for 2 h. Each quiz
+of a room (« Quiz suivant », T47) is its own `GameSession`. Players
 kicked after the start are saved too, ranked below the remaining players (who keep the podium
 order); players kicked in the lobby are not.
 
@@ -501,7 +511,8 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   from `scripts/generate-icons.mjs`)
 - `/remote/:pin#<remoteToken>` → « Télécommande » (T39): the host's phone drives the game (token
   kept in `localStorage` `lbq:remote:<pin>`, removed from the address bar)
-- `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`
+- `/host/:pin` → shared screen (« 🔁 Quiz suivant » at the podium / end: quiz picker — « Mes quiz »,
+  « Partagés avec moi », « Bibliothèque », « Démo » — then the start options, same URL, T47); `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`
   (or `mode=survival&hearts=<n>`; no `theme` = the quiz's) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
   of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic
   game)

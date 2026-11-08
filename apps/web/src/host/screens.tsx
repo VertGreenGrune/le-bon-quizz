@@ -43,6 +43,7 @@ export function LobbyScreen({
   onKick,
   teamLobby,
   hearts,
+  quizTitle,
 }: {
   pin: string;
   players: LobbyMember[];
@@ -51,6 +52,8 @@ export function LobbyScreen({
   teamLobby?: ReactNode;
   /** « Survie »: hearts each player starts with. */
   hearts?: number;
+  /** « Quiz suivant » (T47): the title of the new quiz, from the second quiz of the room on. */
+  quizTitle?: string | null;
 }) {
   const origins = useMemo(() => joinOrigins(), []);
   const [originIndex, setOriginIndex] = useState(0);
@@ -61,6 +64,11 @@ export function LobbyScreen({
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
       <ThemeLobbyTitle theme={theme} />
+      {quizTitle && (
+        <p className="-mt-4 text-3xl font-black" data-testid="next-quiz-title">
+          🔁 Quiz suivant : {quizTitle}
+        </p>
+      )}
       <motion.div
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

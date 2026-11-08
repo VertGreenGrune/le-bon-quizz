@@ -27,17 +27,22 @@ export function StartGameDialog({
   onStart,
   onClose,
   quizTheme = 'classic',
+  initial,
+  title = 'Nouvelle partie',
 }: {
   onStart: (options: GameOptions) => void;
   onClose: () => void;
   /** The quiz's own theme (default choice). */
   quizTheme?: QuizTheme;
+  /** Preselected options (« Quiz suivant », T47: the current game's); jokers on by default. */
+  initial?: GameOptions;
+  title?: string;
 }) {
-  const [mode, setMode] = useState<GameOptions['mode']>('solo');
-  const [teamCount, setTeamCount] = useState<TeamCount>(2);
-  const [hearts, setHearts] = useState(SURVIVAL_DEFAULT_HEARTS);
+  const [mode, setMode] = useState<GameOptions['mode']>(initial?.mode ?? 'solo');
+  const [teamCount, setTeamCount] = useState<TeamCount>(initial?.teamCount ?? 2);
+  const [hearts, setHearts] = useState(initial?.hearts ?? SURVIVAL_DEFAULT_HEARTS);
   // Jokers are the selling point: on by default.
-  const [jokers, setJokers] = useState(true);
+  const [jokers, setJokers] = useState(initial ? !!initial.jokers : true);
   // '' = the quiz's theme (no override sent).
   const [theme, setTheme] = useState<QuizTheme | ''>('');
 
@@ -65,7 +70,7 @@ export function StartGameDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="start-game-title" className="mb-4 text-2xl font-black">
-          Nouvelle partie
+          {title}
         </h2>
         <div className="mb-4 flex gap-3">
           <button

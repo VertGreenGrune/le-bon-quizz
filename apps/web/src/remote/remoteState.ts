@@ -35,8 +35,12 @@ export function remoteReducer(state: RemoteState, action: RemoteAction): RemoteS
       return { ...state, answer: action.payload };
     case 'revoked':
       return { ...state, revoked: true };
-    default:
-      return { ...state, host: hostReducer(state.host, action) };
+    default: {
+      const host = hostReducer(state.host, action);
+      // « Quiz suivant » (T47): the previous quiz's answer goes with it.
+      const answer = host.round === state.host.round ? state.answer : null;
+      return { ...state, host, answer };
+    }
   }
 }
 

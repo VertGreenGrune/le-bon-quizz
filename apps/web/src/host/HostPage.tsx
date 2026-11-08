@@ -34,6 +34,7 @@ import {
 } from './screens';
 import { useHostSounds } from './sounds';
 import { SoundButton } from './soundSettings';
+import { NextQuizDialog } from './nextQuiz';
 
 /**
  * Shared screen (TV/projector). `/host/new?quizId=<id>[&mode=teams&teams=<n>]` creates a game
@@ -57,6 +58,8 @@ export function HostPage() {
 
   const game = useHostGame(pin, hostToken);
   const { state } = game;
+  /** « 🔁 Quiz suivant » (T47) dialog. */
+  const [nextQuizOpen, setNextQuizOpen] = useState(false);
 
   useEffect(() => {
     if (!isNew) return;
@@ -165,6 +168,7 @@ export function HostPage() {
           players={state.players}
           onKick={game.kick}
           hearts={survival?.hearts}
+          quizTitle={state.quizTitle}
           teamLobby={
             teamMode ? (
               <TeamLobby
@@ -331,6 +335,15 @@ export function HostPage() {
               {game.error.message} ✕
             </button>
           )}
+          {(phase === 'PODIUM' || phase === 'ENDED') && (
+            <button
+              type="button"
+              onClick={() => setNextQuizOpen(true)}
+              className="rounded-xl border-2 border-white/70 px-6 py-4 text-2xl font-black hover:bg-white/10"
+            >
+              🔁 Quiz suivant
+            </button>
+          )}
           {phase === 'ENDED' && (
             <Link to="/" className="rounded-xl bg-white px-8 py-4 text-2xl font-black text-brand">
               Retour à l'accueil
@@ -358,6 +371,17 @@ export function HostPage() {
             </motion.button>
           )}
         </footer>
+        {nextQuizOpen && (phase === 'PODIUM' || phase === 'ENDED') && (
+          <NextQuizDialog
+            state={state}
+            currentTitle={state.quizTitle}
+            onClose={() => setNextQuizOpen(false)}
+            onReplay={() => game.nextQuiz(undefined, (ok) => ok && setNextQuizOpen(false))}
+            onPick={(quizId, options) =>
+              game.nextQuiz({ quizId, options }, (ok) => ok && setNextQuizOpen(false))
+            }
+          />
+        )}
       </ThemedMain>
     </MotionConfig>
   );

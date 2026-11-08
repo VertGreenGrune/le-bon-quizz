@@ -29,6 +29,10 @@ export interface PlayerState {
   connected: boolean;
   /** null until the first `game:state` arrives (after join / rejoin). */
   phase: GamePhase | null;
+  /** « Quiz suivant » (T47): number of the quiz played in this room (1 = the first one). */
+  round: number;
+  /** From the second quiz of the room on: its title. */
+  quizTitle: string | null;
   mode: GameMode;
   /** TV theme (T40, `game:state.theme`): the waiting screens follow it. */
   theme: QuizTheme;
@@ -117,6 +121,8 @@ export type PlayerAction =
 export const initialPlayerState: PlayerState = {
   connected: false,
   phase: null,
+  round: 1,
+  quizTitle: null,
   mode: 'solo',
   theme: 'classic',
   questionIndex: -1,
@@ -167,6 +173,19 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return { ...state, teams: action.payload.teams };
 
     case 'state': {
+      const round = action.payload.round ?? 1;
+      // « Quiz suivant » (T47): a new quiz in the same room — same player, nothing else kept
+      // (the teams are re-sent right after).
+      if (round !== state.round)
+        state = {
+          ...initialPlayerState,
+          round,
+          connected: state.connected,
+          nickname: state.nickname,
+          avatar: state.avatar,
+          playerId: state.playerId,
+          teams: state.teams,
+        };
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const paused = action.payload.paused ?? null;
       const buzzer = action.payload.buzzer ?? null;
@@ -188,6 +207,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
         mode,
+        quizTitle: action.payload.quizTitle ?? null,
         theme: action.payload.theme ?? 'classic',
         jokerGame: !!action.payload.jokers,
         questionIndex,

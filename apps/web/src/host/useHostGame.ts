@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
+import { DEFAULT_TEAM_COUNT } from '@lbq/shared';
 import type {
   Ack,
   ErrorPayload,
@@ -188,6 +189,33 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     const a = auth();
     if (a) getSocket().emit('host:end', a, handleAck);
   };
+  /**
+   * « 🔁 Quiz suivant » (T47): a new quiz in this room (same PIN, players kept); no `choice` =
+   * « ↻ Rejouer ce quiz » with the same options. `onDone` gets whether the server accepted.
+   */
+  const nextQuiz = (
+    choice?: { quizId: string; options: GameOptions },
+    onDone?: (ok: boolean) => void,
+  ) => {
+    const a = auth();
+    if (!a) return;
+    const o = choice?.options;
+    const payload = choice
+      ? {
+          ...a,
+          quizId: choice.quizId,
+          mode: o!.mode,
+          jokers: !!o!.jokers,
+          ...(o!.mode === 'teams' && { teamCount: o!.teamCount ?? DEFAULT_TEAM_COUNT }),
+          ...(o!.mode === 'survival' && o!.hearts && { hearts: o!.hearts }),
+          ...(o!.theme && { theme: o!.theme }),
+        }
+      : a;
+    getSocket().emit('host:nextquiz', payload, (res) => {
+      handleAck(res);
+      onDone?.(res.ok);
+    });
+  };
   const kick = (playerId: string) => {
     const a = auth();
     if (a) getSocket().emit('host:kick', { ...a, playerId }, handleAck);
@@ -229,6 +257,7 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     start,
     next,
     end,
+    nextQuiz,
     kick,
     movePlayer,
     shuffle,

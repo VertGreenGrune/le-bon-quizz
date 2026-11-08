@@ -64,8 +64,7 @@ function attach() {
   socket.on('disconnect', () => dispatch({ type: 'connection', connected: false }));
   socket.on('game:state', (payload) => {
     dispatch({ type: 'state', payload, now: Date.now() });
-    // Game over: nothing to resume any more (the end screen stays displayed).
-    if (payload.phase === 'ENDED') clearSession();
+    // Game over: the session is kept, the host may start the next quiz in this room (T47).
   });
   socket.on('game:resuming', ({ inMs }) => {
     dispatch({ type: 'resuming', inMs, now: Date.now() });
@@ -105,8 +104,7 @@ function attach() {
   // long reconnection back-off. Check it now instead of waiting for the next ping timeout.
   const onWake = () => {
     if (document.visibilityState !== 'visible' || !loadSession()) return;
-    // Ended games are swept by the server: a rejoin would turn the end screen into "lost".
-    if (state.phase === 'ENDED' || state.kicked || state.lost) return;
+    if (state.kicked || state.lost) return;
     if (socket.connected) rejoinIfNeeded({ probe: true });
     else reconnectNow();
   };
@@ -154,7 +152,9 @@ function rejoinIfNeeded({ probe = false } = {}) {
         return;
       }
       if (!res.ok) {
-        loseSession(res.error.code, session.pin);
+        // The room of an ended game was closed: keep the end screen, just forget the session.
+        if (state.phase === 'ENDED') clearSession(session.pin);
+        else loseSession(res.error.code, session.pin);
         return;
       }
       boundSocketId = sid;

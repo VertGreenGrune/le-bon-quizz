@@ -162,6 +162,18 @@ export function RemotePage() {
             {host.paused?.byHost ? '▶ Reprendre' : '⏸ Pause'}
           </button>
         )}
+        {(phase === 'PODIUM' || phase === 'ENDED') && (
+          // « Quiz suivant » (T47): the same quiz again, players kept (other quizzes: on the TV).
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Rejouer ce quiz avec les mêmes joueurs ?')) remote.send('host:nextquiz');
+            }}
+            className="rounded-2xl border-2 border-white/70 py-3 text-xl font-black"
+          >
+            ↻ Rejouer ce quiz
+          </button>
+        )}
         {main && (
           <button
             type="button"

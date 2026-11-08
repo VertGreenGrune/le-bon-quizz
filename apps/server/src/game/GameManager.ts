@@ -5,7 +5,10 @@ import { Game, type GameHooks, type GameSettings, type GameTransport } from './G
 
 /** Games idle for this long (no host/player action) are dropped. */
 export const GAME_IDLE_TTL_MS = 2 * 60 * 60 * 1000;
-/** ENDED games are kept a little so reconnecting clients still see the ENDED state. */
+/**
+ * ENDED games are kept a little so reconnecting clients still see the ENDED state — and as long
+ * as their host screen is connected, so the host can pick the next quiz (« Quiz suivant », T47).
+ */
 export const ENDED_GAME_TTL_MS = 5 * 60 * 1000;
 /** A game whose host screen has been gone this long is ended (and saved if it started). */
 export const HOST_GONE_TTL_MS = 10 * 60 * 1000;
@@ -31,6 +34,29 @@ export class GameManager {
     const pin = generatePin((p) => this.games.has(p));
     const game = new Game(pin, quiz, makeTransport(pin), hooks, settings);
     this.games.set(pin, game);
+    return game;
+  }
+
+  /**
+   * « 🔁 Quiz suivant » (T47), PODIUM / ENDED: ends the current quiz (saved through its
+   * `onEnded`) and puts a new one in the same room — same PIN, tokens, TV / remotes and players
+   * (scores from zero), in LOBBY. The caller checks access to `quiz` first.
+   */
+  nextRound(pin: string, quiz: Quiz, hooks?: GameHooks, settings?: GameSettings): Game {
+    const previous = this.get(pin);
+    if (previous.phase !== 'PODIUM' && previous.phase !== 'ENDED')
+      throw new GameError('GAME_ALREADY_STARTED', 'Le quiz en cours n’est pas terminé');
+    previous.end();
+    const room = previous.carryOver();
+    previous.dispose();
+    const game = new Game(pin, quiz, room.transport, hooks, {
+      mode: 'solo',
+      ...settings,
+      hostUserId: settings?.hostUserId ?? previous.hostUserId,
+      room,
+    });
+    this.games.set(pin, game);
+    game.announceLobby();
     return game;
   }
 
@@ -66,7 +92,7 @@ export class GameManager {
         game.end();
         this.remove(pin);
       } else if (game.phase === 'ENDED') {
-        if (idle > ENDED_GAME_TTL_MS) this.remove(pin);
+        if (idle > ENDED_GAME_TTL_MS && !game.hostOnline) this.remove(pin);
       } else if (hostGone) {
         game.end(); // kept for the ENDED grace period from now on
       }

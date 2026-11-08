@@ -75,7 +75,9 @@ export function useRemote(pin: string, remoteToken: string | null) {
   const handleAck = useCallback((res: Ack) => setError(res.ok ? null : res.error), []);
   const auth = () => (remoteToken ? { pin, remoteToken } : null);
 
-  const send = (event: MainEvent | 'host:pause' | 'host:resume' | 'host:shuffle') => {
+  const send = (
+    event: MainEvent | 'host:pause' | 'host:resume' | 'host:shuffle' | 'host:nextquiz',
+  ) => {
     const a = auth();
     if (a) getSocket().emit(event, a, handleAck);
   };

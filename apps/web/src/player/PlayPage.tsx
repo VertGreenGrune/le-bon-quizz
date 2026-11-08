@@ -113,7 +113,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
       if (s.mode === 'teams') return <TeamPicker s={s} />;
       return (
         <Message
-          title="Tu es dans la partie !"
+          title={s.quizTitle ? `Quiz suivant : ${s.quizTitle}` : 'Tu es dans la partie !'}
           subtitle="Ton pseudo apparaît sur l'écran. On attend les autres…"
         >
           {s.survival && (
@@ -177,7 +177,12 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
     case 'podium':
       return <Podium s={s} />;
     case 'ended':
-      return <End title="Partie terminée" subtitle={`Score final : ${s.totalScore} pts`} />;
+      return (
+        <End
+          title="Partie terminée"
+          subtitle={`Score final : ${s.totalScore} pts — en attente du prochain quiz…`}
+        />
+      );
     case 'kicked':
       return <End title="Tu as été exclu de la partie" />;
     case 'lost':

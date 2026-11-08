@@ -6,6 +6,7 @@ import {
   HostJudgePayload,
   HostKickPayload,
   HostMovePlayerPayload,
+  HostNextQuizPayload,
   HostRemotePayload,
   HostTokenPayload,
   PlayerAnswerPayload,
@@ -223,7 +224,7 @@ export function registerSocketHandlers(
             quiz,
             (pin) => makeTransport(io, pin),
             { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount, jokers, jokerHand, hearts, theme },
+            { mode, teamCount, jokers, jokerHand, hearts, theme, hostUserId: hostId },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
@@ -318,6 +319,32 @@ export function registerSocketHandlers(
       handler(socket, HostAcceptPayload, (p) => {
         const { choiceIndex, text, margin } = p;
         asController(p).accept(p.questionIndex, { choiceIndex, text, margin });
+        return {};
+      }),
+    );
+
+    socket.on(
+      'host:nextquiz',
+      handler(socket, HostNextQuizPayload, async (p) => {
+        const current = asController(p);
+        // No quiz: « ↻ Rejouer ce quiz », with the current options unless given.
+        const replay = p.quizId === undefined;
+        const quizId = p.quizId ?? current.quiz.id;
+        const base: Partial<Game['options']> = replay ? current.options : {};
+        const mode = p.mode ?? base.mode ?? 'solo';
+        const teamCount = p.teamCount ?? base.teamCount;
+        const jokers = p.jokers ?? base.jokers;
+        const hearts = p.hearts ?? base.hearts;
+        const theme = p.theme ?? base.theme;
+        // The room's host decides what can be played (a remote has no session cookie).
+        const hostId = current.hostUserId;
+        const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
+        games.nextRound(
+          p.pin,
+          quiz,
+          { onEnded: saveOnEnd(hostId, dbQuizId) },
+          { mode, teamCount, jokers, jokerHand, hearts, theme, hostUserId: hostId },
+        );
         return {};
       }),
     );
