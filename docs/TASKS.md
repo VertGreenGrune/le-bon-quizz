@@ -2603,6 +2603,72 @@ leaderboard has his points.
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
+## Phase 8 — Party nights
+
+### T47 — Next quiz in the same room (players stay, same PIN)
+- **Status:** todo
+- **Depends on:** — (everything merged). Run alone: touches server, shared, TV, remote, phones.
+- **Ports:** server 3047 / web 5247, test DB `lbq_test_t47`, e2e DB `lbq_e2e_t47`.
+
+**User requirement (2026-11-08):** when a quiz is finished, the host can **choose another quiz
+without creating a new room**: the players stay connected and don't have to type a new PIN.
+
+**Design (decided — note any deviation below):**
+- **When:** on the TV at the **PODIUM** and at **ENDED**, a new button « 🔁 Quiz suivant » (next to
+  « Terminer la partie » / « Retour à l'accueil »). It opens a **quiz picker** dialog: tabs « Mes
+  quiz », « 👥 Partagés avec moi », « Bibliothèque » (search) and « Démo » — an anonymous host only
+  gets « Démo » + a « Se connecter » hint —, plus a shortcut « ↻ Rejouer ce quiz ». Picking a quiz
+  opens the existing `StartGameDialog` options (Solo / Équipes / Survie, Jokers, hearts, theme),
+  prefilled with the current game's options. The remote (« Télécommande ») only gets « ↻ Rejouer ce
+  quiz » (the picker stays on the TV).
+- **What happens (server-authoritative):** new host action `host:nextquiz { pin, hostToken |
+  remoteToken, quizId, mode?, teamCount?, jokers?, hearts?, theme? }` (same options and validation
+  as `host:create`). The server:
+  1. loads the quiz with the **game's host user** (store the host's user id on the game at
+     `host:create`; a remote has no cookie) — same access rules as `host:create` (own / shared /
+     public / `demo`), `QUIZ_NOT_FOUND` / `UNAUTHORIZED` otherwise, and the current game is left
+     untouched on error;
+  2. ends the current game if it isn't ENDED yet (so it is **saved as its own `GameSession`** with
+     its report, exactly as today — one report per quiz played);
+  3. starts a **new round in the same room**: same PIN, same `hostToken`, same `remoteToken` and
+     paired remotes, phase `LOBBY` of the new quiz. Every non-kicked player is carried over with the
+     same id, nickname, avatar and session token (offline ones too: they can still rejoin); score,
+     correct count, streak, jokers, hearts, cancels… start from zero. Team mode: a player keeps their
+     team if it still exists (`teamId < teamCount`), otherwise has none and picks again; solo /
+     survie: no team. New players can join this lobby with the same PIN, as in any lobby.
+  Implementation choice left to the agent (note it): a fresh `Game` swapped into `GameManager`
+  under the same PIN with the players / sockets / tokens transferred (preferred: keeps per-game state
+  clean), or a `Game.reset`. Then the usual lobby broadcast: `game:state`, `lobby:players`,
+  `lobby:teams`, `survival:state`.
+- **Clients reset cleanly:** `GameStatePayload` gains `round: number` (1 for the first quiz of the
+  room, +1 at each « Quiz suivant »; also in both resyncs). When it changes, the TV, the remote and
+  the phones drop everything from the previous quiz (results, leaderboard, podium, jokers,
+  « Survie », team, cancels…) and show the new lobby. Optional `game:state.quizTitle` so the phones'
+  lobby shows « Quiz suivant : <titre> » and the TV lobby its title.
+- **Phones must not lose the room at ENDED:** today the phone clears its stored session at ENDED
+  (`playerStore.ts`). Keep it instead (the 12 h TTL and a `GAME_NOT_FOUND` / refused rejoin still
+  clear it), and the end screen says « Merci d'avoir joué ! En attente du prochain quiz… » while the
+  socket stays in the room. A phone that reloads during the new lobby rejoins it directly.
+- **Room lifetime:** an ENDED game is kept while its host screen is connected (today: dropped 5 min
+  after ENDED, `ENDED_GAME_TTL_MS`), so the host can take their time to choose; once the host
+  screen is gone the usual timeouts apply.
+- **URL / host page:** `/host/:pin` doesn't change (the TV stays on the same page, the hostToken in
+  `sessionStorage` stays valid); the lobby QR / PIN is the same.
+- **Docs:** PLAN.md §2 (state machine: ENDED / PODIUM → LOBBY of a new round), §4 (`host:nextquiz`,
+  `game:state.round` / `quizTitle`), §5 (one `GameSession` per round), §7 (TV / phones).
+
+**Tests:** server — `host:nextquiz` from PODIUM and from ENDED (previous round saved once, with its
+own results), players carried over (id, nickname, avatar, session token still valid for
+`player:rejoin`), scores / streaks / jokers / hearts reset, kicked players not carried, team kept
+when it still exists, new player joins the new lobby, remote token still works and `host:nextquiz`
+with it, access refused for a private quiz of another host (current game untouched), anonymous host
+→ demo only, refused during a question (`GAME_ALREADY_STARTED` or a new code, note it), ENDED game
+kept while the host screen is connected; web — reducers reset on a new `round` (TV, remote, phone),
+phone session kept at ENDED; e2e — host + 2 phones play the demo quiz to the podium, « 🔁 Quiz
+suivant » → pick a quiz (Équipes) → the same phones are in the new lobby without typing anything,
+pick a team, play it to the podium; a phone reloaded in the new lobby comes back; `/reports` shows
+two games.
+
 ---
 
 ## Contract changes / cross-task notes
