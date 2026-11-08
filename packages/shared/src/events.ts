@@ -529,7 +529,13 @@ export interface LobbyTeamsPayload {
 }
 
 /** What a phone needs to draw a slider: never the correct value nor the margin. */
-export type SliderPrompt = Pick<SliderSettings, 'min' | 'max' | 'step' | 'unit'>;
+export type SliderPrompt = Pick<SliderSettings, 'min' | 'max' | 'step' | 'unit'> & {
+  /**
+   * `question:prompt` only (T49): where the phone slider starts — random, on a step, always at
+   * least `margin + 10 %` of the range away from the right answer. Never on the TV.
+   */
+  start?: number;
+};
 
 /**
  * « Mytho ! » on the TV: writing the lies, then voting among `options` (lies + the real answer,

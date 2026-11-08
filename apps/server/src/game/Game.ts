@@ -66,6 +66,7 @@ import {
 } from './buzzer.js';
 import { AnswerCancels, checkCancellable } from './answerCancel.js';
 import { GameError } from './errors.js';
+import { sliderStart } from './sliderStart.js';
 import { checkVote, otherLies, startVote, writeLie } from './questionTypes/bluff.js';
 import {
   addStrokes,
@@ -232,6 +233,8 @@ export interface GameSettings {
   jokers?: boolean;
   /** Random source of the jokers and of the « Dessine-moi » words (tests). */
   random?: () => number;
+  /** Random source of the slider start positions (T49, tests). */
+  sliderRandom?: () => number;
   /** Same fixed starting hand for every player (e2e tests, `E2E_JOKER_HAND`). */
   jokerHand?: JokerType[];
   /** « Survie »: hearts per player (default SURVIVAL_DEFAULT_HEARTS). */
@@ -292,6 +295,8 @@ export class Game {
   private reveal: QuestionRevealPayload | null = null;
   /** Drawn when the current question starts (ORDER shuffle), see `questionTypes/`. */
   private setup: QuestionSetup = NO_SETUP;
+  /** SLIDER: where the phone sliders start for the current question (T49), null otherwise. */
+  private sliderStartValue: number | null = null;
   private phaseEndsAt: number | null = null;
   private phaseStartedAt = 0;
   /** ANSWERING start, pushed forward by the paused time: `responseMs` excludes the pauses. */
@@ -337,6 +342,7 @@ export class Game {
   private readonly drawRotation = newRotation();
   /** Random source (« Dessine-moi » words; tests can fix it). */
   private readonly random: () => number;
+  private readonly sliderRandom: () => number;
   private readonly allAnsweredGraceMs: number;
   /** The joker engine's random source: a reveal's draws come out again after an accept (T44). */
   private readonly jokerRandom: ReplayRandom;
@@ -353,6 +359,7 @@ export class Game {
     this.mode = settings.mode;
     this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
+    this.sliderRandom = settings.sliderRandom ?? Math.random;
     this.allAnsweredGraceMs = settings.allAnsweredGraceMs ?? ALL_ANSWERED_GRACE_MS;
     this.jokerRandom = new ReplayRandom(settings.random ?? Math.random);
     if (this.mode === 'teams') {
@@ -1131,6 +1138,10 @@ export class Game {
     this.reveal = null;
     this.settlement = null;
     this.setup = prepareQuestion(question);
+    this.sliderStartValue =
+      question.type === 'SLIDER' && !question.buzzer
+        ? sliderStart(question.slider, this.sliderRandom)
+        : null;
     // « Dessine-moi »: the next drawer in turn and a word (only their phone will get it).
     if (question.type === 'DRAW') {
       const players = [...this.players.values()];
@@ -1769,7 +1780,11 @@ export class Game {
       timeLimitSec: q.timeLimitSec,
     };
     if (q.buzzer) prompt.buzzer = true;
-    else if (q.type === 'SLIDER') prompt.slider = sliderPrompt(q.slider);
+    else if (q.type === 'SLIDER')
+      prompt.slider = {
+        ...sliderPrompt(q.slider),
+        ...(this.sliderStartValue !== null && { start: this.sliderStartValue }),
+      };
     else if (q.type === 'TYPE_ANSWER') prompt.maxLength = TYPE_ANSWER_MAX_LENGTH;
     else if (isExtraQuestion(q))
       Object.assign(prompt, extraPromptFields(q, this.setup, this.players.values(), player.id));

@@ -15,7 +15,7 @@ import { Avatar } from '../components/Avatar';
 import { FullscreenBanner, FullscreenButton } from '../components/FullscreenButton';
 import { Confetti, CountUp } from '../components/motion';
 import { ShapeIcon, shapeBg } from '../components/shapes';
-import { formatValue, snapToStep } from '../lib/numbers';
+import { formatValue, sliderInitialValue, snapToStep } from '../lib/numbers';
 import { competitionRanks } from '../lib/ranks';
 import {
   copyingTarget,
@@ -447,7 +447,7 @@ function TextAnswer({
 /** Curseur: big value, slider with − / + for fine tuning, « Valider ». */
 function SliderAnswer({ slider, narrowed }: { slider: SliderPrompt; narrowed?: boolean }) {
   const { min, max, step, unit } = slider;
-  const [value, setValue] = useState(() => snapToStep((min + max) / 2, min, max, step));
+  const [value, setValue] = useState(() => sliderInitialValue(slider));
   const nudge = (direction: 1 | -1) =>
     setValue((v) => snapToStep(v + direction * step, min, max, step));
   const nudgeClass =

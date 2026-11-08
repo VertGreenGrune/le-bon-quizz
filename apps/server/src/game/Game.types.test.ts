@@ -139,9 +139,16 @@ describe('Game with every question type', () => {
       { type: 'MCQ', choiceCount: 2 },
       { type: 'POLL', choiceCount: 3 },
       { type: 'TYPE_ANSWER', maxLength: 40 },
-      { type: 'SLIDER', slider: { min: 0, max: 100, step: 1, unit: 'km' } },
-      { type: 'SLIDER', slider: { min: 0, max: 10, step: 1 } },
+      {
+        type: 'SLIDER',
+        slider: { min: 0, max: 100, step: 1, unit: 'km', start: expect.any(Number) },
+      },
+      { type: 'SLIDER', slider: { min: 0, max: 10, step: 1, start: expect.any(Number) } },
     ]);
+    // T49: the slider never starts on (or next to) the answer: 50 ± 10, then 4 ± 0.
+    const starts = prompts.filter((p) => p.type === 'SLIDER').map((p) => p.slider!.start!);
+    expect(Math.abs(starts[0]! - 50)).toBeGreaterThanOrEqual(20);
+    expect(Math.abs(starts[1]! - 4)).toBeGreaterThanOrEqual(1);
   });
 
   it('rejects an answer of the wrong kind (INVALID_PAYLOAD) and lets the player answer again', () => {

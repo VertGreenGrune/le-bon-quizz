@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatNumber, formatValue, snapToStep } from './numbers';
+import { formatNumber, formatValue, sliderInitialValue, snapToStep } from './numbers';
 
 describe('numbers', () => {
   it('formats in French without thousands separators', () => {
@@ -16,5 +16,17 @@ describe('numbers', () => {
     expect(snapToStep(-3, 0, 10, 1)).toBe(0);
     expect(snapToStep(12, 0, 10, 3)).toBe(9);
     expect(snapToStep(10, 0, 10, 4)).toBe(8); // 10 isn't a position
+  });
+});
+
+describe('sliderInitialValue (T49)', () => {
+  it('starts at the server start, clamped into a 50/50 range', () => {
+    expect(sliderInitialValue({ min: 1700, max: 1900, step: 1, start: 1712 })).toBe(1712);
+    expect(sliderInitialValue({ min: 1780, max: 1800, step: 1, start: 1712 })).toBe(1780);
+    expect(sliderInitialValue({ min: 0, max: 10, step: 0.5, start: 7.3 })).toBe(7.5);
+  });
+
+  it('falls back to the middle without a start', () => {
+    expect(sliderInitialValue({ min: 0, max: 10, step: 1 })).toBe(5);
   });
 });
