@@ -96,6 +96,9 @@ export function RemotePage() {
           <p className="text-xs font-semibold tracking-wide uppercase opacity-70">
             📱 Télécommande · PIN {pin}
           </p>
+          {host.quizTitle && (
+            <p className="truncate text-sm font-semibold opacity-80">{host.quizTitle}</p>
+          )}
           <p className="text-lg font-black" data-testid="remote-phase">
             {host.phase ? phaseLabel(host) : 'Connexion…'}
           </p>

@@ -412,6 +412,8 @@ export interface GameStatePayload {
   /** -1 in LOBBY. */
   questionIndex: number;
   totalQuestions: number;
+  /** Title of the quiz being played (T47: lobby, phone lobby, remote header). */
+  quizTitle?: string;
   /**
    * Time left in the current timed phase (QUESTION_INTRO / ANSWERING), in ms. Avoids clock skew.
    * While paused: the frozen value.

@@ -86,6 +86,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
       mode: 'solo',
       questionIndex: 0,
       totalQuestions: CLASSIC_QUIZ.questions.length,
+      quizTitle: CLASSIC_QUIZ.title,
       remainingMs: 15_000, // the 2 s grace is given back
       paused: {
         waitingFor: [{ id: bob!.id, nickname: 'Bob', avatar: bob!.avatar }],

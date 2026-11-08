@@ -32,6 +32,8 @@ export interface PlayerState {
   mode: GameMode;
   /** TV theme (T40, `game:state.theme`): the waiting screens follow it. */
   theme: QuizTheme;
+  /** Title of the quiz (T47, `game:state.quizTitle`), '' until known. */
+  quizTitle: string;
   questionIndex: number;
   totalQuestions: number;
   prompt: QuestionPromptPayload | null;
@@ -119,6 +121,7 @@ export const initialPlayerState: PlayerState = {
   phase: null,
   mode: 'solo',
   theme: 'classic',
+  quizTitle: '',
   questionIndex: -1,
   totalQuestions: 0,
   prompt: null,
@@ -189,6 +192,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         phase,
         mode,
         theme: action.payload.theme ?? 'classic',
+        quizTitle: action.payload.quizTitle ?? state.quizTitle,
         jokerGame: !!action.payload.jokers,
         questionIndex,
         totalQuestions,

@@ -39,6 +39,7 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
   await expect(host).toHaveURL(/\/host\/\d{6}$/);
   const pin = new URL(host.url()).pathname.split('/').pop()!;
   await expect(host.getByText(pin, { exact: true })).toBeVisible();
+  await expect(host.getByTestId('lobby-quiz-title')).toHaveText(DEMO_QUIZ.title);
   await expect(host.getByText('En attente des joueurs…')).toBeVisible();
 
   // ---- Players join from their phones ----
@@ -59,6 +60,7 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     await phone.getByRole('button', { name: 'Entrer' }).click();
     await expect(phone).toHaveURL(/\/play$/);
     await expect(phone.getByText('Tu es dans la partie !')).toBeVisible();
+    await expect(phone.getByTestId('phone-quiz-title')).toHaveText(`Quiz : ${DEMO_QUIZ.title}`);
     // The host lobby shows the player with the chosen avatar.
     const inLobby = host.getByRole('button', { name: p.nickname });
     await expect(inLobby).toBeVisible();

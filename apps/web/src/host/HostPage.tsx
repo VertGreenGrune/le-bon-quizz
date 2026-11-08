@@ -162,6 +162,7 @@ export function HostPage() {
       screen = (
         <LobbyScreen
           pin={pin}
+          quizTitle={state.quizTitle}
           players={state.players}
           onKick={game.kick}
           hearts={survival?.hearts}
@@ -259,6 +260,11 @@ export function HostPage() {
             Le Bon Quizz
           </Link>
           {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
+          {phase !== 'LOBBY' && state.quizTitle && (
+            <span className="max-w-md truncate opacity-60" title={state.quizTitle}>
+              {state.quizTitle}
+            </span>
+          )}
           {survival && <SurvivalBadge survival={survival} />}
           {state.jokers && (
             <span className="rounded bg-white/15 px-2" title="Partie avec jokers">

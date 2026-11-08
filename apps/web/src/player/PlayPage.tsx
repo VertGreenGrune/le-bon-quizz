@@ -116,6 +116,14 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           title="Tu es dans la partie !"
           subtitle="Ton pseudo apparaît sur l'écran. On attend les autres…"
         >
+          {s.quizTitle && (
+            <p
+              className="rounded-2xl bg-black/25 px-4 py-2 text-lg font-bold"
+              data-testid="phone-quiz-title"
+            >
+              Quiz : {s.quizTitle}
+            </p>
+          )}
           {s.survival && (
             <p className="rounded-2xl bg-black/25 px-4 py-2 font-bold">
               💀 Survie : {heartsText(s.survival.hearts, s.survival.hearts)} — une erreur coûte un

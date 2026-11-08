@@ -67,6 +67,7 @@ describe('Game state machine', () => {
       mode: 'solo',
       questionIndex: -1,
       totalQuestions: DEMO_QUIZ.questions.length,
+      quizTitle: DEMO_QUIZ.title,
     });
   });
 

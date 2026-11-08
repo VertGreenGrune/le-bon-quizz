@@ -1094,6 +1094,7 @@ export class Game {
       mode: this.mode,
       questionIndex: this.questionIndex,
       totalQuestions: this.totalQuestions,
+      ...(this.quiz.title && { quizTitle: this.quiz.title }),
       ...(this.withJokers && { jokers: true as const }),
       ...(this.theme !== 'classic' && { theme: this.theme }),
     };

@@ -39,12 +39,15 @@ import { AcceptButton, AcceptedTag } from './acceptControls';
 
 export function LobbyScreen({
   pin,
+  quizTitle,
   players,
   onKick,
   teamLobby,
   hearts,
 }: {
   pin: string;
+  /** Quiz being played (T47), shown above the PIN. */
+  quizTitle?: string;
   players: LobbyMember[];
   onKick: (playerId: string) => void;
   /** Team mode: team columns, shown instead of the player list. */
@@ -61,6 +64,16 @@ export function LobbyScreen({
   return (
     <div className="flex flex-1 flex-col items-center gap-8 p-8">
       <ThemeLobbyTitle theme={theme} />
+      {quizTitle && (
+        <motion.h1
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          data-testid="lobby-quiz-title"
+          className="line-clamp-2 max-w-5xl text-center font-display text-5xl leading-tight font-black text-balance drop-shadow"
+        >
+          {quizTitle}
+        </motion.h1>
+      )}
       <motion.div
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

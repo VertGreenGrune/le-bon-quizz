@@ -27,6 +27,8 @@ export interface HostGameState {
   mode: GameMode;
   /** TV theme (T40, `game:state.theme`). */
   theme: QuizTheme;
+  /** Title of the quiz (T47, `game:state.quizTitle`), '' until known. */
+  quizTitle: string;
   /** The game is played with jokers. */
   jokers: boolean;
   questionIndex: number;
@@ -91,6 +93,7 @@ export const initialHostState: HostGameState = {
   phase: null,
   mode: 'solo',
   theme: 'classic',
+  quizTitle: '',
   jokers: false,
   questionIndex: -1,
   totalQuestions: 0,
@@ -134,6 +137,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         phase,
         mode,
         theme: action.payload.theme ?? 'classic',
+        quizTitle: action.payload.quizTitle ?? state.quizTitle,
         jokers: !!action.payload.jokers,
         questionIndex,
         totalQuestions,
