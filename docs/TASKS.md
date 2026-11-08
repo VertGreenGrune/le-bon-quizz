@@ -2621,6 +2621,21 @@ leaderboard has his points.
   e2e `e2e/fire-tv.spec.ts` (960 × 540 TV, wrong then right code, TV = host screen, PC = remote
   starts the game with a phone). No migration. Not tried on a real Fire TV (Silk).
 
+### T48 — Chain quizzes in the same room (« 🔁 Enchaîner un quiz »)
+- **Status:** in-progress (main agent, on `main`)
+- **Depends on:** T47. Ports: server 3048 / web 5248, test DB `lbq_test_t48`.
+- **User requirement (2026-11-08):** when a quiz ends, the host must not have to pair the TV again
+  nor give a new PIN: the games are chained.
+- **Design (decided):** at the PODIUM (or once ENDED) the TV and the remote offer « 🔁 Enchaîner un
+  quiz »: a list of the host's quizzes (own + shared with them, + the demo), then the usual options
+  dialog (Solo / Équipes / Survie, Jokers, theme). `host:chain` replaces the game by a **new game
+  with the same PIN**: same host token, remote token, TV and remote sockets, same players (ids,
+  session tokens, nicknames, avatars, team when it still exists), scores at 0, back to the LOBBY.
+  The finished game is saved as usual (one report per quiz). `game:state.round` (1, 2, …) tells
+  every client a new game started, so they reset their state. The quiz list comes through the
+  socket (`host:quizzes`), loaded for the user who created the room, so a TV that isn't logged in
+  (Fire TV) can chain too.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
