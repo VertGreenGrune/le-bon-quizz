@@ -25,6 +25,7 @@ import { EliminationMoment, SurvivalBadge } from './survivalScreens';
 import { useQuestionClip } from './clipPlayer';
 import { CastButton, isTvScreen } from './castToTv';
 import { useWakeLock } from '../player/useWakeLock';
+import { useTvScale } from './tvScale';
 import { RemoteButton, RemoteToast, useRemotePairing, useTvControls } from './remoteLink';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -115,6 +116,7 @@ export function HostPage() {
   const pairing = useRemotePairing(pin, hostToken);
   const [onTv] = useState(isTvScreen);
   useWakeLock(onTv);
+  useTvScale();
   useTvControls(clip.replay);
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
