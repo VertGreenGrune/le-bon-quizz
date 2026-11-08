@@ -35,7 +35,7 @@ export default defineConfig({
       // Known joker hands for `e2e/jokers.spec.ts` (instead of random ones).
       env: {
         PORT: String(SERVER_PORT),
-        E2E_JOKER_HAND: 'freeze,copy,fifty,double',
+        E2E_JOKER_HAND: 'freeze,copy,fifty,double,thief',
         ...(DATABASE_URL && { DATABASE_URL }),
       },
       reuseExistingServer: !process.env.CI,

@@ -11,6 +11,7 @@ import { parseGameOptions } from '../lib/gameOptions';
 import { getTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { JokerAnnouncements } from './jokerScreens';
+import { ThiefWheels } from './thiefWheel';
 import {
   currentDrawing,
   currentQuestion,
@@ -323,6 +324,9 @@ export function HostPage() {
         <ComebackToasts state={state} now={now} />
         <RemoteToast text={pairing.toast} />
         {(state.jokers || state.mode === 'survival') && <JokerAnnouncements />}
+        {phase === 'REVEAL' && state.reveal?.wheels && (
+          <ThiefWheels key={state.questionIndex} wheels={state.reveal.wheels} instant={instant} />
+        )}
         {phase === 'LEADERBOARD' && survival && !instant && (
           <EliminationMoment survival={survival} questionIndex={state.questionIndex} />
         )}

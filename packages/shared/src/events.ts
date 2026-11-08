@@ -745,8 +745,23 @@ export interface VoteCount {
   count: number;
 }
 
+/**
+ * Voleur (T51): one wheel spun at the reveal. `candidates` = every player of the game (the
+ * thief included), `drawn` = where it landed; `points` moved from `drawn` to `thief` (lost when
+ * `drawn` is the thief, 0 when `blocked` by a Bouclier).
+ */
+export interface ThiefWheel {
+  thief: LobbyMember;
+  candidates: LobbyMember[];
+  drawn: LobbyMember;
+  points: number;
+  blocked?: true;
+}
+
 export interface QuestionRevealPayload extends RevealDetails {
   type: QuestionType;
+  /** Voleur wheels of this question, in the order played (T51); absent when nobody played it. */
+  wheels?: ThiefWheel[];
   /** Correct choice indexes (empty for POLL, TYPE_ANSWER and SLIDER). */
   correctIndexes: number[];
   /**
@@ -904,6 +919,12 @@ export type JokerResult =
   | { kind: 'shieldSaved' } // wrong answer, the streak was kept
   | { kind: 'stole'; points: number; player: LobbyMember }
   | { kind: 'stolen'; points: number; player: LobbyMember }
+  // Voleur wheel (T51): the thief drawn by their own wheel lost `points`.
+  | { kind: 'selfRobbed'; points: number }
+  // Voleur wheel (T51): the drawn `player` had a Bouclier (nothing stolen).
+  | { kind: 'stealBlocked'; player: LobbyMember }
+  // Voleur wheel (T51): your Bouclier protected you from `player`'s wheel.
+  | { kind: 'wheelShielded'; player: LobbyMember }
   | { kind: 'copied'; player: LobbyMember }
   | { kind: 'copyMissed'; player: LobbyMember }
   | { kind: 'hourglass'; points: number } // extra points thanks to the Sablier

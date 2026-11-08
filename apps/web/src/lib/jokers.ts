@@ -41,8 +41,8 @@ export function announcement(p: JokerUsedPayload): { title: string; detail: stri
       return { title: `🛡️ ${by} sort son Bouclier !`, detail: 'Attaques bloquées, série protégée' };
     case 'thief':
       return {
-        title: `🦹 ${by} veut voler ${target} !`,
-        detail: '10 % de son score si bonne réponse',
+        title: `🦹 ${by} lance la roue du Voleur !`,
+        detail: 'Réponse à la révélation : qui va perdre 10 % ?',
       };
     case 'hourglass':
       return { title: `⏳ ${by} retourne le Sablier !`, detail: 'Rapidité comptée ×2' };
@@ -61,7 +61,13 @@ export function resultLine(r: JokerResult): string {
     case 'stole':
       return `🦹 Tu as volé ${r.points} pts à ${r.player.nickname} !`;
     case 'stolen':
-      return `🦹 ${r.player.nickname} t'a volé ${r.points} pts`;
+      return `🦹 La roue de ${r.player.nickname} t'a désigné : − ${r.points} pts`;
+    case 'selfRobbed':
+      return `🦹 Pas de chance, ta roue est tombée sur toi : − ${r.points} pts`;
+    case 'stealBlocked':
+      return `🦹 Ta roue a désigné ${r.player.nickname}… protégé par son Bouclier !`;
+    case 'wheelShielded':
+      return `🛡️ La roue de ${r.player.nickname} t'a désigné, ton Bouclier t'a protégé`;
     case 'copied':
       return `🦜 Réponse copiée sur ${r.player.nickname}`;
     case 'copyMissed':
@@ -107,7 +113,7 @@ export function noJokersHere(state: PlayerJokersPayload): boolean {
 
 /**
  * Players this joker may target (same rules as the server): not yourself; team mode → attacks
- * and Voleur on the other teams, Copieur in your own team; one attack per target per question;
+ * on the other teams, Copieur in your own team (Voleur: no target, T51); one attack per target per question;
  * Gel / Brouilleur only on players who haven't answered yet (T42).
  */
 export function eligibleTargets(

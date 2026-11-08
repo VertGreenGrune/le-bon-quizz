@@ -532,7 +532,22 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     ).json<GameReport>();
     expect(report.questions.map((r) => [r.type, r.correctCount, r.answerCount, r.details])).toEqual(
       [
-        ['ORDER', 1, 1, { order: { items: ['Un', 'Deux', 'Trois'], placed: [1, 1, 1] } }],
+        [
+          'ORDER',
+          1,
+          1,
+          {
+            order: {
+              items: ['Un', 'Deux', 'Trois'],
+              placed: [1, 1, 1],
+              // T50: each player's list is saved for the report.
+              answers: [
+                expect.objectContaining({ order: [0, 1, 2], placed: 3 }),
+                expect.objectContaining({ nickname: 'Bob', order: [], placed: 0 }), // no answer
+              ],
+            },
+          },
+        ],
         [
           'PIN',
           1,

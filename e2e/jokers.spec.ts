@@ -107,7 +107,7 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
   await alice!.getByRole('button', { name: 'Joker Copieur' }).click();
   await expect(alice!.getByTestId('joker-blocked')).toHaveText('🚫 Seulement avant de répondre');
   await shot(alice!, 'phone-after-answer-blocked');
-  await alice!.getByRole('button', { name: 'Annuler' }).click();
+  await alice!.getByRole('button', { name: 'Annuler', exact: true }).click();
   await playJoker(alice!, 'Double ou rien');
   await expect(host.getByTestId('joker-announcement')).toContainText('Alice joue Double ou rien');
   await expect(alice!.getByTestId('joker-bar')).toContainText('Joker joué : Double ou rien');
@@ -116,6 +116,20 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
   await expect(alice!.getByRole('heading', { name: 'Correct !' })).toBeVisible();
   await expect(alice!.getByTestId('joker-results')).toContainText('Double ou rien');
 
+  // ---- Question 3: Bob plays the Voleur, its wheel spins on the TV at the reveal (T51) ----
+  await host.getByRole('button', { name: 'Suivant' }).click();
+  await host.getByRole('button', { name: 'Question suivante' }).click();
+  await expect(host.getByTestId('intro-jokers')).toBeVisible();
+  await playJoker(bob!, 'Voleur'); // no target: the wheel picks among everyone
+  await expect(host.getByTestId('joker-announcement')).toContainText('Bob lance la roue du Voleur');
+  const q3 = DEMO_QUIZ.questions[2]!;
+  for (const phone of [alice!, bob!, chloe!]) await answerOnPhone(phone, q3, 'right');
+  await expect(host.getByTestId('thief-wheel')).toBeVisible({ timeout: 10_000 });
+  await expect(host.getByTestId('thief-wheel')).toContainText('La roue de Bob tourne');
+  await expect(host.getByTestId('thief-wheel-result')).toContainText('🦹', { timeout: 10_000 });
+  await shot(host, 'host-thief-wheel');
+  await expect(host.getByTestId('thief-wheel-summary')).toContainText('🦹', { timeout: 10_000 });
+  await expect(bob!.getByTestId('joker-results')).toContainText('🦹');
   host.once('dialog', (dialog) => void dialog.accept()); // « Terminer la partie maintenant ? »
   await host.getByRole('button', { name: 'Terminer', exact: true }).click();
   for (const phone of [alice!, bob!, chloe!]) {

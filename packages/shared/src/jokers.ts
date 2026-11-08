@@ -98,9 +98,10 @@ export const JOKERS: Record<JokerType, JokerInfo> = {
     id: 'thief',
     name: 'Voleur',
     icon: '🦹',
-    description: 'Si tu réponds juste, tu voles 10 % du score du joueur choisi.',
-    target: true,
-    attack: true,
+    description:
+      'À la réponse, une roue désigne un joueur au hasard : tu lui voles 10 % de ses points. Si elle tombe sur toi, c’est toi qui perds 10 % !',
+    target: false,
+    attack: false,
     afterAnswer: true,
   },
   hourglass: {
@@ -123,7 +124,7 @@ export const JOKER_STREAK_STEP = 3;
 export const FREEZE_MS = 5000;
 /** Double ou rien: points lost on a wrong / missing answer (the score never goes below 0). */
 export const DOUBLE_PENALTY = 500;
-/** Voleur: share of the target's score stolen on a right answer. */
+/** Voleur (T51): share of the drawn player's score moved by the wheel. */
 export const THIEF_SHARE = 0.1;
 /** Copieur: the copied answer counts this much slower than the original. */
 export const COPY_DELAY_MS = 1000;

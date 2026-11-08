@@ -355,20 +355,28 @@ describe('host accepts a refused answer (T44)', () => {
     });
 
     it('Voleur: a thief made right steals; the victim loses the stolen points', () => {
-      create([mcq('Q1'), mcq('Q2')], { jokers: true });
+      // Random 0.99: the wheel lands on the last player (Bob), again after the accept.
+      create([mcq('Q1'), mcq('Q2')], { jokers: true, random: () => 0.99 });
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       toAnswering();
       answer(bob!, RIGHT);
       nextQuestion();
       hand(alice!, ['thief']);
-      game.useJoker(alice!.id, game.questionIndex, 'thief', bob!.id);
+      game.useJoker(alice!.id, game.questionIndex, 'thief');
       answer(alice!, REAL);
       answer(bob!, RIGHT);
       toReveal();
-      expect(result(alice!).pointsEarned).toBe(0);
+      // T51: the wheel steals even on a wrong answer — Bob: 1000 + 1100 = 2100, 10 % = 210.
+      expect(result(alice!).pointsEarned).toBe(210);
+      expect(reveal().wheels).toEqual([
+        expect.objectContaining({
+          drawn: expect.objectContaining({ nickname: 'Bob' }),
+          points: 210,
+        }),
+      ]);
       accept({ choiceIndex: 1 });
-      // Bob: 1000 + 1100 = 2100, 10 % = 210 stolen.
+      // Same draw after the accept: Bob again, 210 stolen.
       expect(result(alice!)).toMatchObject({ pointsEarned: 1210, totalScore: 1210 });
       expect(result(bob!)).toMatchObject({ pointsEarned: 890, totalScore: 1890 });
       game.next();

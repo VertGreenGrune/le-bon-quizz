@@ -125,7 +125,7 @@ describe('leaderboard gains (T41)', () => {
   });
 
   it('counts the jokers: Double ou rien lost and a Voleur make it negative', () => {
-    create({ jokers: true });
+    create({ jokers: true, random: () => 0.99 }); // the Voleur wheel lands on Bob (T51)
     const [alice, bob] = joinAll('Alice', 'Bob');
     const hand = (p: Player, jokers: JokerType[]) => game.jokers!.setHand(p.id, jokers);
     game.start();
@@ -138,7 +138,7 @@ describe('leaderboard gains (T41)', () => {
     game.next();
     hand(alice!, ['thief']);
     hand(bob!, ['double']);
-    game.useJoker(alice!.id, game.questionIndex, 'thief', bob!.id);
+    game.useJoker(alice!.id, game.questionIndex, 'thief');
     game.useJoker(bob!.id, game.questionIndex, 'double');
     toAnswering();
     answer(alice!, RIGHT);

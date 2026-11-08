@@ -33,9 +33,9 @@ describe('joker texts', () => {
       detail: 'Bloqué 5 s sur cette question',
     });
     expect(
-      announcement({ questionIndex: 0, joker: 'thief', by: red, target: batou, blocked: true })
+      announcement({ questionIndex: 0, joker: 'freeze', by: red, target: batou, blocked: true })
         .title,
-    ).toBe('🛡️ Batou bloque le Voleur de Red !');
+    ).toBe('🛡️ Batou bloque le Gel de Red !');
     expect(announcement({ questionIndex: 0, joker: 'copy', by: red }).title).toBe(
       "🦜 Red copie quelqu'un…",
     );
@@ -70,7 +70,7 @@ describe('joker rules on the phone', () => {
   it('teams: attacks on the other teams, Copieur in your own team', () => {
     expect(eligibleTargets(state(), 'freeze', 0).map((p) => p.id)).toEqual(['b', 'c']);
     expect(eligibleTargets(state(), 'copy', 1).map((p) => p.id)).toEqual(['b', 'c']);
-    expect(eligibleTargets(state(), 'thief', 1).map((p) => p.id)).toEqual(['r']);
+    expect(eligibleTargets(state(), 'thief', 1)).toEqual([]); // T51: the wheel, no target
   });
 
   it('after answering (T42): 50/50 and Copieur greyed with the reason, the others playable', () => {
@@ -89,6 +89,6 @@ describe('joker rules on the phone', () => {
     const j = state({ answered: ['b'] });
     expect(eligibleTargets(j, 'freeze', 0).map((p) => p.id)).toEqual(['c']);
     expect(eligibleTargets(j, 'scramble', 0).map((p) => p.id)).toEqual(['c']);
-    expect(eligibleTargets(j, 'thief', 0).map((p) => p.id)).toEqual(['b', 'c']);
+    expect(eligibleTargets(j, 'thief', 0)).toEqual([]);
   });
 });

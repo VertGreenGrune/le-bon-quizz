@@ -1329,6 +1329,8 @@ export class Game {
       ...(question.type === 'TYPE_ANSWER' &&
         !buzzer && { typedAnswers: groupTypedAnswers(this.answers(), accepted) }),
     };
+    const wheels = this.jokers?.revealWheels();
+    if (wheels) this.reveal.wheels = wheels;
     this.transport.toHost('question:reveal', this.reveal);
     for (const p of this.players.values()) {
       if (p.socketId) this.transport.toSocket(p.socketId, 'player:result', this.resultPayload(p));

@@ -21,6 +21,7 @@ import {
   type PlayerJokersPayload,
   type Question,
   type ServerToClientEvents,
+  type ThiefWheel,
 } from '@lbq/shared';
 import { GameError } from './errors.js';
 import type { GameTransport, Player } from './Game.js';
@@ -80,7 +81,7 @@ interface JokerHand {
 /** `Jokers.snapshot()`: per player, the fields a reveal's settlement changes. */
 export type JokerSnapshot = Map<
   string,
-  { hand: JokerType[]; results: JokerResult[]; hourglassExtra: number }
+  { hand: JokerType[]; results: JokerResult[]; hourglassExtra: number; shield: boolean }
 >;
 
 const member = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
@@ -99,6 +100,10 @@ export class Jokers {
   private readonly hands = new Map<string, JokerHand>();
   /** Players attacked on the current question (one attack per target per question). */
   private readonly attacked = new Set<string>();
+  /** Voleur (T51): players who played it on the current question, in the order played. */
+  private thieves: string[] = [];
+  /** Voleur wheels of the current question's settlement (T51). */
+  private wheels: ThiefWheel[] = [];
 
   constructor(
     private readonly ctx: JokerContext,
@@ -136,6 +141,8 @@ export class Jokers {
   /** QUESTION_INTRO: per-question state reset, pending haunts land if the type allows it. */
   startQuestion(): void {
     this.attacked.clear();
+    this.thieves = [];
+    this.wheels = [];
     const q = this.ctx.question();
     const availability = q ? jokerAvailability(q.type, q.buzzer) : null;
     for (const h of this.hands.values()) {
@@ -267,18 +274,8 @@ export class Jokers {
       if (h.played.joker === 'copy' && target) {
         h.results.push({ kind: p.answer ? 'copied' : 'copyMissed', player: member(target) });
       }
-      if (h.played.joker === 'thief' && target && p.answer?.correct) {
-        const points = Math.round(target.totalScore * THIEF_SHARE);
-        if (points > 0) {
-          target.totalScore -= points;
-          p.totalScore += points;
-          if (target.lastResult) target.lastResult.pointsEarned -= points;
-          if (p.lastResult) p.lastResult.pointsEarned += points;
-          h.results.push({ kind: 'stole', points, player: member(target) });
-          this.hands.get(target.id)?.results.push({ kind: 'stolen', points, player: member(p) });
-        }
-      }
     }
+    this.spinWheels();
     if (polled || !this.withHands) return;
     for (const [id, h] of this.hands) {
       const p = players.get(id);
@@ -289,6 +286,57 @@ export class Jokers {
       h.results.push({ kind: 'earned', joker });
     }
     this.sendStates();
+  }
+
+  /**
+   * Voleur (T51): one wheel per thief of this question, in the order they were played, among
+   * every player of the game (the thief included). Another player loses
+   * `THIEF_SHARE` of their total to the thief; the thief drawn loses it; a Bouclier of the drawn
+   * player blocks it. Draws come from the settlement's random source (a T44 re-settlement draws
+   * the same players).
+   */
+  private spinWheels(): void {
+    this.wheels = [];
+    const players = this.ctx.players();
+    const candidates = [...players.values()];
+    for (const thiefId of this.thieves) {
+      const thief = players.get(thiefId);
+      const h = this.hands.get(thiefId);
+      if (!thief || !h || candidates.length === 0) continue;
+      const drawn = candidates[Math.floor(this.random() * candidates.length)]!;
+      const dh = this.hands.get(drawn.id);
+      const wheel: ThiefWheel = {
+        thief: member(thief),
+        candidates: candidates.map(member),
+        drawn: member(drawn),
+        points: 0,
+      };
+      if (dh?.shield) {
+        dh.shield = false;
+        wheel.blocked = true;
+        if (drawn !== thief) h.results.push({ kind: 'stealBlocked', player: member(drawn) });
+        dh.results.push({ kind: 'wheelShielded', player: member(thief) });
+      } else {
+        const points = Math.round(Math.max(0, drawn.totalScore) * THIEF_SHARE);
+        wheel.points = points;
+        drawn.totalScore -= points;
+        if (drawn.lastResult) drawn.lastResult.pointsEarned -= points;
+        if (drawn === thief) {
+          h.results.push({ kind: 'selfRobbed', points });
+        } else {
+          thief.totalScore += points;
+          if (thief.lastResult) thief.lastResult.pointsEarned += points;
+          h.results.push({ kind: 'stole', points, player: member(drawn) });
+          dh?.results.push({ kind: 'stolen', points, player: member(thief) });
+        }
+      }
+      this.wheels.push(wheel);
+    }
+  }
+
+  /** `question:reveal.wheels` (T51): the Voleur wheels of this question, absent when none. */
+  revealWheels(): ThiefWheel[] | undefined {
+    return this.wheels.length > 0 ? this.wheels.map((w) => ({ ...w })) : undefined;
   }
 
   /** `player:result.jokers` (absent when nothing happened). */
@@ -319,7 +367,12 @@ export class Jokers {
     return new Map(
       [...this.hands].map(([id, h]) => [
         id,
-        { hand: [...h.hand], results: [...h.results], hourglassExtra: h.hourglassExtra },
+        {
+          hand: [...h.hand],
+          results: [...h.results],
+          hourglassExtra: h.hourglassExtra,
+          shield: h.shield,
+        },
       ]),
     );
   }
@@ -331,6 +384,7 @@ export class Jokers {
       h.hand = [...saved.hand];
       h.results = [...saved.results];
       h.hourglassExtra = saved.hourglassExtra;
+      h.shield = saved.shield;
     }
   }
 
@@ -391,6 +445,7 @@ export class Jokers {
     h.hand.splice(h.hand.indexOf(joker), 1);
     h.used.push(joker);
     h.played = { joker, ...(target && { targetId: target.id }) };
+    if (joker === 'thief') this.thieves.push(player.id);
     if (fifty) Object.assign(h.effects, fifty);
 
     let blocked = false;

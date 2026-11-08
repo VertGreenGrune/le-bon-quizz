@@ -10,6 +10,7 @@ import {
   type JokerUsedPayload,
   type PlayerJokersPayload,
   type PlayerResultPayload,
+  type QuestionRevealPayload,
   type Question,
   type Quiz,
   type ServerToClientEvents,
@@ -99,6 +100,7 @@ describe('Jokers', () => {
   const state = (p: Player) => rec.last('joker:state', p.socketId!) as PlayerJokersPayload;
   const result = (p: Player) => rec.last('player:result', p.socketId!) as PlayerResultPayload;
   const used = () => rec.last('joker:used', 'all') as JokerUsedPayload;
+  const reveal = () => rec.last('question:reveal', 'host') as QuestionRevealPayload;
   const play = (p: Player, joker: JokerType, target?: Player) =>
     game.useJoker(p.id, game.questionIndex, joker, target?.id);
   const answer = (p: Player, input: { choiceIndex: number } | object) =>
@@ -429,11 +431,11 @@ describe('Jokers', () => {
       const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
       game.start();
       hand(alice!, ['freeze']);
-      hand(chloe!, ['thief']);
+      hand(chloe!, ['scramble']);
       play(alice!, 'freeze', bob);
       expect(state(chloe!).attacked).toEqual([bob!.id]);
-      expectGameError(() => play(chloe!, 'thief', bob), 'JOKER_REFUSED');
-      play(chloe!, 'thief', alice);
+      expectGameError(() => play(chloe!, 'scramble', bob), 'JOKER_REFUSED');
+      play(chloe!, 'scramble', alice);
     });
 
     it('Bouclier blocks the next attack (announced) and keeps the streak on a wrong answer', () => {
@@ -455,12 +457,15 @@ describe('Jokers', () => {
       expect(result(bob!).jokers).toEqual([{ kind: 'shieldSaved' }]);
     });
 
-    it('Voleur: a right answer steals 10 % of the target score', () => {
+    it('Voleur: the wheel lands on another player, 10 % of their score goes to the thief', () => {
+      create(quiz, { random: () => 0.99 }); // last player of the wheel: Bob
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       bob!.totalScore = 5000;
       hand(alice!, ['thief']);
-      play(alice!, 'thief', bob);
+      play(alice!, 'thief');
+      expect(used()).toMatchObject({ questionIndex: 0, joker: 'thief' });
+      expect(used().target).toBeUndefined(); // no target any more (T51)
       toAnswering();
       answer(alice!, RIGHT);
       answer(bob!, WRONG);
@@ -476,17 +481,91 @@ describe('Jokers', () => {
       ]);
     });
 
-    it('Voleur: nothing stolen on a wrong answer', () => {
+    it('Voleur: steals even on a wrong answer; the wheel lists every player', () => {
+      create(quiz, { random: () => 0.5 }); // middle of 3: Bob
+      const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
+      game.start();
+      bob!.totalScore = 5000;
+      hand(alice!, ['thief']);
+      play(alice!, 'thief');
+      toAnswering();
+      answer(alice!, WRONG);
+      answer(bob!, RIGHT);
+      answer(chloe!, RIGHT);
+      expect(bob!.totalScore).toBe(5400); // 6000 − 600
+      expect(alice!.totalScore).toBe(600);
+      const names = (ms: { nickname: string }[]) => ms.map((m) => m.nickname);
+      const [wheel] = reveal().wheels!;
+      expect(names(wheel!.candidates)).toEqual(['Alice', 'Bob', 'Chloé']);
+      expect(wheel).toMatchObject({ thief: { nickname: 'Alice' }, drawn: { nickname: 'Bob' } });
+      expect(wheel!.points).toBe(600);
+    });
+
+    it('Voleur: the wheel lands on the thief, who loses 10 % (never below 0)', () => {
+      create(quiz, { random: () => 0 }); // first player of the wheel: Alice
+      const [alice, bob] = joinAll('Alice', 'Bob');
+      game.start();
+      alice!.totalScore = 5000;
+      hand(alice!, ['thief']);
+      play(alice!, 'thief');
+      toAnswering();
+      answer(alice!, RIGHT); // 6000
+      answer(bob!, RIGHT);
+      expect(alice!.totalScore).toBe(5400);
+      expect(bob!.totalScore).toBe(1000);
+      expect(result(alice!)).toMatchObject({ pointsEarned: 400 });
+      expect(result(alice!).jokers).toEqual([{ kind: 'selfRobbed', points: 600 }]);
+      expect(reveal().wheels![0]).toMatchObject({ drawn: { nickname: 'Alice' }, points: 600 });
+    });
+
+    it('Voleur: a Bouclier of the drawn player blocks it', () => {
+      create(quiz, { random: () => 0.99 }); // Bob
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       bob!.totalScore = 5000;
       hand(alice!, ['thief']);
-      play(alice!, 'thief', bob);
+      hand(bob!, ['shield']);
+      play(bob!, 'shield');
+      play(alice!, 'thief');
       toAnswering();
-      answer(alice!, WRONG);
+      answer(alice!, RIGHT);
       answer(bob!, RIGHT);
       expect(bob!.totalScore).toBe(6000);
-      expect(result(alice!).jokers).toBeUndefined();
+      expect(alice!.totalScore).toBe(1000);
+      expect(reveal().wheels![0]).toMatchObject({
+        drawn: { nickname: 'Bob' },
+        points: 0,
+        blocked: true,
+      });
+      expect(result(alice!).jokers).toEqual([
+        { kind: 'stealBlocked', player: expect.objectContaining({ nickname: 'Bob' }) },
+      ]);
+      expect(result(bob!).jokers).toEqual([
+        { kind: 'wheelShielded', player: expect.objectContaining({ nickname: 'Alice' }) },
+      ]);
+      expect(state(bob!).shield).toBeUndefined(); // used up
+    });
+
+    it('Voleur: two thieves spin one wheel each, in the order played', () => {
+      const draws: number[] = [];
+      create(quiz, { random: () => draws.shift() ?? 0.3 });
+      const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
+      game.start(); // dealing the hands used the random source: the draws come after it
+      hand(alice!, ['thief']);
+      hand(chloe!, ['thief']);
+      draws.push(0.5, 0); // Chloé's wheel → Bob, then Alice's wheel → Alice
+      play(chloe!, 'thief');
+      play(alice!, 'thief');
+      bob!.totalScore = 5000;
+      toAnswering();
+      for (const p of [alice!, bob!, chloe!]) answer(p, RIGHT);
+      expect(reveal().wheels!.map((w) => [w.thief.nickname, w.drawn.nickname, w.points])).toEqual([
+        ['Chloé', 'Bob', 600],
+        ['Alice', 'Alice', 100],
+      ]);
+      expect(bob!.totalScore).toBe(5400);
+      expect(chloe!.totalScore).toBe(1600);
+      expect(alice!.totalScore).toBe(900);
     });
   });
 
@@ -527,6 +606,7 @@ describe('Jokers', () => {
 
     describe('after answering (T42)', () => {
       it('Double ou rien and Voleur played while waiting for the others', () => {
+        create(quiz, { random: () => 0.5 }); // the Voleur wheel lands on Bob (middle of 3)
         const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
         game.start();
         bob!.totalScore = 5000;
@@ -536,7 +616,7 @@ describe('Jokers', () => {
         answer(alice!, RIGHT);
         answer(chloe!, RIGHT);
         play(alice!, 'double');
-        play(chloe!, 'thief', bob);
+        play(chloe!, 'thief');
         expect(state(alice!).played).toEqual({ joker: 'double' });
         answer(bob!, WRONG);
         expect(result(alice!)).toMatchObject({ pointsEarned: 2000 });
@@ -698,9 +778,9 @@ describe('Jokers', () => {
       expectGameError(() => play(alice!, 'freeze', bob), 'JOKER_REFUSED');
       expectGameError(() => play(alice!, 'copy', chloe), 'JOKER_REFUSED');
       play(alice!, 'copy', bob);
+      // T51: the Voleur has no target (its wheel takes every player, teammates included).
       hand(chloe!, ['thief']);
-      expectGameError(() => play(chloe!, 'thief', chloe), 'JOKER_REFUSED');
-      play(chloe!, 'thief', alice);
+      play(chloe!, 'thief');
     });
 
     it('team averages use the points after the jokers', () => {
