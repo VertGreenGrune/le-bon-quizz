@@ -1,5 +1,6 @@
 import type { GameQuestionReport } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
+import { orderCells } from '../lib/orderItems';
 import { PinMarker, PinPicture, PinZoneMark } from '../components/PinPicture';
 
 /** Report cards of the ORDER / PIN / WHO_OF_US / WORD_CLOUD questions (see `QuestionCard`). */
@@ -26,6 +27,44 @@ export function MoreTypeDetails({ q, noAnswer }: { q: GameQuestionReport; noAnsw
             </li>
           ))}
         </ol>
+        {order.answers && order.answers.length > 0 && (
+          <table className="mt-3 text-sm" data-testid="report-order-answers">
+            <tbody>
+              {order.answers.map((a, i) => (
+                <tr key={i}>
+                  <td className="py-0.5 pr-2">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <Avatar id={a.avatar} size="xs" />
+                      {a.nickname}
+                    </span>
+                  </td>
+                  <td className="py-0.5 pr-2">
+                    {a.order.length === 0 ? (
+                      <span className="text-gray-500 italic">pas de réponse</span>
+                    ) : (
+                      <span className="flex gap-1">
+                        {orderCells(a.order).map((c, p) => (
+                          <span
+                            key={p}
+                            className={`flex size-6 items-center justify-center rounded text-xs font-black text-white ${
+                              c.right ? 'bg-answer-green' : 'bg-answer-red'
+                            }`}
+                          >
+                            {c.rank}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-0.5 pr-2 text-gray-500 tabular-nums">
+                    {a.placed} / {order.items.length}
+                  </td>
+                  <td className="py-0.5 text-right font-bold tabular-nums">{a.points} pts</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         {missing}
       </>
     );

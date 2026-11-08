@@ -214,11 +214,17 @@ export function extraRevealDetails(
 ): RevealDetails {
   switch (q.type) {
     case 'ORDER':
-      return orderReveal(
-        q,
-        setup.display,
-        answers.flatMap(({ answer }) => (answer.order ? [answer.order] : [])),
-      );
+      return orderReveal(q, setup.display, [
+        ...answers.map(({ player, answer }) => ({
+          player,
+          order: answer.order ?? null,
+          points: answer.points,
+        })),
+        // T50: the players without an answer, listed last.
+        ...[...players]
+          .filter((p) => !answers.some((a) => a.player === p))
+          .map((player) => ({ player, order: null, points: 0 })),
+      ]);
     case 'PIN':
       return {
         pin: {

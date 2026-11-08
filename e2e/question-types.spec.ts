@@ -141,6 +141,13 @@ test('ordre, point sur l’image, « Qui de nous ? » and word cloud, up to the 
   await expect(bob.getByRole('heading', { name: 'Raté !' })).toBeVisible();
   await expect(bob.getByText('0 / 3 bien placé')).toBeVisible();
   await expect(host.getByRole('listitem').filter({ hasText: 'Beetlejuice' })).toContainText('✓ 1');
+  // T50: each player's list beside the right order (Alice all green, Bob none in place).
+  const rows = host.getByTestId('order-answers').getByRole('listitem');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('Alice');
+  await expect(rows.nth(0)).toContainText('3 / 3');
+  await expect(rows.nth(1)).toContainText('Bob');
+  await expect(rows.nth(1)).toContainText('0 / 3');
   await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Question suivante' }).click();
 

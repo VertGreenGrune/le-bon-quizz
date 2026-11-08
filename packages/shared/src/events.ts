@@ -529,6 +529,18 @@ export interface LobbyTeamsPayload {
 }
 
 /** What a phone needs to draw a slider: never the correct value nor the margin. */
+/** ORDER reveal (T50): one player's list. */
+export interface OrderAnswer {
+  nickname: string;
+  avatar: AvatarId;
+  /** Item indexes in the right-order list, as the player placed them; [] = no answer. */
+  order: number[];
+  /** Items in the right place. */
+  placed: number;
+  /** Points of this question (before streak bonus and jokers). */
+  points: number;
+}
+
 export type SliderPrompt = Pick<SliderSettings, 'min' | 'max' | 'step' | 'unit'> & {
   /**
    * `question:prompt` only (T49): where the phone slider starts — random, on a step, always at
@@ -677,7 +689,12 @@ export interface RevealDetails {
    */
   closest?: { nickname: string; value: number; avatar?: AvatarId };
   /** ORDER: the items in the right order, and per position how many players got it right. */
-  order?: { items: string[]; placed: number[] };
+  order?: {
+    items: string[];
+    placed: number[];
+    /** T50: every player's list, best first, players without an answer last (absent before T50). */
+    answers?: OrderAnswer[];
+  };
   /** PIN: the picture, the correct zone and every player's pin (earliest first). */
   pin?: { imageUrl: string; zone: PinZone; pins: PinMark[] };
   /** WHO_OF_US: the players who got votes, most voted first (ties: by nickname). */

@@ -218,7 +218,29 @@ describe('Game with the ORDER / PIN / WHO_OF_US / WORD_CLOUD types', () => {
       type: 'ORDER',
       correctIndexes: [],
       distribution: [],
-      order: { items: ITEMS, placed: [1, 1, 2, 2] },
+      order: {
+        items: ITEMS,
+        placed: [1, 1, 2, 2],
+        // T50: every player's list in right-order indexes, best first, no answer last.
+        answers: [
+          {
+            nickname: 'Alice',
+            avatar: alice!.avatar,
+            order: [0, 1, 2, 3],
+            placed: 4,
+            points: 1000,
+          },
+          { nickname: 'Bob', avatar: bob!.avatar, order: [1, 0, 2, 3], placed: 2, points: 500 },
+          {
+            nickname: 'Chloé',
+            avatar: chloe!.avatar,
+            order: expect.any(Array),
+            placed: 0,
+            points: 0,
+          },
+          { nickname: 'Dan', avatar: dan!.avatar, order: [], placed: 0, points: 0 },
+        ],
+      },
     });
     expect(game.questionStats[0]).toMatchObject({
       type: 'ORDER',

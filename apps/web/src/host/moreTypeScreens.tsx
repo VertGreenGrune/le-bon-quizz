@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import type { QuestionRevealPayload, QuestionShowPayload, QuestionType } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import { PinMarker, PinPicture, PinZoneMark } from '../components/PinPicture';
-import { itemLetter } from '../lib/orderItems';
+import { itemLetter, orderCells } from '../lib/orderItems';
 import { cloudLayout } from '../lib/wordCloud';
 
 /** Shared screen of the ORDER / PIN / WHO_OF_US / WORD_CLOUD questions (see `QuestionScreen`). */
@@ -96,7 +96,10 @@ export function MoreTypeReveal({
   return null;
 }
 
-/** The right order, item by item, with how many players placed each one right. */
+/**
+ * The right order, item by item, with how many players placed each one right — then (T50) every
+ * player's list beside it: the items as their numbers in the right order, green when in place.
+ */
 function OrderReveal({
   order,
   instant,
@@ -104,29 +107,74 @@ function OrderReveal({
   order: NonNullable<QuestionRevealPayload['order']>;
   instant: boolean;
 }) {
+  const answers = order.answers ?? [];
+  const compact = answers.length > 0;
+  const rowsAt = instant ? 0 : 0.4 + order.items.length * 0.35;
   return (
-    <ol className="flex w-full max-w-4xl flex-col gap-3">
-      {order.items.map((item, i) => (
-        <motion.li
-          key={i}
-          initial={instant ? false : { x: -60, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: instant ? 0 : 0.2 + i * 0.35, type: 'spring', stiffness: 220 }}
-          className="flex items-center gap-5 rounded-xl bg-answer-green px-6 py-3 text-3xl font-bold shadow-lg"
+    <div className="flex w-full max-w-7xl items-start justify-center gap-8">
+      <ol className={`flex flex-col gap-3 ${compact ? 'w-[40%] shrink-0' : 'w-full max-w-4xl'}`}>
+        {order.items.map((item, i) => (
+          <motion.li
+            key={i}
+            initial={instant ? false : { x: -60, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: instant ? 0 : 0.2 + i * 0.35, type: 'spring', stiffness: 220 }}
+            className={`flex items-center gap-4 rounded-xl bg-answer-green font-bold shadow-lg ${
+              compact ? 'px-4 py-2 text-2xl' : 'gap-5 px-6 py-3 text-3xl'
+            }`}
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white font-black text-answer-green">
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1">{item}</span>
+            <span className="text-xl tabular-nums opacity-90" title="Joueurs qui l’ont bien placé">
+              ✓ {order.placed[i] ?? 0}
+            </span>
+          </motion.li>
+        ))}
+      </ol>
+      {compact && (
+        <ul
+          data-testid="order-answers"
+          className={`grid min-w-0 flex-1 gap-2 ${answers.length > 8 ? 'grid-cols-2' : 'grid-cols-1'}`}
         >
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white font-black text-answer-green">
-            {i + 1}
-          </span>
-          <span className="flex-1">{item}</span>
-          <span className="text-2xl tabular-nums opacity-90" title="Joueurs qui l’ont bien placé">
-            ✓ {order.placed[i] ?? 0}
-          </span>
-        </motion.li>
-      ))}
-    </ol>
+          {answers.map((a, i) => (
+            <motion.li
+              key={`${a.nickname}-${i}`}
+              initial={instant ? false : { y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: rowsAt + i * 0.15 }}
+              className="flex items-center gap-2 rounded-xl bg-panel px-3 py-1.5"
+            >
+              <Avatar id={a.avatar} size="xs" />
+              <span className="w-24 shrink-0 truncate text-lg font-bold">{a.nickname}</span>
+              {a.order.length === 0 ? (
+                <span className="flex-1 text-base italic opacity-70">pas de réponse</span>
+              ) : (
+                <span className="flex flex-1 gap-1">
+                  {orderCells(a.order).map((c, p) => (
+                    <span
+                      key={p}
+                      className={`flex size-8 items-center justify-center rounded-md text-lg font-black ${
+                        c.right ? 'bg-answer-green' : 'bg-answer-red'
+                      }`}
+                    >
+                      {c.rank}
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span className="text-base font-bold tabular-nums opacity-90">
+                {a.placed} / {order.items.length}
+              </span>
+              <span className="w-16 text-right text-base font-black tabular-nums">+{a.points}</span>
+            </motion.li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
-
 /** The picture with the correct zone and every player's pin (avatar). */
 function PinReveal({
   pin,

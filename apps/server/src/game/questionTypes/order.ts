@@ -1,4 +1,4 @@
-import type { OrderQuestion, RevealDetails } from '@lbq/shared';
+import type { LobbyMember, OrderAnswer, OrderQuestion, RevealDetails } from '@lbq/shared';
 
 /**
  * ORDER — Remettre dans l'ordre (PLAN.md §3). The items are shown shuffled (same order on the TV
@@ -49,17 +49,42 @@ export function shownItems(q: OrderQuestion, display: readonly number[]): string
   return display.map((i) => q.items[i]!);
 }
 
-/** The right order, and per position how many players put the right item there. */
+/** One player's list for the reveal (T50). */
+export interface OrderAnswerInput {
+  player: LobbyMember;
+  /** Shown indexes in the order the player chose; null = no answer. */
+  order: readonly number[] | null;
+  points: number;
+}
+
+/**
+ * The right order, per position how many players put the right item there, and (T50) every
+ * player's list in right-order indexes — best first, players without an answer last.
+ */
 export function orderReveal(
   q: OrderQuestion,
   display: readonly number[],
-  orders: readonly (readonly number[])[],
+  answers: readonly OrderAnswerInput[],
 ): RevealDetails {
   const placed = q.items.map(() => 0);
-  for (const order of orders) {
-    order.forEach((shown, position) => {
+  for (const { order } of answers) {
+    order?.forEach((shown, position) => {
       if (display[shown] === position) placed[position]!++;
     });
   }
-  return { order: { items: q.items, placed } };
+  const rows: OrderAnswer[] = answers.map(({ player, order, points }) => ({
+    nickname: player.nickname,
+    avatar: player.avatar,
+    order: order ? order.map((shown) => display[shown]!) : [],
+    placed: order ? placedCount(order, display) : 0,
+    points: order ? points : 0,
+  }));
+  // Stable sort: answered first, then most items placed, then most points (faster).
+  rows.sort(
+    (a, b) =>
+      Number(b.order.length > 0) - Number(a.order.length > 0) ||
+      b.placed - a.placed ||
+      b.points - a.points,
+  );
+  return { order: { items: q.items, placed, answers: rows } };
 }
