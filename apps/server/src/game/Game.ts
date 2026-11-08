@@ -243,6 +243,27 @@ export interface GameSettings {
    * default ALL_ANSWERED_GRACE_MS; 0 = at once, tests written before T43).
    */
   allAnsweredGraceMs?: number;
+  /** User who created the room (null: anonymous demo host): whose quizzes can be chained (T48). */
+  ownerId?: string | null;
+  /** « Enchaîner un quiz » (T48): what this game takes over from the finished one. */
+  carry?: GameCarry;
+}
+
+/**
+ * « 🔁 Enchaîner un quiz » (T48): what a new game in the same room keeps from the finished one —
+ * the TV, the remotes and the players (scores start over).
+ */
+export interface GameCarry {
+  round: number;
+  hostToken: string;
+  remoteToken: string | null;
+  hostSockets: string[];
+  remoteSockets: string[];
+  hostGoneSince: number | null;
+  players: Pick<
+    Player,
+    'id' | 'sessionToken' | 'nickname' | 'avatar' | 'socketId' | 'offlineSince' | 'teamId'
+  >[];
 }
 
 export interface GameHooks {
@@ -267,7 +288,11 @@ export interface GameHooks {
  * per question the average of its present members' points (PLAN.md §3).
  */
 export class Game {
-  readonly hostToken = randomUUID();
+  readonly hostToken: string;
+  /** User who created the room (null: anonymous demo host). */
+  readonly ownerId: string | null;
+  /** Number of the game in this room: 1, then + 1 each time the host chains a quiz (T48). */
+  readonly round: number;
   readonly players = new Map<string, Player>();
   phase: GamePhase = 'LOBBY';
   questionIndex = -1;
@@ -351,6 +376,10 @@ export class Game {
     settings: GameSettings = { mode: 'solo' },
   ) {
     this.mode = settings.mode;
+    const carry = settings.carry;
+    this.hostToken = carry?.hostToken ?? randomUUID();
+    this.ownerId = settings.ownerId ?? null;
+    this.round = carry ? carry.round + 1 : 1;
     this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
     this.allAnsweredGraceMs = settings.allAnsweredGraceMs ?? ALL_ANSWERED_GRACE_MS;
@@ -399,6 +428,70 @@ export class Game {
             settings.hearts ?? SURVIVAL_DEFAULT_HEARTS,
           )
         : null;
+    if (carry) this.takeOver(carry);
+  }
+
+  /** Takes over the room of the finished game (T48): host, remotes, players with scores at 0. */
+  private takeOver(carry: GameCarry): void {
+    this.remoteToken = carry.remoteToken;
+    for (const sid of carry.hostSockets) this.hostSockets.add(sid);
+    for (const sid of carry.remoteSockets) this.remoteSockets.add(sid);
+    this.hostGoneSince = carry.hostGoneSince;
+    for (const p of carry.players) {
+      this.players.set(p.id, {
+        ...p,
+        // Team mode: the team chosen before is kept when it still exists.
+        teamId: p.teamId !== null && this.teamIds.includes(p.teamId) ? p.teamId : null,
+        totalScore: 0,
+        correctCount: 0,
+        streak: 0,
+        answer: null,
+        lastResult: null,
+      });
+    }
+  }
+
+  /**
+   * « 🔁 Enchaîner un quiz » (T48), PODIUM / ENDED: ends the game (saved by `onEnded`) without
+   * telling the clients — the next game's state follows at once — and hands over what the next
+   * game keeps. Kicked players stay out.
+   */
+  handOver(): GameCarry {
+    if (this.phase !== 'PODIUM' && this.phase !== 'ENDED')
+      throw new GameError('GAME_ALREADY_STARTED', 'Termine d’abord ce quiz');
+    if (this.phase === 'PODIUM') {
+      this.setPhase('ENDED', null);
+      this.hooks.onEnded?.(this);
+    }
+    this.dispose();
+    return {
+      round: this.round,
+      hostToken: this.hostToken,
+      remoteToken: this.remoteToken,
+      hostSockets: [...this.hostSockets],
+      remoteSockets: [...this.remoteSockets],
+      hostGoneSince: this.hostGoneSince,
+      players: [...this.players.values()].map(
+        ({ id, sessionToken, nickname, avatar, socketId, offlineSince, teamId }) => ({
+          id,
+          sessionToken,
+          nickname,
+          avatar,
+          socketId,
+          offlineSince,
+          teamId,
+        }),
+      ),
+    };
+  }
+
+  /** New game of a chained room (T48): tells everyone (state first, so clients start over). */
+  announce(): void {
+    this.broadcastState();
+    this.sendLobbyPlayers();
+    this.sendTeams();
+    this.sendSurvival();
+    this.sendRemoteStatus();
   }
 
   get totalQuestions(): number {
@@ -1096,6 +1189,7 @@ export class Game {
       totalQuestions: this.totalQuestions,
       ...(this.withJokers && { jokers: true as const }),
       ...(this.theme !== 'classic' && { theme: this.theme }),
+      ...(this.round > 1 && { round: this.round }),
     };
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;

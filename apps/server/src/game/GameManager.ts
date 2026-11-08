@@ -34,6 +34,24 @@ export class GameManager {
     return game;
   }
 
+  /**
+   * « 🔁 Enchaîner un quiz » (T48): the room's game (PODIUM / ENDED) is saved and replaced by a new
+   * game with the same PIN, which keeps its TV, remotes and players, then tells everyone.
+   */
+  chain(
+    pin: string,
+    quiz: Quiz,
+    makeTransport: (pin: string) => GameTransport,
+    hooks?: GameHooks,
+    settings: GameSettings = { mode: 'solo' },
+  ): Game {
+    const carry = this.get(pin).handOver();
+    const game = new Game(pin, quiz, makeTransport(pin), hooks, { ...settings, carry });
+    this.games.set(pin, game);
+    game.announce();
+    return game;
+  }
+
   get(pin: string): Game {
     const game = this.games.get(pin);
     if (!game) throw new GameError('GAME_NOT_FOUND', 'Partie introuvable');

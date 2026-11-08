@@ -2622,7 +2622,7 @@ leaderboard has his points.
   starts the game with a phone). No migration. Not tried on a real Fire TV (Silk).
 
 ### T48 — Chain quizzes in the same room (« 🔁 Enchaîner un quiz »)
-- **Status:** in-progress (main agent, on `main`)
+- **Status:** done
 - **Depends on:** T47. Ports: server 3048 / web 5248, test DB `lbq_test_t48`.
 - **User requirement (2026-11-08):** when a quiz ends, the host must not have to pair the TV again
   nor give a new PIN: the games are chained.
@@ -2635,6 +2635,20 @@ leaderboard has his points.
   every client a new game started, so they reset their state. The quiz list comes through the
   socket (`host:quizzes`), loaded for the user who created the room, so a TV that isn't logged in
   (Fire TV) can chain too.
+- **Summary:** shared: `host:quizzes` (ack `{ quizzes: ChainQuiz[] }`), `host:chain`
+  (`HostChainPayload` = `host:create` options + host or remote token), `GameStatePayload.round?`.
+  Server: `Game` gains `ownerId`, `round`, `handOver()` (PODIUM → ENDED + `onEnded` save without
+  broadcast, `dispose`, returns a `GameCarry`) and `takeOver()` (constructor `settings.carry`),
+  `announce()`; `GameManager.chain`; `GamePersistence.listQuizzes` (own + shared + demo; demo only
+  without DB / anonymous); socket handlers (`asController`, so the remote can chain). Web:
+  `lib/chain.ts` (`chainActions`), `components/ChainQuizDialog.tsx` (quiz list → `StartGameDialog`)
+  behind « 🔁 Enchaîner un quiz » on the TV footer and the remote (PODIUM / ENDED); host / player /
+  remote reducers start from a fresh state on a new `round` (the phone keeps its identity, the
+  remote drops the old answer); the phone store keeps the session it cleared at ENDED and saves it
+  back when a new round arrives; phone end screen « Reste ici : si l’animateur enchaîne un autre
+  quiz… ». Tests: `Game.chain.test.ts` (5), `playerState.chain.test.ts` (3), e2e `e2e/chain.spec.ts`
+  (end early → chain the demo → same URL / PIN, players in the new lobby, phone reload, plays).
+  No migration. Not tried on a real Fire TV.
 
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
@@ -2974,3 +2988,6 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   falls back to files still in `UPLOAD_DIR`). Uploads and `quiz:import` write to the table
   (content-hash names); `media:to-db` (`dist/media-to-db.js`) copies an old upload dir into it.
   `ApiDeps.uploadDir` is optional; `@fastify/static` no longer serves `/uploads/`.
+- 2026-11-08, main agent (T48, additive): `host:quizzes`, `host:chain` (`HostChainPayload`,
+  `ChainQuiz`), `GameStatePayload.round?`; `GamePersistence.listQuizzes` (**required** — test
+  persistences implementing the interface must add it); `GameSettings.ownerId?` / `carry?`.

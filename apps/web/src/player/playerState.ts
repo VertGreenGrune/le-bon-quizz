@@ -27,6 +27,8 @@ import {
 /** Everything the phone knows about the game. Pure data, driven by server events. */
 export interface PlayerState {
   connected: boolean;
+  /** Quiz number in this room (T48 « Enchaîner un quiz », `game:state.round`, 1 = first). */
+  round: number;
   /** null until the first `game:state` arrives (after join / rejoin). */
   phase: GamePhase | null;
   mode: GameMode;
@@ -116,6 +118,7 @@ export type PlayerAction =
 
 export const initialPlayerState: PlayerState = {
   connected: false,
+  round: 1,
   phase: null,
   mode: 'solo',
   theme: 'classic',
@@ -167,6 +170,18 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return { ...state, teams: action.payload.teams };
 
     case 'state': {
+      const round = action.payload.round ?? 1;
+      if (round !== state.round && state.phase !== null) {
+        // The host chained another quiz (T48): same room, same player, everything else is new.
+        state = {
+          ...initialPlayerState,
+          round,
+          connected: state.connected,
+          playerId: state.playerId,
+          nickname: state.nickname,
+          avatar: state.avatar,
+        };
+      }
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const paused = action.payload.paused ?? null;
       const buzzer = action.payload.buzzer ?? null;
@@ -181,6 +196,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       const waiting = paused && (paused.waitingFor.length > 0 || paused.hostMissing);
       return {
         ...state,
+        round,
         paused,
         buzzer,
         draw: action.payload.draw ?? null,

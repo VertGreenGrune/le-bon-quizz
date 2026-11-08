@@ -9,6 +9,7 @@ import type {
 import { SOLO, type GameOptions } from '../lib/gameOptions';
 import { getSocket, type GameSocket } from '../lib/socket';
 import type { AcceptInput } from './accept';
+import { chainActions } from '../lib/chain';
 import { hostReducer, initialHostState, type HostAction } from './hostReducer';
 
 const tokenKey = (pin: string) => `lbq:host:${pin}`;
@@ -226,6 +227,8 @@ export function useHostGame(pin: string | undefined, hostToken: string | null) {
     error,
     lost,
     connected,
+    /** « 🔁 Enchaîner un quiz » (T48). */
+    chainActions: chainActions(auth),
     start,
     next,
     end,

@@ -177,7 +177,13 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
     case 'podium':
       return <Podium s={s} />;
     case 'ended':
-      return <End title="Partie terminée" subtitle={`Score final : ${s.totalScore} pts`} />;
+      return (
+        <End
+          title="Partie terminée"
+          subtitle={`Score final : ${s.totalScore} pts`}
+          hint="Reste ici : si l’animateur enchaîne un autre quiz, tu y seras automatiquement."
+        />
+      );
     case 'kicked':
       return <End title="Tu as été exclu de la partie" />;
     case 'lost':
@@ -955,10 +961,11 @@ function TeamPodium({ s }: { s: PlayerState }) {
   );
 }
 
-function End({ title, subtitle }: { title: string; subtitle?: string }) {
+function End({ title, subtitle, hint }: { title: string; subtitle?: string; hint?: string }) {
   const navigate = useNavigate();
   return (
     <Message title={title} subtitle={subtitle}>
+      {hint && <p className="max-w-xs text-center text-sm font-semibold opacity-80">{hint}</p>}
       <button
         type="button"
         onClick={() => {

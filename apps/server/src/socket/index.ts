@@ -2,6 +2,7 @@ import type { Server, Socket } from 'socket.io';
 import {
   HostAcceptPayload,
   HostCastPayload,
+  HostChainPayload,
   HostActionPayload,
   HostCreatePayload,
   HostJudgePayload,
@@ -227,7 +228,7 @@ export function registerSocketHandlers(
             quiz,
             (pin) => makeTransport(io, pin),
             { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount, jokers, jokerHand, hearts, theme },
+            { mode, teamCount, jokers, jokerHand, hearts, theme, ownerId: hostId },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
@@ -347,6 +348,34 @@ export function registerSocketHandlers(
         asHost(pin, hostToken);
         const tv = tvs.claim(code, socket.id);
         io.to(tv).emit('tv:paired', { pin, hostToken });
+        return {};
+      }),
+    );
+
+    // ---------- « 🔁 Enchaîner un quiz » (T48) ----------
+
+    socket.on(
+      'host:quizzes',
+      handler(socket, HostActionPayload, async (p) => ({
+        quizzes: await persistence.listQuizzes(asController(p).ownerId),
+      })),
+    );
+
+    socket.on(
+      'host:chain',
+      handler(socket, HostChainPayload, async (p) => {
+        const game = asController(p);
+        if (game.phase !== 'PODIUM' && game.phase !== 'ENDED')
+          throw new GameError('GAME_ALREADY_STARTED', 'Termine d’abord ce quiz');
+        const { quizId, mode = 'solo', teamCount, jokers, hearts, theme } = p;
+        const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, game.ownerId);
+        games.chain(
+          game.pin,
+          quiz,
+          (pin) => makeTransport(io, pin),
+          { onEnded: saveOnEnd(game.ownerId, dbQuizId) },
+          { mode, teamCount, jokers, jokerHand, hearts, theme, ownerId: game.ownerId },
+        );
         return {};
       }),
     );

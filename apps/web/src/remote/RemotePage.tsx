@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router';
 import { SHAPES, TEAM_NAMES, type LobbyMember, type QuestionType, type TeamId } from '@lbq/shared';
 import { GainBadge } from '../components/GainBadge';
+import { ChainQuizDialog } from '../components/ChainQuizDialog';
 import { Avatar } from '../components/Avatar';
 import { PinPicture, PinZoneMark } from '../components/PinPicture';
 import { QUESTION_TYPES } from '../editor/draft';
@@ -43,6 +44,7 @@ export function RemotePage() {
   const { pin = '' } = useParams();
   const token = useRemoteToken(pin);
   const remote = useRemote(pin, token);
+  const [chaining, setChaining] = useState(false);
   const { state } = remote;
   const host = state.host;
   useWakeLock(!!token && !remote.lost && !state.revoked && host.phase !== 'ENDED');
@@ -162,6 +164,15 @@ export function RemotePage() {
             {host.paused?.byHost ? '▶ Reprendre' : '⏸ Pause'}
           </button>
         )}
+        {(phase === 'PODIUM' || phase === 'ENDED') && (
+          <button
+            type="button"
+            onClick={() => setChaining(true)}
+            className="rounded-2xl bg-answer-green py-5 text-2xl font-black shadow-lg active:scale-95"
+          >
+            🔁 Enchaîner un quiz
+          </button>
+        )}
         {main && (
           <button
             type="button"
@@ -214,6 +225,9 @@ export function RemotePage() {
           </button>
         )}
       </footer>
+      {chaining && (
+        <ChainQuizDialog actions={remote.chainActions} onClose={() => setChaining(false)} />
+      )}
     </Screen>
   );
 }

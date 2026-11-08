@@ -171,6 +171,15 @@ export const TvRegisterPayload = z.object({ code: TvCode.optional() });
 /** TV header « 📺 Afficher sur la TV »: sends the game to the `/tv` page showing `code`. */
 export const HostCastPayload = HostTokenPayload.extend({ code: TvCode });
 
+/**
+ * « 🔁 Enchaîner un quiz » (T48), PODIUM / ENDED: a new game with the same PIN, TV, remotes and
+ * players, with this quiz and these options (same fields as `host:create`).
+ */
+export const HostChainPayload = z.union([
+  HostCreatePayload.extend({ pin: Pin, hostToken: z.string().min(1) }),
+  HostCreatePayload.extend({ pin: Pin, remoteToken: z.string().min(1) }),
+]);
+
 /** `avatar` missing (older clients) → the server picks a random one. */
 export const PlayerJoinPayload = z.object({
   pin: Pin,
@@ -263,6 +272,18 @@ export type HostRemotePayload = z.infer<typeof HostRemotePayload>;
 export type RemoteJoinPayload = z.infer<typeof RemoteJoinPayload>;
 export type TvRegisterPayload = z.infer<typeof TvRegisterPayload>;
 export type HostCastPayload = z.infer<typeof HostCastPayload>;
+export type HostChainPayload = z.infer<typeof HostChainPayload>;
+
+/** A quiz the host can chain (T48): their own, the ones shared with them, the demo. */
+export interface ChainQuiz {
+  id: string;
+  title: string;
+  questionCount: number;
+  theme: QuizTheme;
+  coverImageUrl?: string;
+  /** Shared by another host (T45): their name. */
+  ownerName?: string;
+}
 export type RemoteTvPayload = z.infer<typeof RemoteTvPayload>;
 export type PlayerBuzzPayload = z.infer<typeof PlayerBuzzPayload>;
 export type PlayerUnanswerPayload = z.infer<typeof PlayerUnanswerPayload>;
@@ -330,6 +351,16 @@ export interface ClientToServerEvents {
    * shows `code` (it gets `tv:paired`). `TV_NOT_FOUND` for an unknown code.
    */
   'host:cast': (p: HostCastPayload, ack: (r: Ack) => void) => void;
+  /**
+   * « 🔁 Enchaîner un quiz » (T48): the quizzes of the user who created the room (own + shared
+   * with them + the demo), so a TV that isn't logged in can chain too.
+   */
+  'host:quizzes': (p: HostActionPayload, ack: (r: Ack<{ quizzes: ChainQuiz[] }>) => void) => void;
+  /**
+   * PODIUM / ENDED only (`GAME_ALREADY_STARTED` otherwise): the game is saved, then replaced by a
+   * new one with the same PIN (TV, remotes and players kept, scores at 0, LOBBY, `round` + 1).
+   */
+  'host:chain': (p: HostChainPayload, ack: (r: Ack) => void) => void;
   /**
    * « Continuer sans… »: while paused, the missing players become absent for the current
    * question and the game resumes (after the usual 3-2-1 countdown). No-op when not paused.
@@ -446,6 +477,11 @@ export interface GameStatePayload {
   jokers?: true;
   /** TV theme (T40): the start dialog's choice or the quiz's theme; absent = `classic`. */
   theme?: QuizTheme;
+  /**
+   * « 🔁 Enchaîner un quiz » (T48): number of the game in this room (absent = 1). Changes when the
+   * host chains a new quiz: clients start over from an empty state.
+   */
+  round?: number;
   /**
    * « Buzzer » question, ANSWERING: who has the hand (the timer is then frozen, `remainingMs` =
    * frozen value) and who answered wrong and can't buzz right now (emptied when everyone has).

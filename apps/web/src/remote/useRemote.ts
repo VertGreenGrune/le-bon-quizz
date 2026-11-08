@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 import type { Ack, ErrorPayload, ServerToClientEvents, TeamId, TvAction } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
+import { chainActions } from '../lib/chain';
 import type { AcceptInput } from '../host/accept';
 import { listenHostEvents } from '../host/useHostGame';
 import {
@@ -86,6 +87,8 @@ export function useRemote(pin: string, remoteToken: string | null) {
     lost,
     connected,
     send,
+    /** « 🔁 Enchaîner un quiz » (T48). */
+    chainActions: chainActions(auth),
     kick: (playerId: string) => {
       const a = auth();
       if (a) getSocket().emit('host:kick', { ...a, playerId }, handleAck);
