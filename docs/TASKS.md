@@ -2617,7 +2617,7 @@ in solo / teams / « Survie », with the pause and both resyncs.
 only one touching `content/**`; T49 doesn't edit quiz content.
 
 ### T47 — Quiz title in the lobby
-- **Status:** in-progress (main agent)
+- **Status:** done
 - **Depends on:** — Ports 3047 / 5247.
 - **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` (`game:state`),
   `apps/web/src/host/**` (lobby screen), `apps/web/src/player/**` (lobby only),
@@ -2629,9 +2629,10 @@ only one touching `content/**`; T49 doesn't edit quiz content.
 - **Contract (additive):** `GameStatePayload.quizTitle?: string` (sent in every `game:state`, so
   both resyncs have it). Never anything else of the quiz.
 - **Tests:** server (title in `game:state` + resyncs, demo), host reducer, e2e lobby shows the title.
+- **Summary:** `game:state.quizTitle` (every state, so both resyncs); TV lobby title (big, theme font, 2 lines max) + small in the TV header during the game, « Quiz : … » on the phone lobby, remote header. Tests: server state, reducers (`host/quizTitle.test.ts`), full-game e2e checks the TV + phone lobby.
 
 ### T48 — Content: shuffle the right answers + slider ranges (content only)
-- **Status:** in-progress (main agent)
+- **Status:** done
 - **Depends on:** — Ports 3048 / 5248.
 - **Scope:** `content/quizzes/*/quiz.json` (+ the README / CREDITS lines that cite a choice
   position), `packages/shared/src/demoQuiz.ts` if needed, a new content check test
@@ -2656,9 +2657,10 @@ only one touching `content/**`; T49 doesn't edit quiz content.
      away from the middle »).
 - **Re-import:** after merge, the main agent re-imports the 6 quizzes for loicmoster@hotmail.fr
   (Neon, `quiz:import`, updated in place). Not inside the worktree.
+- **Summary:** every MCQ of the 6 content quizzes re-ordered by a seeded script (least-used slot, never 3 times the same slot in a row; « select all » included; numeric choices like years kept sorted): right answers now 1–3 per slot per quiz. 10 slider ranges changed by hand (answer between 13 % and 77 % of the range, never 35–65 %); halloween Q5 (a month, 1–12) can't move and is listed as fixed. Guard `apps/server/scripts/contentQuizzes.test.ts` + one line in CLAUDE.md. Only choice order and slider ranges changed (checked by script). Re-imported into Neon after merge.
 
 ### T49 — Slider: random start position, never on the answer
-- **Status:** in-progress (main agent)
+- **Status:** done
 - **Depends on:** — Ports 3049 / 5249.
 - **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/**` (prompt),
   `apps/web/src/player/**` (slider answer), PLAN.md §3 / §4.
@@ -2673,9 +2675,10 @@ only one touching `content/**`; T49 doesn't edit quiz content.
   whatever is shown (as today — a player can validate without moving).
 - **Tests:** server (start on a step, far from the answer for margins 0 / large, deterministic per
   question, in resyncs, no other field leaked), web (initial value from `start`, clamped by 50/50).
+- **Summary:** `game/sliderStart.ts` picks the start on the step grid at least `margin + 10 %` of the range away from the answer (fallback: the farthest end), once per question (`GameSettings.sliderRandom` for tests), sent as `question:prompt.slider.start` (never on the TV); phone `sliderInitialValue` (clamped into a 50/50 range, middle for an old server). Tests: `sliderStart.test.ts` (steps, margins 0 / wide, decimals, both sides, fallback), prompt test, `numbers.test.ts`.
 
 ### T50 — « Remettre dans l'ordre »: show every player's order at the reveal
-- **Status:** in-progress (main agent)
+- **Status:** done
 - **Depends on:** — Ports 3050 / 5250.
 - **Scope:** `packages/shared/src/events.ts` (additive), `apps/server/src/game/questionTypes/order.ts`,
   `apps/web/src/host/moreTypeScreens.tsx` (ORDER reveal), `apps/web/src/remote/**` (optional),
@@ -2691,9 +2694,10 @@ only one touching `content/**`; T49 doesn't edit quiz content.
   (saved in the report details too).
 - **Tests:** server (answers in the reveal + saved details, no answer, kicked player, rejoin),
   web (row colouring helper), e2e: 2 phones answer differently → both rows on the TV.
+- **Summary:** `RevealDetails.order.answers` (`OrderAnswer`: nickname, avatar, order in right-order indexes, placed, points; best first, no answer last; saved in the report). TV: right order on the left, one compact row per player on the right (numbers green / red, n / m, +points; 2 columns beyond 8). Report ORDER card: same table. Tests: Game.moreTypes, persistence (Postgres), `orderItems.test.ts`, question-types e2e (2 rows).
 
 ### T51 — New « Voleur »: the wheel of fortune
-- **Status:** in-progress (main agent)
+- **Status:** done
 - **Depends on:** — Ports 3051 / 5251.
 - **Scope:** `packages/shared/src/jokers.ts` + `events.ts` (additive), `apps/server/src/game/jokers.ts`
   (+ hooks in `Game.ts`), `apps/server/src/game/rejudge.ts` (re-settlement), `apps/web/src/host/**`
@@ -2729,6 +2733,7 @@ only one touching `content/**`; T49 doesn't edit quiz content.
   thieves, floor at 0, team averages, « Survie » ghosts in the wheel, re-settlement by an accept
   draws the same player, resyncs; web wheel helpers (slice → angle); e2e: a thief → the TV wheel →
   the result line on both phones.
+- **Summary:** Voleur has no target and isn't an attack; `Jokers.spinWheels` at the settlement: one wheel per thief (order played) over every player, drawn with the replayable random (T44 accepts draw the same), 10 % of the drawn total to the thief / lost by a self-drawn thief / blocked by a Bouclier (used up, now in the snapshot). `question:reveal.wheels` (`ThiefWheel`), `JokerResult` `selfRobbed` / `stealBlocked` / `wheelShielded`. TV `host/thiefWheel.tsx`: overlay 3 s after the reveal, wheel with avatars spins 4.2 s to the drawn slice (`lib/wheel.ts`), result line + joker sound, then a summary banner (only the banner after a reload). Tests: joker tests (other / self / Bouclier / two thieves / steals on a wrong answer), accept + gains, `wheel.test.ts`, jokers e2e (Bob's wheel on the TV; `E2E_JOKER_HAND` gains `thief`). Not done: a dedicated wheel sound, the remote's result line.
 
 ---
 
@@ -3065,3 +3070,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   falls back to files still in `UPLOAD_DIR`). Uploads and `quiz:import` write to the table
   (content-hash names); `media:to-db` (`dist/media-to-db.js`) copies an old upload dir into it.
   `ApiDeps.uploadDir` is optional; `@fastify/static` no longer serves `/uploads/`.
+- 2026-11-09, main agent (T47–T51, all additive, PLAN.md §3 / §4): `GameStatePayload.quizTitle?`;
+  `SliderPrompt.start?` (prompt only) + `GameSettings.sliderRandom`; `RevealDetails.order.answers?`
+  (`OrderAnswer`); `QuestionRevealPayload.wheels?` (`ThiefWheel`), `JokerResult` `selfRobbed` /
+  `stealBlocked` / `wheelShielded`. Behaviour: the Voleur has no target, steals even on a wrong
+  answer, and `JOKERS.thief` is neither `target` nor `attack` (code checking those flags for
+  « attacks » no longer sees it); `JokerSnapshot` gains `shield`. Tests building an exact
+  `game:state` must add `quizTitle`; tests with a Voleur must fix `GameSettings.random`.
+  `E2E_JOKER_HAND` = `freeze,copy,fifty,double,thief`.
