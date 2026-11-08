@@ -2998,4 +2998,4 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
 - 2026-11-08, main agent (content, no app change): `content/quizzes/hxh-one-piece/` « One Piece ×
   Hunter × Hunter », 30 questions of every type and option (buzzer, sound during / at the reveal,
   blur / zoom / pixelate, 2 PIN on a CC BY-SA map of Japan, « select all »), an explanation on each;
-  2 music files to add (`README.md`). Imported (private) for loicmoster@hotmail.fr.
+  2 music files to add (`README.md`). Imported (private) for vachet.clement.es2@gmail.com.
