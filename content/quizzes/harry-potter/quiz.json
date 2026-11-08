@@ -10,10 +10,6 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Le Prince de Sang-Mêlé",
-          "isCorrect": true
-        },
-        {
           "text": "Les Reliques de la Mort",
           "isCorrect": false
         },
@@ -24,6 +20,10 @@
         {
           "text": "La Coupe de Feu",
           "isCorrect": false
+        },
+        {
+          "text": "Le Prince de Sang-Mêlé",
+          "isCorrect": true
         }
       ]
     },
@@ -99,15 +99,15 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Minerva McGonagall",
-          "isCorrect": true
-        },
-        {
           "text": "Nymphadora Tonks",
           "isCorrect": false
         },
         {
           "text": "Rita Skeeter",
+          "isCorrect": true
+        },
+        {
+          "text": "Minerva McGonagall",
           "isCorrect": true
         },
         {
@@ -129,12 +129,12 @@
           "isCorrect": false
         },
         {
-          "text": "Château d'Alnwick",
-          "isCorrect": true
-        },
-        {
           "text": "Château de Stirling",
           "isCorrect": false
+        },
+        {
+          "text": "Château d'Alnwick",
+          "isCorrect": true
         },
         {
           "text": "Château d'Eilean Donan",
@@ -194,12 +194,12 @@
           "isCorrect": false
         },
         {
-          "text": "Rubeus Hagrid",
-          "isCorrect": false
-        },
-        {
           "text": "Albus Dumbledore",
           "isCorrect": true
+        },
+        {
+          "text": "Rubeus Hagrid",
+          "isCorrect": false
         },
         {
           "text": "Remus Lupin",
@@ -274,6 +274,10 @@
       "basePoints": 1000,
       "choices": [
         {
+          "text": "King's Cross",
+          "isCorrect": true
+        },
+        {
           "text": "Paddington",
           "isCorrect": false
         },
@@ -284,10 +288,6 @@
         {
           "text": "Euston",
           "isCorrect": false
-        },
-        {
-          "text": "King's Cross",
-          "isCorrect": true
         }
       ]
     },
@@ -308,12 +308,12 @@
           "isCorrect": false
         },
         {
-          "text": "Les Bizarr' Sisters",
-          "isCorrect": true
-        },
-        {
           "text": "Les Strangulots",
           "isCorrect": false
+        },
+        {
+          "text": "Les Bizarr' Sisters",
+          "isCorrect": true
         },
         {
           "text": "Les Hiboux Hurleurs",
@@ -327,7 +327,7 @@
       "timeLimitSec": 25,
       "basePoints": 1000,
       "slider": {
-        "min": 1900,
+        "min": 1930,
         "max": 2000,
         "step": 1,
         "correct": 1943,
@@ -345,16 +345,16 @@
           "isCorrect": false
         },
         {
-          "text": "Le Déluminateur",
-          "isCorrect": true
-        },
-        {
           "text": "Le premier Vif d'or de Harry",
           "isCorrect": false
         },
         {
           "text": "L'épée de Gryffondor",
           "isCorrect": false
+        },
+        {
+          "text": "Le Déluminateur",
+          "isCorrect": true
         }
       ]
     },

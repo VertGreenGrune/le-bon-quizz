@@ -13,12 +13,12 @@
       "type": "MCQ",
       "choices": [
         {
-          "text": "Oogie Boogie",
-          "isCorrect": false
-        },
-        {
           "text": "Jack Skellington",
           "isCorrect": true
+        },
+        {
+          "text": "Oogie Boogie",
+          "isCorrect": false
         },
         {
           "text": "Zéro",
@@ -54,16 +54,16 @@
           "isCorrect": false
         },
         {
+          "text": "Clyde",
+          "isCorrect": true
+        },
+        {
           "text": "Pinky",
           "isCorrect": false
         },
         {
           "text": "Inky",
           "isCorrect": false
-        },
-        {
-          "text": "Clyde",
-          "isCorrect": true
         }
       ]
     },
@@ -104,10 +104,6 @@
       "type": "MCQ",
       "choices": [
         {
-          "text": "Strangers in the Night (Frank Sinatra)",
-          "isCorrect": true
-        },
-        {
           "text": "Hound Dog (Elvis Presley)",
           "isCorrect": false
         },
@@ -118,6 +114,10 @@
         {
           "text": "What a Wonderful World (Louis Armstrong)",
           "isCorrect": false
+        },
+        {
+          "text": "Strangers in the Night (Frank Sinatra)",
+          "isCorrect": true
         }
       ]
     },
@@ -159,12 +159,12 @@
           "isCorrect": false
         },
         {
-          "text": "Pour ramener les défunts à la vie",
-          "isCorrect": true
-        },
-        {
           "text": "Pour rendre les fantômes visibles",
           "isCorrect": false
+        },
+        {
+          "text": "Pour ramener les défunts à la vie",
+          "isCorrect": true
         },
         {
           "text": "Pour détruire les fantômes",
@@ -196,16 +196,16 @@
           "isCorrect": false
         },
         {
-          "text": "Les noiraudes",
-          "isCorrect": true
-        },
-        {
           "text": "Les charbonnets",
           "isCorrect": false
         },
         {
           "text": "Les suies-suies",
           "isCorrect": false
+        },
+        {
+          "text": "Les noiraudes",
+          "isCorrect": true
         }
       ]
     },
@@ -229,7 +229,7 @@
       "explanation": "Vingt doigts : Sukuna avait quatre bras ! Yuji Itadori avale le premier pour sauver ses amis et devient son hôte. En photo : la sorcière Takiyasha et son squelette géant, estampe d'Utagawa Kuniyoshi (vers 1844).",
       "type": "SLIDER",
       "slider": {
-        "max": 50,
+        "max": 30,
         "min": 0,
         "step": 1,
         "unit": "doigts",
@@ -246,12 +246,12 @@
       "type": "MCQ",
       "choices": [
         {
-          "text": "Sous un grand parapluie rouge",
-          "isCorrect": false
-        },
-        {
           "text": "Dans une caisse en bois sur son dos",
           "isCorrect": true
+        },
+        {
+          "text": "Sous un grand parapluie rouge",
+          "isCorrect": false
         },
         {
           "text": "Dans un panier en osier",
@@ -320,7 +320,7 @@
       "explanation": "Quarante-cinq coups, et sa tête tient encore par un lambeau de peau : voilà pourquoi le club des Chasseurs sans tête refuse de l'accueillir. Dans La Chambre des secrets, Harry fête avec lui son 500e anniversaire de mort.",
       "type": "SLIDER",
       "slider": {
-        "max": 100,
+        "max": 60,
         "min": 1,
         "step": 1,
         "unit": "coups",
@@ -347,15 +347,15 @@
       "type": "MCQ",
       "choices": [
         {
-          "text": "Desastre",
-          "isCorrect": true
-        },
-        {
           "text": "La Chose (La Famille Addams)",
           "isCorrect": false
         },
         {
           "text": "Danny Fenton",
+          "isCorrect": true
+        },
+        {
+          "text": "Desastre",
           "isCorrect": true
         },
         {
@@ -400,16 +400,16 @@
       "type": "MCQ",
       "choices": [
         {
+          "text": "Le comte Dracula",
+          "isCorrect": true
+        },
+        {
           "text": "Gomez Addams",
           "isCorrect": false
         },
         {
           "text": "Beetlejuice",
           "isCorrect": false
-        },
-        {
-          "text": "Le comte Dracula",
-          "isCorrect": true
         },
         {
           "text": "Le monstre de Frankenstein",

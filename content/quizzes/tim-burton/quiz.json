@@ -9,9 +9,9 @@
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
-        { "text": "Sleepy Hollow", "isCorrect": true },
         { "text": "Les Noces funèbres", "isCorrect": false },
         { "text": "Dark Shadows", "isCorrect": false },
+        { "text": "Sleepy Hollow", "isCorrect": true },
         { "text": "Beetlejuice", "isCorrect": false }
       ]
     },
@@ -65,8 +65,8 @@
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
-        { "text": "Le Joker", "isCorrect": true },
         { "text": "Batman", "isCorrect": false },
+        { "text": "Le Joker", "isCorrect": true },
         { "text": "Le Pingouin", "isCorrect": false },
         { "text": "Beetlejuice", "isCorrect": false }
       ]
@@ -76,7 +76,7 @@
       "text": "En quelle année est sorti le Batman de Tim Burton, avec Jack Nicholson en Joker ?",
       "timeLimitSec": 20,
       "basePoints": 1000,
-      "slider": { "min": 1980, "max": 2000, "step": 1, "correct": 1989, "margin": 2 }
+      "slider": { "min": 1980, "max": 2020, "step": 1, "correct": 1989, "margin": 2 }
     },
     {
       "type": "POLL",
@@ -107,10 +107,10 @@
       "basePoints": 1000,
       "audio": { "url": "audio/batman-theme.mp3", "startSec": 0, "durationSec": 20 },
       "choices": [
-        { "text": "Batman", "isCorrect": true },
         { "text": "Beetlejuice", "isCorrect": false },
         { "text": "Edward aux mains d'argent", "isCorrect": false },
-        { "text": "Mars Attacks!", "isCorrect": false }
+        { "text": "Mars Attacks!", "isCorrect": false },
+        { "text": "Batman", "isCorrect": true }
       ]
     },
     {
@@ -130,7 +130,7 @@
       "text": "Combien de films de Tim Burton Johnny Depp a-t-il tournés (rôles vocaux compris) ?",
       "timeLimitSec": 25,
       "basePoints": 1000,
-      "slider": { "min": 0, "max": 15, "step": 1, "correct": 8, "margin": 1, "unit": "films" }
+      "slider": { "min": 0, "max": 25, "step": 1, "correct": 8, "margin": 1, "unit": "films" }
     },
     {
       "type": "TYPE_ANSWER",
@@ -149,8 +149,8 @@
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
-        { "text": "Winona Ryder", "isCorrect": false },
         { "text": "Helena Bonham Carter", "isCorrect": true },
+        { "text": "Winona Ryder", "isCorrect": false },
         { "text": "Eva Green", "isCorrect": false },
         { "text": "Christina Ricci", "isCorrect": false }
       ]
@@ -202,9 +202,9 @@
       "audioOnReveal": true,
       "choices": [
         { "text": "Human Fly", "isCorrect": false },
-        { "text": "Goo Goo Muck", "isCorrect": true },
         { "text": "Surfin' Bird", "isCorrect": false },
-        { "text": "Fever", "isCorrect": false }
+        { "text": "Fever", "isCorrect": false },
+        { "text": "Goo Goo Muck", "isCorrect": true }
       ]
     },
     {
@@ -212,7 +212,7 @@
       "text": "Alice au pays des merveilles (2010), son plus gros succès, a rapporté combien dans le monde ?",
       "timeLimitSec": 30,
       "basePoints": 2000,
-      "slider": { "min": 0, "max": 2000, "step": 25, "correct": 1025, "margin": 150, "unit": "M$" }
+      "slider": { "min": 0, "max": 1400, "step": 25, "correct": 1025, "margin": 150, "unit": "M$" }
     },
     {
       "type": "SLIDER",

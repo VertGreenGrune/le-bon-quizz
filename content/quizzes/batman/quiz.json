@@ -9,10 +9,10 @@
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
-        { "text": "Batman contre le fantôme masqué (Mask of the Phantasm)", "isCorrect": true },
         { "text": "Batman et Mr. Freeze : SubZero", "isCorrect": false },
         { "text": "La Mystérieuse Batwoman (Mystery of the Batwoman)", "isCorrect": false },
-        { "text": "Le Retour du Joker (Return of the Joker)", "isCorrect": false }
+        { "text": "Le Retour du Joker (Return of the Joker)", "isCorrect": false },
+        { "text": "Batman contre le fantôme masqué (Mask of the Phantasm)", "isCorrect": true }
       ]
     },
     {
@@ -21,8 +21,8 @@
       "timeLimitSec": 20,
       "basePoints": 1000,
       "choices": [
-        { "text": "Shirley Walker", "isCorrect": false },
         { "text": "Danny Elfman", "isCorrect": true },
+        { "text": "Shirley Walker", "isCorrect": false },
         { "text": "Hans Zimmer", "isCorrect": false },
         { "text": "John Williams", "isCorrect": false }
       ]
@@ -40,7 +40,7 @@
       "text": "Combien d'épisodes compte Batman, la série animée (1992–1995), sans les « New Batman Adventures » ?",
       "timeLimitSec": 20,
       "basePoints": 1000,
-      "slider": { "min": 20, "max": 200, "step": 1, "correct": 85, "margin": 5, "unit": "épisodes" }
+      "slider": { "min": 0, "max": 120, "step": 1, "correct": 85, "margin": 5, "unit": "épisodes" }
     },
     {
       "type": "DRAW",
@@ -67,8 +67,8 @@
       "basePoints": 1000,
       "choices": [
         { "text": "Harley and Ivy", "isCorrect": false },
-        { "text": "Mad Love", "isCorrect": false },
         { "text": "Joker's Favor (« Chantage à crédit »)", "isCorrect": true },
+        { "text": "Mad Love", "isCorrect": false },
         { "text": "Harlequinade", "isCorrect": false }
       ]
     },
@@ -104,8 +104,8 @@
       "choices": [
         { "text": "Du papier blanc", "isCorrect": false },
         { "text": "Du celluloïd bleu", "isCorrect": false },
-        { "text": "Du papier kraft", "isCorrect": false },
-        { "text": "Du papier noir", "isCorrect": true }
+        { "text": "Du papier noir", "isCorrect": true },
+        { "text": "Du papier kraft", "isCorrect": false }
       ]
     },
     {
@@ -128,8 +128,8 @@
       "basePoints": 1000,
       "choices": [
         { "text": "Le Chapelier fou", "isCorrect": false },
-        { "text": "L'Épouvantail", "isCorrect": true },
         { "text": "Poison Ivy", "isCorrect": false },
+        { "text": "L'Épouvantail", "isCorrect": true },
         { "text": "Le Joker", "isCorrect": false }
       ]
     },
@@ -155,10 +155,10 @@
       "timeLimitSec": 25,
       "basePoints": 1000,
       "choices": [
-        { "text": "Harley Quinn", "isCorrect": true },
-        { "text": "Killer Croc", "isCorrect": false },
         { "text": "Renee Montoya", "isCorrect": true },
-        { "text": "Lock-Up (Double Tour)", "isCorrect": true }
+        { "text": "Lock-Up (Double Tour)", "isCorrect": true },
+        { "text": "Killer Croc", "isCorrect": false },
+        { "text": "Harley Quinn", "isCorrect": true }
       ]
     },
     {
@@ -166,7 +166,7 @@
       "text": "En quelle année « Batman contre le fantôme masqué » est-il sorti au cinéma aux États-Unis ?",
       "timeLimitSec": 20,
       "basePoints": 1000,
-      "slider": { "min": 1985, "max": 2005, "step": 1, "correct": 1993, "margin": 1 }
+      "slider": { "min": 1970, "max": 2000, "step": 1, "correct": 1993, "margin": 1 }
     },
     {
       "type": "TYPE_ANSWER",
@@ -222,8 +222,8 @@
       "choices": [
         { "text": "Ron Perlman", "isCorrect": false },
         { "text": "Roddy McDowall", "isCorrect": false },
-        { "text": "Michael Ansara", "isCorrect": true },
-        { "text": "John Glover", "isCorrect": false }
+        { "text": "John Glover", "isCorrect": false },
+        { "text": "Michael Ansara", "isCorrect": true }
       ]
     },
     {
@@ -247,7 +247,7 @@
       "text": "Combien de minutes dure « Batman contre le fantôme masqué » ?",
       "timeLimitSec": 20,
       "basePoints": 1000,
-      "slider": { "min": 40, "max": 150, "step": 1, "correct": 76, "margin": 4, "unit": "min" }
+      "slider": { "min": 60, "max": 180, "step": 1, "correct": 76, "margin": 4, "unit": "min" }
     },
     {
       "type": "ORDER",

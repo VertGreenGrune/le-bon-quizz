@@ -11,12 +11,12 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Chaudron",
-          "isCorrect": true
-        },
-        {
           "text": "Balai",
           "isCorrect": false
+        },
+        {
+          "text": "Chaudron",
+          "isCorrect": true
         },
         {
           "text": "Grimoire",
@@ -49,16 +49,16 @@
           "isCorrect": true
         },
         {
+          "text": "Holi (Inde)",
+          "isCorrect": false
+        },
+        {
           "text": "Zhongyuan, fête des fantômes (Chine)",
           "isCorrect": true
         },
         {
           "text": "Fèt Gede (Haïti)",
           "isCorrect": true
-        },
-        {
-          "text": "Holi (Inde)",
-          "isCorrect": false
         }
       ],
       "explanation": "Au Japon, Obon s'achève souvent par des lanternes posées sur l'eau (tōrō nagashi) pour raccompagner les esprits. Holi, elle, fête le printemps et la victoire du bien sur le mal, à coups de poudres colorées."
@@ -106,16 +106,16 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Jules Michelet",
-          "isCorrect": true
-        },
-        {
           "text": "Victor Hugo",
           "isCorrect": false
         },
         {
           "text": "Voltaire",
           "isCorrect": false
+        },
+        {
+          "text": "Jules Michelet",
+          "isCorrect": true
         },
         {
           "text": "George Sand",
@@ -223,10 +223,6 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Allerheiligenstriezel",
-          "isCorrect": true
-        },
-        {
           "text": "Christstollen",
           "isCorrect": false
         },
@@ -237,6 +233,10 @@
         {
           "text": "Bretzel",
           "isCorrect": false
+        },
+        {
+          "text": "Allerheiligenstriezel",
+          "isCorrect": true
         }
       ],
       "explanation": "Les parrains et marraines l'offrent pour la Toussaint. On rattache la coutume à d'anciens rites de deuil, où l'on se coupait les cheveux tressés pour exprimer son chagrin."
@@ -284,12 +284,12 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Adam Mickiewicz",
-          "isCorrect": true
-        },
-        {
           "text": "Juliusz Słowacki",
           "isCorrect": false
+        },
+        {
+          "text": "Adam Mickiewicz",
+          "isCorrect": true
         },
         {
           "text": "Alexandre Pouchkine",
@@ -337,7 +337,7 @@
       "timeLimitSec": 20,
       "basePoints": 1000,
       "slider": {
-        "min": 1850,
+        "min": 1900,
         "max": 2000,
         "step": 1,
         "correct": 1926,
@@ -361,12 +361,12 @@
       "basePoints": 2000,
       "choices": [
         {
-          "text": "Pierre de Lancre",
-          "isCorrect": true
-        },
-        {
           "text": "Jean Bodin",
           "isCorrect": false
+        },
+        {
+          "text": "Pierre de Lancre",
+          "isCorrect": true
         },
         {
           "text": "Henri Boguet",

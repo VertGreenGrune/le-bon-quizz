@@ -22,9 +22,9 @@
       "buzzer": true,
       "audio": { "url": "audio/02-magicien-d-oz.mp3", "startSec": 0, "durationSec": 20 },
       "choices": [
-        { "text": "La Méchante Sorcière de l'Est", "isCorrect": true },
         { "text": "La Méchante Sorcière de l'Ouest", "isCorrect": false },
         { "text": "Glinda, la Bonne Sorcière du Nord", "isCorrect": false },
+        { "text": "La Méchante Sorcière de l'Est", "isCorrect": true },
         { "text": "La Sorcière blanche de Narnia", "isCorrect": false }
       ]
     },
@@ -124,8 +124,8 @@
       "audio": { "url": "audio/12-harry-potter-azkaban.mp3", "startSec": 0, "durationSec": 20 },
       "choices": [
         { "text": "Harry Potter à l'école des sorciers", "isCorrect": false },
-        { "text": "Harry Potter et la Chambre des secrets", "isCorrect": false },
         { "text": "Harry Potter et le Prisonnier d'Azkaban", "isCorrect": true },
+        { "text": "Harry Potter et la Chambre des secrets", "isCorrect": false },
         { "text": "Harry Potter et la Coupe de feu", "isCorrect": false }
       ]
     },
@@ -149,10 +149,10 @@
       "basePoints": 1000,
       "audio": { "url": "audio/14-les-sorcieres.mp3", "startSec": 0, "durationSec": 20 },
       "choices": [
-        { "text": "Anjelica Huston", "isCorrect": true },
         { "text": "Meryl Streep", "isCorrect": false },
         { "text": "Bette Midler", "isCorrect": false },
-        { "text": "Glenn Close", "isCorrect": false }
+        { "text": "Glenn Close", "isCorrect": false },
+        { "text": "Anjelica Huston", "isCorrect": true }
       ]
     },
     {
@@ -182,9 +182,9 @@
       "audio": { "url": "audio/17-coraline.mp3", "startSec": 0, "durationSec": 20 },
       "choices": [
         { "text": "Alexandre Desplat", "isCorrect": false },
-        { "text": "Bruno Coulais", "isCorrect": true },
         { "text": "Éric Serra", "isCorrect": false },
-        { "text": "Michel Legrand", "isCorrect": false }
+        { "text": "Michel Legrand", "isCorrect": false },
+        { "text": "Bruno Coulais", "isCorrect": true }
       ]
     },
     {

@@ -74,3 +74,6 @@ Several Claude agents work on this repo in parallel. To avoid conflicts:
 - Validate every incoming socket payload / HTTP body with the zod schemas from `packages/shared`.
 - Socket event names: `domain:action` (e.g. `player:join`, `game:state`).
 - Tests: Vitest (unit), Playwright (e2e, phone + host flows).
+- Quiz content (`content/quizzes`): spread the right answer over the 4 choice slots (never mostly
+  the first / red one) and keep slider answers away from the middle of their range — checked by
+  `apps/server/scripts/contentQuizzes.test.ts`.
