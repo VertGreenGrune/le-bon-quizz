@@ -36,6 +36,7 @@ import {
   QuestionIntroScreen,
   QuestionScreen,
 } from './screens';
+import { useThemeRadio } from './radio';
 import { useHostSounds } from './sounds';
 import { SoundButton } from './soundSettings';
 
@@ -96,6 +97,8 @@ export function HostPage() {
   const offline = offlinePlayers(state);
 
   const holder = state.buzzer?.holder ?? null;
+  // « 📻 Radio du thème »: background music the whole game, silent for a question's sound.
+  const radio = useThemeRadio(state.phase, currentQuestion(state), state.theme);
   useHostSounds({
     phase: state.phase,
     // Paused / someone answering out loud: the clock doesn't tick, the 3-2-1 countdown does.
@@ -104,6 +107,7 @@ export function HostPage() {
     playerCount: state.players.length,
     buzzerHolder: holder?.id ?? null,
     theme: state.theme,
+    radio,
   });
 
   // Sound clip of the question (host screen only): paused with the game, until the 3-2-1 ends,

@@ -2650,6 +2650,20 @@ leaderboard has his points.
   (end early → chain the demo → same URL / PIN, players in the new lobby, phone reload, plays).
   No migration. Not tried on a real Fire TV.
 
+### T49 — Theme radio on the TV (« 📻 Radio du thème »)
+- **Status:** done
+- **User requirement (2026-11-08):** free radios playing music that fits each theme, all game
+  long — **during the questions too**, but silent when a question has a sound to listen to.
+- **Summary:** `ThemeDefinition.radio` (one SomaFM station per theme), `host/radio.ts`
+  (`radioFactor` per phase / question, `RadioPlayer`: live stream started / stopped declaratively,
+  autoplay retry on the first gesture, error or 12 s without sound → `setRadioFailed`),
+  `useThemeRadio` in `HostPage` (the lobby loop stays off while the radio is on); `sounds.ts`
+  stores the ambiance (`lbq:host:ambiance`, default radio, `VITE_DEFAULT_AMBIANCE`) and the failure;
+  « 📻 Musique d’ambiance » choice in the « 🔊 Son » menu. Follows « Musique et effets » and « Tout
+  couper » (so the remote's mute / music − + too). Tests `host/radio.test.ts`, e2e `radio.spec.ts`
+  (station mocked). Checked that the 5 real streams play in Chromium with a desktop and a Fire TV
+  (Silk) user agent; SomaFM answers 403 to headless browsers. Not tried on the real Fire TV.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 

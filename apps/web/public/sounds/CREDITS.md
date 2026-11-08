@@ -39,3 +39,11 @@ the **SIL Open Font License 1.1**: Creepster (Sideshow, Halloween), Mountains of
 
 If you replace a file with a downloaded one, only use royalty-free / CC0 sounds and add a row
 with its exact source URL, author and license.
+
+## Radio d'ambiance (« 📻 Radio du thème »)
+
+Not files of this repository: the TV streams a station of [SomaFM](https://somafm.com/)
+(listener-supported, commercial-free internet radio, San Francisco) chosen per theme in
+`src/themes/*.ts`. Streaming for personal / private listening, as in a game at home; public or
+commercial rebroadcasting isn't covered by SomaFM's terms. Support them:
+https://somafm.com/support/

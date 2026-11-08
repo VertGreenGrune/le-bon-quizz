@@ -22,5 +22,6 @@ export const retro: ThemeDefinition = {
     emojiShare: 0,
   },
   sounds: { lobby: 'lobby-retro', reveal: 'reveal-retro', podium: 'podium-retro' },
+  radio: { name: 'Underground 80s', url: 'https://ice2.somafm.com/u80s-128-mp3' },
   lobbyTitle: { text: 'LE BON QUIZZ', left: '👾', right: '🕹️' },
 };

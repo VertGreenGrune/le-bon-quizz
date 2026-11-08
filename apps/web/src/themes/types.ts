@@ -43,6 +43,11 @@ export interface ThemeDefinition {
   font: string;
   confetti: ConfettiStyle;
   sounds: Partial<Record<ThemedSound, string>>;
+  /**
+   * Ambiance radio of the TV (« 📻 Radio du thème »): a free SomaFM station (listener-supported,
+   * no ads), played in every phase unless the question has a sound to listen to.
+   */
+  radio: { name: string; url: string };
   /** Lobby title (TV) with its decorations; none for the classic look. */
   lobbyTitle: { text: string; left: string; right: string } | null;
 }
