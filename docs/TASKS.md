@@ -2824,6 +2824,25 @@ only one touching `content/**`; T49 doesn't edit quiz content.
 
 ---
 
+### T56 — « Dessine-moi »: an easier pad on the phone
+- **Status:** done
+- **User feedback (2026-11-09):** drawing on a phone is hard (small pad). Decided: bigger pad +
+  landscape, undo, smoother lines, palm rejection (not: more time, word choice).
+- **Summary:** web only, no contract / server change. `player/draw.tsx` `DrawerPad`: CSS grid —
+  portrait = word / pad / tools (colors on one row, icon tools) / status, « 🔄 Tourne ton téléphone
+  pour dessiner en grand »; landscape = pad on the left (≈ 2× the area), word + timer + tools on the
+  right, the phone header hidden (`TopBar`, `landscape:hidden` for the drawer). The canvas is the
+  biggest 4:3 rectangle of its area (ResizeObserver). `lib/fullscreen.ts` `allowRotation()` lifts
+  the portrait lock while drawing (full screen / installed app) and puts it back. « Annuler le
+  dernier trait » (SVG arrow): undo stack of strokes and « Tout effacer », re-sends the drawing
+  with `clear` through `lib/drawing.ts` `drawMessages` (≤ 200 points per chunk, ≤ 20 chunks per
+  message — the normal flush uses it too). Smoothing: `smoothSegments` (quadratic curves through
+  the midpoints) on the phone canvas (incremental) and in the TV / report SVG (`strokePath`);
+  coalesced pointer events. Palm rejection: only the primary pointer draws, touches wider than
+  70 px ignored. Tests: `lib/drawing.test.ts` (split + merge back, clear, curves, incremental =
+  full), `strokePath`; e2e `draw.spec.ts` (undo, undo of « Tout effacer », landscape pad bigger
+  and on screen). Not tried on real phones (palm size, iOS rotation of the home-screen app).
+
 ## Contract changes / cross-task notes
 _(Append here: date, agent, what changed in `packages/shared` or outside your scope, why.)_
 

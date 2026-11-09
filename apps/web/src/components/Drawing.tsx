@@ -6,14 +6,17 @@ import {
   strokeStyle,
   type DrawStroke,
 } from '@lbq/shared';
+import { smoothSegments } from '../lib/drawing';
 
-/** SVG path of a stroke (a single point becomes a dot thanks to the round caps). */
+/** SVG path of a stroke, smoothed like on the drawer's phone (a single point = a dot). */
 export function strokePath(points: readonly number[]): string {
   if (points.length < 2) return '';
-  let d = `M${points[0]} ${points[1]}`;
-  if (points.length === 2) return `${d}l0.01 0`;
-  for (let i = 2; i < points.length; i += 2) d += `L${points[i]} ${points[i + 1]}`;
-  return d;
+  if (points.length === 2) return `M${points[0]} ${points[1]}l0.01 0`;
+  const { move, curves, end } = smoothSegments(points);
+  const r = (v: number) => Math.round(v * 10) / 10;
+  let d = `M${move[0]} ${move[1]}`;
+  for (const [cx, cy, x, y] of curves) d += `Q${cx} ${cy} ${r(x)} ${r(y)}`;
+  return `${d}L${end[0]} ${end[1]}`;
 }
 
 /**

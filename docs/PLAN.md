@@ -182,6 +182,11 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     `question:prompt` has the word (TV: blanks `wordHint`); the drawer sends stroke chunks
     (`player:draw`, integer points in a 1000 × 750 space, throttled every 60 ms by the phone,
     ≤ 1000 strokes / 20 000 points), relayed to the host room (`draw:strokes`), never images.
+    Drawer's pad (T56, `player/draw.tsx`): the biggest 4:3 pad that fits; phone held sideways = tools
+    on the side (orientation unlocked while drawing, `allowRotation`); strokes drawn smoothed
+    (quadratic curves through the midpoints, `lib/drawing.ts` `smoothSegments`, same on the TV's
+    SVG); one finger draws (second finger / palm ignored); « Annuler le dernier trait » (also undoes
+    « Tout effacer ») re-sends the whole drawing with `clear` (`drawMessages`, server limits kept).
     The others guess with `player:answer { text }` as often as they like: matched like typed
     answers (typo tolerance on), a wrong guess is not recorded (ack `guess: 'wrong'`, or
     `'close'` = « Presque ! »: one typo more than accepted, or a word of the answer), a right one

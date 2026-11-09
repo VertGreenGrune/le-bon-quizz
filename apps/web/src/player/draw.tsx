@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import {
   DRAW_BACKGROUND,
@@ -14,13 +14,20 @@ import {
   type PlayerResultPayload,
 } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
+import { drawMessages, smoothSegments } from '../lib/drawing';
+import { allowRotation } from '../lib/fullscreen';
 import { sendGuess, sendStrokes } from './playerStore';
 import type { PlayerState } from './playerState';
 
 /** Points closer than this to the previous one (drawing units) are skipped: smaller messages. */
 const MIN_STEP = 3;
+/** A touch wider than this (CSS px) is a palm resting on the screen, not a finger: ignored. */
+const PALM_SIZE = 70;
 
-/** Draws one stroke (or its last segment) on the canvas, `k` = canvas pixels per drawing unit. */
+/**
+ * Draws one stroke on the canvas, smoothed (`smoothSegments`, same curves as the TV), `k` =
+ * canvas pixels per drawing unit; `from` = index in `points` of the first value not painted yet.
+ */
 function paint(ctx: CanvasRenderingContext2D, s: DrawStroke, k: number, from = 0) {
   const { color, width } = strokeStyle(s);
   const p = s.points;
@@ -35,31 +42,54 @@ function paint(ctx: CanvasRenderingContext2D, s: DrawStroke, k: number, from = 0
     ctx.fill();
     return;
   }
+  const { move, curves, end } = smoothSegments(p, from / 2);
   ctx.beginPath();
-  const start = Math.max(0, from - 2);
-  ctx.moveTo(p[start]! * k, p[start + 1]! * k);
-  for (let i = start + 2; i < p.length; i += 2) ctx.lineTo(p[i]! * k, p[i + 1]! * k);
+  ctx.moveTo(move[0] * k, move[1] * k);
+  for (const [cx, cy, x, y] of curves) ctx.quadraticCurveTo(cx * k, cy * k, x * k, y * k);
+  ctx.lineTo(end[0] * k, end[1] * k);
   ctx.stroke();
 }
 
+/** What « Annuler » undoes: a stroke (by id), or a « Tout effacer » (the strokes it removed). */
+type Undo = { stroke: number } | { cleared: DrawStroke[] };
+
+/** Grid of the pad: word / pad / tools / status stacked, or the pad on the left when sideways. */
+const LAYOUT = [
+  'grid min-h-0 flex-1 gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+  "[grid-template-areas:'word'_'pad'_'tools'_'status'] grid-rows-[auto_minmax(0,1fr)_auto_auto]",
+  "landscape:[grid-template-areas:'pad_word'_'pad_tools'_'pad_status']",
+  'landscape:grid-cols-[minmax(0,1fr)_auto] landscape:grid-rows-[auto_auto_minmax(0,1fr)]',
+  'landscape:p-2 landscape:pl-[max(0.5rem,env(safe-area-inset-left))]',
+  'landscape:pr-[max(0.5rem,env(safe-area-inset-right))]',
+].join(' ');
+const TOOL = 'flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-xl';
+
 /**
- * « Dessine-moi », the drawer: the secret word, a 4:3 canvas drawn with the finger, a few colors,
- * three sizes, an eraser and « Tout effacer ». New points are sent every DRAW_FLUSH_MS.
+ * « Dessine-moi », the drawer: the secret word, a 4:3 canvas drawn with the finger (as big as the
+ * screen allows; phone held sideways = tools on the side, a much bigger pad), a few colors,
+ * three sizes, undo, an eraser and « Tout effacer ». New points are sent every DRAW_FLUSH_MS.
  */
-export function DrawerPad({ s }: { s: PlayerState }) {
+export function DrawerPad({ s, timer }: { s: PlayerState; timer?: ReactNode }) {
   const word = s.prompt?.draw?.word ?? '';
   const index = s.questionIndex;
   const [color, setColor] = useState(0);
   const [size, setSize] = useState(1);
   const [eraser, setEraser] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  const area = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<DrawStroke[]>([]);
-  const current = useRef<DrawStroke | null>(null);
+  const current = useRef<{ stroke: DrawStroke; pointer: number } | null>(null);
+  const history = useRef<Undo[]>([]);
   /** Points not sent yet, per stroke id; `clear` = « Tout effacer » not sent yet. */
   const pending = useRef(new Map<number, DrawStroke>());
   const clear = useRef(false);
   const nextId = useRef(0);
   const frozen = !!s.paused;
+
+  // Turning the phone sideways is allowed while drawing (full screen locks portrait otherwise).
+  useEffect(() => allowRotation(), []);
 
   const scale = () => (canvas.current ? canvas.current.width / DRAW_WIDTH : 1);
   const redraw = useCallback(() => {
@@ -73,7 +103,8 @@ export function DrawerPad({ s }: { s: PlayerState }) {
 
   const flush = useCallback(() => {
     if (!clear.current && pending.current.size === 0) return;
-    sendStrokes([...pending.current.values()], clear.current);
+    for (const m of drawMessages([...pending.current.values()], clear.current))
+      sendStrokes(m.strokes, m.clear);
     pending.current.clear();
     clear.current = false;
   }, []);
@@ -86,27 +117,37 @@ export function DrawerPad({ s }: { s: PlayerState }) {
     strokes.current = drawing.strokes.map((st) => ({ ...st, points: [...st.points] }));
     nextId.current = Math.max(nextId.current, ...drawing.strokes.map((st) => st.id + 1));
     pending.current.clear();
+    history.current = [];
+    setCanUndo(false);
     redraw();
     // Only a new full re-send (`version`) replaces the local drawing.
   }, [version, redraw]);
 
-  // Canvas size follows its box (sharp on high-density screens).
+  // The pad is the biggest 4:3 rectangle that fits its area (portrait or landscape).
+  useEffect(() => {
+    const a = area.current;
+    if (!a) return;
+    const measure = () => {
+      const w = Math.floor(Math.min(a.clientWidth, (a.clientHeight * DRAW_WIDTH) / DRAW_HEIGHT));
+      setBox((b) => (b.w === w ? b : { w, h: Math.floor((w * DRAW_HEIGHT) / DRAW_WIDTH) }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(a);
+    return () => ro.disconnect();
+  }, []);
+
+  // Canvas pixels follow its size (sharp on high-density screens).
   useEffect(() => {
     const c = canvas.current;
-    if (!c) return;
-    const fit = () => {
-      const w = Math.round(c.clientWidth * (window.devicePixelRatio || 1));
-      if (w > 0 && c.width !== w) {
-        c.width = w;
-        c.height = Math.round((w * DRAW_HEIGHT) / DRAW_WIDTH);
-        redraw();
-      }
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(c);
-    return () => ro.disconnect();
-  }, [redraw]);
+    if (!c || box.w === 0) return;
+    const w = Math.round(box.w * (window.devicePixelRatio || 1));
+    if (c.width !== w) {
+      c.width = w;
+      c.height = Math.round((w * DRAW_HEIGHT) / DRAW_WIDTH);
+    }
+    redraw();
+  }, [box, redraw]);
 
   useEffect(() => {
     const id = setInterval(flush, DRAW_FLUSH_MS);
@@ -116,12 +157,10 @@ export function DrawerPad({ s }: { s: PlayerState }) {
     };
   }, [flush]);
 
-  const point = (e: PointerEvent<HTMLCanvasElement>): [number, number] => {
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - r.left) / r.width) * DRAW_WIDTH);
-    const y = Math.round(((e.clientY - r.top) / r.height) * DRAW_HEIGHT);
-    return [Math.min(DRAW_WIDTH, Math.max(0, x)), Math.min(DRAW_HEIGHT, Math.max(0, y))];
-  };
+  const point = (x: number, y: number, r: DOMRect): [number, number] => [
+    Math.min(DRAW_WIDTH, Math.max(0, Math.round(((x - r.left) / r.width) * DRAW_WIDTH))),
+    Math.min(DRAW_HEIGHT, Math.max(0, Math.round(((y - r.top) / r.height) * DRAW_HEIGHT))),
+  ];
 
   /** Adds points to the current stroke, its pending chunk and the canvas. */
   const add = (st: DrawStroke, pts: number[]) => {
@@ -139,8 +178,10 @@ export function DrawerPad({ s }: { s: PlayerState }) {
   };
 
   const down = (e: PointerEvent<HTMLCanvasElement>) => {
-    if (frozen) return;
     e.preventDefault();
+    // One finger draws; a second finger or a resting palm is ignored.
+    if (frozen || current.current || !e.isPrimary) return;
+    if (e.pointerType === 'touch' && Math.max(e.width, e.height) > PALM_SIZE) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const st: DrawStroke = {
       id: nextId.current++,
@@ -150,22 +191,40 @@ export function DrawerPad({ s }: { s: PlayerState }) {
       points: [],
     };
     strokes.current.push(st);
-    current.current = st;
-    add(st, point(e));
+    current.current = { stroke: st, pointer: e.pointerId };
+    history.current.push({ stroke: st.id });
+    setCanUndo(true);
+    add(st, point(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect()));
   };
   const move = (e: PointerEvent<HTMLCanvasElement>) => {
-    const st = current.current;
-    if (!st || frozen) return;
-    const [x, y] = point(e);
-    const n = st.points.length;
-    if (Math.hypot(x - st.points[n - 2]!, y - st.points[n - 1]!) < MIN_STEP) return;
-    add(st, [x, y]);
+    const cur = current.current;
+    if (!cur || cur.pointer !== e.pointerId || frozen) return;
+    const st = cur.stroke;
+    const r = e.currentTarget.getBoundingClientRect();
+    // Every position since the last event (fast strokes stay round instead of angular).
+    const events = e.nativeEvent.getCoalescedEvents?.() ?? [];
+    const pts: number[] = [];
+    let lx = st.points[st.points.length - 2]!;
+    let ly = st.points[st.points.length - 1]!;
+    for (const ev of events.length > 0 ? events : [e.nativeEvent]) {
+      const [x, y] = point(ev.clientX, ev.clientY, r);
+      if (Math.hypot(x - lx, y - ly) < MIN_STEP) continue;
+      pts.push(x, y);
+      lx = x;
+      ly = y;
+    }
+    if (pts.length > 0) add(st, pts);
   };
-  const up = () => {
+  const up = (e: PointerEvent<HTMLCanvasElement>) => {
+    if (current.current?.pointer !== e.pointerId) return;
     current.current = null;
     flush();
   };
   const eraseAll = () => {
+    if (strokes.current.length > 0) {
+      history.current.push({ cleared: strokes.current });
+      setCanUndo(true);
+    }
     strokes.current = [];
     current.current = null;
     pending.current.clear();
@@ -173,77 +232,138 @@ export function DrawerPad({ s }: { s: PlayerState }) {
     flush();
     redraw();
   };
+  /** Removes the last stroke (or brings back a « Tout effacer ») and re-sends the drawing. */
+  const undo = () => {
+    const last = history.current.pop();
+    setCanUndo(history.current.length > 0);
+    if (!last) return;
+    current.current = null;
+    if ('stroke' in last) strokes.current = strokes.current.filter((st) => st.id !== last.stroke);
+    else strokes.current = [...last.cleared, ...strokes.current];
+    clear.current = true;
+    pending.current = new Map(
+      strokes.current.map((st) => [st.id, { ...st, points: [...st.points] }]),
+    );
+    flush();
+    redraw();
+  };
 
   const found = s.draw?.found ?? [];
   return (
-    <div className="flex flex-1 flex-col gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <p className="text-center text-lg font-bold">🎨 C’est toi qui dessines !</p>
-      <p
-        className="rounded-2xl bg-white px-4 py-2 text-center text-3xl font-black break-words text-brand"
-        data-testid="draw-word"
-      >
-        {word}
-      </p>
-      <canvas
-        ref={canvas}
-        data-testid="draw-canvas"
-        aria-label={`Zone de dessin : dessine « ${word} »`}
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerCancel={up}
-        className={`aspect-[4/3] w-full touch-none rounded-xl shadow-lg ${frozen ? 'opacity-60' : ''}`}
-        style={{ background: DRAW_BACKGROUND }}
-      />
-      <div className="flex flex-wrap items-center justify-center gap-2" role="toolbar">
-        {DRAW_COLORS.map((c, i) => (
-          <button
-            key={c}
-            type="button"
-            aria-label={DRAW_COLOR_NAMES[i]}
-            aria-pressed={!eraser && color === i}
-            onClick={() => {
-              setColor(i);
-              setEraser(false);
-            }}
-            className={`size-9 touch-manipulation rounded-full border-2 ${!eraser && color === i ? 'scale-110 border-white ring-2 ring-white' : 'border-white/40'}`}
-            style={{ background: c }}
-          />
-        ))}
+    <div className={LAYOUT}>
+      <div className="flex flex-col gap-1 [grid-area:word] landscape:w-48">
+        <p className="flex items-center justify-center gap-2 text-sm font-bold">
+          🎨 C’est toi qui dessines !
+          {timer && <span className="hidden landscape:inline">{timer}</span>}
+        </p>
+        <p
+          className="rounded-2xl bg-white px-3 py-1.5 text-center text-2xl font-black break-words text-brand"
+          data-testid="draw-word"
+        >
+          {word}
+        </p>
+        <p className="text-center text-xs font-semibold opacity-80 landscape:hidden">
+          🔄 Tourne ton téléphone pour dessiner en grand
+        </p>
       </div>
-      <div className="flex items-center justify-center gap-2" role="toolbar">
-        {DRAW_SIZES.map((w, i) => (
-          <button
-            key={w}
-            type="button"
-            aria-label={['Trait fin', 'Trait moyen', 'Trait épais'][i]}
-            aria-pressed={size === i}
-            onClick={() => setSize(i)}
-            className={`flex size-11 touch-manipulation items-center justify-center rounded-xl ${size === i ? 'bg-white' : 'bg-white/20'}`}
-          >
-            <span
-              className="rounded-full bg-gray-900"
-              style={{ width: 4 + i * 6, height: 4 + i * 6 }}
+      <div ref={area} className="flex min-h-0 min-w-0 items-center justify-center [grid-area:pad]">
+        <canvas
+          ref={canvas}
+          data-testid="draw-canvas"
+          aria-label={`Zone de dessin : dessine « ${word} »`}
+          onPointerDown={down}
+          onPointerMove={move}
+          onPointerUp={up}
+          onPointerCancel={up}
+          className={`touch-none rounded-xl shadow-lg ${frozen ? 'opacity-60' : ''}`}
+          style={{ background: DRAW_BACKGROUND, width: box.w, height: box.h }}
+        />
+      </div>
+      <div className="flex flex-col items-center gap-2 [grid-area:tools] landscape:w-48">
+        <div
+          className="grid grid-cols-8 gap-1.5 landscape:grid-cols-4"
+          role="toolbar"
+          aria-label="Couleurs"
+        >
+          {DRAW_COLORS.map((c, i) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={DRAW_COLOR_NAMES[i]}
+              aria-pressed={!eraser && color === i}
+              onClick={() => {
+                setColor(i);
+                setEraser(false);
+              }}
+              className={`size-9 touch-manipulation rounded-full border-2 ${!eraser && color === i ? 'scale-110 border-white ring-2 ring-white' : 'border-white/40'}`}
+              style={{ background: c }}
             />
+          ))}
+        </div>
+        <div
+          className="flex flex-wrap items-center justify-center gap-1.5"
+          role="toolbar"
+          aria-label="Outils"
+        >
+          {DRAW_SIZES.map((w, i) => (
+            <button
+              key={w}
+              type="button"
+              aria-label={['Trait fin', 'Trait moyen', 'Trait épais'][i]}
+              aria-pressed={size === i}
+              onClick={() => setSize(i)}
+              className={`${TOOL} ${size === i ? 'bg-white' : 'bg-white/20'}`}
+            >
+              <span
+                className="rounded-full bg-gray-900"
+                style={{ width: 4 + i * 6, height: 4 + i * 6 }}
+              />
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-label="Annuler le dernier trait"
+            title="Annuler le dernier trait"
+            disabled={!canUndo}
+            onClick={undo}
+            className={`${TOOL} bg-white/20 disabled:opacity-40`}
+          >
+            <svg viewBox="0 0 24 24" className="size-7" aria-hidden="true">
+              <path
+                d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
-        ))}
-        <button
-          type="button"
-          aria-pressed={eraser}
-          onClick={() => setEraser((v) => !v)}
-          className={`h-11 touch-manipulation rounded-xl px-3 font-black ${eraser ? 'bg-white text-brand' : 'bg-white/20'}`}
-        >
-          🧽 Gomme
-        </button>
-        <button
-          type="button"
-          onClick={eraseAll}
-          className="h-11 touch-manipulation rounded-xl bg-answer-red px-3 font-black"
-        >
-          🗑️ Tout effacer
-        </button>
+          <button
+            type="button"
+            aria-label="Gomme"
+            title="Gomme"
+            aria-pressed={eraser}
+            onClick={() => setEraser((v) => !v)}
+            className={`${TOOL} text-2xl ${eraser ? 'bg-white' : 'bg-white/20'}`}
+          >
+            🧽
+          </button>
+          <button
+            type="button"
+            aria-label="Tout effacer"
+            title="Tout effacer"
+            onClick={eraseAll}
+            className={`${TOOL} bg-answer-red text-2xl`}
+          >
+            🗑️
+          </button>
+        </div>
       </div>
-      <p className="text-center font-bold" aria-live="polite">
+      <p
+        className="text-center text-sm font-bold [grid-area:status] landscape:w-48"
+        aria-live="polite"
+      >
         {found.length === 0
           ? 'Les autres devinent sur leur téléphone…'
           : `✅ ${found.map((p) => p.nickname).join(', ')} ${found.length > 1 ? 'ont' : 'a'} trouvé !`}

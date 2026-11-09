@@ -111,6 +111,31 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
   await expect(board).toHaveAttribute('data-strokes', '2');
   await shot(alice, 'phone-drawer');
 
+  // Undo: the last stroke goes away on the TV; « Tout effacer » can be undone too.
+  const undo = alice.getByRole('button', { name: 'Annuler le dernier trait' });
+  await scribble(alice, [0.1, 0.9], [0.9, 0.9]);
+  await expect(board).toHaveAttribute('data-strokes', '3');
+  await undo.click();
+  await expect(board).toHaveAttribute('data-strokes', '2');
+  await alice.getByRole('button', { name: 'Tout effacer' }).click();
+  await expect(board).toHaveAttribute('data-strokes', '0');
+  await undo.click();
+  await expect(board).toHaveAttribute('data-strokes', '2');
+
+  // Phone held sideways: a bigger pad, tools on the side, everything on screen.
+  const portrait = (await alice.getByTestId('draw-canvas').boundingBox())!;
+  await alice.setViewportSize({ width: 915, height: 412 });
+  await expect
+    .poll(async () => (await alice.getByTestId('draw-canvas').boundingBox())!.height)
+    .toBeGreaterThan(portrait.height * 1.15);
+  const sideways = (await alice.getByTestId('draw-canvas').boundingBox())!;
+  expect(sideways.y + sideways.height).toBeLessThanOrEqual(412);
+  await expect(undo).toBeInViewport();
+  await shot(alice, 'phone-drawer-landscape');
+  await scribble(alice, [0.2, 0.8], [0.8, 0.2]);
+  await expect(board).toHaveAttribute('data-strokes', '3');
+  await alice.setViewportSize({ width: 412, height: 839 });
+
   await guess(bob, 'cheval');
   await expect(bob.getByTestId('guess-feedback')).toHaveText('Non, pas « cheval »…');
   await guess(chloe, 'Lycorn');
@@ -128,7 +153,7 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
 
   // ---- Reveal: the word, the drawing stays ----
   await expect(host.getByTestId('draw-word')).toHaveText('Licorne');
-  await expect(board).toHaveAttribute('data-strokes', '2');
+  await expect(board).toHaveAttribute('data-strokes', '3');
   await expect(host.getByTestId('draw-found')).toContainText('Chloé');
   await shot(host, 'host-reveal');
   await expect(alice.getByRole('heading', { name: 'Bien dessiné !' })).toBeVisible();
@@ -182,7 +207,7 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
     ['DRAW', 2],
     ['DRAW', 0],
   ]);
-  expect(report.questions[0]!.details.draw?.strokes).toHaveLength(2);
+  expect(report.questions[0]!.details.draw?.strokes).toHaveLength(3);
   expect(report.results.find((r) => r.nickname === 'Alice')?.score).toBe(1000);
   await host.goto(`/reports/${summary!.id}`);
   const cards = host.getByTestId('draw-report');
@@ -190,7 +215,7 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
   // Hardest first: « Fusée » (nobody) comes before « Licorne ».
   await expect(cards.first()).toContainText('Fusée');
   const licorne = cards.filter({ hasText: 'Licorne' });
-  await expect(licorne.getByTestId('drawing')).toHaveAttribute('data-strokes', '2');
+  await expect(licorne.getByTestId('drawing')).toHaveAttribute('data-strokes', '3');
   await expect(host.getByText('2 / 3 joueurs ont trouvé le mot')).toBeVisible();
   await shot(host, 'report');
 });

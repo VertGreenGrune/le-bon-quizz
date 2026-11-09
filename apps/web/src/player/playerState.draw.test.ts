@@ -113,7 +113,8 @@ describe('TV, « Dessine-moi »', () => {
   });
 
   it('SVG path of a stroke; a single point is a dot', () => {
-    expect(strokePath([1, 2, 3, 4, 5, 6])).toBe('M1 2L3 4L5 6');
+    expect(strokePath([1, 2, 3, 4, 5, 6])).toBe('M1 2Q3 4 4 5L5 6');
+    expect(strokePath([0, 0, 10, 0])).toBe('M0 0L10 0');
     expect(strokePath([7, 8])).toBe('M7 8l0.01 0');
     expect(strokePath([])).toBe('');
   });

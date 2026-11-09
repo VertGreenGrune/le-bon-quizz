@@ -66,6 +66,22 @@ export async function enterFullscreen(env: FullscreenEnv): Promise<boolean> {
   return true;
 }
 
+/**
+ * « Dessine-moi »: lets the drawer turn the phone sideways (a bigger pad) although full screen /
+ * the installed app lock portrait; the returned function puts the portrait lock back. Browsers
+ * without the API, or not in full screen (no lock to lift), just refuse — ignored.
+ */
+export function allowRotation(): () => void {
+  const env = browserEnv();
+  const orientation = (typeof screen !== 'undefined' ? screen.orientation : undefined) as
+    (ScreenOrientation & { lock?: (o: 'any' | 'portrait') => Promise<void> }) | undefined;
+  if (!env || !orientation?.lock) return () => {};
+  orientation.lock('any').catch(() => {});
+  return () => {
+    if (env.doc.fullscreenElement || env.standalone) orientation.lock!('portrait').catch(() => {});
+  };
+}
+
 export async function exitFullscreen(env: FullscreenEnv): Promise<void> {
   if (env.doc.fullscreenElement) await env.doc.exitFullscreen?.().catch(() => {});
 }

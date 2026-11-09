@@ -167,7 +167,10 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
       // Remounted when the hand changes: an old « X a buzzé avant toi » goes away.
       if (s.prompt?.buzzer) return <BuzzerPad key={s.buzzer?.holder?.id ?? 'open'} s={s} />;
       const role = drawRole(s);
-      if (role === 'drawer') return <DrawerPad s={s} />;
+      if (role === 'drawer')
+        return (
+          <DrawerPad s={s} timer={<Countdown endsAt={s.answeringEndsAt} frozenMs={s.frozenMs} />} />
+        );
       if (role === 'guesser') return <GuessPad s={s} />;
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
@@ -204,11 +207,13 @@ function TopBar({ s, screen }: { s: PlayerState; screen: ReturnType<typeof playe
   // Team mode: the header band takes the team color for the whole game.
   const team = myTeam(s);
   const shape = team ? SHAPES[team.id] : null;
+  // « Dessine-moi », phone held sideways: the pad takes the whole height (its own timer).
+  const drawing = screen === 'answer' && drawRole(s) === 'drawer';
   return (
     <header
       className={`flex items-center justify-between gap-2 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] text-sm font-bold ${
         shape ? shapeBg[shape.color] : 'bg-black/20'
-      }`}
+      } ${drawing ? 'landscape:hidden' : ''}`}
     >
       <span className="flex min-w-0 items-center gap-1.5">
         {s.avatar && <Avatar id={s.avatar} size="sm" />}
