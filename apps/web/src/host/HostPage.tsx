@@ -8,6 +8,7 @@ import {
   type GamePhase as HostPhase,
 } from '@lbq/shared';
 import { parseGameOptions } from '../lib/gameOptions';
+import { ChainQuizDialog } from '../components/ChainQuizDialog';
 import { getTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { JokerAnnouncements } from './jokerScreens';
@@ -24,6 +25,9 @@ import { ComebackToasts, PauseOverlay, nicknameList } from './pauseScreens';
 import { TeamLobby, TeamPodiumScreen } from './teamScreens';
 import { EliminationMoment, SurvivalBadge } from './survivalScreens';
 import { useQuestionClip } from './clipPlayer';
+import { CastButton, isTvScreen } from './castToTv';
+import { useWakeLock } from '../player/useWakeLock';
+import { useTvScale } from './tvScale';
 import { RemoteButton, RemoteToast, useRemotePairing, useTvControls } from './remoteLink';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -112,6 +116,10 @@ export function HostPage() {
   );
   // « 📱 Télécommande » (T39): pairing, and the TV controls pressed on the remote.
   const pairing = useRemotePairing(pin, hostToken);
+  const [onTv] = useState(isTvScreen);
+  const [chaining, setChaining] = useState(false);
+  useWakeLock(onTv);
+  useTvScale();
   useTvControls(clip.replay);
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
@@ -286,6 +294,9 @@ export function HostPage() {
               📵 {nicknameList(offline)} {offline.length > 1 ? 'sont' : 'est'} hors ligne
             </span>
           )}
+          {phase !== 'ENDED' && !onTv && hostToken && (
+            <CastButton pin={pin} hostToken={hostToken} remoteToken={pairing.remoteToken} />
+          )}
           {phase !== 'ENDED' && (
             <RemoteButton pin={pin} remotes={pairing.remotes} remoteToken={pairing.remoteToken} />
           )}
@@ -342,9 +353,21 @@ export function HostPage() {
             </button>
           )}
           {phase === 'ENDED' && (
-            <Link to="/" className="rounded-xl bg-white px-8 py-4 text-2xl font-black text-brand">
+            <Link
+              to="/"
+              className="rounded-xl border-2 border-white/70 px-8 py-4 text-2xl font-black"
+            >
               Retour à l'accueil
             </Link>
+          )}
+          {(phase === 'PODIUM' || phase === 'ENDED') && (
+            <button
+              type="button"
+              onClick={() => setChaining(true)}
+              className="rounded-xl bg-white px-8 py-4 text-2xl font-black text-brand shadow-lg"
+            >
+              🔁 Enchaîner un quiz
+            </button>
           )}
           {(phase === 'QUESTION_INTRO' || phase === 'ANSWERING') && !state.paused && (
             <button
@@ -368,6 +391,9 @@ export function HostPage() {
             </motion.button>
           )}
         </footer>
+        {chaining && (
+          <ChainQuizDialog actions={game.chainActions} onClose={() => setChaining(false)} />
+        )}
       </ThemedMain>
     </MotionConfig>
   );

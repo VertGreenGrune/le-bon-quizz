@@ -1,4 +1,4 @@
-import { DRAW_FINDER_SHARE, DRAW_MAX_WORDS, DRAW_WORDS, DRAW_WORD_MAX_LENGTH } from '@lbq/shared';
+import { DRAW_MAX_WORDS, DRAW_WORDS, DRAW_WORD_MAX_LENGTH } from '@lbq/shared';
 import type { DraftQuestion } from './draft';
 
 type FieldProps = {
@@ -10,7 +10,6 @@ type FieldProps = {
 /** « Dessine-moi »: the words to draw (one per line), or the built-in list when empty. */
 export function DrawFields({ q, err, onChange }: FieldProps) {
   const words = q.words.filter((w) => w.trim());
-  const perFinder = Math.round(q.basePoints * DRAW_FINDER_SHARE);
   const errors = [
     err('.words'),
     ...q.words.map((w, i) => {
@@ -24,8 +23,8 @@ export function DrawFields({ q, err, onChange }: FieldProps) {
       <p className="text-sm text-gray-500">
         Un joueur (chacun son tour) reçoit un mot secret sur son téléphone et le dessine avec le
         doigt : le dessin s’affiche en direct sur l’écran. Les autres tapent leurs propositions ;
-        plus ils trouvent vite, plus ils marquent. Le dessinateur gagne {perFinder} pts par joueur
-        qui trouve (maximum {q.basePoints} pts).
+        plus ils trouvent vite, plus ils marquent. Le dessinateur gagne une part de {q.basePoints}{' '}
+        pts égale à la part des joueurs qui trouvent (tout le monde trouve : {q.basePoints} pts).
       </p>
       <label className="flex flex-col gap-1">
         <span className="flex justify-between text-sm font-bold text-gray-600">

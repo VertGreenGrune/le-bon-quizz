@@ -1,4 +1,4 @@
-import { BLUFF_FOOL_SHARE, BLUFF_MAX_LENGTH } from '@lbq/shared';
+import { BLUFF_FOOL_MAX_SHARE, BLUFF_FOOL_SHARE, BLUFF_MAX_LENGTH } from '@lbq/shared';
 import { VOTE_TIMES, type DraftQuestion } from './draft';
 
 type FieldProps = {
@@ -14,12 +14,13 @@ const inputClass = (invalid: boolean) =>
 export function BluffFields({ q, err, onChange }: FieldProps) {
   const truthErr = err('.truth');
   const fool = Math.round(q.basePoints * BLUFF_FOOL_SHARE);
+  const foolMax = Math.round(q.basePoints * BLUFF_FOOL_MAX_SHARE);
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-gray-500">
         Chaque joueur invente d’abord une fausse réponse crédible, puis tout le monde vote pour
         celle qu’il croit vraie parmi les mythos et la vraie réponse. Trouver la vérité :{' '}
-        {q.basePoints} pts ; chaque joueur piégé par ton mytho : {fool} pts.
+        {q.basePoints} pts ; chaque joueur piégé par ton mytho : {fool} pts (maximum {foolMax} pts).
       </p>
       <label className="flex flex-col gap-1">
         <span className="text-sm font-bold text-gray-600">La vraie réponse</span>

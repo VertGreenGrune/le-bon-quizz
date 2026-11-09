@@ -231,3 +231,45 @@ describe('« Télécommande » over sockets (T39)', () => {
     expect(players).toMatchObject({ players: [{ nickname: 'Alice', teamId: 1 }] });
   });
 });
+
+describe('« 📺 Afficher sur la TV » over sockets (T47)', () => {
+  it('hands the host screen over to the /tv page showing the code', async () => {
+    const pc = await client();
+    const created = await call<{ pin: string; hostToken: string }>(pc.socket, 'host:create', {
+      quizId: 'demo',
+    });
+    if (!created.ok) throw new Error(created.error.message);
+    const { pin, hostToken } = created;
+
+    const tv = await client();
+    const reg = await call<{ code: string }>(tv.socket, 'tv:register', {});
+    if (!reg.ok) throw new Error(reg.error.message);
+    expect(reg.code).toMatch(/^\d{4}$/);
+    // Same socket, same code (e.g. the page re-registers).
+    expect(await call(tv.socket, 'tv:register', {})).toMatchObject({ ok: true, code: reg.code });
+
+    const wrongCode = reg.code === '0000' ? '0001' : '0000';
+    expect(await call(pc.socket, 'host:cast', { pin, hostToken, code: wrongCode })).toMatchObject({
+      ok: false,
+      error: { code: 'TV_NOT_FOUND' },
+    });
+    expect(
+      await call(pc.socket, 'host:cast', { pin, hostToken: 'nope', code: reg.code }),
+    ).toMatchObject({ ok: false, error: { code: 'UNAUTHORIZED' } });
+
+    expect(await call(pc.socket, 'host:cast', { pin, hostToken, code: reg.code })).toEqual({
+      ok: true,
+    });
+    await settle();
+    expect(tv.received).toContainEqual({ event: 'tv:paired', payload: { pin, hostToken } });
+    // The code is used up.
+    expect(await call(pc.socket, 'host:cast', { pin, hostToken, code: reg.code })).toMatchObject({
+      ok: false,
+      error: { code: 'TV_NOT_FOUND' },
+    });
+    // The TV then attaches as the host screen.
+    expect(await call(tv.socket, 'host:rejoin', { pin, hostToken })).toEqual({ ok: true });
+    await settle();
+    expect(tv.received.some((r) => r.event === 'game:state')).toBe(true);
+  });
+});

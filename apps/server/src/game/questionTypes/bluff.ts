@@ -1,5 +1,5 @@
 import {
-  BLUFF_FOOL_SHARE,
+  bluffFoolPoints,
   BLUFF_MAX_LENGTH,
   type BluffOption,
   type BluffPrompt,
@@ -19,8 +19,8 @@ import type { Answer, Player } from '../Game.js';
  *    it is (almost) the real answer; a new one replaces the previous one.
  * 2. `vote` (`voteTimeSec`): the lies (same lies merged) and the truth, shuffled, are the
  *    options; every phone votes (`{ choiceIndex }`, the scored answer), never for its own lie.
- * Finding the truth = `basePoints`; each player fooled by your lie = `basePoints` ×
- * BLUFF_FOOL_SHARE. No time points.
+ * Finding the truth = `basePoints`; fooling players = `bluffFoolPoints`
+ * (+250 each, +500 at most). No time points.
  */
 export interface BluffState {
   stage: 'write' | 'vote';
@@ -104,8 +104,6 @@ function fooledBy(state: BluffState, playerId: string, players: Iterable<Player>
   return [...players].filter((p) => p.id !== playerId && p.answer?.choiceIndex === own);
 }
 
-const foolPoints = (q: BluffQuestion) => Math.round(q.basePoints * BLUFF_FOOL_SHARE);
-
 /** Points for fooling the others (added at the reveal, voted or not). */
 export function bluffBonus(
   q: BluffQuestion,
@@ -113,7 +111,7 @@ export function bluffBonus(
   player: Player,
   players: Iterable<Player>,
 ): number {
-  return fooledBy(state, player.id, players).length * foolPoints(q);
+  return bluffFoolPoints(q.basePoints, fooledBy(state, player.id, players).length);
 }
 
 const member = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nickname, avatar });
@@ -190,7 +188,7 @@ export function bluffResult(
       found: !!option?.truth,
       ...(lie && { lie }),
       fooled,
-      fooledPoints: fooled.length * foolPoints(q),
+      fooledPoints: bluffFoolPoints(q.basePoints, fooled.length),
       ...(fellFor && { fellFor }),
     },
   };

@@ -70,6 +70,14 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   `remoteToken`; it alone gets the answer (`remote:answer`, `answerText(q)` + explanation, PIN
   zone). « Déconnecter la télécommande » = new token, remotes told (`remote:revoked`) and dropped.
   In memory only (`Game.ts`), no DB.
+- **« 🔁 Enchaîner un quiz »** (T48, `Game.handOver` / `takeOver`, `GameManager.chain`): at PODIUM
+  or ENDED the TV and the remote pick another quiz (`host:quizzes`: own + shared quizzes of the
+  host who created the room, + the demo) and its options; `host:chain` ends the current game (a
+  PODIUM is saved like `host:end`, without broadcasting ENDED) and replaces it by a **new `Game`
+  with the same PIN**: same `hostToken` / `remoteToken`, TV and remote sockets, players (ids,
+  session tokens, nicknames, avatars, connection, team if it still exists; kicked ones left out),
+  scores / streaks at 0, LOBBY. `game:state.round` (2, 3…) tells the clients to start from a fresh
+  state; a phone that saw ENDED restores its session. New players can still join the new lobby.
 
 ## 3. Scoring
 
@@ -151,7 +159,8 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     after normalization, first spelling kept) + the truth, shuffled once, are the options; each
     phone votes `{ choiceIndex }` (the scored answer, through `recordAnswer`), never for its own
     lie (`INVALID_PAYLOAD`). Finding the truth = `basePoints` (correct, streak); each player who
-    voted for your lie = `basePoints × BLUFF_FOOL_SHARE` (+500), added at the reveal even without
+    voted for your lie = `basePoints × BLUFF_FOOL_SHARE` (+250), at most `basePoints ×
+    BLUFF_FOOL_MAX_SHARE` (+500) in all (`bluffFoolPoints`), added at the reveal even without
     a vote. No time points. Phones never get which option is true before the reveal. A kicked
     player's lie is dropped while writing. Jokers: Copieur copies the vote (a copied vote for
     one's own lie scores nothing), 50/50 hides half of the others' lies once the vote starts, Gel
@@ -170,7 +179,8 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     `'close'` = « Presque ! »: one typo more than accepted, or a word of the answer), a right one
     is the scored answer (time-based points, streak; `game:state.draw.found` tells everyone who
     found it, never what was typed). ANSWERING ends when every guesser found it or on the timer.
-    The drawer scores `basePoints × DRAW_FINDER_SHARE` (+200) per finder, up to `basePoints`, is
+    The drawer scores `basePoints` × the share of the guessers who found it (`drawerShare`;
+    guessers = the other players connected, + those who found it — everyone found = `basePoints`), is
     left out of the answer count, keeps their streak, and is awaited like any player (offline →
     pause; drawing refused while paused). No joker (pending attacks wait), no buzzer; « Survie »:
     never costs a heart (a ghost who finds it earns a haunt). Rejoin: the TV and the drawer's
@@ -332,7 +342,15 @@ Every client → server event takes an ack callback receiving
 | `host:resume` | `{ pin, hostToken }` | « Continuer sans… » while paused: the missing players become absent for the current question, then `game:resuming` (no-op when not paused) |
 | `host:pause` | `{ pin, hostToken }` | « ⏸ Pause » (T39), QUESTION_INTRO / ANSWERING only (`NOT_ANSWERING` otherwise): see §2 « Manual pause » |
 | `host:remote` | `{ pin, hostToken, revoke?: true }` | TV only: ack `{ remoteToken }` (created the first time); `revoke` = new token, paired remotes get `remote:revoked` and are dropped |
+| `host:cast` | `{ pin, hostToken, code }` | « 📺 Afficher sur la TV » (T47), TV only: the `/tv` page showing that 4-digit `code` gets `tv:paired { pin, hostToken }` and becomes the host screen (`host:rejoin`); the code is used up. `TV_NOT_FOUND` for an unknown code (5 wrong codes / minute per socket, then refused) |
+| `host:quizzes` | `{ pin, hostToken }` | « 🔁 Enchaîner un quiz » (T48): ack `{ quizzes: ChainQuiz[] }` (`{ id, title, questionCount, theme, coverImageUrl?, ownerName? }`) — the quizzes of the user who created the room (own, shared with them, the demo; only the demo for an anonymous host) |
+| `host:chain` | `{ pin, hostToken, quizId, mode?, teamCount?, jokers?, hearts?, theme? }` | PODIUM / ENDED only (`GAME_ALREADY_STARTED` otherwise): new game in the same room (§2), then `game:state` (`round`), `lobby:players`, `lobby:teams`, `survival:state`, `remote:status`; `QUIZ_NOT_FOUND` like `host:create` |
 | `host:rejoin` | `{ pin, hostToken }` | host screen reloaded / socket reconnected: re-attaches the socket as host (`GAME_NOT_FOUND` / `UNAUTHORIZED` otherwise), then re-sends to it `game:state`, `lobby:players`, `lobby:teams` (team mode), + `question:show` (question phases and LEADERBOARD), `answer:count` (ANSWERING, REVEAL), `question:reveal` (REVEAL), `leaderboard` (LEADERBOARD), `podium` (PODIUM, ENDED), `remote:status` |
+
+### TV page → server (« 📺 Afficher sur la TV », T47)
+| Event | Payload | Notes |
+|---|---|---|
+| `tv:register` | `{ code? }` | `/tv` page waiting for a game: ack `{ code }` (4 digits, unique among the waiting TVs; the given one again after a reconnection when still free). In memory (`socket/tvPairing.ts`), dropped on disconnect / once paired |
 
 ### Remote → server (« Télécommande », T39)
 | Event | Payload | Notes |
@@ -357,7 +375,7 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `quizTitle` = the quiz title (T47: TV lobby + header, phone lobby, remote); `introMs` during QUESTION_INTRO = its whole length, T42) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `quizTitle` = the quiz title (T47: TV lobby + header, phone lobby, remote); `introMs` during QUESTION_INTRO = its whole length, T42; `round` = quiz number in the room after a « 🔁 Enchaîner un quiz », absent = 1, T48 (2nd wave)) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -377,6 +395,7 @@ Every client → server event takes an ack callback receiving
 | `remote:revoked` | each remote | `{}` — the TV revoked the token (the socket leaves the rooms) |
 | `remote:status` | host room | `{ remotes }` — remotes connected (TV indicator + toast), also in the host resync |
 | `tv:control` | the TV sockets | `{ action }` from `remote:tv` |
+| `tv:paired` | that `/tv` page | `{ pin, hostToken }` (T47): save the token, open `/host/<pin>` |
 | `error` | sender | `{ code, message }` |
 
 Choice index ↔ shape/color (fixed): `0 = red ▲`, `1 = blue ◆`, `2 = yellow ●`, `3 = green ■`.
@@ -504,6 +523,10 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
   browser drops it), `lib/fullscreen.ts`; iPhone Safari (no API): « Sur l'écran d'accueil » hint +
   web app manifest (`public/manifest.webmanifest`, `display: fullscreen`, `start_url: /join`, icons
   from `scripts/generate-icons.mjs`)
+- `/tv` → « 📺 Afficher sur la TV » (T47): a TV browser (Fire TV: Silk) shows a 4-digit code; the
+  host types it in the TV header's « 📺 Afficher sur la TV » dialog → this page becomes the host
+  screen (same document, so the « 🔊 Activer le son » press unlocks the sound; wake lock) and the
+  host's device reloads as the « Télécommande ». Linked from the home page
 - `/remote/:pin#<remoteToken>` → « Télécommande » (T39): the host's phone drives the game (token
   kept in `localStorage` `lbq:remote:<pin>`, removed from the address bar)
 - `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`

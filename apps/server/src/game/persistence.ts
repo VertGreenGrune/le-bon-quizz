@@ -1,5 +1,5 @@
-import { DEMO_QUIZ, type GameMode, type Quiz } from '@lbq/shared';
-import { getPlayableQuiz } from '../api/quizzes.service.js';
+import { DEMO_QUIZ, type ChainQuiz, type GameMode, type Quiz } from '@lbq/shared';
+import { getPlayableQuiz, listQuizzes, listSharedQuizzes } from '../api/quizzes.service.js';
 import { getUserBySessionToken } from '../auth/session.js';
 import type { PrismaClient } from '../db.js';
 import type { Prisma } from '../generated/prisma/client.js';
@@ -41,6 +41,8 @@ export interface GamePersistence {
    * `QUIZ_NOT_FOUND` (also for someone else's private quiz, so its existence is not disclosed).
    */
   loadQuiz(quizId: string, hostId: string | null): Promise<LoadedQuiz>;
+  /** « 🔁 Enchaîner un quiz » (T48): the host's own quizzes, the shared ones, then the demo. */
+  listQuizzes(hostId: string | null): Promise<ChainQuiz[]>;
   saveGame(record: GameRecord): Promise<void>;
 }
 
@@ -50,10 +52,18 @@ function demoOr(quizId: string, hostId: string | null): LoadedQuiz {
   throw new GameError('QUIZ_NOT_FOUND', 'Quiz introuvable');
 }
 
+const DEMO_CHAIN_QUIZ: ChainQuiz = {
+  id: DEMO_QUIZ.id,
+  title: DEMO_QUIZ.title,
+  questionCount: DEMO_QUIZ.questions.length,
+  theme: DEMO_QUIZ.theme ?? 'classic',
+};
+
 /** No database: only the demo quiz, nothing is saved (unit tests, phase 1). */
 export const demoOnlyPersistence: GamePersistence = {
   authenticate: async () => null,
   loadQuiz: async (quizId, hostId) => demoOr(quizId, hostId),
+  listQuizzes: async () => [DEMO_CHAIN_QUIZ],
   saveGame: async () => {},
 };
 
@@ -69,6 +79,26 @@ export function createPrismaPersistence(prisma: PrismaClient): GamePersistence {
       if (!playable) return demoOr(quizId, hostId);
       const { createdAt: _c, updatedAt: _u, visibility: _v, ...quiz } = playable;
       return { quiz: { ...quiz, id: quizId }, dbQuizId: quizId };
+    },
+
+    async listQuizzes(hostId) {
+      if (!hostId) return [DEMO_CHAIN_QUIZ];
+      const [own, shared] = await Promise.all([
+        listQuizzes(prisma, hostId),
+        listSharedQuizzes(prisma, hostId),
+      ]);
+      const pick = (q: (typeof own)[number]): ChainQuiz => ({
+        id: q.id,
+        title: q.title,
+        questionCount: q.questionCount,
+        theme: q.theme,
+        ...(q.coverImageUrl && { coverImageUrl: q.coverImageUrl }),
+      });
+      const list = [
+        ...own.map(pick),
+        ...shared.map((q) => ({ ...pick(q), ownerName: q.ownerName })),
+      ];
+      return list.some((q) => q.id === DEMO_QUIZ.id) ? list : [...list, DEMO_CHAIN_QUIZ];
     },
 
     async saveGame(r) {

@@ -30,6 +30,8 @@ const ACK_TIMEOUT_MS = 8000;
 const PROBE_TIMEOUT_MS = 3000;
 
 let state: PlayerState = initialPlayerState;
+/** Session of the game that just ended, kept in case the host chains another quiz (T48). */
+let endedSession: PlayerSession | null = null;
 const listeners = new Set<() => void>();
 let attached = false;
 /** Socket id that did the join / last successful rejoin: no rejoin needed while it lives. */
@@ -64,8 +66,15 @@ function attach() {
   socket.on('disconnect', () => dispatch({ type: 'connection', connected: false }));
   socket.on('game:state', (payload) => {
     dispatch({ type: 'state', payload, now: Date.now() });
-    // Game over: nothing to resume any more (the end screen stays displayed).
-    if (payload.phase === 'ENDED') clearSession();
+    // Game over: nothing to resume any more (the end screen stays displayed)…
+    if (payload.phase === 'ENDED') {
+      endedSession = loadSession() ?? endedSession;
+      clearSession();
+    } else if (endedSession && payload.round !== undefined) {
+      // …unless the host chains another quiz in the same room (T48): the session goes on.
+      saveSession(endedSession);
+      endedSession = null;
+    }
   });
   socket.on('game:resuming', ({ inMs }) => {
     dispatch({ type: 'resuming', inMs, now: Date.now() });
@@ -180,6 +189,7 @@ export function joinGame(pin: string, nickname: string, avatar: AvatarId): Promi
   // Fresh state before emitting, so game:state pushed right after the join lands in it.
   clearSession(pin);
   boundSocketId = undefined;
+  endedSession = null;
   state = { ...initialPlayerState, connected: socket.connected };
   listeners.forEach((l) => l());
   return new Promise((resolve) => {
@@ -436,6 +446,7 @@ export function chooseTeam(teamId: TeamId) {
 /** Forget the game (end screen, kicked, "join another game"). */
 export function leaveGame() {
   clearSession();
+  endedSession = null;
   boundSocketId = undefined;
   state = { ...initialPlayerState, connected: state.connected };
   listeners.forEach((l) => l());

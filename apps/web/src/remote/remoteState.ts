@@ -35,8 +35,12 @@ export function remoteReducer(state: RemoteState, action: RemoteAction): RemoteS
       return { ...state, answer: action.payload };
     case 'revoked':
       return { ...state, revoked: true };
-    default:
-      return { ...state, host: hostReducer(state.host, action) };
+    default: {
+      const host = hostReducer(state.host, action);
+      // Another quiz chained (T48): the previous quiz's answer must not show on the new one.
+      const answer = host.round !== state.host.round ? null : state.answer;
+      return { ...state, host, answer };
+    }
   }
 }
 

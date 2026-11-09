@@ -32,6 +32,9 @@ export function Home() {
         <Link to="/editor" className="py-2 text-center font-semibold underline opacity-90">
           Espace animateur : mes quiz
         </Link>
+        <Link to="/tv" className="py-1 text-center text-sm font-semibold underline opacity-80">
+          📺 Je suis la TV : afficher un code
+        </Link>
       </div>
       {starting && (
         <StartGameDialog

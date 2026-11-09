@@ -2600,6 +2600,56 @@ leaderboard has his points.
   never sign in). (3) A local session opened before Firebase was turned on stays valid until logout.
   **After merging, run `pnpm --filter @lbq/server db:migrate`.**
 
+### T47 — Show the game on a Fire TV (« 📺 Afficher sur la TV »)
+- **Status:** done
+- **Depends on:** — Ports: server 3047 / web 5247, test DB `lbq_test_t47`.
+- **User requirement (2026-11-07):** cast the host screen to a Fire TV (no Google Cast there).
+  **Decided:** the Fire TV opens `/tv` in its browser (Silk), which shows a 4-digit code; the host
+  types it in « 📺 Afficher sur la TV » (TV header) → the TV becomes the host screen and the host's
+  device switches to the « Télécommande ».
+- **Summary:** shared (additive): `tv:register { code? }` → `{ code }`, `host:cast { pin,
+  hostToken, code }`, `tv:paired { pin, hostToken }`, error `TV_NOT_FOUND`, `TvCode`. Server:
+  `socket/tvPairing.ts` (`TvPairing`: unique 4-digit codes per waiting socket, kept across a
+  reconnection, used up when paired, 5 wrong codes / minute per socket), handlers in
+  `socket/index.ts`. Web: `/tv` (`tv/TvPage.tsx`: big code sized in `vh` for a 960 × 540 TV
+  browser, « 🔊 Activer le son (appuie sur OK) » focused for the TV remote, wake lock, re-registers
+  on reconnection; `tv:paired` → host token saved → `/host/<pin>`), « 📺 Je suis la TV » link on
+  the home page; TV header « 📺 Afficher sur la TV » (`host/castToTv.tsx`: the `/tv` address on the
+  LAN origins, code field, errors; on success the device reloads as `/remote/<pin>#token`), hidden
+  on a paired TV (`isTvScreen`), which also keeps its screen on. Tests: `tvPairing.test.ts`,
+  socket test (cast, wrong code, bad token, code used up, TV rejoins as host), `castToTv.test.ts`,
+  e2e `e2e/fire-tv.spec.ts` (960 × 540 TV, wrong then right code, TV = host screen, PC = remote
+  starts the game with a phone). No migration. Not tried on a real Fire TV (Silk).
+
+### T48 — Chain quizzes in the same room (« 🔁 Enchaîner un quiz »)
+- **Status:** done
+- **Depends on:** T47. Ports: server 3048 / web 5248, test DB `lbq_test_t48`.
+- **User requirement (2026-11-08):** when a quiz ends, the host must not have to pair the TV again
+  nor give a new PIN: the games are chained.
+- **Design (decided):** at the PODIUM (or once ENDED) the TV and the remote offer « 🔁 Enchaîner un
+  quiz »: a list of the host's quizzes (own + shared with them, + the demo), then the usual options
+  dialog (Solo / Équipes / Survie, Jokers, theme). `host:chain` replaces the game by a **new game
+  with the same PIN**: same host token, remote token, TV and remote sockets, same players (ids,
+  session tokens, nicknames, avatars, team when it still exists), scores at 0, back to the LOBBY.
+  The finished game is saved as usual (one report per quiz). `game:state.round` (1, 2, …) tells
+  every client a new game started, so they reset their state. The quiz list comes through the
+  socket (`host:quizzes`), loaded for the user who created the room, so a TV that isn't logged in
+  (Fire TV) can chain too.
+- **Summary:** shared: `host:quizzes` (ack `{ quizzes: ChainQuiz[] }`), `host:chain`
+  (`HostChainPayload` = `host:create` options + host or remote token), `GameStatePayload.round?`.
+  Server: `Game` gains `ownerId`, `round`, `handOver()` (PODIUM → ENDED + `onEnded` save without
+  broadcast, `dispose`, returns a `GameCarry`) and `takeOver()` (constructor `settings.carry`),
+  `announce()`; `GameManager.chain`; `GamePersistence.listQuizzes` (own + shared + demo; demo only
+  without DB / anonymous); socket handlers (`asController`, so the remote can chain). Web:
+  `lib/chain.ts` (`chainActions`), `components/ChainQuizDialog.tsx` (quiz list → `StartGameDialog`)
+  behind « 🔁 Enchaîner un quiz » on the TV footer and the remote (PODIUM / ENDED); host / player /
+  remote reducers start from a fresh state on a new `round` (the phone keeps its identity, the
+  remote drops the old answer); the phone store keeps the session it cleared at ENDED and saves it
+  back when a new round arrives; phone end screen « Reste ici : si l’animateur enchaîne un autre
+  quiz… ». Tests: `Game.chain.test.ts` (5), `playerState.chain.test.ts` (3), e2e `e2e/chain.spec.ts`
+  (end early → chain the demo → same URL / PIN, players in the new lobby, phone reload, plays).
+  No migration. Not tried on a real Fire TV.
+
 - **Later ideas (not specified):** AI-generated quizzes (T17); « Duel » question between the two
   leaders; seasonal themes/skins for the TV; spectator mode on a second screen.
 
@@ -3070,6 +3120,17 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   falls back to files still in `UPLOAD_DIR`). Uploads and `quiz:import` write to the table
   (content-hash names); `media:to-db` (`dist/media-to-db.js`) copies an old upload dir into it.
   `ApiDeps.uploadDir` is optional; `@fastify/static` no longer serves `/uploads/`.
+- 2026-11-08, main agent (T48, additive): `host:quizzes`, `host:chain` (`HostChainPayload`,
+  `ChainQuiz`), `GameStatePayload.round?`; `GamePersistence.listQuizzes` (**required** — test
+  persistences implementing the interface must add it); `GameSettings.ownerId?` / `carry?`.
+- 2026-11-08, main agent (scoring rebalance, user feedback): « Mytho ! » fooling = +250 per player
+  fooled, +500 at most (`BLUFF_FOOL_SHARE` 0.25, new `BLUFF_FOOL_MAX_SHARE`, `bluffFoolPoints`);
+  « Dessine-moi » drawer = `basePoints` × share of the guessers who found the word (`drawerShare`,
+  replaces `DRAW_FINDER_SHARE`), so everyone finding it = full points whatever the group size.
+- 2026-11-08, main agent (content, no app change): `content/quizzes/hxh-one-piece/` « One Piece ×
+  Hunter × Hunter », 30 questions of every type and option (buzzer, sound during / at the reveal,
+  blur / zoom / pixelate, 2 PIN on a CC BY-SA map of Japan, « select all »), an explanation on each;
+  2 music files to add (`README.md`). Imported (private) for vachet.clement.es2@gmail.com.
 - 2026-11-09, main agent (T47–T51, all additive, PLAN.md §3 / §4): `GameStatePayload.quizTitle?`;
   `SliderPrompt.start?` (prompt only) + `GameSettings.sliderRandom`; `RevealDetails.order.answers?`
   (`OrderAnswer`); `QuestionRevealPayload.wheels?` (`ThiefWheel`), `JokerResult` `selfRobbed` /

@@ -1,6 +1,8 @@
 import type { Server, Socket } from 'socket.io';
 import {
   HostAcceptPayload,
+  HostCastPayload,
+  HostChainPayload,
   HostActionPayload,
   HostCreatePayload,
   HostJudgePayload,
@@ -20,6 +22,7 @@ import {
   PlayerTeamPayload,
   RemoteJoinPayload,
   RemoteTvPayload,
+  TvRegisterPayload,
   roomAll,
   roomHost,
   type Ack,
@@ -33,6 +36,7 @@ import { GameError } from '../game/errors.js';
 import type { Game, GameTransport } from '../game/Game.js';
 import { GameManager } from '../game/GameManager.js';
 import { SESSION_COOKIE } from '../auth/session.js';
+import { TvPairing } from './tvPairing.js';
 import { demoOnlyPersistence, gameRecord, type GamePersistence } from '../game/persistence.js';
 
 export type IoServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -147,6 +151,7 @@ export function registerSocketHandlers(
   };
 
   setInterval(() => games.sweep(), SWEEP_INTERVAL_MS).unref();
+  const tvs = new TvPairing();
 
   io.on('connection', (socket) => {
     let session: Session | null = null;
@@ -223,7 +228,7 @@ export function registerSocketHandlers(
             quiz,
             (pin) => makeTransport(io, pin),
             { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount, jokers, jokerHand, hearts, theme },
+            { mode, teamCount, jokers, jokerHand, hearts, theme, ownerId: hostId },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
@@ -335,6 +340,51 @@ export function registerSocketHandlers(
       handler(socket, HostRemotePayload, ({ pin, hostToken, revoke }) => ({
         remoteToken: asHost(pin, hostToken).remoteTokenFor(!!revoke),
       })),
+    );
+
+    socket.on(
+      'host:cast',
+      handler(socket, HostCastPayload, ({ pin, hostToken, code }) => {
+        asHost(pin, hostToken);
+        const tv = tvs.claim(code, socket.id);
+        io.to(tv).emit('tv:paired', { pin, hostToken });
+        return {};
+      }),
+    );
+
+    // ---------- « 🔁 Enchaîner un quiz » (T48) ----------
+
+    socket.on(
+      'host:quizzes',
+      handler(socket, HostActionPayload, async (p) => ({
+        quizzes: await persistence.listQuizzes(asController(p).ownerId),
+      })),
+    );
+
+    socket.on(
+      'host:chain',
+      handler(socket, HostChainPayload, async (p) => {
+        const game = asController(p);
+        if (game.phase !== 'PODIUM' && game.phase !== 'ENDED')
+          throw new GameError('GAME_ALREADY_STARTED', 'Termine d’abord ce quiz');
+        const { quizId, mode = 'solo', teamCount, jokers, hearts, theme } = p;
+        const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, game.ownerId);
+        games.chain(
+          game.pin,
+          quiz,
+          (pin) => makeTransport(io, pin),
+          { onEnded: saveOnEnd(game.ownerId, dbQuizId) },
+          { mode, teamCount, jokers, jokerHand, hearts, theme, ownerId: game.ownerId },
+        );
+        return {};
+      }),
+    );
+
+    // ---------- « 📺 Afficher sur la TV » (T47) ----------
+
+    socket.on(
+      'tv:register',
+      handler(socket, TvRegisterPayload, ({ code }) => ({ code: tvs.register(socket.id, code) })),
     );
 
     // ---------- « Télécommande » (T39) ----------
@@ -486,7 +536,10 @@ export function registerSocketHandlers(
       }),
     );
 
-    socket.on('disconnect', leaveSession);
+    socket.on('disconnect', () => {
+      leaveSession();
+      tvs.disconnected(socket.id);
+    });
   });
 
   return games;

@@ -22,6 +22,8 @@ import {
 
 /** Everything the shared screen knows about the game, folded from server events. */
 export interface HostGameState {
+  /** Quiz number in this room (T48 « Enchaîner un quiz », `game:state.round`, 1 = first). */
+  round: number;
   /** null until the first `game:state` arrives. */
   phase: GamePhase | null;
   mode: GameMode;
@@ -90,6 +92,7 @@ export type HostAction =
   | { type: 'drawStrokes'; payload: DrawStrokesPayload };
 
 export const initialHostState: HostGameState = {
+  round: 1,
   phase: null,
   mode: 'solo',
   theme: 'classic',
@@ -125,6 +128,9 @@ export const initialHostState: HostGameState = {
 export function hostReducer(state: HostGameState, action: HostAction): HostGameState {
   switch (action.type) {
     case 'state': {
+      const round = action.payload.round ?? 1;
+      // The host chained another quiz (T48): start from scratch (the lobby is re-sent next).
+      if (round !== state.round && state.phase !== null) state = { ...initialHostState, round };
       const { phase, mode, questionIndex, totalQuestions, remainingMs } = action.payload;
       const newQuestion = questionIndex !== state.questionIndex;
       const paused = action.payload.paused ?? null;
@@ -134,6 +140,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
       const frozen = !!paused || !!buzzer?.holder;
       return {
         ...state,
+        round,
         phase,
         mode,
         theme: action.payload.theme ?? 'classic',
