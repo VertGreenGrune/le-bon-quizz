@@ -57,10 +57,9 @@ describe('jokerAvailability (T26 « Mytho ! »)', () => {
 });
 
 describe('T42: jokers on the current question, after answering, intro length', () => {
-  it('Brouilleur only on shape questions, refused with a reason elsewhere', () => {
+  it('Brouilleur only on choix multiple, refused with a reason elsewhere', () => {
     expect(jokerAllowed('MCQ', 'scramble')).toBe(true);
-    expect(jokerAllowed('TRUE_FALSE', 'scramble')).toBe(true);
-    for (const type of ['TYPE_ANSWER', 'SLIDER', 'ORDER', 'PIN', 'BLUFF'] as const) {
+    for (const type of ['TRUE_FALSE', 'TYPE_ANSWER', 'SLIDER', 'ORDER', 'PIN', 'BLUFF'] as const) {
       expect(jokerAllowed(type, 'scramble')).toBe(false);
       expect(jokerRefusal(type, 'scramble')).toMatch(/Brouilleur/);
     }

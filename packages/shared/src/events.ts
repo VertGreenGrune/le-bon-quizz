@@ -62,7 +62,8 @@ export interface ErrorPayload {
 
 /** Every ack callback receives either `{ ok: true, ...data }` or `{ ok: false, error }`. */
 export type Ack<T extends object = object> =
-  ({ ok: true } & T) | { ok: false; error: ErrorPayload };
+  | ({ ok: true } & T)
+  | { ok: false; error: ErrorPayload };
 
 export interface RankedPlayer {
   nickname: string;
@@ -868,7 +869,10 @@ export interface JokerEffects {
    * before ANSWERING, elapsed time + 5 s when it lands during ANSWERING (T42).
    */
   frozen?: { ms: number; by: LobbyMember };
-  /** Brouilleur: grey buttons in this order, labelled with the choice texts (read the TV). */
+  /**
+   * Brouilleur (MCQ only): the shape buttons move all over the phone screen. `choices` (shuffled,
+   * with the texts) is kept for older phones; the current phone only uses the indexes.
+   */
   scrambled?: { by: LobbyMember; choices: { index: number; text: string }[] };
   /** Copieur: the target answered, so did you (copied answer, not shown). */
   copied?: true;

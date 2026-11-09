@@ -47,6 +47,7 @@ import { CancelAnswerButton } from './cancelAnswer';
 import { getTheme, useTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
+import { MovingButtons } from './MovingButtons';
 import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
 import { heartsText, survivalLabel } from '../lib/survival';
 import {
@@ -56,7 +57,6 @@ import {
   JokerChip,
   JokerResultLines,
   JokerToast,
-  ScrambledButtons,
 } from './jokers';
 
 /** /play — phone controller. Question text is only on the shared screen. */
@@ -316,7 +316,7 @@ function PauseOverlay({ s }: { s: PlayerState }) {
 
 /**
  * Shape buttons, a text field, a slider… depending on the question type. `effects`: jokers
- * (50/50 hides choices / narrows the slider / gives a first letter, Brouilleur scrambles).
+ * (50/50 hides choices / narrows the slider / gives a first letter, Brouilleur moves the buttons).
  */
 function AnswerScreen({
   s,
@@ -362,22 +362,24 @@ function AnswerScreen({
     ) : (
       <BluffVote prompt={prompt.bluff} hidden={effects.hiddenChoices ?? []} />
     );
-  // « Select all »: toggles + « Valider » (grey and scrambled with a Brouilleur).
+  // Brouilleur: the buttons move all over the screen (single answer or « select all »).
+  if (effects.scrambled)
+    return (
+      <MovingButtons
+        choiceCount={prompt.choiceCount ?? 4}
+        hidden={effects.hiddenChoices}
+        by={effects.scrambled.by}
+        multiple={prompt.multiple}
+        s={s}
+      />
+    );
+  // « Select all »: toggles + « Valider ».
   if (prompt.multiple)
     return (
       <MultiAnswerButtons
         s={s}
         choiceCount={prompt.choiceCount ?? 4}
         hidden={effects.hiddenChoices ?? []}
-        scrambled={effects.scrambled}
-      />
-    );
-  if (effects.scrambled)
-    return (
-      <ScrambledButtons
-        choices={effects.scrambled.choices}
-        by={effects.scrambled.by}
-        hidden={effects.hiddenChoices}
       />
     );
   return (

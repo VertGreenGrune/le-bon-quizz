@@ -24,6 +24,6 @@ export const HAUNTS: Record<HauntType, { name: string; icon: string; description
   scramble: {
     name: 'Brouilleur',
     icon: '🌀',
-    description: 'Ses boutons sont gris et mélangés à sa prochaine question à choix.',
+    description: 'Ses boutons bougent dans tout l’écran à sa prochaine question à choix multiple.',
   },
 };

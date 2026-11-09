@@ -112,7 +112,7 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   the usual time points (from the validation), streak, team averages, « Survie » heart. Every
   ticked choice counts in `distribution`; `RevealDetails.multiple.allFound` = players who ticked
   exactly the right set. Jokers as usual: 50/50 hides wrong choices, Copieur copies the whole
-  selection, Brouilleur's grey buttons become toggles. Single-answer MCQ, TRUE_FALSE and POLL are
+  selection, Brouilleur's moving buttons become toggles. Single-answer MCQ, TRUE_FALSE and POLL are
   unchanged (one tap).
 - **Question types** (`Question.type`): `MCQ` and `TRUE_FALSE` (shape buttons, ≥ 1 correct
   choice), plus:
@@ -200,7 +200,7 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   « before answering » only. Which jokers a question type takes comes from **one table**,
   `jokerAvailability(type)` in shared (+ `afterAnswer` per type), and the refusal reasons from
   `jokerRefusal` (server message = the phone's greyed-joker reason): `POLL` takes none (bar
-  hidden), `TRUE_FALSE` no 50/50, Brouilleur only on MCQ / TRUE_FALSE.
+  hidden), `TRUE_FALSE` no 50/50, Brouilleur only on MCQ (T52).
   - 🎯 **50/50** (`fifty`): hides `min(ceil(wrong / 2), wrong − 1)` wrong choices on that phone;
     SLIDER: a range half as wide containing the answer (random position); TYPE_ANSWER: the first
     letter of the first accepted answer (leading article skipped). Refused when it would hide
@@ -214,9 +214,11 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     (`FROZEN`) for 5 s — from the start of `ANSWERING` when played during the intro, from the
     moment it lands when played during `ANSWERING` (`effects.frozen.ms` = elapsed ANSWERING time
     when it ends; pauses excluded). « Mytho ! »: it blocks the vote (not the writing).
-  - 🌀 **Brouilleur** (`scramble`, attack, T42: **this** question, MCQ / TRUE_FALSE only): the
-    target's phone gets grey buttons in a shuffled order labelled with the choice texts, right
-    away (`joker:state` pushed).
+  - 🌀 **Brouilleur** (`scramble`, attack, T42: **this** question, MCQ only — single answer or
+    « select all », T52): right away (`joker:state` pushed), the target's colored shape buttons
+    **move all over the phone screen** at a medium speed (bouncing off the edges and each other,
+    `player/MovingButtons.tsx` + `movingPhysics.ts`), so the right one is hard to hit; « Valider »
+    of a « select all » stays still. `effects.scrambled.choices` is still sent (unused).
   - Gel / Brouilleur on a target who already answered → `JOKER_REFUSED` « X a déjà répondu »
     (joker kept); on a type they can't hit → refused with the reason. « Survie » haunts (§ Survie)
     still land on the target's **next** question that takes them.

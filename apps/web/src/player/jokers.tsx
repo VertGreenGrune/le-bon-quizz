@@ -18,7 +18,7 @@ import {
   noJokersHere,
   resultLine,
 } from '../lib/jokers';
-import { sendAnswer, playJoker } from './playerStore';
+import { playJoker } from './playerStore';
 import {
   bluffStage,
   jokerEffects,
@@ -428,37 +428,6 @@ export function CopyWaiting({ target }: { target: LobbyMember }) {
       <h2 className="text-3xl font-black">Tu copies {target.nickname}</h2>
       <Avatar id={target.avatar} size="xl" className="ring-4 ring-white" />
       <p className="text-lg font-semibold opacity-85">Sa réponse sera la tienne, 1 s plus tard…</p>
-    </div>
-  );
-}
-
-/** Brouilleur: grey buttons in a shuffled order, with the choice texts (read the TV!). */
-export function ScrambledButtons({
-  choices,
-  by,
-  hidden = [],
-}: {
-  choices: { index: number; text: string }[];
-  by: LobbyMember;
-  hidden?: number[];
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-3 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <p className="text-center text-sm font-black">
-        🌀 Brouillé par {by.nickname} : lis l'écran !
-      </p>
-      {choices.map((c) => (
-        <motion.button
-          key={c.index}
-          type="button"
-          whileTap={{ scale: 0.95 }}
-          disabled={hidden.includes(c.index)}
-          onClick={() => sendAnswer({ choiceIndex: c.index })}
-          className="flex flex-1 touch-manipulation items-center justify-center rounded-2xl bg-gray-500 px-4 text-2xl font-black shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] disabled:opacity-20"
-        >
-          {c.text}
-        </motion.button>
-      ))}
     </div>
   );
 }
