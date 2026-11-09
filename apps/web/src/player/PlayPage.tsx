@@ -327,16 +327,21 @@ function AnswerScreen({
   prompt: QuestionPromptPayload;
   effects?: JokerEffects;
 }) {
+  // After « Annuler ma réponse », the screen starts from the answer just cancelled.
+  const previous = s.cancelled?.questionIndex === prompt.index ? s.cancelled : null;
+  const previousText = previous && 'text' in previous ? previous.text : '';
   if (prompt.type === 'TYPE_ANSWER')
     return (
       <TextAnswer
         maxLength={prompt.maxLength ?? TYPE_ANSWER_MAX_LENGTH}
         firstLetter={effects.firstLetter}
+        initial={previousText}
       />
     );
   if (prompt.type === 'WORD_CLOUD')
     return (
       <TextAnswer
+        initial={previousText}
         maxLength={prompt.maxLength ?? WORD_CLOUD_MAX_LENGTH}
         title="Un mot ou deux"
         placeholder="Ton mot…"
@@ -347,13 +352,29 @@ function AnswerScreen({
     return (
       <SliderAnswer
         key={range ? 'narrowed' : 'full'}
-        slider={{ ...prompt.slider, ...range }}
+        slider={{
+          ...prompt.slider,
+          ...range,
+          ...(previous && 'value' in previous && { start: previous.value }),
+        }}
         narrowed={!!range}
       />
     );
   }
-  if (prompt.type === 'ORDER' && prompt.items) return <OrderAnswer items={prompt.items} />;
-  if (prompt.type === 'PIN' && prompt.imageUrl) return <PinAnswer imageUrl={prompt.imageUrl} />;
+  if (prompt.type === 'ORDER' && prompt.items)
+    return (
+      <OrderAnswer
+        items={prompt.items}
+        initial={previous && 'order' in previous ? previous.order : undefined}
+      />
+    );
+  if (prompt.type === 'PIN' && prompt.imageUrl)
+    return (
+      <PinAnswer
+        imageUrl={prompt.imageUrl}
+        initial={previous && 'point' in previous ? previous.point : undefined}
+      />
+    );
   if (prompt.type === 'WHO_OF_US' && prompt.candidates)
     return <WhoOfUsAnswer candidates={prompt.candidates} />;
   if (prompt.type === 'BLUFF' && prompt.bluff)
@@ -391,13 +412,15 @@ function TextAnswer({
   firstLetter,
   title = 'Écris ta réponse',
   placeholder = 'Ta réponse…',
+  initial = '',
 }: {
+  initial?: string;
   maxLength: number;
   firstLetter?: string;
   title?: string;
   placeholder?: string;
 }) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState(initial);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => input.current?.focus(), []);
   const answer = text.trim();

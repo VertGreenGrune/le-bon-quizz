@@ -61,6 +61,11 @@ export interface PlayerState {
   selection: { questionIndex: number; indexes: number[] } | null;
   /** What the player answered (choice, text or slider value), for `questionIndex` only. */
   myAnswer: ({ questionIndex: number } & AnswerInput) | null;
+  /**
+   * The answer just cancelled (« Annuler ma réponse »), to pre-fill the answer screen with it
+   * (order, text, slider value, pin), for `questionIndex` only.
+   */
+  cancelled: ({ questionIndex: number } & AnswerInput) | null;
   /** « Annuler ma réponse » (T43): cancels left on `questionIndex` (absent: none used yet). */
   cancels: { questionIndex: number; left: number } | null;
   result: (PlayerResultPayload & { questionIndex: number }) | null;
@@ -134,6 +139,7 @@ export const initialPlayerState: PlayerState = {
   drawing: null,
   selection: null,
   myAnswer: null,
+  cancelled: null,
   cancels: null,
   result: null,
   nickname: '',
@@ -267,6 +273,8 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       return {
         ...state,
         myAnswer: state.myAnswer?.questionIndex === action.questionIndex ? null : state.myAnswer,
+        cancelled:
+          state.myAnswer?.questionIndex === action.questionIndex ? state.myAnswer : state.cancelled,
         cancels: { questionIndex: action.questionIndex, left: action.cancelsLeft },
       };
 

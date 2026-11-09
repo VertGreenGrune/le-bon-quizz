@@ -45,6 +45,18 @@ describe('« Annuler ma réponse » (T43)', () => {
     expect(s.myAnswer).toMatchObject({ choiceIndex: 1 });
   });
 
+  it('keeps the cancelled answer to pre-fill the answer screen (order, text…)', () => {
+    let s = answering(prompt({ type: 'ORDER', items: ['A', 'B', 'C'], choiceCount: undefined }));
+    expect(s.cancelled).toBeNull();
+    s = playerReducer(s, { type: 'answer', questionIndex: 0, answer: { order: [2, 0, 1] } });
+    s = playerReducer(s, { type: 'answerCancelled', questionIndex: 0, cancelsLeft: 2 });
+    expect(s.cancelled).toEqual({ questionIndex: 0, order: [2, 0, 1] });
+    // A second answer then a second cancel: the latest one is kept.
+    s = playerReducer(s, { type: 'answer', questionIndex: 0, answer: { order: [1, 2, 0] } });
+    s = playerReducer(s, { type: 'answerCancelled', questionIndex: 0, cancelsLeft: 1 });
+    expect(s.cancelled).toEqual({ questionIndex: 0, order: [1, 2, 0] });
+  });
+
   it('no more cancels once the server says none is left; reset on the next question', () => {
     let s = playerReducer(answering(), {
       type: 'answerCancelled',

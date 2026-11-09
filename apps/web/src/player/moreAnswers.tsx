@@ -18,13 +18,21 @@ import { IDENTITY, MAX_SCALE, clampView, zoomAt, type View } from './zoomPan';
 
 /** Phone controllers of the ORDER / PIN / WHO_OF_US questions (word clouds use `TextAnswer`). */
 
+/** `order` lists each of the `n` shown indexes exactly once. */
+function isPermutation(order: number[] | undefined, n: number): order is number[] {
+  return !!order && order.length === n && [...order].sort((a, b) => a - b).every((v, i) => v === i);
+}
+
 const validateClass =
   'w-full touch-manipulation rounded-2xl bg-answer-green py-4 text-2xl font-black shadow-[inset_0_-6px_0_rgba(0,0,0,0.25)] disabled:opacity-50';
 
 /** Remettre dans l'ordre: drag the items (or use ↑ ↓), then « Valider ». */
-export function OrderAnswer({ items }: { items: string[] }) {
-  // Shown indexes, in the player's order (starts as shown: the same order as on the TV).
-  const [order, setOrder] = useState(() => items.map((_, i) => i));
+export function OrderAnswer({ items, initial }: { items: string[]; initial?: number[] }) {
+  // Shown indexes, in the player's order: starts as shown (the same order as on the TV), or as
+  // the player had placed them before cancelling their answer.
+  const [order, setOrder] = useState(() =>
+    isPermutation(initial, items.length) ? [...initial] : items.map((_, i) => i),
+  );
   const move = (from: number, to: number) =>
     setOrder((o) => {
       if (to < 0 || to >= o.length) return o;
@@ -104,8 +112,8 @@ const TAP_SLOP_PX = 8;
  * be zoomed (pinch, ＋ / −, mouse wheel) and moved (drag) to place the point precisely; the point is
  * measured on the picture as shown, so it is the same picture fraction whatever the zoom.
  */
-export function PinAnswer({ imageUrl }: { imageUrl: string }) {
-  const [point, setPoint] = useState<PinPoint | null>(null);
+export function PinAnswer({ imageUrl, initial }: { imageUrl: string; initial?: PinPoint }) {
+  const [point, setPoint] = useState<PinPoint | null>(initial ?? null);
   const [view, setView] = useState<View>(IDENTITY);
   const viewport = useRef<HTMLDivElement>(null);
   const picture = useRef<HTMLDivElement>(null);
