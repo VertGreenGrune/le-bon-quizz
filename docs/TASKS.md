@@ -2799,6 +2799,26 @@ only one touching `content/**`; T49 doesn't edit quiz content.
   the result line on both phones.
 - **Summary:** Voleur has no target and isn't an attack; `Jokers.spinWheels` at the settlement: one wheel per thief (order played) over every player, drawn with the replayable random (T44 accepts draw the same), 10 % of the drawn total to the thief / lost by a self-drawn thief / blocked by a Bouclier (used up, now in the snapshot). `question:reveal.wheels` (`ThiefWheel`), `JokerResult` `selfRobbed` / `stealBlocked` / `wheelShielded`. TV `host/thiefWheel.tsx`: overlay 3 s after the reveal, wheel with avatars spins 4.2 s to the drawn slice (`lib/wheel.ts`), result line + joker sound, then a summary banner (only the banner after a reload). Tests: joker tests (other / self / Bouclier / two thieves / steals on a wrong answer), accept + gains, `wheel.test.ts`, jokers e2e (Bob's wheel on the TV; `E2E_JOKER_HAND` gains `thief`). Not done: a dedicated wheel sound, the remote's result line.
 
+### T52 — Brouilleur: moving buttons, choix multiple only
+- **Status:** done
+- **Depends on:** — Ports 3052 / 5252.
+- **User requirement (2026-11-09):** the Brouilleur (grey shuffled buttons) isn't fun. It should
+  only be playable on **4-answer questions (choix multiple, single or several answers)**, and its
+  effect is to **move the buttons all over the screen at a medium speed**, so the right one is
+  hard to hit.
+- **Summary:** shared: `jokerAvailability.TRUE_FALSE.scramble = false` (MCQ only; a « Survie »
+  haunt waits for the next MCQ), new description / refusal (« … questions à choix multiple ») /
+  haunt text, TV announcement detail. Phone: `player/MovingButtons.tsx` replaces the grey
+  `ScrambledButtons` (and the scrambled branch of `MultiAnswerButtons`): the usual colored shapes
+  drift in an arena, ~0.42 × the smaller side per second (± 15 %), bounce off the edges and off
+  each other (`player/movingPhysics.ts`, pure: `initialBodies`, `step`), moved with
+  `requestAnimationFrame` + `transform` (no React re-render per frame); single answer = tap on
+  touch-down, « select all » = toggles + a still « Valider »; 50/50-hidden choices aren't shown.
+  Server unchanged (still sends `effects.scrambled.choices`, now unused by the phone). Tests:
+  shared joker table, `movingPhysics.test.ts`, server test names + a true/false check.
+- **Follow-ups:** not tried on real phones (tune `MOVING_SPEED` if too easy / hard);
+  `prefers-reduced-motion` doesn't slow it (it is the joker's effect).
+
 ---
 
 ## Contract changes / cross-task notes

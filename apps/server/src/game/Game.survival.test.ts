@@ -354,7 +354,7 @@ describe('« Survie » mode', () => {
       answer(alice, RIGHT);
     });
 
-    it('Brouilleur: grey shuffled buttons on the target’s next choice question', () => {
+    it('Brouilleur: moving buttons on the target’s next choix multiple question', () => {
       const [alice, bob] = setup();
       game.haunt(bob.id, 'scramble', alice.id);
       toAnswering();

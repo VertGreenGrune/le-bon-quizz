@@ -33,7 +33,7 @@ export function announcement(p: JokerUsedPayload): { title: string; detail: stri
     case 'scramble':
       return {
         title: `🌀 ${by} brouille ${target} !`,
-        detail: 'Boutons mélangés sur cette question',
+        detail: 'Ses boutons bougent dans tout l’écran !',
       };
     case 'double':
       return { title: `✖️2 ${by} joue Double ou rien !`, detail: 'Points ×2… ou −500' };

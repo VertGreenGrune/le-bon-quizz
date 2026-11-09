@@ -492,7 +492,7 @@ export class Jokers {
     th.effects.frozen = { ms: th.frozenMs, by };
   }
 
-  /** Brouilleur on the current question (T42): grey shuffled buttons right away. */
+  /** Brouilleur on the current question (T42): the target's buttons move right away (T52). */
   private scrambleNow(q: Question, th: JokerHand, by: LobbyMember): void {
     if (!('choices' in q)) return;
     th.effects.scrambled = {

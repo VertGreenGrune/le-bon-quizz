@@ -3,6 +3,7 @@ import {
   DEMO_QUIZ,
   FREEZE_MS,
   JOKERS_AT_START,
+  jokerAllowed,
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
   RESUME_COUNTDOWN_MS,
@@ -232,6 +233,7 @@ describe('Jokers', () => {
       nextQuestion(); // TRUE_FALSE
       hand(alice!, ['fifty', 'double']);
       expectGameError(() => play(alice!, 'fifty'), 'JOKER_REFUSED');
+      expect(jokerAllowed('TRUE_FALSE', 'scramble')).toBe(false); // Brouilleur: choix multiple only
       answer(alice!, { choiceIndex: 0 });
       nextQuestion();
       answer(alice!, rightAnswer(game.currentQuestion!));
@@ -332,7 +334,7 @@ describe('Jokers', () => {
       expect(bob!.answer?.responseMs).toBe(FREEZE_MS);
     });
 
-    it('Brouilleur: grey shuffled buttons with the texts, right away on this question', () => {
+    it('Brouilleur: moving buttons (choices + texts sent), right away on this question', () => {
       create(DEMO_QUIZ);
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();

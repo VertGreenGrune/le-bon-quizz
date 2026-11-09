@@ -92,7 +92,7 @@ réponses d'affilée. Où les montrer :
 | 🎯 50/50           | 5, 11, 20 (QCM) ; 9, 19 (curseur) ; 21 | QCM : cache des mauvaises réponses ; curseur : plage réduite ; réponse libre : 1re lettre |
 | 🦜 Copieur         | 21, 23                                 | copier le meilleur joueur sur les questions les plus dures                                |
 | 🥶 Gel             | avant 3, 14                            | 5 s bloqué au début ; au buzzer (14), il retarde le BUZZ                                  |
-| 🌀 Brouilleur      | avant 5, 6, 11, 17, 18, 20             | boutons gris et mélangés : il faut lire le texte à l'écran                                |
+| 🌀 Brouilleur      | avant 5, 6, 11, 17, 18, 20             | les boutons bougent dans tout l'écran : dur de viser la bonne réponse                     |
 | ✖️2 Double ou rien | 16, 21, 23 (2000 points)               | ×2 si juste, −500 si faux                                                                 |
 | 🛡️ Bouclier        | n'importe quand                        | bloque la prochaine attaque et garde la série                                             |
 | 🦹 Voleur          | à partir de la question 10             | vole 10 % du score du leader                                                              |

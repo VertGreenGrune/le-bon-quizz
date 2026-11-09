@@ -71,7 +71,7 @@ export const JOKERS: Record<JokerType, JokerInfo> = {
     name: 'Brouilleur',
     icon: '🌀',
     description:
-      'Mélange et grise tout de suite les boutons du joueur choisi (questions à choix, s’il n’a pas encore répondu).',
+      'Fait bouger les boutons du joueur choisi dans tout l’écran : dur de viser la bonne réponse ! (choix multiple, s’il n’a pas encore répondu)',
     target: true,
     attack: true,
     afterAnswer: true,
@@ -135,8 +135,9 @@ export interface JokerAvailability {
   /** Jokers that can't be played on this type (greyed out on the phone). */
   unavailable: JokerType[];
   /**
-   * Brouilleur works on this type (shape buttons). A « Survie » haunt Brouilleur waits for the
-   * next question that has it; the Brouilleur joker is refused elsewhere (T42).
+   * Brouilleur works on this type: MCQ only, single or « select all » (its shape buttons move
+   * all over the phone screen). A « Survie » haunt Brouilleur waits for the next question that
+   * has it; the Brouilleur joker is refused elsewhere (T42).
    */
   scramble: boolean;
   /** A pending Gel hits here although the question takes no joker (« Buzzer »: BUZZ delayed). */
@@ -151,7 +152,8 @@ export interface JokerAvailability {
  */
 const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>> = {
   MCQ: { jokers: true, unavailable: [], scramble: true },
-  TRUE_FALSE: { jokers: true, unavailable: ['fifty'], scramble: true },
+  // No Brouilleur: two big buttons moving around are still too easy to hit.
+  TRUE_FALSE: { jokers: true, unavailable: ['fifty'], scramble: false },
   TYPE_ANSWER: { jokers: true, unavailable: [], scramble: false },
   SLIDER: { jokers: true, unavailable: [], scramble: false },
   POLL: { jokers: false, unavailable: [], scramble: false },
@@ -204,7 +206,7 @@ export function jokerRefusal(
   const a = jokerAvailability(type);
   if (!a.jokers) return 'Pas de joker sur cette question';
   if (joker === 'scramble' && !a.scramble)
-    return 'Le Brouilleur ne marche que sur les questions à choix';
+    return 'Le Brouilleur ne marche que sur les questions à choix multiple';
   if (a.unavailable.includes(joker)) return 'Ce joker ne marche pas sur cette question';
   if (answered && !a.afterAnswer.includes(joker)) return 'Seulement avant de répondre';
   return null;
