@@ -22,5 +22,6 @@ export const space: ThemeDefinition = {
     emojiShare: 0.3,
   },
   sounds: { lobby: 'lobby-space', reveal: 'reveal-space', podium: 'podium-space' },
+  radio: { name: 'Space Station Soma', url: 'https://ice2.somafm.com/spacestation-128-mp3' },
   lobbyTitle: { text: 'Mission Quizz', left: '🚀', right: '🪐' },
 };

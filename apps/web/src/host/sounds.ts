@@ -97,6 +97,37 @@ function localStorageOrUndefined(): Storage | undefined {
   }
 }
 
+/**
+ * Background music of the TV: `radio` = the theme's ambiance radio (`radio.ts`, default),
+ * `game` = the built-in lobby music only.
+ */
+export type Ambiance = 'radio' | 'game';
+const AMBIANCE_KEY = 'lbq:host:ambiance';
+
+/** Without a stored choice: the radio (`VITE_DEFAULT_AMBIANCE=game` for offline e2e runs). */
+const DEFAULT_AMBIANCE: Ambiance =
+  import.meta.env.VITE_DEFAULT_AMBIANCE === 'game' ? 'game' : 'radio';
+
+export function readAmbiance(
+  storage: Pick<Storage, 'getItem'> | undefined,
+  fallback: Ambiance = DEFAULT_AMBIANCE,
+): Ambiance {
+  try {
+    const value = storage?.getItem(AMBIANCE_KEY);
+    return value === 'game' || value === 'radio' ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeAmbiance(storage: Pick<Storage, 'setItem'> | undefined, value: Ambiance) {
+  try {
+    storage?.setItem(AMBIANCE_KEY, value);
+  } catch {
+    // Not remembered, but the choice still works for this page.
+  }
+}
+
 // ---------- Player (module-level: one host screen per tab) ----------
 
 /** Read lazily: touching `localStorage` at import time warns under Node (unit tests). */
@@ -107,6 +138,10 @@ const getLevels = () => (levels ??= readLevels(localStorageOrUndefined()));
 /** The game sounds are silent: everything cut, or the music level at 0. */
 const musicSilent = () => isMuted() || getLevels().music === 0;
 const listeners = new Set<() => void>();
+let ambiance: Ambiance | null = null;
+const getAmbiance = () => (ambiance ??= readAmbiance(localStorageOrUndefined()));
+/** The radio stream failed on this page (offline, station down): back to the game music. */
+let radioFailed = false;
 /** One element per sound *file* (a theme swaps some files). */
 const elements = new Map<string, HTMLAudioElement>();
 let soundTheme: QuizTheme = 'classic';
@@ -224,6 +259,28 @@ export function setLevels(change: Partial<SoundLevels>) {
   listeners.forEach((l) => l());
 }
 
+export function setAmbiance(value: Ambiance) {
+  ambiance = value;
+  radioFailed = false; // choosing the radio again retries it
+  writeAmbiance(localStorageOrUndefined(), value);
+  listeners.forEach((l) => l());
+}
+
+/** Called by the radio player when its stream can't be played. */
+export function setRadioFailed(value: boolean) {
+  if (radioFailed === value) return;
+  radioFailed = value;
+  listeners.forEach((l) => l());
+}
+
+export function useAmbiance(): Ambiance {
+  return useSyncExternalStore(subscribe, getAmbiance);
+}
+
+export function useRadioFailed(): boolean {
+  return useSyncExternalStore(subscribe, () => radioFailed);
+}
+
 /** Current levels (outside React). */
 export const getSoundLevels = (): SoundLevels => getLevels();
 
@@ -289,6 +346,7 @@ export function useHostSounds({
   playerCount,
   buzzerHolder = null,
   theme = 'classic',
+  radio = false,
 }: {
   phase: GamePhase | null;
   /** null while paused: the frozen clock doesn't tick. */
@@ -300,6 +358,8 @@ export function useHostSounds({
   buzzerHolder?: string | null;
   /** TV theme (T40): lobby music, reveal and podium sounds. */
   theme?: QuizTheme;
+  /** The theme's radio is the background music: no lobby loop. */
+  radio?: boolean;
 }) {
   const prevPhase = useRef<GamePhase | null>(null);
   const prevCount = useRef<number | null>(null);
@@ -312,8 +372,11 @@ export function useHostSounds({
     const sound = phaseSound(prevPhase.current, phase);
     if (sound) playSound(sound);
     if (phase !== null) prevPhase.current = phase;
-    loopSound(phase === 'LOBBY' ? 'lobby' : null);
   }, [phase]);
+
+  useEffect(() => {
+    loopSound(phase === 'LOBBY' && !radio ? 'lobby' : null);
+  }, [phase, radio]);
 
   useEffect(() => {
     if (phase === 'LOBBY' && prevCount.current !== null && playerCount > prevCount.current) {

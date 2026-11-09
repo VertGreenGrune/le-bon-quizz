@@ -21,5 +21,6 @@ export const classic: ThemeDefinition = {
     emojiShare: 0,
   },
   sounds: {},
+  radio: { name: 'Secret Agent', url: 'https://ice2.somafm.com/secretagent-128-mp3' },
   lobbyTitle: null,
 };

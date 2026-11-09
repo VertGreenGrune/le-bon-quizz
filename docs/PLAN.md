@@ -94,7 +94,15 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   (`audioOnReveal: true` = plays once at `REVEAL` instead); the other host sounds are ducked
   meanwhile (`apps/web/src/host/clipPlayer.ts`). TV volumes (T41, « 🔊 Son » in the TV header,
   `host/soundSettings.tsx`, `localStorage`): « Musique et effets » (every other host sound) and
-  « Extraits du quiz » (the clip), 0–100 % each, plus « Tout couper ». `imageEffect` (`blur` 30 px
+  « Extraits du quiz » (the clip), 0–100 % each, plus « Tout couper ». **« 📻 Radio du thème »** (same menu,
+  default; `host/radio.ts`): the TV plays the theme's free SomaFM station (`ThemeDefinition.radio`:
+  classic Secret Agent, Halloween Doomed, Noël Christmas Lounge, Rétro Underground 80s, Espace
+  Space Station Soma) in every phase — ½ of the « Musique et effets » level, ¼ while a question is
+  on screen —, **stopped when the question has a sound** (QUESTION_INTRO + ANSWERING, or REVEAL with
+  `audioOnReveal`; restarted live afterwards), replacing the lobby loop; « Musique du jeu » = the
+  built-in lobby loop only (`lbq:host:ambiance`). A stream error / no sound within 12 s → back to
+  the game music with « Radio injoignable ». SomaFM refuses headless browsers (403): the e2e runs
+  build with `VITE_DEFAULT_AMBIANCE=game` and mock the station. `imageEffect` (`blur` 30 px
   → 0, `zoom` ×6 on a point → ×1, `pixelate` 8 blocks → full; only with `imageUrl`): the picture
   clears up over the answering time (frozen while paused), fully clear at `REVEAL`
   (`apps/web/src/components/RevealImage.tsx`). Scoring is unchanged (faster = more points).

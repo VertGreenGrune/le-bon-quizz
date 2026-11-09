@@ -22,5 +22,6 @@ export const halloween: ThemeDefinition = {
     emojiShare: 0.35,
   },
   sounds: { lobby: 'lobby-halloween', reveal: 'reveal-halloween', podium: 'podium-halloween' },
+  radio: { name: 'Doomed', url: 'https://ice2.somafm.com/doomed-128-mp3' },
   lobbyTitle: { text: 'Soirée frissons', left: '🎃', right: '🦇' },
 };

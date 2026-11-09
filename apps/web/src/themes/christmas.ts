@@ -22,5 +22,6 @@ export const christmas: ThemeDefinition = {
     emojiShare: 0.35,
   },
   sounds: { lobby: 'lobby-christmas', reveal: 'reveal-christmas', podium: 'podium-christmas' },
+  radio: { name: 'Christmas Lounge', url: 'https://ice2.somafm.com/christmas-128-mp3' },
   lobbyTitle: { text: 'Joyeux quiz de Noël', left: '🎄', right: '🎁' },
 };

@@ -45,7 +45,8 @@ export default defineConfig({
       command: `pnpm exec vite --port ${WEB_PORT} --strictPort`,
       cwd: 'apps/web',
       url: WEB_URL,
-      env: { VITE_SERVER_URL: SERVER_URL },
+      // No theme radio by default: the e2e runs stay offline (radio.spec.ts picks it, mocked).
+      env: { VITE_SERVER_URL: SERVER_URL, VITE_DEFAULT_AMBIANCE: 'game' },
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
