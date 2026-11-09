@@ -11,16 +11,16 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "L'île des Hommes-Poissons",
-          "isCorrect": true
-        },
-        {
           "text": "Water Seven",
           "isCorrect": false
         },
         {
           "text": "Skypiea",
           "isCorrect": false
+        },
+        {
+          "text": "L'île des Hommes-Poissons",
+          "isCorrect": true
         },
         {
           "text": "Amazon Lily",
@@ -57,10 +57,6 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Le Gomu Gomu no Mi",
-          "isCorrect": true
-        },
-        {
           "text": "Le Mera Mera no Mi",
           "isCorrect": false
         },
@@ -71,6 +67,10 @@
         {
           "text": "Le Hito Hito no Mi",
           "isCorrect": false
+        },
+        {
+          "text": "Le Gomu Gomu no Mi",
+          "isCorrect": true
         }
       ],
       "explanation": "Le Gomu Gomu no Mi (fruit du caoutchouc) était en réalité un nom de couverture : le Gouvernement mondial appelait ainsi le Hito Hito no Mi, modèle Nika, révélé au chapitre 1044."
@@ -167,11 +167,11 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Feitan",
+          "text": "Nobunaga",
           "isCorrect": true
         },
         {
-          "text": "Nobunaga",
+          "text": "Feitan",
           "isCorrect": true
         },
         {
@@ -192,10 +192,6 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Marshall D. Teach (Barbe Noire)",
-          "isCorrect": true
-        },
-        {
           "text": "Monkey D. Luffy",
           "isCorrect": false
         },
@@ -206,6 +202,10 @@
         {
           "text": "Edward Newgate (Barbe Blanche)",
           "isCorrect": false
+        },
+        {
+          "text": "Marshall D. Teach (Barbe Noire)",
+          "isCorrect": true
         }
       ],
       "explanation": "Barbe Noire prononce cette phrase dans un bar de Mock Town, sur l'île de Jaya, devant Luffy et Zoro qui viennent de se laisser humilier par Bellamy."
@@ -273,12 +273,12 @@
       "basePoints": 1000,
       "choices": [
         {
-          "text": "Renforcement",
-          "isCorrect": true
-        },
-        {
           "text": "Émission",
           "isCorrect": false
+        },
+        {
+          "text": "Renforcement",
+          "isCorrect": true
         },
         {
           "text": "Transformation",
@@ -324,16 +324,16 @@
       "imageEffect": "pixelate",
       "choices": [
         {
-          "text": "Hisoka : « Bungee Gum »",
-          "isCorrect": true
-        },
-        {
           "text": "Kurapika : « Emperor Time »",
           "isCorrect": false
         },
         {
           "text": "Gon : « Jajanken »",
           "isCorrect": false
+        },
+        {
+          "text": "Hisoka : « Bungee Gum »",
+          "isCorrect": true
         },
         {
           "text": "Kirua : « Godspeed »",
@@ -373,12 +373,12 @@
       "audioOnReveal": true,
       "choices": [
         {
-          "text": "Masatoshi Ono",
-          "isCorrect": true
-        },
-        {
           "text": "Hiroshi Kitadani",
           "isCorrect": false
+        },
+        {
+          "text": "Masatoshi Ono",
+          "isCorrect": true
         },
         {
           "text": "Ali Project",
@@ -397,8 +397,8 @@
       "timeLimitSec": 25,
       "basePoints": 2000,
       "slider": {
-        "min": 100,
-        "max": 200,
+        "min": 120,
+        "max": 300,
         "step": 1,
         "correct": 148,
         "margin": 5,

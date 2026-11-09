@@ -133,7 +133,7 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
   await shot(host, 'host-reveal');
   await expect(alice.getByRole('heading', { name: 'Bien dessiné !' })).toBeVisible();
   await expect(alice.getByText('2 joueurs ont reconnu ton dessin !')).toBeVisible();
-  await expect(alice.getByText('+ 400 pts')).toBeVisible({ timeout: 5_000 });
+  await expect(alice.getByText('+ 1000 pts')).toBeVisible({ timeout: 5_000 });
   await expect(chloe.getByRole('heading', { name: 'Trouvé !' })).toBeVisible();
   await shot(alice, 'phone-drawer-result');
 
@@ -183,7 +183,7 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
     ['DRAW', 0],
   ]);
   expect(report.questions[0]!.details.draw?.strokes).toHaveLength(2);
-  expect(report.results.find((r) => r.nickname === 'Alice')?.score).toBe(400);
+  expect(report.results.find((r) => r.nickname === 'Alice')?.score).toBe(1000);
   await host.goto(`/reports/${summary!.id}`);
   const cards = host.getByTestId('draw-report');
   await expect(cards).toHaveCount(2);

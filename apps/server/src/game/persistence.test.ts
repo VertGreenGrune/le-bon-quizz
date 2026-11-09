@@ -628,8 +628,8 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
         ],
       },
     });
-    // Truth (1000) + Bob fooled (500).
-    expect(report.results[0]).toMatchObject({ nickname: 'Alice', score: 1500, correctCount: 1 });
+    // Truth (1000) + Bob fooled (250, « Mytho ! » rebalance).
+    expect(report.results[0]).toMatchObject({ nickname: 'Alice', score: 1250, correctCount: 1 });
   });
 
   it('keeps a « Dessine-moi » question and saves the drawing as vector data', async () => {

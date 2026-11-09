@@ -2600,7 +2600,10 @@ leaderboard has his points.
   never sign in). (3) A local session opened before Firebase was turned on stays valid until logout.
   **After merging, run `pnpm --filter @lbq/server db:migrate`.**
 
-### T47 — Show the game on a Fire TV (« 📺 Afficher sur la TV »)
+### T53 — Show the game on a Fire TV (« 📺 Afficher sur la TV »)
+- **Renumbered (2026-11-09, merge):** written as T47–T49 on the `content/hxh-one-piece` /
+  `feat/theme-radio` branches, in parallel with the other T47–T49; now T53 (Fire TV), T54 (chain
+  quizzes), T55 (theme radio). Code comments may still say T47 / T48 / T49 for these.
 - **Status:** done
 - **Depends on:** — Ports: server 3047 / web 5247, test DB `lbq_test_t47`.
 - **User requirement (2026-11-07):** cast the host screen to a Fire TV (no Google Cast there).
@@ -2621,7 +2624,7 @@ leaderboard has his points.
   e2e `e2e/fire-tv.spec.ts` (960 × 540 TV, wrong then right code, TV = host screen, PC = remote
   starts the game with a phone). No migration. Not tried on a real Fire TV (Silk).
 
-### T48 — Chain quizzes in the same room (« 🔁 Enchaîner un quiz »)
+### T54 — Chain quizzes in the same room (« 🔁 Enchaîner un quiz »)
 - **Status:** done
 - **Depends on:** T47. Ports: server 3048 / web 5248, test DB `lbq_test_t48`.
 - **User requirement (2026-11-08):** when a quiz ends, the host must not have to pair the TV again
@@ -2650,7 +2653,7 @@ leaderboard has his points.
   (end early → chain the demo → same URL / PIN, players in the new lobby, phone reload, plays).
   No migration. Not tried on a real Fire TV.
 
-### T49 — Theme radio on the TV (« 📻 Radio du thème »)
+### T55 — Theme radio on the TV (« 📻 Radio du thème »)
 - **Status:** done
 - **User requirement (2026-11-08):** free radios playing music that fits each theme, all game
   long — **during the questions too**, but silent when a question has a sound to listen to.
@@ -3154,7 +3157,7 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   falls back to files still in `UPLOAD_DIR`). Uploads and `quiz:import` write to the table
   (content-hash names); `media:to-db` (`dist/media-to-db.js`) copies an old upload dir into it.
   `ApiDeps.uploadDir` is optional; `@fastify/static` no longer serves `/uploads/`.
-- 2026-11-08, main agent (T48, additive): `host:quizzes`, `host:chain` (`HostChainPayload`,
+- 2026-11-08, main agent (T54, additive): `host:quizzes`, `host:chain` (`HostChainPayload`,
   `ChainQuiz`), `GameStatePayload.round?`; `GamePersistence.listQuizzes` (**required** — test
   persistences implementing the interface must add it); `GameSettings.ownerId?` / `carry?`.
 - 2026-11-08, main agent (scoring rebalance, user feedback): « Mytho ! » fooling = +250 per player

@@ -117,7 +117,7 @@ test('« Mytho ! »: lies, votes, reveal one by one, report', async ({ browser }
   await shot(host, 'host-reveal');
 
   await expect(alice!.getByRole('heading', { name: 'Vérité trouvée !' })).toBeVisible();
-  await expect(alice!.getByTestId('bluff-result')).toContainText('a piégé 1 joueur : + 500 pts');
+  await expect(alice!.getByTestId('bluff-result')).toContainText('a piégé 1 joueur : + 250 pts');
   await expect(bob!.getByRole('heading', { name: 'Piégé !' })).toBeVisible();
   await expect(bob!.getByTestId('bluff-result')).toContainText('Piégé par le mytho de Alice');
   await shot(bob!, 'phone-result');
@@ -142,7 +142,7 @@ test('« Mytho ! »: lies, votes, reveal one by one, report', async ({ browser }
     await hostContext.request.get(`${SERVER_URL}/api/games/${summary!.id}`)
   ).json()) as GameReport;
   expect(report.results.map((r) => [r.nickname, r.score])).toEqual([
-    ['Alice', 1500],
+    ['Alice', 1250],
     ['Chloé', 1000],
     ['Bob', 0],
   ]);

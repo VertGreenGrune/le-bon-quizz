@@ -64,8 +64,7 @@ export interface ErrorPayload {
 
 /** Every ack callback receives either `{ ok: true, ...data }` or `{ ok: false, error }`. */
 export type Ack<T extends object = object> =
-  | ({ ok: true } & T)
-  | { ok: false; error: ErrorPayload };
+  ({ ok: true } & T) | { ok: false; error: ErrorPayload };
 
 export interface RankedPlayer {
   nickname: string;
