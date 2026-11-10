@@ -1,0 +1,223 @@
+{
+  "title": "Mythologie grecque — niveau expert",
+  "description": "20 questions difficiles sur les Grecs : la Titanomachie, les travaux d'Héraclès, les Moires, les Muses et les grands supplices. Avec un point sur l'image, des curseurs, un ordre, un « Mytho ! » et deux buzzers.",
+  "coverImageUrl": "images/cover-heracles.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Quel dieu avalait ses enfants à leur naissance, par peur d'être détrôné ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Ouranos", "isCorrect": false },
+        { "text": "Cronos", "isCorrect": true },
+        { "text": "Hadès", "isCorrect": false },
+        { "text": "Typhon", "isCorrect": false }
+      ],
+      "explanation": "Cronos avait lui-même détrôné son père Ouranos. Rhéa sauvera Zeus en lui faisant avaler une pierre emmaillotée à la place du nourrisson."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Dans quel récipient Pandore gardait-elle les maux ? Attention, ce n'est pas une boîte…",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["une jarre", "jarre", "un pithos", "pithos", "une amphore"],
+      "typoTolerance": true,
+      "explanation": "Hésiode écrit « pithos », une grande jarre à grain. C'est Érasme qui, au XVIe siècle, l'a traduit par le latin « pyxis » — une boîte. L'erreur a tenu cinq siècles."
+    },
+    {
+      "type": "MCQ",
+      "text": "Les trois Moires filent le destin. Coche les rôles exacts !",
+      "timeLimitSec": 35,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Clotho file le fil", "isCorrect": true },
+        { "text": "Lachésis mesure le fil", "isCorrect": true },
+        { "text": "Atropos coupe le fil", "isCorrect": true },
+        { "text": "Némésis tisse le fil", "isCorrect": false }
+      ],
+      "explanation": "Chez Hésiode, leurs noms disent leur fonction : Clotho « la Fileuse », Lachésis « celle qui attribue », Atropos « l'Inflexible ». Némésis, elle, est la vengeance divine."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de travaux Eurysthée avait-il d'abord imposés à Héraclès ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 2, "max": 40, "step": 1, "correct": 10, "margin": 1 },
+      "explanation": "Dix. Eurysthée en a refusé deux et en a ajouté deux autres : c'est ainsi qu'on arrive aux douze travaux."
+    },
+    {
+      "type": "MCQ",
+      "text": "Pourquoi Eurysthée a-t-il refusé de compter la victoire sur l'Hydre de Lerne ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Parce que l'Hydre a repoussé aussitôt", "isCorrect": false },
+        { "text": "Parce qu'Héraclès s'était fait payer", "isCorrect": false },
+        { "text": "Parce qu'Héraclès avait utilisé une arme interdite", "isCorrect": false },
+        { "text": "Parce que son neveu Iolaos l'avait aidé", "isCorrect": true }
+      ],
+      "explanation": "Iolaos cautérisait les cous tranchés pour empêcher les têtes de repousser. Travail à deux : travail annulé."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel autre travail a été annulé, parce qu'Héraclès s'était fait payer pour l'accomplir ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "buzzer": true,
+      "acceptedAnswers": ["les écuries d'Augias", "écuries d'Augias", "Augias", "les écuries"],
+      "typoTolerance": true,
+      "explanation": "Héraclès avait réclamé un dixième du bétail d'Augias. Eurysthée a jugé que ce n'était plus un travail mais un contrat."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les quatre premiers travaux d'Héraclès dans l'ordre.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": [
+        "Le lion de Némée",
+        "L'hydre de Lerne",
+        "La biche de Cérynie",
+        "Le sanglier d'Érymanthe"
+      ],
+      "explanation": "L'ordre d'Apollodore. La peau du lion de Némée, invulnérable, deviendra le vêtement d'Héraclès pour tout le reste du cycle."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de Muses compte la tradition classique ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 2, "max": 30, "step": 1, "correct": 9, "margin": 0 },
+      "explanation": "Neuf, filles de Zeus et de Mnémosyne, la Mémoire. Chacune préside à un art : épopée, histoire, tragédie, danse, astronomie…"
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle Muse préside à la poésie épique ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Calliope", "isCorrect": true },
+        { "text": "Clio", "isCorrect": false },
+        { "text": "Thalie", "isCorrect": false },
+        { "text": "Melpomène", "isCorrect": false }
+      ],
+      "explanation": "Calliope, « la belle voix », mère d'Orphée. Clio tient l'histoire, Thalie la comédie et Melpomène la tragédie."
+    },
+    {
+      "type": "PIN",
+      "text": "Sur ce tableau, montre l'attribut d'Uranie, la Muse de l'astronomie.",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/pin-muses.jpg",
+      "zone": { "x": 0.663, "y": 0.866, "radius": 0.065 },
+      "explanation": "Le globe céleste bleu, en bas à droite. Mengs a peint Apollon entouré de Mnémosyne et des neuf Muses, chacune avec son attribut : lyre, masque, rouleau, globe."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "De quelle partie du corps de Zeus Athéna est-elle sortie, tout armée ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["la tête", "tête", "le crâne", "crâne", "le front", "front"],
+      "typoTolerance": true,
+      "explanation": "C'est Héphaïstos qui ouvre le crâne de Zeus d'un coup de hache pour la délivrer."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Avant la naissance d'Athéna, Zeus avait avalé sa mère, la déesse Métis.",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Chez Hésiode, Zeus avale Métis enceinte, pour éviter la prophétie annonçant un fils plus fort que lui. Athéna naîtra donc de son crâne."
+    },
+    {
+      "type": "MCQ",
+      "text": "Laquelle des trois Gorgones était la seule mortelle ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Sthéno", "isCorrect": false },
+        { "text": "Euryale", "isCorrect": false },
+        { "text": "Méduse", "isCorrect": true },
+        { "text": "Toutes les trois", "isCorrect": false }
+      ],
+      "explanation": "Sthéno et Euryale étaient immortelles : c'est pour cela que Persée ne pouvait trancher que la tête de Méduse."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Cerbère a toujours eu trois têtes dans les textes antiques.",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ],
+      "explanation": "Hésiode, le plus ancien à le décrire, lui en donne cinquante ; Pindare cent. Les trois têtes ne s'imposent que chez les auteurs plus tardifs."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Comment appelle-t-on la pièce glissée dans la bouche des morts pour payer Charon ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "une obole",
+      "explanation": "L'obole de Charon. Les archéologues en retrouvent régulièrement dans les sépultures grecques et romaines, posées sur ou dans la bouche du défunt."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel est le supplice d'Ixion aux Enfers ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Il pousse un rocher sans fin", "isCorrect": false },
+        { "text": "L'eau fuit dès qu'il se penche", "isCorrect": false },
+        { "text": "Un aigle lui dévore le foie", "isCorrect": false },
+        { "text": "Il tourne sur une roue enflammée", "isCorrect": true }
+      ],
+      "explanation": "Ixion avait osé convoiter Héra. Zeus l'attache à une roue de feu tournant pour l'éternité dans le Tartare."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel héros délivre Prométhée de son rocher ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "buzzer": true,
+      "acceptedAnswers": ["Héraclès", "Heracles", "Hercule"],
+      "typoTolerance": true,
+      "explanation": "Héraclès abat l'aigle d'une flèche au cours de ses voyages. Prométhée, lui, avait donné le feu aux hommes."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les trois générations de souverains divins dans l'ordre.",
+      "timeLimitSec": 35,
+      "basePoints": 1000,
+      "items": ["Ouranos", "Cronos", "Zeus"],
+      "explanation": "Chacun renverse son père : Cronos castre Ouranos, Zeus détrône Cronos. La Titanomachie met fin au règne des Titans."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel supplice attend les Danaïdes aux Enfers ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Remplir sans fin un vase percé", "isCorrect": true },
+        { "text": "Rouler un rocher jusqu'au sommet", "isCorrect": false },
+        { "text": "Tourner sur une roue enflammée", "isCorrect": false },
+        { "text": "Voir l'eau fuir sous leurs lèvres", "isCorrect": false }
+      ],
+      "explanation": "Les cinquante filles de Danaos avaient tué leurs époux la nuit de leurs noces — toutes sauf une. La dernière proposition, c'est le supplice de Tantale."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel roi est condamné à rouler éternellement un rocher qui redescend ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Sisyphe", "Sisyphos"],
+      "typoTolerance": true,
+      "explanation": "Sisyphe, roi de Corinthe, avait enchaîné Thanatos, la Mort elle-même. Camus en fera le symbole de l'absurde heureux."
+    }
+  ]
+}

@@ -1,0 +1,360 @@
+{
+  "title": "Batman — les comics, niveau confirmé",
+  "description": "31 questions intermédiaires et difficiles sur les comics Batman, de Detective Comics #27 à la Cour des Hiboux : créateurs, premières apparitions, Robin, récits cultes et coulisses d'édition. Avec curseurs, ordres, « Mytho ! », buzzers et un « Dessine-moi ».",
+  "coverImageUrl": "images/cover-chauve-souris.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Dans quelle publication Batman apparaît-il pour la première fois ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Action Comics #1", "isCorrect": false },
+        { "text": "Detective Comics #27", "isCorrect": true },
+        { "text": "Batman #1", "isCorrect": false },
+        { "text": "All-Star Comics #8", "isCorrect": false }
+      ],
+      "explanation": "Detective Comics #27, daté de mai 1939 mais sorti le 30 mars. Action Comics #1, c'est Superman ; All-Star Comics #8, Wonder Woman."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année Batman est-il apparu pour la première fois ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 1925, "max": 1945, "step": 1, "correct": 1939, "margin": 1 },
+      "explanation": "1939, un an après Superman. Batman n'aura son propre titre, Batman, qu'au printemps 1940."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui sont les deux créateurs de Batman ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Jerry Siegel et Joe Shuster", "isCorrect": false },
+        { "text": "Stan Lee et Jack Kirby", "isCorrect": false },
+        { "text": "Frank Miller et David Mazzucchelli", "isCorrect": false },
+        { "text": "Bob Kane et Bill Finger", "isCorrect": true }
+      ],
+      "explanation": "Bob Kane et Bill Finger. Siegel et Shuster ont créé Superman ; Miller et Mazzucchelli signeront Year One près de cinquante ans plus tard."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Bill Finger n'a été officiellement crédité comme co-créateur de Batman qu'à partir de 2015.",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Bob Kane revendiquait seul la création. DC n'a crédité Finger qu'en 2015, après une action en justice de sa famille — il était mort en 1974."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelles œuvres ont inspiré le personnage et son costume ? Coche-les toutes !",
+      "timeLimitSec": 35,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Le film Le Signe de Zorro (1920)", "isCorrect": true },
+        { "text": "Le film The Bat Whispers (1930)", "isCorrect": true },
+        { "text": "Le pulp The Shadow", "isCorrect": true },
+        { "text": "Le roman Dracula de Bram Stoker", "isCorrect": false }
+      ],
+      "explanation": "Zorro pour le justicier masqué, The Bat Whispers pour la chauve-souris, The Shadow et Sherlock Holmes pour le ton. Dracula, non."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quand Alfred, le majordome des Wayne, fait-il sa première apparition ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Dans Batman #16, en 1943", "isCorrect": true },
+        { "text": "Dans Detective Comics #27, en 1939", "isCorrect": false },
+        { "text": "Dans Batman #1, en 1940", "isCorrect": false },
+        { "text": "Dans Detective Comics #38, en 1940", "isCorrect": false }
+      ],
+      "explanation": "Alfred Pennyworth arrive tard : quatre ans après Batman, en 1943. Le manoir fonctionnait sans majordome jusque-là."
+    },
+    {
+      "type": "MCQ",
+      "text": "Dans quel numéro Robin apparaît-il pour la première fois ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Batman #1", "isCorrect": false },
+        { "text": "Detective Comics #27", "isCorrect": false },
+        { "text": "Detective Comics #38", "isCorrect": true },
+        { "text": "Batman #16", "isCorrect": false }
+      ],
+      "explanation": "Detective Comics #38, en avril 1940. Bob Kane voulait garder Batman solitaire ; les ventes ont tranché."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "L'arrivée de Robin a fait presque doubler les ventes du magazine.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Les ventes ont quasiment doublé — ce qui a lancé la mode du side-kick adolescent dans tous les comics de l'époque."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les cinq Robin dans l'ordre où ils ont porté le costume.",
+      "timeLimitSec": 50,
+      "basePoints": 2000,
+      "items": ["Dick Grayson", "Jason Todd", "Tim Drake", "Stephanie Brown", "Damian Wayne"],
+      "explanation": "Dick Grayson devient Nightwing, Jason Todd meurt puis revient, Tim Drake est le plus détective, Stephanie Brown ne reste que peu de temps, et Damian est le fils de Bruce."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Sous quel nom de héros Dick Grayson poursuit-il sa carrière après avoir quitté Robin ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "buzzer": true,
+      "acceptedAnswers": ["Nightwing", "Night Wing"],
+      "typoTolerance": true,
+      "explanation": "Nightwing. Le nom lui vient d'une légende kryptonienne racontée par Superman — un clin d'œil rarement relevé."
+    },
+    {
+      "type": "MCQ",
+      "text": "Le Joker et Catwoman sont tous les deux apparus dans le même numéro. Lequel ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Detective Comics #27", "isCorrect": false },
+        { "text": "Detective Comics #38", "isCorrect": false },
+        { "text": "Detective Comics #66", "isCorrect": false },
+        { "text": "Batman #1", "isCorrect": true }
+      ],
+      "explanation": "Batman #1, au printemps 1940 : un seul numéro offre à Batman ses deux adversaires les plus durables."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Sous quel nom Catwoman apparaît-elle dans ce tout premier numéro ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["The Cat", "la Chatte", "Cat"],
+      "typoTolerance": true,
+      "explanation": "Simplement « The Cat » — la Chatte. Le nom Catwoman, et le costume, viendront ensuite."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Quel prénom féminin complète le nom officiel de l'asile d'Arkham ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Elizabeth",
+      "explanation": "« Elizabeth Arkham Asylum for the Criminally Insane » : son fondateur l'a nommé d'après sa mère, Elizabeth Arkham."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Qui a fondé l'asile d'Arkham ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Amadeus Arkham", "Amadeus"],
+      "typoTolerance": true,
+      "explanation": "Amadeus Arkham, qui finira lui-même enfermé dans son établissement — une des plus belles idées noires du mythe."
+    },
+    {
+      "type": "MCQ",
+      "text": "Sous quel nom Mr. Freeze a-t-il d'abord été présenté aux lecteurs ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Captain Cold", "isCorrect": false },
+        { "text": "Mister Zero", "isCorrect": true },
+        { "text": "Doctor Frost", "isCorrect": false },
+        { "text": "Mister Snow", "isCorrect": false }
+      ],
+      "explanation": "Mister Zero, en 1959. Captain Cold existe bien, mais c'est un adversaire de Flash."
+    },
+    {
+      "type": "MCQ",
+      "text": "En quelle année le Sphinx (le Riddler) fait-il sa première apparition ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "1941", "isCorrect": false },
+        { "text": "1944", "isCorrect": false },
+        { "text": "1948", "isCorrect": true },
+        { "text": "1956", "isCorrect": false }
+      ],
+      "explanation": "1948, dans Detective Comics #140 — bien après le Pingouin (1941) et Double-Face (1942)."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets ces premières apparitions dans l'ordre chronologique.",
+      "timeLimitSec": 50,
+      "basePoints": 2000,
+      "items": ["Batman", "Le Pingouin", "Double-Face", "Batgirl (Barbara Gordon)", "Ra's al Ghul"],
+      "explanation": "1939, décembre 1941, août 1942, janvier 1967 et juin 1971 : trente ans séparent la chauve-souris du maître des Assassins."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Comment s'appelle l'homme qui a tué les parents de Bruce Wayne ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Joe Chill",
+      "explanation": "Joe Chill. Le tueur apparaît sans nom dès 1939 ; il ne sera baptisé qu'en 1948, dans Batman #47, par Bill Finger lui-même."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a écrit et dessiné The Dark Knight Returns, en 1986 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Frank Miller", "isCorrect": true },
+        { "text": "Alan Moore", "isCorrect": false },
+        { "text": "Jeph Loeb", "isCorrect": false },
+        { "text": "Scott Snyder", "isCorrect": false }
+      ],
+      "explanation": "Frank Miller, qui imagine un Bruce Wayne vieillissant reprenant le costume. Il enchaînera dès l'année suivante avec Year One."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Qui a écrit The Killing Joke ? La photo se précise…",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "imageUrl": "images/20-alan-moore.jpg",
+      "imageEffect": "blur",
+      "acceptedAnswers": ["Alan Moore", "Moore"],
+      "typoTolerance": true,
+      "explanation": "Alan Moore, en 1988, deux ans après Watchmen. Un one-shot qui donne au Joker une origine possible — sans jamais la confirmer."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dessiné The Killing Joke ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Jim Lee", "isCorrect": false },
+        { "text": "Tim Sale", "isCorrect": false },
+        { "text": "Greg Capullo", "isCorrect": false },
+        { "text": "Brian Bolland", "isCorrect": true }
+      ],
+      "explanation": "Brian Bolland, dont le trait glacé fait toute la force de l'album. Tim Sale dessinera The Long Halloween, Jim Lee Hush et Greg Capullo la Cour des Hiboux."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a dessiné Batman : Year One, sur un scénario de Frank Miller ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Bob Kane", "isCorrect": false },
+        { "text": "David Mazzucchelli", "isCorrect": true },
+        { "text": "Jim Aparo", "isCorrect": false },
+        { "text": "Neal Adams", "isCorrect": false }
+      ],
+      "explanation": "David Mazzucchelli, dans Batman #404 à #407, de février à mai 1987 : la première année de Bruce Wayne et de Jim Gordon à Gotham."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Ce sont les lecteurs qui, par un vote téléphonique, ont décidé de la mort de Jason Todd.",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "En 1988, DC a ouvert deux numéros de téléphone pendant 35 heures : un pour sauver Robin, un pour le laisser mourir."
+    },
+    {
+      "type": "SLIDER",
+      "text": "De combien de voix la mort de Jason Todd a-t-elle été décidée ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 1, "max": 500, "step": 1, "correct": 72, "margin": 10, "unit": "voix" },
+      "explanation": "72 voix d'écart : 5 343 contre 5 271. Robin est mort à une poignée d'appels près."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Sous quel nom Jason Todd revient-il des années plus tard ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Red Hood", "le Red Hood", "Capuche Rouge"],
+      "typoTolerance": true,
+      "explanation": "Red Hood — l'identité qu'avait justement portée le Joker avant sa chute dans la cuve de produits chimiques."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel adversaire brise le dos de Batman pendant Knightfall ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "buzzer": true,
+      "acceptedAnswers": ["Bane"],
+      "typoTolerance": true,
+      "explanation": "Bane, dans Batman #497, en juillet 1993. Il avait d'abord vidé Arkham pour épuiser Batman avant de l'affronter."
+    },
+    {
+      "type": "MCQ",
+      "text": "De qui Damian Wayne est-il le fils, avec Bruce Wayne ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Selina Kyle", "isCorrect": false },
+        { "text": "Barbara Gordon", "isCorrect": false },
+        { "text": "Talia al Ghul", "isCorrect": true },
+        { "text": "Pamela Isley", "isCorrect": false }
+      ],
+      "explanation": "Talia al Ghul, la fille de Ra's al Ghul. Damian a été élevé par la Ligue des Assassins avant d'arriver à Gotham."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel scénariste a lancé La Cour des Hiboux avec le dessinateur Greg Capullo ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/28-scott-snyder.jpg",
+      "imageEffect": "pixelate",
+      "acceptedAnswers": ["Scott Snyder", "Snyder"],
+      "typoTolerance": true,
+      "explanation": "Scott Snyder, dans les onze premiers numéros de la série Batman relancée en 2011 : une société secrète qui tenait Gotham bien avant Bruce Wayne."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets ces récits dans leur ordre de publication.",
+      "timeLimitSec": 55,
+      "basePoints": 2000,
+      "items": [
+        "The Dark Knight Returns",
+        "Year One",
+        "The Killing Joke",
+        "Knightfall",
+        "Hush",
+        "La Cour des Hiboux"
+      ],
+      "explanation": "1986, 1987, 1988, 1993, 2002-2003 et 2011-2012 : vingt-cinq ans de Batman en six récits."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien coûtait Detective Comics #27 en 1939, en cents ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "slider": { "min": 1, "max": 100, "step": 1, "correct": 10, "margin": 2, "unit": "cents" },
+      "explanation": "10 cents. Un exemplaire en bon état se négocie aujourd'hui en millions de dollars."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi un élément de l'univers de Batman !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "une chauve-souris",
+        "la Batmobile",
+        "un batarang",
+        "le Bat-signal",
+        "un parapluie",
+        "une pièce de monnaie",
+        "un point d'interrogation",
+        "un manoir",
+        "une cape",
+        "un pingouin",
+        "un chat",
+        "un joker"
+      ],
+      "explanation": "Le Bat-signal, le parapluie du Pingouin, la pièce de Double-Face et le point d'interrogation du Sphinx : quatre objets qui suffisent à désigner un personnage."
+    }
+  ]
+}

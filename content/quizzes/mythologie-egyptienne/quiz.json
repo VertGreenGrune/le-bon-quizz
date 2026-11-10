@@ -1,0 +1,225 @@
+{
+  "title": "Mythologie égyptienne — niveau expert",
+  "description": "20 questions difficiles sur l'Égypte ancienne : la pesée du cœur, les 42 assesseurs, les vases canopes, l'Ennéade et le mythe d'Osiris. Avec un point sur l'image sur le papyrus d'Ani, des curseurs, un ordre, un « Mytho ! » et deux buzzers.",
+  "coverImageUrl": "images/pin-pesee-du-coeur.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Quel dieu tient la balance lors de la pesée du cœur ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "imageUrl": "images/anubis.jpg",
+      "choices": [
+        { "text": "Thot", "isCorrect": false },
+        { "text": "Osiris", "isCorrect": false },
+        { "text": "Anubis", "isCorrect": true },
+        { "text": "Horus", "isCorrect": false }
+      ],
+      "explanation": "Anubis, à tête de chacal, règle la balance. Thot note le résultat, Osiris préside le tribunal : chacun son office."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Contre quoi le cœur du défunt est-il pesé ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "buzzer": true,
+      "acceptedAnswers": ["la plume de Maât", "plume de Maat", "une plume", "plume", "la plume"],
+      "typoTolerance": true,
+      "explanation": "La plume d'autruche de Maât, déesse de l'ordre, de la vérité et de la justice. Un cœur plus lourd qu'une plume, et tout est perdu."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle créature dévore le cœur jugé trop lourd ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Ammit", "isCorrect": true },
+        { "text": "Apophis", "isCorrect": false },
+        { "text": "Sobek", "isCorrect": false },
+        { "text": "Bastet", "isCorrect": false }
+      ],
+      "explanation": "Ammit « la Dévoreuse » : tête de crocodile, avant-train de lion, arrière-train d'hippopotame. Être dévoré par elle, c'est la seconde mort, définitive."
+    },
+    {
+      "type": "PIN",
+      "text": "Sur ce papyrus, montre Ammit la Dévoreuse.",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/pin-pesee-du-coeur.jpg",
+      "zone": { "x": 0.885, "y": 0.73, "radius": 0.085 },
+      "explanation": "Elle attend tout à droite, juste derrière Thot. Ce papyrus est celui du scribe Ani, conservé au British Museum : la plus célèbre version de la scène."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de dieux assesseurs siègent dans la salle du jugement ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 10, "max": 150, "step": 1, "correct": 42, "margin": 2 },
+      "explanation": "Quarante-deux. Le défunt leur adresse quarante-deux déclarations d'innocence — la « confession négative » du chapitre 125."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment s'appelle la salle où se déroule le jugement des morts ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": [
+        "la salle des Deux Vérités",
+        "salle des deux verites",
+        "les Deux Vérités",
+        "Maaty"
+      ],
+      "typoTolerance": true,
+      "explanation": "La salle des Deux Vérités (Maâty). On y entre après avoir traversé la Douat, le monde souterrain."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel est le titre égyptien de ce que nous appelons le « Livre des Morts » ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Le Livre des Portes", "isCorrect": false },
+        { "text": "Le Livre pour sortir au jour", "isCorrect": true },
+        { "text": "Le Livre de la Nuit", "isCorrect": false },
+        { "text": "Le Livre des Cavernes", "isCorrect": false }
+      ],
+      "explanation": "« Formules pour sortir au jour ». Le nom « Livre des Morts » vient de l'égyptologue allemand Karl Richard Lepsius, en 1842. Les trois autres titres existent bel et bien : ce sont d'autres textes funéraires."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quels organes étaient placés dans les vases canopes ? Coche-les tous !",
+      "timeLimitSec": 35,
+      "basePoints": 2000,
+      "imageUrl": "images/vases-canopes.jpg",
+      "choices": [
+        { "text": "Le foie", "isCorrect": true },
+        { "text": "Les poumons", "isCorrect": true },
+        { "text": "L'estomac", "isCorrect": true },
+        { "text": "Le cœur", "isCorrect": false }
+      ],
+      "explanation": "Quatre vases pour quatre organes : le foie (Amset), les poumons (Hâpi), l'estomac (Douamoutef) et les intestins (Qebehsenouf). Le cœur, lui, restait dans le corps."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Le cœur était retiré du corps et conservé dans un vase canope.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ],
+      "explanation": "Il restait en place : c'est lui qu'on pèsera au jugement. Siège de la pensée et de la mémoire pour les Égyptiens, il ne pouvait pas quitter le corps."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel organe les embaumeurs jetaient-ils, le jugeant sans utilité ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Le foie", "isCorrect": false },
+        { "text": "Le cerveau", "isCorrect": true },
+        { "text": "Les poumons", "isCorrect": false },
+        { "text": "Les reins", "isCorrect": false }
+      ],
+      "explanation": "Le cerveau était extrait par les narines, puis jeté. Pour les Égyptiens, l'intelligence siégeait dans le cœur, pas dans la tête."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Les quatre fils d'Horus ont tous une tête humaine.",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ],
+      "explanation": "Seul Amset est à tête humaine. Hâpi est un babouin, Douamoutef un chacal et Qebehsenouf un faucon."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de jours durait une momification complète ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "slider": { "min": 10, "max": 200, "step": 1, "correct": 70, "margin": 5, "unit": "jours" },
+      "explanation": "Soixante-dix jours, dont une quarantaine de dessiccation dans le natron. Le reste, ce sont les bandelettes, les onguents et les rites."
+    },
+    {
+      "type": "MCQ",
+      "text": "Selon Plutarque, en combien de morceaux Seth a-t-il découpé le corps d'Osiris ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "7", "isCorrect": false },
+        { "text": "9", "isCorrect": false },
+        { "text": "42", "isCorrect": false },
+        { "text": "14", "isCorrect": true }
+      ],
+      "explanation": "Quatorze morceaux, dispersés dans toute l'Égypte. Isis et Nephtys les ont tous retrouvés… ou presque."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Quel est le seul morceau d'Osiris qu'Isis n'a jamais pu retrouver ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "le phallus",
+      "explanation": "Avalé par un poisson du Nil, selon Plutarque. Isis en fabriquera un de remplacement — et concevra Horus avec le corps reconstitué de son époux."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle déesse rassemble les morceaux d'Osiris et le ramène à la vie ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Isis", "Isis et Nephtys"],
+      "typoTolerance": true,
+      "explanation": "Isis, sa sœur et son épouse, aidée de leur sœur Nephtys. Osiris ne reviendra pas chez les vivants : il règnera sur les morts."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel dieu à tête de faucon, fils d'Isis et d'Osiris, affronte Seth pour le trône ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Horus", "Hor"],
+      "typoTolerance": true,
+      "explanation": "Horus. Leur querelle dure quatre-vingts ans dans certaines versions ; Horus y perd un œil, qui deviendra l'oudjat, amulette de protection."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets ces quatre générations de l'Ennéade d'Héliopolis dans l'ordre.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": ["Atoum", "Shou", "Geb", "Osiris"],
+      "explanation": "Atoum le créateur engendre Shou (l'air), père de Geb (la terre), lui-même père d'Osiris. Neuf dieux en tout : d'où le nom d'Ennéade."
+    },
+    {
+      "type": "MCQ",
+      "text": "De quoi Seth est-il le dieu ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Du désert, de l'orage et du chaos", "isCorrect": true },
+        { "text": "De la crue du Nil et des moissons", "isCorrect": false },
+        { "text": "De l'écriture et du calcul", "isCorrect": false },
+        { "text": "De la musique et de l'ivresse", "isCorrect": false }
+      ],
+      "explanation": "Seth règne sur les terres rouges, hostiles, par opposition aux terres noires fertiles d'Osiris. Il n'est pas qu'un méchant : c'est lui qui défend la barque solaire contre Apophis."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel serpent géant attaque chaque nuit la barque solaire de Rê ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Apophis", "Apep", "Apopis"],
+      "typoTolerance": true,
+      "explanation": "Apophis, l'ennemi du soleil, repoussé chaque nuit puis renaissant chaque nuit suivante : le désordre n'est jamais vaincu, seulement contenu."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle déesse à tête de lionne incarne la fureur guerrière et les épidémies ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Sekhmet", "Sakhmet", "Sekhmet la lionne"],
+      "typoTolerance": true,
+      "explanation": "Sekhmet, « la Puissante ». Envoyée par Rê punir les hommes, elle ne s'arrête que soûlée de bière teintée en rouge pour ressembler à du sang."
+    }
+  ]
+}

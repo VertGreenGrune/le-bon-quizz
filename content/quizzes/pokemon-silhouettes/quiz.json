@@ -1,0 +1,329 @@
+{
+  "title": "Pokémon — Qui est cette silhouette ? (difficile)",
+  "description": "30 questions difficiles : 14 silhouettes à reconnaître, de la 1re à la 9e génération, et 16 questions de types, de statistiques et d'évolutions. Deux silhouettes se jouent au buzzer.",
+  "coverImageUrl": "images/cover-silhouette.png",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Silhouette 1 — Qui est ce Pokémon ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "imageUrl": "images/115-kangaskhan.png",
+      "choices": [
+        { "text": "Rhinoféros", "isCorrect": false },
+        { "text": "Flagadoss", "isCorrect": false },
+        { "text": "Kangourex", "isCorrect": true },
+        { "text": "Ronflex", "isCorrect": false }
+      ],
+      "explanation": "Kangourex (n° 115, 1re génération), le Pokémon Maternel. Le bébé dans la poche ventrale est le détail qui trahit la silhouette."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien d'espèces la première génération a-t-elle introduites ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 50, "max": 400, "step": 1, "correct": 151, "margin": 3 },
+      "explanation": "151, de Bulbizarre à Mew. C'est la quatrième plus grosse fournée : la 5e génération en a introduit 156."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 2 — Qui est ce Pokémon ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "imageUrl": "images/142-aerodactyl.png",
+      "acceptedAnswers": ["Ptéra", "Ptera", "Aerodactyl"],
+      "typoTolerance": true,
+      "explanation": "Ptéra (n° 142, 1re génération), le Pokémon Fossile, ressuscité à partir d'un ambre. Types Roche et Vol."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel type est totalement insensible aux attaques de type Dragon ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Fée", "isCorrect": true },
+        { "text": "Acier", "isCorrect": false },
+        { "text": "Spectre", "isCorrect": false },
+        { "text": "Ténèbres", "isCorrect": false }
+      ],
+      "explanation": "Le type Fée, arrivé à la 6e génération précisément pour contenir les Dragons : une attaque Dragon lui inflige zéro dégât. L'Acier, lui, résiste sans être immunisé."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 3 — Qui est ce Pokémon ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "imageUrl": "images/203-girafarig.png",
+      "acceptedAnswers": ["Girafarig"],
+      "typoTolerance": true,
+      "explanation": "Girafarig (n° 203, 2e génération), le Pokémon Long-Cou. Son nom est un palindrome, à l'image de sa queue qui possède sa propre tête."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Le type Spectre est insensible aux attaques de type Normal comme à celles de type Combat.",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Les deux, en effet. Et la réciproque est vraie : une attaque Spectre n'inflige aucun dégât à un Pokémon de type Normal."
+    },
+    {
+      "type": "MCQ",
+      "text": "Silhouette 4 — Qui est ce Pokémon ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "imageUrl": "images/227-skarmory.png",
+      "choices": [
+        { "text": "Rapasdepic", "isCorrect": false },
+        { "text": "Étouraptor", "isCorrect": false },
+        { "text": "Corvaillus", "isCorrect": false },
+        { "text": "Airmure", "isCorrect": true }
+      ],
+      "explanation": "Airmure (n° 227, 2e génération), le Pokémon Armoiseau, types Acier et Vol. Corvaillus, le corbeau d'acier de la 8e génération, est le piège de la question."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Quelle est la statistique de Défense de base de Caratroc, la plus haute du jeu ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 5, "max": 300, "step": 1, "correct": 230, "margin": 10 },
+      "explanation": "230 en Défense — et autant en Défense Spéciale. En échange, Caratroc n'a que 20 PV, 10 d'Attaque et 5 de Vitesse."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 5 — Qui est ce Pokémon ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/302-sableye.png",
+      "acceptedAnswers": ["Ténéfix", "Tenefix", "Sableye"],
+      "typoTolerance": true,
+      "explanation": "Ténéfix (n° 302, 3e génération), le Pokémon Obscurité. Il fut longtemps le seul Pokémon Spectre et Ténèbres, une combinaison sans aucune faiblesse avant l'arrivée du type Fée."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quels types infligent des dégâts doublés au type Fée ? Coche-les tous !",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Poison", "isCorrect": true },
+        { "text": "Acier", "isCorrect": true },
+        { "text": "Dragon", "isCorrect": false },
+        { "text": "Combat", "isCorrect": false }
+      ],
+      "explanation": "Poison et Acier, et eux seuls. Le Dragon est le contre-exemple parfait : ses attaques n'infligent aucun dégât aux Fées."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 6 — Qui est ce Pokémon ? Buzzez et annoncez-le à voix haute !",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "buzzer": true,
+      "imageUrl": "images/357-tropius.png",
+      "acceptedAnswers": ["Tropius"],
+      "typoTolerance": true,
+      "explanation": "Tropius (n° 357, 3e génération), le Pokémon Fruit, types Plante et Vol. Les régimes de fruits sous son cou poussent quand il mange beaucoup."
+    },
+    {
+      "type": "ORDER",
+      "text": "Classe ces Pokémon du plus faible au plus élevé total de statistiques de base.",
+      "timeLimitSec": 50,
+      "basePoints": 2000,
+      "items": ["Leveinard", "Caratroc", "Ronflex", "Monaflèmit", "Arceus"],
+      "explanation": "450, 505, 540, 670 et 720. Arceus détient le record des Pokémon de la liste, avec 120 dans chacune de ses six statistiques."
+    },
+    {
+      "type": "MCQ",
+      "text": "Silhouette 7 — Qui est ce Pokémon ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "imageUrl": "images/426-drifblim.png",
+      "choices": [
+        { "text": "Branette", "isCorrect": false },
+        { "text": "Grodrive", "isCorrect": true },
+        { "text": "Momartik", "isCorrect": false },
+        { "text": "Baudrive", "isCorrect": false }
+      ],
+      "explanation": "Grodrive (n° 426, 4e génération), le Pokémon Ballon. Baudrive est sa pré-évolution : c'est la taille et les quatre bras qui tranchent."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel Pokémon possède la plus haute statistique de PV de base du jeu, avec 255 ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Leuphorie", "Blissey"],
+      "typoTolerance": true,
+      "explanation": "Leuphorie, avec 255 PV — devant sa pré-évolution Leveinard et ses 250. En échange, 10 d'Attaque et 10 de Défense."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 8 — Qui est ce Pokémon ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/472-gliscor.png",
+      "acceptedAnswers": ["Scorvol", "Gliscor"],
+      "typoTolerance": true,
+      "explanation": "Scorvol (n° 472, 4e génération), le Pokémon Scorpicroc, types Sol et Vol. Il évolue de Scorplane en tenant un Croc Rapace, de nuit."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle génération a introduit le plus d'espèces nouvelles ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "La 1re génération", "isCorrect": false },
+        { "text": "La 3e génération", "isCorrect": false },
+        { "text": "La 5e génération", "isCorrect": true },
+        { "text": "La 9e génération", "isCorrect": false }
+      ],
+      "explanation": "La 5e, avec 156 espèces — cinq de plus que la 1re. Une génération qui n'avait réutilisé aucun ancien Pokémon avant la fin de l'aventure."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 9 — Qui est ce Pokémon ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/563-cofagrigus.png",
+      "acceptedAnswers": ["Tutankafer", "Cofagrigus"],
+      "typoTolerance": true,
+      "explanation": "Tutankafer (n° 563, 5e génération), le Pokémon Cercueil. Sa pré-évolution, Tutafeh, est le petit masque qui se promène en portant son propre visage."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien d'espèces la 6e génération a-t-elle introduites ? C'est la plus petite fournée.",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 20, "max": 300, "step": 1, "correct": 72, "margin": 5 },
+      "explanation": "72 seulement, contre 156 pour la 5e. C'est aussi la génération qui a ajouté le type Fée et les Méga-Évolutions."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 10 — Qui est ce Pokémon ? Buzzez et annoncez-le à voix haute !",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "buzzer": true,
+      "imageUrl": "images/623-golurk.png",
+      "acceptedAnswers": ["Golemastoc", "Golurk"],
+      "typoTolerance": true,
+      "explanation": "Golemastoc (n° 623, 5e génération), le Pokémon Golem Ancien, types Sol et Spectre. Il évolue de Gringolem grâce à une Plaque Mémorielle."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Évoli possède huit évolutions différentes.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Huit : Aquali, Voltali, Pyroli, Mentali, Noctali, Phyllali, Givrali et Nymphali. Aucun autre Pokémon n'a autant de branches."
+    },
+    {
+      "type": "MCQ",
+      "text": "Silhouette 11 — Qui est ce Pokémon ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "imageUrl": "images/681-aegislash.png",
+      "choices": [
+        { "text": "Monorpale", "isCorrect": false },
+        { "text": "Dimoclès", "isCorrect": false },
+        { "text": "Trousselin", "isCorrect": false },
+        { "text": "Exagide", "isCorrect": true }
+      ],
+      "explanation": "Exagide (n° 681, 6e génération), le Pokémon Noble Lame, en forme Parade : le bouclier est déployé derrière la lame. Monorpale et Dimoclès sont ses deux stades précédents."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel Pokémon a exactement 120 dans chacune de ses six statistiques de base ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Arceus"],
+      "typoTolerance": true,
+      "explanation": "Arceus, et son total de 720 réparti en parts parfaitement égales. Le Pokémon réputé avoir créé l'univers des jeux."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 12 — Qui est ce Pokémon ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "imageUrl": "images/778-mimikyu.png",
+      "acceptedAnswers": ["Mimiqui", "Mimikyu"],
+      "typoTolerance": true,
+      "explanation": "Mimiqui (n° 778, 7e génération), le Pokémon Fantômasque. Ce qu'on voit n'est qu'un déguisement en chiffon : personne ne sait à quoi il ressemble vraiment."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel type n'inflige aucun dégât au type Acier ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Poison", "isCorrect": true },
+        { "text": "Roche", "isCorrect": false },
+        { "text": "Feu", "isCorrect": false },
+        { "text": "Glace", "isCorrect": false }
+      ],
+      "explanation": "Le Poison : l'acier ne s'empoisonne pas. Le Feu, lui, est au contraire super efficace contre l'Acier, avec le Combat et le Sol."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 13 — Qui est ce Pokémon ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/887-dragapult.png",
+      "acceptedAnswers": ["Lanssorien", "Dragapult"],
+      "typoTolerance": true,
+      "explanation": "Lanssorien (n° 887, 8e génération), le Pokémon Furtif, types Dragon et Spectre. Avec 142 de Vitesse, il loge ses deux Fantyrm dans ses cornes pour les lancer."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets cette lignée d'évolution dans l'ordre.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": ["Terhal", "Métang", "Métalosse"],
+      "explanation": "Terhal, Métang puis Métalosse : à chaque étape, deux individus fusionnent — un pseudo-légendaire de la 3e génération."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Silhouette 14 — Qui est ce Pokémon ? Attention, le marteau est un indice.",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/959-tinkaton.png",
+      "acceptedAnswers": ["Forgelina", "Tinkaton"],
+      "typoTolerance": true,
+      "explanation": "Forgelina (n° 959, 9e génération), types Fée et Acier. Elle agrandit son marteau à chaque évolution : Forgerette, puis Forgella, puis elle."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Comment s'appelle en français le Pokémon n° 132, capable de prendre l'apparence de n'importe quel autre ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Métamorph",
+      "explanation": "Métamorph (Ditto en anglais). Sa capacité Morphing copie l'apparence et les statistiques de l'adversaire — mais pas ses PV."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quels sont les deux types de Caratroc ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Roche et Sol", "isCorrect": false },
+        { "text": "Insecte et Roche", "isCorrect": true },
+        { "text": "Insecte et Acier", "isCorrect": false },
+        { "text": "Roche et Acier", "isCorrect": false }
+      ],
+      "explanation": "Insecte et Roche — une combinaison qui lui vaut une quadruple faiblesse au type Roche, malgré ses 230 de Défense."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel Pokémon légendaire, de types Dragon et Vol, totalise 680 en statistiques de base ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Rayquaza"],
+      "typoTolerance": true,
+      "explanation": "Rayquaza, le gardien de la couche d'ozone de la 3e génération : 150 en Attaque et 150 en Attaque Spéciale."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+# Vos propres images restent sur votre disque, jamais dans git.
+# Seuls les fichiers Wikimedia Commons librement réutilisables ci-dessous sont versionnés
+# (crédits et licences dans ../CREDITS.md).
+*
+!.gitignore
+!anubis.jpg
+!pin-pesee-du-coeur.jpg
+!vases-canopes.jpg

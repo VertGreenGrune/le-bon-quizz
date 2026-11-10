@@ -1,0 +1,348 @@
+{
+  "title": "La Quête d'Ewilan — niveau confirmé",
+  "description": "30 questions intermédiaires et difficiles sur la saga de Pierre Bottero : Gwendalavir, le Dessin, les Sentinelles, les Marchombres et l'auteur. Choix multiples, réponses libres, curseurs, ordres, « Mytho ! », buzzers et un « Dessine-moi ».",
+  "coverImageUrl": "images/cover-paysage.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Dans quel monde Camille Duciel se retrouve-t-elle projetée en faisant un pas de côté ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Valingaï", "isCorrect": false },
+        { "text": "Gwendalavir", "isCorrect": true },
+        { "text": "Al-Jeit", "isCorrect": false },
+        { "text": "Otolep", "isCorrect": false }
+      ],
+      "explanation": "Gwendalavir est l'empire humain du monde imaginé par Pierre Bottero. Al-Jeit en est la capitale, Valingaï un empire lointain et Otolep un lac mythique : trois lieux du même univers."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Sous quel nom Ewilan Gil' Sayan a-t-elle grandi dans notre monde ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Camille Duciel", "Camille", "Duciel"],
+      "typoTolerance": true,
+      "explanation": "Confiée à la famille Duciel, Camille ignore tout de ses origines. Elle est en réalité la fille d'Altan et Élicia Gil' Sayan, deux Sentinelles de l'Empire."
+    },
+    {
+      "type": "MCQ",
+      "text": "De quelle couleur sont les yeux de Camille ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Dorés", "isCorrect": false },
+        { "text": "Verts", "isCorrect": false },
+        { "text": "Violets", "isCorrect": true },
+        { "text": "Un de chaque couleur", "isCorrect": false }
+      ],
+      "explanation": "Pierre Bottero décrit Camille avec des cheveux bruns et de grands yeux violets — un détail que les lecteurs retiennent bien avant toute adaptation."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment appelle-t-on le geste qui permet de passer instantanément d'un monde à l'autre ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": [
+        "le pas sur le côté",
+        "pas sur le côté",
+        "un pas sur le côté",
+        "le pas de côté",
+        "pas de côté"
+      ],
+      "typoTolerance": true,
+      "explanation": "Le « pas sur le côté » est réservé aux dessinateurs les plus puissants. Le frère de Camille en est un maître reconnu."
+    },
+    {
+      "type": "MCQ",
+      "text": "Le Don d'un dessinateur se mesure à trois caractéristiques. Coche-les toutes !",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "La Volonté", "isCorrect": true },
+        { "text": "La Créativité", "isCorrect": true },
+        { "text": "Le Pouvoir", "isCorrect": true },
+        { "text": "La Mémoire", "isCorrect": false }
+      ],
+      "explanation": "L'analyste les mesure avec des cercles de couleur : rouge pour la Volonté, bleu pour la Créativité, jaune pour le Pouvoir. L'Empereur, lui, manque de Créativité."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel vieil analyste au caractère épineux teste le Don de Camille ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Artis Valpierre", "isCorrect": false },
+        { "text": "Edwin Til' Illan", "isCorrect": false },
+        { "text": "Bjorn Wil' Wayard", "isCorrect": false },
+        { "text": "Duom Nil' Erg", "isCorrect": true }
+      ],
+      "explanation": "Duom Nil' Erg découvre que Camille est une dessinatrice parfaite. Artis Valpierre est un rêveur qui soigne, Bjorn un chevalier et Edwin un guerrier."
+    },
+    {
+      "type": "MCQ",
+      "text": "À quoi ressemblent les Ts'liches ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "buzzer": true,
+      "choices": [
+        { "text": "À un croisement entre un lézard et une mante religieuse", "isCorrect": true },
+        { "text": "À des loups géants au pelage blanc", "isCorrect": false },
+        { "text": "À des hommes-oiseaux aux ailes de cuir", "isCorrect": false },
+        { "text": "À des serpents de mer à six têtes", "isCorrect": false }
+      ],
+      "explanation": "Les Ts'liches dépassent les deux mètres, parlent, réfléchissent et manient le Dessin. Ce sont eux qui tiennent Gwendalavir sous leur emprise."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de Sentinelles veillaient sur l'Empire avant d'être figées ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 5, "max": 50, "step": 1, "correct": 12, "margin": 1 },
+      "explanation": "Douze Sentinelles, les dessinateurs les plus puissants de Gwendalavir — dont les parents d'Ewilan, et deux traîtres."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle Sentinelle a trahi l'Empire et devient la grande ennemie d'Ewilan ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Eléa Ril' Morienval", "Elea Ril Morienval", "Morienval", "Eléa"],
+      "typoTolerance": true,
+      "explanation": "Éléa Ril' Morienval poursuit Ewilan sur plusieurs trilogies. Elle dirige l'Institution de La Forêt des captifs et meurt dans Les Tentacules du mal."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel peuple, manipulé par les Ts'liches, forme le gros de leurs armées ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Les Faëls", "isCorrect": false },
+        { "text": "Les Petits", "isCorrect": false },
+        { "text": "Les Raïs", "isCorrect": true },
+        { "text": "Les Mentaïs", "isCorrect": false }
+      ],
+      "explanation": "Les Raïs sont des humanoïdes verts jetés au combat par milliers. Les Mentaïs, eux, sont les tueurs d'élite des Mercenaires du Chaos."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Les Faëls sont des alliés des Ts'liches.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ],
+      "explanation": "C'est l'inverse : les Faëls sont justement les alliés que la petite troupe part chercher pour résister aux Ts'liches."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment s'appelle la capitale de Gwendalavir ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "buzzer": true,
+      "acceptedAnswers": ["Al-Jeit", "Al Jeit", "Aljeit"],
+      "typoTolerance": true,
+      "explanation": "Al-Jeit, la cité de l'Empereur. Al-Vor et Al-Far sont d'autres villes alaviriennes."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelles sont les fonctions d'Edwin Til' Illan ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Grand druide de l'Empire", "isCorrect": false },
+        { "text": "Maître d'armes de l'Empereur et chef de la Légion noire", "isCorrect": true },
+        { "text": "Premier marchombre du Conseil", "isCorrect": false },
+        { "text": "Ambassadeur de l'Empire auprès des Faëls", "isCorrect": false }
+      ],
+      "explanation": "Edwin Til' Illan est considéré comme le plus grand guerrier de Gwendalavir. Il devient le protecteur de la petite troupe."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les trois tomes de La Quête d'Ewilan dans l'ordre de lecture.",
+      "timeLimitSec": 40,
+      "basePoints": 2000,
+      "items": ["D'un monde à l'autre", "Les Frontières de glace", "L'Île du destin"],
+      "explanation": "Les trois tomes ont paru la même année, en 2003 : mars, mai et novembre. Pierre Bottero écrivait vite."
+    },
+    {
+      "type": "MCQ",
+      "text": "Mathieu Boulanger, le frère de Camille, porte quel nom à Gwendalavir ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Altan Gil' Sayan", "isCorrect": false },
+        { "text": "Sayanel Lyyant", "isCorrect": false },
+        { "text": "Chiam Vite", "isCorrect": false },
+        { "text": "Akiro Gil' Sayan", "isCorrect": true }
+      ],
+      "explanation": "Akiro a été adopté séparément, à onze ans. Camille le retrouve dans une école d'art à Paris, où son Don se limite à changer la couleur des peintures."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Avant d'être rebaptisée Ellana, la future marchombre portait un tout autre prénom. Lequel ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Ipiutiminelle",
+      "explanation": "Ipiutiminelle — « Ipiu » pour les intimes — est le nom que lui donnent les Petits. C'est une fillette, Nahis, qui l'appellera Ellana."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel peuple a recueilli et élevé Ellana, orpheline, dans Le Pacte des Marchombres ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "acceptedAnswers": ["les Petits", "Petits"],
+      "typoTolerance": true,
+      "explanation": "Les Petits sont de minuscules humanoïdes farceurs. Ils recueillent la fillette après la mort de ses parents, tués lors d'une attaque de Raïs."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui est le maître marchombre d'Ellana, réputé le meilleur professeur de la voie ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Jilano Alhuïn", "isCorrect": true },
+        { "text": "Sayanel Lyyant", "isCorrect": false },
+        { "text": "Duom Nil' Erg", "isCorrect": false },
+        { "text": "Edwin Til' Illan", "isCorrect": false }
+      ],
+      "explanation": "Jilano Alhuïn prend Ellana comme élève. Sayanel Lyyant, autre maître marchombre, est son ami — et le maître de l'apprenti Nillem."
+    },
+    {
+      "type": "SLIDER",
+      "text": "À quel âge Ellana a-t-elle perdu ses parents, tués en la protégeant ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 1, "max": 25, "step": 1, "correct": 5, "margin": 1, "unit": "ans" },
+      "explanation": "Cinq ans. Ses parents meurent lors d'une attaque de Raïs ; la fillette survit et sera élevée par les Petits."
+    },
+    {
+      "type": "MCQ",
+      "text": "Dans Les Mondes d'Ewilan, qui est Illian ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Un Ts'lich repenti", "isCorrect": false },
+        { "text": "Le fils d'Éléa Ril' Morienval", "isCorrect": false },
+        { "text": "Un garçon de huit ans au pouvoir étonnant", "isCorrect": true },
+        { "text": "Un marchombre siégeant au Conseil", "isCorrect": false }
+      ],
+      "explanation": "Ewilan rencontre Illian dans La Forêt des captifs. Son pouvoir, dérivé du Dessin, est si particulier que la troupe l'escorte jusqu'à sa famille."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel lac mythique guérit Ewilan et l'immunise contre la menace du deuxième cycle ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/21-lac.jpg",
+      "imageEffect": "blur",
+      "acceptedAnswers": ["Otolep", "le lac Otolep", "lac Otolep"],
+      "typoTolerance": true,
+      "explanation": "Le lac Otolep donne son titre au deuxième tome des Mondes d'Ewilan, L'Œil d'Otolep."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle créature, surnommée « la méduse », tente d'envahir l'Imagination ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Le Rentaï", "isCorrect": false },
+        { "text": "Ahmour", "isCorrect": true },
+        { "text": "Merwyn", "isCorrect": false },
+        { "text": "Valingaï", "isCorrect": false }
+      ],
+      "explanation": "Ahmour et ses tentacules donnent leur titre au tome Les Tentacules du mal. L'affrontement final se déroule dans les arènes de Valingaï."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les trois tomes des Mondes d'Ewilan dans l'ordre.",
+      "timeLimitSec": 40,
+      "basePoints": 2000,
+      "items": ["La Forêt des captifs", "L'Œil d'Otolep", "Les Tentacules du mal"],
+      "explanation": "La deuxième trilogie paraît en 2004 et 2005, juste après La Quête d'Ewilan."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Comment s'appellent les deux Petits qui ont recueilli Ellana enfant ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Oukilip et Pilipip",
+      "explanation": "Oukilip et Pilipip. Les noms des Petits sonnent tous un peu pareil — ce qui rend les mythos particulièrement crédibles."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui est Merwyn Ril' Avalon ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "L'Empereur de Gwendalavir", "isCorrect": false },
+        { "text": "Le chef des Mercenaires du Chaos", "isCorrect": false },
+        { "text": "Un Ts'lich légendaire", "isCorrect": false },
+        { "text": "Le plus grand dessinateur de l'histoire", "isCorrect": true }
+      ],
+      "explanation": "Merwyn fut le plus grand espoir des hommes lors de la première guerre contre les Ts'liches. Sa légende traverse tout l'univers de Gwendalavir."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment s'appelle la montagne sacrée liée à la voie des marchombres ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/26-montagne.jpg",
+      "imageEffect": "zoom",
+      "acceptedAnswers": ["le Rentaï", "Rentaï", "Rentai"],
+      "typoTolerance": true,
+      "explanation": "Le Rentaï est l'un des hauts lieux de Gwendalavir, central dans le parcours d'Ellana."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les trois tomes du Pacte des Marchombres dans l'ordre.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "items": ["Ellana", "Ellana, l'Envol", "Ellana, la Prophétie"],
+      "explanation": "Ellana (2006), l'Envol (avril 2008) puis la Prophétie (octobre 2008) : 624 pages pour le dernier, le plus gros livre de l'univers."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Avant d'écrire à plein temps, Pierre Bottero a été instituteur pendant une vingtaine d'années.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Instituteur pendant vingt ans, Pierre Bottero quitte l'école en 2001 pour se consacrer à l'écriture. Ses élèves ont été ses premiers lecteurs."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année est paru D'un monde à l'autre, le premier tome de la saga ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 1995, "max": 2005, "step": 1, "correct": 2003, "margin": 1 },
+      "explanation": "Mars 2003, chez Rageot. En cinq ans, la saga et Le Pacte des Marchombres dépasseront le million d'exemplaires vendus."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi un objet ou un lieu qu'on croiserait à Gwendalavir !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "une hache",
+        "un cheval",
+        "une forêt",
+        "une épée",
+        "une montagne",
+        "un lac",
+        "un arbre",
+        "une étoile",
+        "un loup",
+        "un dragon",
+        "un pont",
+        "une tour"
+      ],
+      "explanation": "Pierre Bottero disait partir des paysages avant les scènes : Gwendalavir est né d'images, pas d'une carte."
+    }
+  ]
+}

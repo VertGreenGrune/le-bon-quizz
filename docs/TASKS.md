@@ -3195,3 +3195,47 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   « attacks » no longer sees it); `JokerSnapshot` gains `shield`. Tests building an exact
   `game:state` must add `quizTitle`; tests with a Voleur must fix `GameSettings.random`.
   `E2E_JOKER_HAND` = `freeze,copy,fifty,double,thief`.
+- 2026-11-10, main agent (content, no app change): three quizzes asked by the user, **« niveau
+  intermédiaire et difficile », no 0-point question** (so no POLL / WHO_OF_US / WORD_CLOUD) and
+  deliberate care on the two T48 rules (answer slots spread, slider answers off-centre):
+  `content/quizzes/ewilan/` « La Quête d'Ewilan — niveau confirmé » (30 q.),
+  `content/quizzes/kaamelott/` « Kaamelott — niveau confirmé » (31 q.) and
+  `content/quizzes/batman-comics/` « Batman — les comics, niveau confirmé » (31 q. — distinct from
+  the T34 `batman` quiz on the animated series). Each: QCM (incl. one « select all »), vrai/faux,
+  réponse libre, curseur, ordre, « Mytho ! », 2 buzzers and one « Dessine-moi »; an explanation on
+  every question, sources per answer in `CREDITS.md`, question table + how to play in `README.md`.
+  Right-answer slots 21-29 % per slot in the three; sliders at 9-80 % of their range. Imported
+  (private) for vachet.clement.es2@gmail.com.
+- 2026-11-10, main agent (content, no app change): **images added to the three quizzes above**,
+  after the user asked why they had none. No still, cover, logo or soundtrack of the franchises
+  (all protected) — only freely licensed Wikimedia Commons files, in `images/` with the usual
+  whitelist `.gitignore` and full credits in each `CREDITS.md`: Ewilan 3 Bierstadt landscapes
+  (public domain, blur / zoom on the lake and mountain questions), Kaamelott 3 Howard Pyle
+  Arthurian plates (public domain) + a CC BY-SA photo of Alexandre Astier (blur on the
+  Exoconférence question), Batman 1 public-domain bat + CC BY-SA portraits of Alan Moore (blur)
+  and Scott Snyder (pixelate) — there the picture **is** the clue. Files ≤ 1400 px. Re-imported.
+- 2026-11-10, main agent (content, no app change): three **mythology** quizzes asked by the user,
+  20 questions each, **difficult**, no 0-point question: `content/quizzes/mythologie-grecque/`,
+  `mythologie-egyptienne/` and `mythologie-scandinave/`. Each: 7 QCM (incl. one « select all »),
+  2 vrai/faux, 5-6 réponses libres, 2 curseurs, 1-2 ordres, 1 « Mytho ! », **1 point sur l'image**
+  and 2 buzzers, an explanation on every question, sources per answer in `CREDITS.md`. Ancient art
+  is overwhelmingly public domain, so all 8 pictures are free (papyrus of Ani, Mengs, Doepler,
+  an Ashmolean amphora under CC BY-SA). The three PIN zones (Ammit, Urania's celestial globe,
+  Fenrir's jaws) were **drawn on the pictures and checked by eye** (`System.Drawing` script, like
+  T34). Facts verified one by one; disputed numbers either dropped or turned into the question
+  itself (Cerberus' heads), and the Valhalla doors fixed at 540 per the _Grímnismál_ against
+  sources claiming 640. Imported (private) for vachet.clement.es2@gmail.com.
+- 2026-11-10, main agent (content, no app change): `content/quizzes/pokemon-silhouettes/`
+  « Pokémon — Qui est cette silhouette ? (difficile) », 30 questions, **14 silhouettes** (the
+  user's hard requirement) + 16 type / base-stat / evolution questions, 2 of the silhouettes
+  **au buzzer**, no 0-point question. The silhouettes are generated: official artwork from the
+  PokeAPI sprite repo → a `System.Drawing` script turns every opaque pixel black on white, crops
+  to the shape and pads 6 % (method and script in `CREDITS.md`). **Unlike every other quiz in
+  `content/`, these images are NOT freely licensed** — they are derivatives of artwork owned by
+  Nintendo / Creatures / GAME FREAK: the quiz is imported **private** and `CREDITS.md` says in a
+  warning block that it must not be made public. Every fact, French name and type relation comes
+  from the PokeAPI endpoints listed in `CREDITS.md`, not from memory (several French names are
+  counter-intuitive: Tutankafer, Golemastoc, Lanssorien, Forgelina). Spiritomb was dropped after
+  looking at its silhouette — an unreadable black blob — and replaced by Scorvol. Typed answers
+  accept the English names, and were tested against 29 realistic inputs. Imported (private) for
+  vachet.clement.es2@gmail.com.

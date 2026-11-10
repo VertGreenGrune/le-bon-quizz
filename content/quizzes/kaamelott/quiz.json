@@ -1,0 +1,362 @@
+{
+  "title": "Kaamelott — niveau confirmé",
+  "description": "31 questions intermédiaires et difficiles sur la série d'Alexandre Astier : la production, le casting, les répliques cultes et les coulisses. Choix multiples, réponses libres, curseurs, ordre, « Mytho ! », buzzers et un « Dessine-moi ».",
+  "coverImageUrl": "images/cover-excalibur.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Sur quelle chaîne Kaamelott a-t-elle été diffusée ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "France 2", "isCorrect": false },
+        { "text": "Canal+", "isCorrect": false },
+        { "text": "M6", "isCorrect": true },
+        { "text": "TF1", "isCorrect": false }
+      ],
+      "explanation": "M6, du 3 janvier 2005 au 31 octobre 2009, d'abord en « shortcom » juste avant le journal du soir."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Kaamelott est née d'un court-métrage réalisé avant la série.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Un court-métrage de 2003, tourné avec une partie de la future troupe, a convaincu la production de lancer la série."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel est le titre de ce court-métrage de 2003 dont la série est issue ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Dies irae", "Dies iræ", "Dies ire"],
+      "typoTolerance": true,
+      "explanation": "Dies iræ, « jour de colère » en latin, reprend le nom d'une séquence de la liturgie des morts. Alexandre Astier y jouait déjà Arthur."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui interprète Léodagan, le roi de Carmélide ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Lionnel Astier", "isCorrect": true },
+        { "text": "Serge Papagalli", "isCorrect": false },
+        { "text": "François Rollin", "isCorrect": false },
+        { "text": "Jean-Robert Lombard", "isCorrect": false }
+      ],
+      "explanation": "Lionnel Astier est le père d'Alexandre Astier dans la vraie vie : il joue donc le beau-père de son propre fils à l'écran."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "De quel royaume Léodagan est-il le roi ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "buzzer": true,
+      "imageUrl": "images/10-guinevere.jpg",
+      "acceptedAnswers": ["la Carmélide", "Carmélide", "Carmelide"],
+      "typoTolerance": true,
+      "explanation": "La Carmélide, royaume voisin que Léodagan ne cesse de comparer — à son avantage — à la Bretagne d'Arthur."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quels personnages sont joués par des membres de la famille d'Alexandre Astier ? Coche-les tous !",
+      "timeLimitSec": 35,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Léodagan", "isCorrect": true },
+        { "text": "Yvain", "isCorrect": true },
+        { "text": "Dame Séli", "isCorrect": true },
+        { "text": "Perceval", "isCorrect": false }
+      ],
+      "explanation": "Son père Lionnel (Léodagan), son demi-frère Simon (Yvain) et sa mère Joëlle Sevilla (Dame Séli). Perceval, lui, c'est Franck Pitiot."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien d'épisodes compte la série Kaamelott en tout ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 200, "max": 1200, "step": 1, "correct": 458, "margin": 25 },
+      "explanation": "458 épisodes répartis en six livres — un chiffre énorme, dû au format très court des quatre premiers livres."
+    },
+    {
+      "type": "MCQ",
+      "text": "Combien de temps durent les épisodes des Livres I à IV ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Environ 1 minute", "isCorrect": false },
+        { "text": "Environ 7 minutes", "isCorrect": false },
+        { "text": "Environ 26 minutes", "isCorrect": false },
+        { "text": "Environ 3 minutes 30", "isCorrect": true }
+      ],
+      "explanation": "3 min 30 pour les Livres I à IV, 7 minutes pour le Livre V, et 40 minutes pour le Livre VI : la série change complètement de format en route."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de minutes durent les épisodes du Livre VI ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 5, "max": 120, "step": 1, "correct": 40, "margin": 3, "unit": "min" },
+      "explanation": "40 minutes, pour neuf épisodes seulement : le Livre VI raconte la jeunesse d'Arthur à Rome et ressemble davantage à une série dramatique."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle actrice incarne la Dame du Lac ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Anne Girouard", "isCorrect": false },
+        { "text": "Joëlle Sevilla", "isCorrect": false },
+        { "text": "Audrey Fleurot", "isCorrect": true },
+        { "text": "Caroline Ferrus", "isCorrect": false }
+      ],
+      "explanation": "Audrey Fleurot, bien avant Engrenages et Dix pour cent. Anne Girouard joue Guenièvre."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel est le prénom de la Dame du Lac ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Viviane"],
+      "typoTolerance": true,
+      "explanation": "Viviane, reprise de la légende arthurienne. Seuls quelques élus peuvent la voir — ce qui vaut à Arthur d'être pris pour un fou."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui joue Merlin, l'enchanteur plus que discutable de Bretagne ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Nicolas Gabion", "isCorrect": false },
+        { "text": "Loïc Varraut", "isCorrect": false },
+        { "text": "Brice Fournier", "isCorrect": false },
+        { "text": "Jacques Chambon", "isCorrect": true }
+      ],
+      "explanation": "Jacques Chambon. Nicolas Gabion joue Bohort, et Loïc Varraut l'inimitable Venec."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel jeu venu du pays de Galles Perceval tente-t-il d'expliquer à la taverne ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "buzzer": true,
+      "acceptedAnswers": ["le Sloubi", "Sloubi"],
+      "typoTolerance": true,
+      "explanation": "Le Sloubi. Quand on remporte un tour, quatorze solutions s'offrent au joueur — dont « attrape-oiseaux », « régoudon » et « chante Sloubi »."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui interprète Yvain, le frère flemmard de Guenièvre ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Simon Astier", "isCorrect": true },
+        { "text": "Thomas Cousseau", "isCorrect": false },
+        { "text": "Franck Pitiot", "isCorrect": false },
+        { "text": "Jean-Christophe Hembert", "isCorrect": false }
+      ],
+      "explanation": "Simon Astier, demi-frère d'Alexandre, né de l'union de Lionnel Astier et de Josée Drevon. Il créera plus tard la série Hero Corp."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Complète la devise de Karadoc : « Le gras, c'est… »",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "acceptedAnswers": ["la vie", "vie"],
+      "typoTolerance": true,
+      "explanation": "« Le gras, c'est la vie », lancé dans l'épisode Corpore Sano du Livre II, où Karadoc défend sa conception très personnelle de la diététique."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "C'est Perceval qui a inventé la réplique « C'est pas faux ».",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": false },
+        { "text": "Faux", "isCorrect": true }
+      ],
+      "explanation": "C'est Karadoc : une ruse pour ne pas passer pour un idiot devant un mot qu'on ne comprend pas. Il l'enseigne ensuite à Perceval, qui en abusera."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel mot du Tavernier déclenche le tout premier « C'est pas faux » ?",
+      "timeLimitSec": 35,
+      "basePoints": 2000,
+      "acceptedAnswers": ["sinécure", "une sinécure"],
+      "typoTolerance": true,
+      "explanation": "« Sinécure ». La scène est dans l'épisode 28 du Livre I : Karadoc, pris de court, invente la parade qui deviendra culte."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Dans quel épisode du Livre I Karadoc invente-t-il « C'est pas faux » ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "La Botte secrète",
+      "explanation": "La Botte secrète, 28e épisode du Livre I. Les titres de Kaamelott sont si variés qu'un faux titre passe très bien pour un vrai."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel comédien incarne le Duc d'Aquitaine ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Élie Semoun", "isCorrect": false },
+        { "text": "Alain Chabat", "isCorrect": true },
+        { "text": "Antoine de Caunes", "isCorrect": false },
+        { "text": "Christian Clavier", "isCorrect": false }
+      ],
+      "explanation": "Alain Chabat, l'un des nombreux invités prestigieux de la série, aux côtés d'Alexandre Astier qui l'admirait depuis Les Nuls."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui joue le roi Loth d'Orcanie, beau-frère d'Arthur ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Serge Papagalli", "isCorrect": false },
+        { "text": "Bruno Salomone", "isCorrect": false },
+        { "text": "François Rollin", "isCorrect": true },
+        { "text": "Jean-Robert Lombard", "isCorrect": false }
+      ],
+      "explanation": "François Rollin, en roi grandiloquent et parfaitement inutile. Jean-Robert Lombard, lui, est le Père Blaise."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel est le titre complet de Karadoc ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Karadoc de Gaunes", "isCorrect": false },
+        { "text": "Karadoc d'Orcanie", "isCorrect": false },
+        { "text": "Karadoc de Carmélide", "isCorrect": false },
+        { "text": "Karadoc de Vannes", "isCorrect": true }
+      ],
+      "explanation": "Karadoc de Vannes. Gaunes, c'est Bohort : « Bohort de Gaunes », le chevalier le plus raffiné — et le plus peureux — de la Table ronde."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui interprète l'enchanteur Élias de Kelliwic'h ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Jacques Chambon", "isCorrect": false },
+        { "text": "Bruno Fontaine", "isCorrect": true },
+        { "text": "Antoine de Caunes", "isCorrect": false },
+        { "text": "Loïc Varraut", "isCorrect": false }
+      ],
+      "explanation": "Bruno Fontaine, par ailleurs pianiste et compositeur. Élias est tout ce que Merlin n'est pas : réellement puissant, et de très mauvaise humeur."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Alexandre Astier compose lui-même la musique de Kaamelott.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Il en est le compositeur et l'interprète, en plus d'être auteur, réalisateur et acteur principal. Il a étudié la musique avant le cinéma."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Le nom « Kaamelott » s'inspire de l'orthographe « Camaalot » employée par quel auteur ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Jean Markale",
+      "explanation": "Jean Markale, spécialiste des légendes celtiques. Astier a ajouté des T pour faire entendre « camelote » : tout le programme de la série."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle société a produit la série Kaamelott ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["CALT", "Calt"],
+      "typoTolerance": false,
+      "explanation": "CALT, la société de Jean-Yves Robin et Alain Kappauf, co-créateurs de la série, déjà derrière Caméra Café. Budget : environ 2 millions d'euros par saison."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel spectacle d'Alexandre Astier parle de la vie extraterrestre ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/03-astier.jpg",
+      "imageEffect": "blur",
+      "acceptedAnswers": ["L'Exoconférence", "Exoconférence", "Exoconference"],
+      "typoTolerance": true,
+      "explanation": "L'Exoconférence, créée en septembre 2014 : Astier y joue un astrophysicien qui retrace l'histoire de l'univers depuis le Big Bang."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "L'Exoconférence a été mise en scène par le comédien qui joue Karadoc.",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Jean-Christophe Hembert, Karadoc à l'écran, est metteur en scène de théâtre : c'est lui qui a mis en scène le spectacle."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel rôle Alexandre Astier a-t-il tenu sur Astérix : Le Domaine des dieux ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Scénariste et co-réalisateur", "isCorrect": true },
+        { "text": "Uniquement la voix d'Astérix", "isCorrect": false },
+        { "text": "Uniquement la musique", "isCorrect": false },
+        { "text": "Il n'a pas participé au film", "isCorrect": false }
+      ],
+      "explanation": "Il écrit et co-réalise le film d'animation de 2014 avec Louis Clichy — et signe aussi le suivant, Le Secret de la potion magique."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année est sorti Kaamelott — Premier volet au cinéma ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": { "min": 2010, "max": 2024, "step": 1, "correct": 2021, "margin": 1 },
+      "explanation": "2021, douze ans après la fin de la série et après plusieurs reports liés à la pandémie. Le Deuxième volet a suivi en 2025."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets ces projets d'Alexandre Astier dans l'ordre chronologique.",
+      "timeLimitSec": 45,
+      "basePoints": 2000,
+      "imageUrl": "images/30-arthur-pyle.jpg",
+      "items": [
+        "Le court-métrage Dies iræ",
+        "La première diffusion de Kaamelott sur M6",
+        "Astérix : Le Domaine des dieux",
+        "Kaamelott — Premier volet"
+      ],
+      "explanation": "2003, 2005, 2014 et 2021 : près de vingt ans entre le court-métrage fauché et le film à gros budget."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi quelque chose qu'on trouverait à Kaamelott !",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "une épée",
+        "un château",
+        "un chevalier",
+        "le Graal",
+        "une table ronde",
+        "un dragon",
+        "un heaume",
+        "un bouclier",
+        "un cheval",
+        "une couronne",
+        "un tonneau",
+        "un pont-levis"
+      ],
+      "explanation": "Le Graal, objet de la quête, n'est quasiment jamais montré dans la série : tout le sel de Kaamelott est dans l'attente et les réunions qui tournent mal."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# Vos propres images restent sur votre disque, jamais dans git.
+# Seules les silhouettes générées ci-dessous sont versionnées (voir ../CREDITS.md :
+# ce sont des dérivés des artworks officiels, réservés à un usage privé).
+*
+!.gitignore
+!115-kangaskhan.png
+!142-aerodactyl.png
+!203-girafarig.png
+!227-skarmory.png
+!302-sableye.png
+!357-tropius.png
+!426-drifblim.png
+!472-gliscor.png
+!563-cofagrigus.png
+!623-golurk.png
+!681-aegislash.png
+!778-mimikyu.png
+!887-dragapult.png
+!959-tinkaton.png
+!cover-silhouette.png

@@ -1,0 +1,225 @@
+{
+  "title": "Mythologie scandinave — niveau expert",
+  "description": "20 questions difficiles sur les Nordiques : Yggdrasil et les Nornes, le sacrifice d'Odin, la forge de Mjöllnir, l'entrave de Fenrir et le Ragnarök. Avec un point sur l'image, des curseurs, un ordre, un « Mytho ! » et deux buzzers.",
+  "coverImageUrl": "images/cover-ragnarok.jpg",
+  "theme": "classic",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Combien de mondes l'arbre cosmique relie-t-il ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Trois", "isCorrect": false },
+        { "text": "Neuf", "isCorrect": true },
+        { "text": "Douze", "isCorrect": false },
+        { "text": "Sept", "isCorrect": false }
+      ],
+      "explanation": "Neuf mondes, dont Ásgard des dieux, Midgard des hommes, Jötunheim des géants et Niflheim des brumes glacées."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment s'appelle cet arbre qui porte les neuf mondes ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "buzzer": true,
+      "acceptedAnswers": ["Yggdrasil", "Yggdrasill", "l'Yggdrasil"],
+      "typoTolerance": true,
+      "explanation": "Yggdrasil, le frêne monde. Un écureuil, Ratatosk, court le long du tronc pour porter les insultes de l'aigle du sommet au dragon des racines."
+    },
+    {
+      "type": "MCQ",
+      "text": "Les trois Nornes tissent le destin. Coche les associations exactes !",
+      "timeLimitSec": 35,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Urd, le passé", "isCorrect": true },
+        { "text": "Verdandi, le présent", "isCorrect": true },
+        { "text": "Skuld, le futur", "isCorrect": true },
+        { "text": "Nanna, l'oubli", "isCorrect": false }
+      ],
+      "explanation": "Elles vivent au pied d'Yggdrasil, près de la source d'Urd, et arrosent chaque jour l'arbre pour le garder en vie. Nanna, elle, est l'épouse de Baldr."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de nuits Odin est-il resté pendu à l'arbre, percé d'une lance ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 1, "max": 40, "step": 1, "correct": 9, "margin": 0, "unit": "nuits" },
+      "explanation": "Neuf nuits, « offert à Odin, moi-même à moi-même », dit le Hávamál. Sans boire ni manger, jusqu'à saisir ce qu'il était venu chercher."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Qu'Odin a-t-il obtenu au terme de ce sacrifice ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["les runes", "runes", "la connaissance des runes"],
+      "typoTolerance": true,
+      "explanation": "« Je saisis les runes, hurlant je les saisis, puis je retombai. » Il les transmettra ensuite aux hommes, avec la magie et la poésie."
+    },
+    {
+      "type": "MCQ",
+      "text": "Que signifient les noms des deux corbeaux d'Odin, Huginn et Muninn ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Guerre et Paix", "isCorrect": false },
+        { "text": "Jour et Nuit", "isCorrect": false },
+        { "text": "Soleil et Lune", "isCorrect": false },
+        { "text": "Pensée et Mémoire", "isCorrect": true }
+      ],
+      "explanation": "Ils parcourent le monde chaque jour et reviennent lui parler à l'oreille. Odin avoue craindre davantage de perdre Muninn, la Mémoire."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment s'appelle le cheval à huit pattes d'Odin ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Sleipnir", "Sleipner"],
+      "typoTolerance": true,
+      "explanation": "Sleipnir, le meilleur de tous les chevaux, capable de galoper sur terre, sur mer et dans les airs."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Loki est la mère de ce cheval.",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Pour détourner l'étalon Svadilfari et faire échouer le marché d'un géant bâtisseur, Loki s'est changé en jument. Il a mis bas Sleipnir."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel est le seul défaut du marteau Mjöllnir ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Son manche est trop court", "isCorrect": true },
+        { "text": "Une fêlure court sur sa tête", "isCorrect": false },
+        { "text": "Il ne revient pas toujours", "isCorrect": false },
+        { "text": "Il est trop lourd, même pour Thor", "isCorrect": false }
+      ],
+      "explanation": "Un manche si court que Thor doit le tenir d'une main ferme. À part cela, il ne manque jamais sa cible et revient toujours."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Pourquoi le manche de Mjöllnir est-il trop court ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 25,
+      "basePoints": 2000,
+      "truth": "Loki, en mouche, a piqué le forgeron",
+      "explanation": "Loki, changé en mouche, a piqué le nain Brokkr entre les deux yeux pendant qu'il actionnait le soufflet. Une seconde d'inattention, et le manche est resté court."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quels nains ont forgé Mjöllnir ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Fjalar et Galar", "isCorrect": false },
+        { "text": "Brokkr et Eitri", "isCorrect": true },
+        { "text": "Dvalin et Durin", "isCorrect": false },
+        { "text": "Fáfnir et Regin", "isCorrect": false }
+      ],
+      "explanation": "Les frères Brokkr et Eitri (ou Sindri), lors d'un pari lancé par Loki. Fjalar et Galar, eux, sont les nains qui ont assassiné Kvasir pour en tirer l'hydromel de poésie."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de portes le Valhalla compte-t-il, selon le Grímnismál ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "slider": { "min": 100, "max": 1500, "step": 10, "correct": 540, "margin": 20 },
+      "explanation": "Cinq cent quarante portes, et huit cents guerriers franchissent chacune d'elles lorsqu'ils sortent affronter le Loup. Le toit, lui, est couvert de boucliers."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Comment appelle-t-on les guerriers morts au combat accueillis au Valhalla ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "acceptedAnswers": ["les einherjar", "einherjar", "einherjer", "einheriar"],
+      "typoTolerance": true,
+      "explanation": "Les einherjar. Ils se battent toute la journée, meurent, ressuscitent le soir et festoient — un entraînement quotidien en vue du Ragnarök."
+    },
+    {
+      "type": "PIN",
+      "text": "Au Ragnarök, Odin est dévoré par un monstre. Montre-le sur cette illustration.",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "imageUrl": "images/pin-odin-fenrir.jpg",
+      "zone": { "x": 0.27, "y": 0.14, "radius": 0.1 },
+      "explanation": "Le loup Fenrir, gueule ouverte en haut à gauche. Son fils Vidar le vengera aussitôt en déchirant la gueule du loup. Illustration d'Emil Doepler, 1905."
+    },
+    {
+      "type": "MCQ",
+      "text": "Avec quel lien les dieux sont-ils parvenus à entraver Fenrir ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "choices": [
+        { "text": "Draupnir", "isCorrect": false },
+        { "text": "Gungnir", "isCorrect": false },
+        { "text": "Gleipnir", "isCorrect": true },
+        { "text": "Gjallarhorn", "isCorrect": false }
+      ],
+      "explanation": "Gleipnir, souple comme un ruban de soie, forgé à partir de six choses impossibles : le bruit du pas d'un chat, la barbe d'une femme, les racines d'une montagne, les tendons d'un ours, le souffle d'un poisson et la salive d'un oiseau."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel dieu y perd sa main, gage de la bonne foi des Ases ?",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "buzzer": true,
+      "acceptedAnswers": ["Tyr", "Týr", "Tir"],
+      "typoTolerance": true,
+      "explanation": "Tyr avait posé sa main dans la gueule du loup en garantie. Quand Fenrir comprend le piège, il referme les mâchoires. Tyr, dieu du droit, en restera manchot."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Au Ragnarök, Thor et le serpent de Midgard se tuent mutuellement.",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "imageUrl": "images/thor-serpent.jpg",
+      "choices": [
+        { "text": "Vrai", "isCorrect": true },
+        { "text": "Faux", "isCorrect": false }
+      ],
+      "explanation": "Thor abat Jörmungand, fait neuf pas… et tombe, tué par le venin du serpent. Les deux adversaires se devaient cette fin depuis leur première rencontre."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle plante, seule à n'avoir pas prêté serment, a tué Baldr ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["le gui", "gui"],
+      "typoTolerance": true,
+      "explanation": "Le gui, jugé trop jeune et trop faible par Frigg pour qu'on lui demande de jurer. C'est exactement cette faille que Loki est allé chercher."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remets les étapes de la mort de Baldr dans l'ordre.",
+      "timeLimitSec": 50,
+      "basePoints": 2000,
+      "items": [
+        "Frigg fait jurer à toute chose de ne pas blesser Baldr",
+        "Loki découvre que le gui n'a pas prêté serment",
+        "Loki guide la main de Höd, le frère aveugle",
+        "Baldr s'effondre, transpercé par le gui"
+      ],
+      "explanation": "Les dieux s'amusaient à lancer des objets sur Baldr devenu invulnérable. Sa mort est le premier signe annonçant le Ragnarök."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a écrit l'Edda en prose, principale source de la mythologie nordique ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "choices": [
+        { "text": "Saxo Grammaticus", "isCorrect": false },
+        { "text": "Ari Þorgilsson", "isCorrect": false },
+        { "text": "Snorri Sturluson", "isCorrect": true },
+        { "text": "Sæmundr Sigfússon", "isCorrect": false }
+      ],
+      "explanation": "Snorri Sturluson, chef et poète islandais, vers 1220 — deux siècles après la christianisation de l'Islande. Sans lui, l'essentiel de ces récits serait perdu."
+    }
+  ]
+}
