@@ -30,6 +30,7 @@ import { DrawIntroLine, DrawStage } from './drawScreens';
 import { ListStage } from './listScreens';
 import { ColorsStage } from './colorsScreens';
 import { MissingStage } from './missingScreens';
+import { PointlessRevealView } from './pointlessScreens';
 import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -351,6 +352,12 @@ export function QuestionScreen({
               <BluffReveal bluff={reveal.bluff} instant={instant} />
             ) : MORE_TYPES.includes(reveal.type) ? (
               <MoreTypeReveal reveal={reveal} instant={instant} questionIndex={question.index} />
+            ) : reveal.pointless ? (
+              <PointlessRevealView
+                reveal={reveal.pointless}
+                instant={instant}
+                onAccept={onAccept}
+              />
             ) : reveal.type === 'TYPE_ANSWER' ? (
               <TypedAnswersReveal reveal={reveal} instant={instant} onAccept={onAccept} />
             ) : reveal.type === 'SLIDER' ? (
@@ -540,13 +547,15 @@ function AnswerHint({ question }: { question: QuestionShowPayload }) {
   const hint =
     question.type === 'TYPE_ANSWER'
       ? '✍️ Écris ta réponse sur ton téléphone'
-      : question.type === 'SLIDER' && slider
-        ? `🎚️ Entre ${formatValue(slider.min, slider.unit)} et ${formatValue(slider.max, slider.unit)}`
-        : question.type === 'POLL'
-          ? '🗳️ Sondage : pas de bonne réponse !'
-          : question.multiple
-            ? '☑️ Plusieurs réponses possibles'
-            : null;
+      : question.type === 'POINTLESS'
+        ? '💎 Une seule réponse : la plus rare possible !'
+        : question.type === 'SLIDER' && slider
+          ? `🎚️ Entre ${formatValue(slider.min, slider.unit)} et ${formatValue(slider.max, slider.unit)}`
+          : question.type === 'POLL'
+            ? '🗳️ Sondage : pas de bonne réponse !'
+            : question.multiple
+              ? '☑️ Plusieurs réponses possibles'
+              : null;
   if (!hint) return null;
   return (
     <motion.p

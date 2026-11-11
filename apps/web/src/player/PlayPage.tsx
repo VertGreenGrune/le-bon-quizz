@@ -45,6 +45,7 @@ import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from
 import { useWakeLock } from './useWakeLock';
 import { CancelAnswerButton } from './cancelAnswer';
 import { ListPad, ListResultLines, listResultTitle } from './list';
+import { PointlessResultLine, pointlessResultTitle } from './pointless';
 import { ColorsAnswered, ColorsMemo, ColorsPad, ColorsResultLines } from './colors';
 import { MissingMemo } from './missing';
 import { getTheme, useTheme } from '../themes';
@@ -365,6 +366,17 @@ function AnswerScreen({
         initial={previousText}
       />
     );
+  if (prompt.type === 'POINTLESS')
+    return (
+      <TextAnswer
+        maxLength={prompt.maxLength ?? TYPE_ANSWER_MAX_LENGTH}
+        firstLetter={effects.firstLetter}
+        initial={previousText}
+        title="Une seule réponse"
+        hint="💎 Moins il y a de joueurs qui la donnent, plus elle rapporte !"
+        firstLetterText="Une des bonnes réponses commence par"
+      />
+    );
   if (prompt.type === 'WORD_CLOUD')
     return (
       <TextAnswer
@@ -443,8 +455,13 @@ function TextAnswer({
   title = 'Écris ta réponse',
   placeholder = 'Ta réponse…',
   initial = '',
+  hint,
+  firstLetterText = 'Commence par',
 }: {
   initial?: string;
+  /** A line under the title (« Pas évident ! »: the rarer, the better). */
+  hint?: string;
+  firstLetterText?: string;
   maxLength: number;
   firstLetter?: string;
   title?: string;
@@ -463,9 +480,10 @@ function TextAnswer({
       className="flex flex-1 flex-col gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
       <h2 className="text-center text-2xl font-black">{title}</h2>
+      {hint && <p className="-mt-2 text-center font-bold opacity-90">{hint}</p>}
       {firstLetter && (
         <p className="-mt-2 text-center font-black" data-testid="first-letter">
-          🎯 Commence par « {firstLetter} »
+          🎯 {firstLetterText} « {firstLetter} »
         </p>
       )}
       <input
@@ -664,21 +682,23 @@ function Result({ s }: { s: PlayerState }) {
     ? buzzerResultTitle(r.buzzer)
     : r.list
       ? listResultTitle(r)
-      : r.draw
-        ? drawResultTitle(r.draw)
-        : r.bluff
-          ? r.bluff.found
-            ? 'Vérité trouvée !'
-            : partial
-              ? 'Bien mythoné !'
-              : 'Piégé !'
-          : r.correct
-            ? 'Correct !'
-            : partial
-              ? 'Presque !'
-              : answered
-                ? 'Raté !'
-                : 'Temps écoulé !';
+      : r.pointless
+        ? pointlessResultTitle(r, answered)
+        : r.draw
+          ? drawResultTitle(r.draw)
+          : r.bluff
+            ? r.bluff.found
+              ? 'Vérité trouvée !'
+              : partial
+                ? 'Bien mythoné !'
+                : 'Piégé !'
+            : r.correct
+              ? 'Correct !'
+              : partial
+                ? 'Presque !'
+                : answered
+                  ? 'Raté !'
+                  : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
@@ -752,6 +772,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.bluff && <BluffResultLines bluff={r.bluff} />}
       {r.draw && <DrawResultLines draw={r.draw} />}
       {r.list && <ListResultLines list={r.list} />}
+      {r.pointless && <PointlessResultLine pointless={r.pointless} />}
       {r.colors && (
         <ColorsResultLines
           colors={r.colors}

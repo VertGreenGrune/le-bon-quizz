@@ -174,6 +174,9 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   COLORS: { jokers: true, unavailable: ['scramble', 'copy'], scramble: false },
   // « Qu'est-ce qui a disparu ? » (T59): like PIN (a point on a picture).
   MISSING: { jokers: true, unavailable: ['fifty'], scramble: false },
+  // « Pas évident ! » (T60): 50/50 = first letter of an item; points don't depend on the speed
+  // (no Sablier); no buttons to scramble.
+  POINTLESS: { jokers: true, unavailable: ['scramble', 'hourglass'], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

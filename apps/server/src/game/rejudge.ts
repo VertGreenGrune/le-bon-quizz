@@ -10,7 +10,7 @@ import {
 import { GameError } from './errors.js';
 import type { Answer, Player, QuestionStats } from './Game.js';
 import type { JokerSnapshot, Jokers } from './jokers.js';
-import { matchesAnswer, normalizeAnswer } from './matching.js';
+import { matchItem, matchesAnswer, normalizeAnswer } from './matching.js';
 import { sliderPoints } from './scoring.js';
 import type { Survival, SurvivalSnapshot } from './survival.js';
 
@@ -49,12 +49,13 @@ export function addAccept(
     }
     case 'text': {
       const text = input.text?.trim();
-      if (!text || q.type !== 'TYPE_ANSWER') throw invalid('Choisis une réponse à accepter');
-      if (
-        matchesAnswer(text, q.acceptedAnswers, q.typoTolerance) ||
-        matchesAnswer(text, accepted.texts ?? [], false)
-      )
-        return null;
+      if (!text || (q.type !== 'TYPE_ANSWER' && q.type !== 'POINTLESS'))
+        throw invalid('Choisis une réponse à accepter');
+      const right =
+        q.type === 'TYPE_ANSWER'
+          ? matchesAnswer(text, q.acceptedAnswers, q.typoTolerance)
+          : matchItem(q.items, text, q.typoTolerance) >= 0;
+      if (right || matchesAnswer(text, accepted.texts ?? [], false)) return null;
       return { ...accepted, texts: [...(accepted.texts ?? []), text] };
     }
     case 'margin': {
@@ -91,7 +92,8 @@ export function rejudgeAnswer(
     };
   }
   if (original.correct) return original;
-  if (q.type === 'TYPE_ANSWER')
+  // « Pas évident ! »: the points are divided again at the settlement (`settlePointless`).
+  if (q.type === 'TYPE_ANSWER' || q.type === 'POINTLESS')
     return original.text !== null && matchesAnswer(original.text, accepted.texts ?? [], false)
       ? right()
       : original;

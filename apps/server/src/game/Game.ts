@@ -151,6 +151,8 @@ export interface Answer {
   votedFor?: string;
   /** COLORS: a palette index per zone (-1 = none). */
   colors?: number[];
+  /** POINTLESS: the item a right answer names (index in `items`; absent for an accepted text). */
+  item?: number;
   responseMs: number;
   correct: boolean;
   points: number;
@@ -1477,7 +1479,7 @@ export class Game {
       ...details,
       ...(details.slider && { correct: details.slider.correct, margin: details.slider.margin }),
       ...(explanation && { explanation }),
-      ...(question.type === 'TYPE_ANSWER' &&
+      ...((question.type === 'TYPE_ANSWER' || question.type === 'POINTLESS') &&
         !buzzer && { typedAnswers: groupTypedAnswers(this.answers(), accepted) }),
     };
     const wheels = this.jokers?.revealWheels();

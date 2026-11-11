@@ -15,6 +15,7 @@ import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './Mo
 import { BluffFields } from './BluffFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
+import { PointlessFields } from './PointlessFields';
 import { ColorsFields } from './ColorsFields';
 import { MissingFields } from './MissingFields';
 import {
@@ -318,6 +319,8 @@ export function QuestionEditor({
         <ColorsFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'MISSING' ? (
         <MissingFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'POINTLESS' ? (
+        <PointlessFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

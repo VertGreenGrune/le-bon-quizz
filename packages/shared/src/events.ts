@@ -846,6 +846,8 @@ export interface RevealDetails {
   colors?: ColorsReveal;
   /** « Qu'est-ce qui a disparu ? »: both pictures, the zone (on « avant ») and every pin. */
   missing?: { imageUrl: string; missingImageUrl: string; zone: PinZone; pins: PinMark[] };
+  /** « Pas évident ! »: right answers given (rarest first), wrong ones, items nobody gave. */
+  pointless?: PointlessReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
@@ -865,6 +867,18 @@ export interface ColorsReveal {
     right: number;
     points: number;
   }[];
+}
+
+/**
+ * « Pas évident ! » (T60) reveal: every right answer given (one per item, `players` = who gave
+ * it, `points` each), rarest first; the wrong answers (grouped after normalization, as the first
+ * player typed them); up to `POINTLESS_MISSED_SHOWN` items nobody gave (`missedCount` = all of them).
+ */
+export interface PointlessReveal {
+  answers: { text: string; players: LobbyMember[]; points: number; accepted?: true }[];
+  wrong: { text: string; players: LobbyMember[] }[];
+  missed: string[];
+  missedCount: number;
 }
 
 export interface ListReveal {
@@ -928,7 +942,10 @@ export interface QuestionRevealPayload extends RevealDetails {
   /** SLIDER: same as `slider.correct` / `slider.margin` (the accepted margin, T44). */
   correct?: number;
   margin?: number;
-  /** TYPE_ANSWER: every group of typed answers (not only the top 6), for the host to accept one. */
+  /**
+   * TYPE_ANSWER / « Pas évident ! »: every group of typed answers (not only the top 6), for the
+   * host to accept one.
+   */
   typedAnswers?: TypedAnswerGroup[];
 }
 
@@ -1002,6 +1019,11 @@ export interface PlayerResultPayload {
   list?: { found: number; total: number; missed: string[] };
   /** « Couleurs perdues »: zones right out of how many, the right colors and the player's. */
   colors?: { right: number; total: number; colors: number[]; yours?: number[] };
+  /**
+   * « Pas évident ! »: what the player answered (the item's label when right), how many players
+   * gave that same right answer (themselves included, 0 when wrong / none) — 1 = « 💎 Pas évident ! ».
+   */
+  pointless?: { yours?: string; sharedBy: number };
   /**
    * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks
    * (absent without an answer).

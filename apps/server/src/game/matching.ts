@@ -1,3 +1,5 @@
+import { listItemAnswers } from '@lbq/shared';
+
 /**
  * TYPE_ANSWER matching (server only, PLAN.md §3): both sides are normalized — trimmed, lower
  * case, without accents, punctuation, extra spaces or a leading article — then compared. With
@@ -74,4 +76,24 @@ export function isNearMiss(typed: string, answer: string): boolean {
   return (
     words(guess).some((w) => inside(w, accepted)) || words(accepted).some((w) => inside(w, guess))
   );
+}
+
+/**
+ * « Liste chrono » / « Pas évident ! »: the item (« | » spellings, `listItemAnswers`) a guess
+ * names — an exact match first (so a close but different item isn't taken for it), then with
+ * the typo tolerance. Items in `skip` are ignored. -1 = none.
+ */
+export function matchItem(
+  items: readonly string[],
+  guess: string,
+  typoTolerance: boolean,
+  skip: ReadonlySet<number> = new Set(),
+): number {
+  for (const tolerant of typoTolerance ? [false, true] : [false]) {
+    const index = items.findIndex(
+      (item, i) => !skip.has(i) && matchesAnswer(guess, listItemAnswers(item), tolerant),
+    );
+    if (index >= 0) return index;
+  }
+  return -1;
 }

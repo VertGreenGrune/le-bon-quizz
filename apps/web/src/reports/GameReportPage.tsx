@@ -31,6 +31,7 @@ import { DrawDetails } from './drawCard';
 import { ListDetails } from './listCard';
 import { ColorsDetails } from './colorsCard';
 import { MissingDetails } from './missingCard';
+import { PointlessDetails } from './pointlessCard';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -302,7 +303,7 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
       </div>
       <p className="mb-3 text-sm text-gray-500">
         {scored
-          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'BLUFF' ? 'trouvé la vérité' : q.type === 'DRAW' ? 'trouvé le mot' : q.type === 'LIST' ? 'trouvé au moins la moitié' : q.type === 'COLORS' ? 'trouvé toutes les couleurs' : q.type === 'MISSING' ? 'trouvé l’élément disparu' : 'bien répondu'}`
+          ? `${q.correctCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'BLUFF' ? 'trouvé la vérité' : q.type === 'DRAW' ? 'trouvé le mot' : q.type === 'LIST' ? 'trouvé au moins la moitié' : q.type === 'COLORS' ? 'trouvé toutes les couleurs' : q.type === 'MISSING' ? 'trouvé l’élément disparu' : q.type === 'POINTLESS' ? 'donné une bonne réponse' : 'bien répondu'}`
           : `${q.answerCount} / ${q.playerCount} joueur${plural} ont ${q.type === 'WORD_CLOUD' ? 'répondu' : 'voté'} — pas de bonne réponse`}
       </p>
       {q.details.buzzer ? (
@@ -313,6 +314,8 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
         <DrawDetails q={q} />
       ) : q.type === 'LIST' ? (
         <ListDetails q={q} />
+      ) : q.type === 'POINTLESS' ? (
+        <PointlessDetails q={q} />
       ) : q.type === 'COLORS' ? (
         <ColorsDetails q={q} />
       ) : q.type === 'MISSING' ? (

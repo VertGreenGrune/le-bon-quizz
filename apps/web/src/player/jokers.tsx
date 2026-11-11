@@ -36,6 +36,7 @@ import {
  */
 const FULL_HEIGHT_TYPES = new Set<QuestionType>([
   'TYPE_ANSWER',
+  'POINTLESS',
   'SLIDER',
   'ORDER',
   'PIN',

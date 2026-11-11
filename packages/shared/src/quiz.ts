@@ -33,6 +33,8 @@ import {
  *   colors back with a palette; points per zone right.
  * - `MISSING` (« Qu'est-ce qui a disparu ? », T59): a picture on the TV, then the same picture
  *   without one element: players tap where it was (scored like PIN).
+ * - `POINTLESS` (« Pas évident ! », T60): « Citez un pays d'Afrique » — each player types one
+ *   answer; the fewer players gave the same right answer, the more points.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -49,6 +51,7 @@ export const QuestionType = z.enum([
   'LIST',
   'COLORS',
   'MISSING',
+  'POINTLESS',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -474,6 +477,43 @@ const MissingQuestion = z
     path: ['imageEffect'],
   });
 
+/** « Pas évident ! » (T60): accepted answers, default time, how many unfound items the reveal lists. */
+export const POINTLESS_MIN_ITEMS = 2;
+export const POINTLESS_MAX_ITEMS = 100;
+export const POINTLESS_DEFAULT_SEC = 30;
+export const POINTLESS_MISSED_SHOWN = 10;
+/** « Pas évident ! »: a right answer given by `sharedBy` players earns each `basePoints / sharedBy`. */
+export function pointlessPoints(basePoints: number, sharedBy: number): number {
+  return sharedBy > 0 ? Math.round(basePoints / sharedBy) : 0;
+}
+
+/**
+ * « Pas évident ! » (T60): `items` = every accepted answer (« | » spellings, like LIST), matched
+ * like typed answers; each player types one in `timeLimitSec`.
+ */
+const PointlessQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('POINTLESS'),
+    timeLimitSec: questionBase.timeLimitSec.default(POINTLESS_DEFAULT_SEC),
+    items: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(LIST_ITEM_MAX_LENGTH)
+          .refine((i) => listItemAnswers(i).length > 0, 'Empty item'),
+      )
+      .min(POINTLESS_MIN_ITEMS)
+      .max(POINTLESS_MAX_ITEMS),
+    typoTolerance: z.boolean().default(true),
+  })
+  .refine(
+    (q) =>
+      new Set(q.items.map((i) => listItemLabel(i).toLocaleLowerCase())).size === q.items.length,
+    { message: 'Items must be different', path: ['items'] },
+  );
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -493,6 +533,7 @@ export const QuestionSchema = z.preprocess(
       ListQuestion,
       ColorsQuestion,
       MissingQuestion,
+      PointlessQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -515,6 +556,7 @@ export type DrawQuestion = Extract<Question, { type: 'DRAW' }>;
 export type ListQuestion = Extract<Question, { type: 'LIST' }>;
 export type ColorsQuestion = Extract<Question, { type: 'COLORS' }>;
 export type MissingQuestion = Extract<Question, { type: 'MISSING' }>;
+export type PointlessQuestion = Extract<Question, { type: 'POINTLESS' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -584,6 +626,7 @@ export function answerText(q: Question, drawWord?: string, boardColors?: number[
     case 'DRAW':
       return drawWord ? [drawWord] : [];
     case 'LIST':
+    case 'POINTLESS':
       return q.items.map(listItemLabel);
     case 'COLORS':
       // `boardColors`: the colors of a generated board (drawn when the question starts).
