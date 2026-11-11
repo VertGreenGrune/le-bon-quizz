@@ -1,0 +1,436 @@
+{
+  "title": "Culture générale française — niveau difficile",
+  "description": "25 questions pour briller en société : histoire, géographie, littérature, arts, sciences et institutions françaises. Choix multiples, réponses libres, curseurs, ordres et deux « Mytho ! ».",
+  "questions": [
+    {
+      "type": "MCQ",
+      "text": "Quel roi a signé l'ordonnance de Villers-Cotterêts (1539), qui impose le français dans les actes officiels ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "François Ier, en août 1539. C'est le plus ancien texte législatif encore en vigueur en France : ses articles sur la langue française n'ont jamais été abrogés.",
+      "choices": [
+        {
+          "text": "Henri II",
+          "isCorrect": false
+        },
+        {
+          "text": "Louis XII",
+          "isCorrect": false
+        },
+        {
+          "text": "François Ier",
+          "isCorrect": true
+        },
+        {
+          "text": "Charles IX",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel est le point culminant du Massif central ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "Le puy de Sancy (1 886 m), dans le massif des monts Dore, en Auvergne. Il dépasse le plomb du Cantal (1 855 m) et le puy de Dôme (1 465 m).",
+      "acceptedAnswers": ["Puy de Sancy", "Sancy", "Le Sancy"],
+      "typoTolerance": true
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année l'esclavage a-t-il été aboli définitivement en France ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "En 1848, par le décret du 27 avril porté par Victor Schœlcher. Une première abolition, votée en 1794, avait été annulée par Bonaparte en 1802.",
+      "slider": {
+        "min": 1750,
+        "max": 1870,
+        "step": 1,
+        "correct": 1848,
+        "margin": 2
+      }
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a écrit Les Liaisons dangereuses (1782) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "Pierre Choderlos de Laclos, officier d'artillerie. Ce roman épistolaire raconte les manipulations de la marquise de Merteuil et du vicomte de Valmont.",
+      "choices": [
+        {
+          "text": "Choderlos de Laclos",
+          "isCorrect": true
+        },
+        {
+          "text": "Denis Diderot",
+          "isCorrect": false
+        },
+        {
+          "text": "Marivaux",
+          "isCorrect": false
+        },
+        {
+          "text": "Rétif de la Bretonne",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces régimes dans l'ordre chronologique, du plus ancien au plus récent.",
+      "timeLimitSec": 40,
+      "basePoints": 2000,
+      "explanation": "Premier Empire (1804), Restauration (1814-1815), Monarchie de Juillet (1830), Deuxième République (1848), Second Empire (1852).",
+      "items": [
+        "Premier Empire",
+        "Restauration",
+        "Monarchie de Juillet",
+        "Deuxième République",
+        "Second Empire"
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : La Marseillaise a été composée à Marseille.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "explanation": "Faux ! Rouget de Lisle l'a composée à Strasbourg en avril 1792, sous le titre « Chant de guerre pour l'armée du Rhin ». Elle doit son nom aux volontaires marseillais qui la chantaient en montant à Paris.",
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel est le plus long fleuve coulant entièrement en France ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "La Loire, environ 1 000 km, du mont Gerbier-de-Jonc (Ardèche) à l'estuaire de Saint-Nazaire. Le Rhin et le Rhône sont plus longs mais prennent leur source en Suisse.",
+      "acceptedAnswers": ["Loire", "La Loire"],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "À qui a été attribué le prix Nobel de littérature ? Cochez toutes les bonnes réponses.",
+      "timeLimitSec": 30,
+      "basePoints": 2000,
+      "explanation": "Camus (1957), Sartre (1964, qui l'a refusé) et Modiano (2014). Proust est mort en 1922 sans l'avoir reçu ; il avait obtenu le prix Goncourt en 1919.",
+      "choices": [
+        {
+          "text": "Marcel Proust",
+          "isCorrect": false
+        },
+        {
+          "text": "Albert Camus",
+          "isCorrect": true
+        },
+        {
+          "text": "Jean-Paul Sartre",
+          "isCorrect": true
+        },
+        {
+          "text": "Patrick Modiano",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de départements compte la France (métropole et outre-mer) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "101 : 96 en métropole et 5 en outre-mer (Guadeloupe, Martinique, Guyane, La Réunion, Mayotte).",
+      "slider": {
+        "min": 70,
+        "max": 110,
+        "step": 1,
+        "correct": 101,
+        "margin": 0,
+        "unit": "dép."
+      }
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel était le vrai prénom de Molière ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 20,
+      "basePoints": 1000,
+      "explanation": "Jean-Baptiste Poquelin, fils d'un tapissier du roi. Il prend le nom de scène « Molière » vers 1644, sans jamais expliquer pourquoi.",
+      "truth": "Jean-Baptiste"
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a peint Le Radeau de la Méduse (1819) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "Théodore Géricault. Le tableau, au Louvre, montre les survivants du naufrage de la frégate La Méduse (1816), un scandale politique sous la Restauration.",
+      "choices": [
+        {
+          "text": "Eugène Delacroix",
+          "isCorrect": false
+        },
+        {
+          "text": "Jacques-Louis David",
+          "isCorrect": false
+        },
+        {
+          "text": "Gustave Courbet",
+          "isCorrect": false
+        },
+        {
+          "text": "Théodore Géricault",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Qui a fondé l'Académie française en 1635 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "Le cardinal de Richelieu, principal ministre de Louis XIII. Les lettres patentes de 1635 lui donnent pour mission de fixer la langue française.",
+      "acceptedAnswers": ["Richelieu", "Cardinal de Richelieu", "Le cardinal de Richelieu"],
+      "typoTolerance": true
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de membres (« immortels ») compte l'Académie française ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "40 fauteuils, numérotés. On les appelle « immortels » à cause de la devise « À l'immortalité », gravée sur le sceau donné par Richelieu.",
+      "slider": {
+        "min": 20,
+        "max": 100,
+        "step": 1,
+        "correct": 40,
+        "margin": 0,
+        "unit": "membres"
+      }
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel physicien français a découvert la radioactivité en 1896 ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "Henri Becquerel, avec des sels d'uranium. Il partage le prix Nobel de physique 1903 avec Pierre et Marie Curie.",
+      "choices": [
+        {
+          "text": "Pierre Curie",
+          "isCorrect": false
+        },
+        {
+          "text": "Henri Becquerel",
+          "isCorrect": true
+        },
+        {
+          "text": "Louis Pasteur",
+          "isCorrect": false
+        },
+        {
+          "text": "Paul Langevin",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le Mont-Saint-Michel se trouve en Normandie.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "explanation": "Vrai : il est dans la Manche. Le Couesnon, qui marque la frontière avec la Bretagne, se jette dans la baie juste à côté, d'où la vieille querelle entre Bretons et Normands.",
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces monuments parisiens dans l'ordre de leur achèvement, du plus ancien au plus récent.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "explanation": "Notre-Dame (XIVe siècle), l'Arc de triomphe (1836), l'Opéra Garnier (1875), la tour Eiffel (1889), le Centre Pompidou (1977).",
+      "items": [
+        "Cathédrale Notre-Dame",
+        "Arc de triomphe de l'Étoile",
+        "Opéra Garnier",
+        "Tour Eiffel",
+        "Centre Pompidou"
+      ]
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Avant d'entrer dans la Résistance, quel était le métier de Jean Moulin ?",
+      "timeLimitSec": 45,
+      "voteTimeSec": 20,
+      "basePoints": 1000,
+      "explanation": "Préfet : en 1940 il était préfet d'Eure-et-Loir, le plus jeune de France lors de sa première nomination (1937, Aveyron). Il dessinait aussi sous le pseudonyme de Romanin.",
+      "truth": "Préfet"
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle est la devise de la ville de Paris ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "« Fluctuat nec mergitur » : il est battu par les flots mais ne sombre pas. Elle vient de la puissante corporation des marchands de l'eau ; « Nec pluribus impar » était celle de Louis XIV.",
+      "choices": [
+        {
+          "text": "Nec pluribus impar",
+          "isCorrect": false
+        },
+        {
+          "text": "Montjoie Saint-Denis",
+          "isCorrect": false
+        },
+        {
+          "text": "Fluctuat nec mergitur",
+          "isCorrect": true
+        },
+        {
+          "text": "Liberté, Égalité, Fraternité",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel compositeur français a écrit le Boléro (1928) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "Maurice Ravel, pour la danseuse Ida Rubinstein. Le même thème est répété en crescendo pendant environ un quart d'heure.",
+      "acceptedAnswers": ["Maurice Ravel", "Ravel"],
+      "typoTolerance": true
+    },
+    {
+      "type": "SLIDER",
+      "text": "Avec combien de pays la France métropolitaine a-t-elle une frontière terrestre ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "8 : Belgique, Luxembourg, Allemagne, Suisse, Italie, Monaco, Andorre et Espagne. Avec l'outre-mer, il faut ajouter le Brésil, le Suriname et les Pays-Bas (Saint-Martin).",
+      "slider": {
+        "min": 3,
+        "max": 20,
+        "step": 1,
+        "correct": 8,
+        "margin": 0,
+        "unit": "pays"
+      }
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel roi de France est surnommé « le Bien-Aimé » ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "Louis XV, surnommé ainsi en 1744 quand le royaume priait pour sa guérison à Metz. Louis XII, lui, était « le Père du peuple », et Louis XIV « le Roi-Soleil ».",
+      "choices": [
+        {
+          "text": "Louis XIV",
+          "isCorrect": false
+        },
+        {
+          "text": "Henri IV",
+          "isCorrect": false
+        },
+        {
+          "text": "Louis XII",
+          "isCorrect": false
+        },
+        {
+          "text": "Louis XV",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quelle distinction honorifique Napoléon Bonaparte a-t-il créée en 1802 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "explanation": "La Légion d'honneur, créée le 19 mai 1802 par le Premier consul. C'est toujours la plus haute distinction française.",
+      "acceptedAnswers": [
+        "Légion d'honneur",
+        "La Légion d'honneur",
+        "Ordre de la Légion d'honneur"
+      ],
+      "typoTolerance": true
+    },
+    {
+      "type": "MCQ",
+      "text": "Depuis la réforme de 2016, combien de régions compte la France métropolitaine ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "explanation": "13 régions métropolitaines (dont la Corse), contre 22 avant 2016. Avec les 5 régions d'outre-mer, la France en compte 18 au total.",
+      "choices": [
+        {
+          "text": "12",
+          "isCorrect": false
+        },
+        {
+          "text": "13",
+          "isCorrect": true
+        },
+        {
+          "text": "18",
+          "isCorrect": false
+        },
+        {
+          "text": "22",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : la Corse est devenue française après la Révolution de 1789.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "explanation": "Faux : Gênes cède la Corse à la France par le traité de Versailles de 1768. Napoléon, né à Ajaccio en 1769, est donc né français, à un an près.",
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Finale 🏆 Qui fut la première femme élue à l'Académie française, en 1980 ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "explanation": "Marguerite Yourcenar, autrice des Mémoires d'Hadrien. Suivront Jacqueline de Romilly (1988), Hélène Carrère d'Encausse (1990) et Simone Veil (2008).",
+      "choices": [
+        {
+          "text": "Marguerite Yourcenar",
+          "isCorrect": true
+        },
+        {
+          "text": "Simone Veil",
+          "isCorrect": false
+        },
+        {
+          "text": "Jacqueline de Romilly",
+          "isCorrect": false
+        },
+        {
+          "text": "Hélène Carrère d'Encausse",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}
