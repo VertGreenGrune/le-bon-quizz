@@ -12,6 +12,15 @@ import {
   ColorZoneSchema,
   colorName,
 } from './colors.js';
+import {
+  WAVELENGTH_DEFAULT_CLUE_SEC,
+  WAVELENGTH_DEFAULT_GUESS_SEC,
+  WAVELENGTH_END_MAX_LENGTH,
+  WAVELENGTH_MAX_CLUE_SEC,
+  WAVELENGTH_MAX_SPECTRA,
+  WAVELENGTH_MIN_CLUE_SEC,
+  type WavelengthSpectrum,
+} from './wavelength.js';
 
 /**
  * - `MCQ` / `TRUE_FALSE`: shape buttons, one or more correct choices.
@@ -37,6 +46,8 @@ import {
  *   answer; the fewer players gave the same right answer, the more points.
  * - `WAGER` (« Paris sur les réponses », T61, Wits & Wagers): everyone guesses a number, then bets
  *   on the guess closest to the right answer without going over.
+ * - `WAVELENGTH` (« Sur la même longueur d'onde », T62, Wavelength): one player sees a secret
+ *   position on a scale (« Froid ↔ Chaud ») and gives a clue; the others place a needle.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -55,6 +66,7 @@ export const QuestionType = z.enum([
   'MISSING',
   'POINTLESS',
   'WAGER',
+  'WAVELENGTH',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -559,6 +571,32 @@ const WagerQuestion = z.object({
     .default(WAGER_DEFAULT_BET_SEC),
 });
 
+/**
+ * « Sur la même longueur d'onde » (T62): `spectra` = the scales to pick from (none = the built-in
+ * `WAVELENGTH_SPECTRA`), `clueTimeSec` = the psychic's time for the clue, `timeLimitSec` = the
+ * guessing time. No time points.
+ */
+const WavelengthQuestion = z.object({
+  ...questionBase,
+  type: z.literal('WAVELENGTH'),
+  timeLimitSec: questionBase.timeLimitSec.default(WAVELENGTH_DEFAULT_GUESS_SEC),
+  spectra: z
+    .array(
+      z.object({
+        left: z.string().trim().min(1).max(WAVELENGTH_END_MAX_LENGTH),
+        right: z.string().trim().min(1).max(WAVELENGTH_END_MAX_LENGTH),
+      }),
+    )
+    .max(WAVELENGTH_MAX_SPECTRA)
+    .default([]),
+  clueTimeSec: z
+    .number()
+    .int()
+    .min(WAVELENGTH_MIN_CLUE_SEC)
+    .max(WAVELENGTH_MAX_CLUE_SEC)
+    .default(WAVELENGTH_DEFAULT_CLUE_SEC),
+});
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -580,6 +618,7 @@ export const QuestionSchema = z.preprocess(
       MissingQuestion,
       PointlessQuestion,
       WagerQuestion,
+      WavelengthQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -604,6 +643,7 @@ export type ColorsQuestion = Extract<Question, { type: 'COLORS' }>;
 export type MissingQuestion = Extract<Question, { type: 'MISSING' }>;
 export type PointlessQuestion = Extract<Question, { type: 'POINTLESS' }>;
 export type WagerQuestion = Extract<Question, { type: 'WAGER' }>;
+export type WavelengthQuestion = Extract<Question, { type: 'WAVELENGTH' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -648,9 +688,15 @@ export function questionExplanation(q: Question): string | undefined {
  * secretly (`remote:answer`, T39) and what the host judges a « Buzzer » answer against.
  * `drawWord` = the word picked for a « Dessine-moi » (drawn when the question starts). Types
  * without a right answer (POLL, WHO_OF_US, WORD_CLOUD) → []. `boardColors`: the colors of a
- * generated « Couleurs perdues » board.
+ * generated « Couleurs perdues » board. `wavelength`: the scale and the secret target of a
+ * « Sur la même longueur d'onde » (drawn when the question starts).
  */
-export function answerText(q: Question, drawWord?: string, boardColors?: number[]): string[] {
+export function answerText(
+  q: Question,
+  drawWord?: string,
+  boardColors?: number[],
+  wavelength?: { spectrum: WavelengthSpectrum; target: number },
+): string[] {
   switch (q.type) {
     case 'MCQ':
     case 'TRUE_FALSE':
@@ -683,6 +729,13 @@ export function answerText(q: Question, drawWord?: string, boardColors?: number[
       );
     case 'WAGER':
       return [`${frenchNumber(q.wager.correct)}${q.wager.unit ? ` ${q.wager.unit}` : ''}`];
+    case 'WAVELENGTH':
+      return wavelength
+        ? [
+            `${wavelength.target} sur 100`,
+            `(0 = ${wavelength.spectrum.left}, 100 = ${wavelength.spectrum.right})`,
+          ]
+        : [];
     default:
       return [];
   }

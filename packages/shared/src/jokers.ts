@@ -180,6 +180,8 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   // « Paris sur les réponses » (T61): Copieur copies the bet, Gel blocks the start of the bets;
   // nothing to hide nor scramble, no time points (no Sablier).
   WAGER: { jokers: true, unavailable: ['fifty', 'scramble', 'hourglass'], scramble: false },
+  // « Sur la même longueur d'onde » (T62): no joker (one player gives a clue, like DRAW).
+  WAVELENGTH: { jokers: false, unavailable: [], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

@@ -880,4 +880,51 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
       ],
     });
   });
+  it('keeps a « Sur la même longueur d’onde » question and saves the target, clue and needles', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Sur la même longueur d’onde !',
+        type: 'WAVELENGTH',
+        spectra: [{ left: 'Froid', right: 'Chaud' }],
+        clueTimeSec: 40,
+        timeLimitSec: 25,
+        basePoints: 1000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Onde', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', random: () => 0.5 });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next(); // intro → clue (Alice is the psychic, target 50)
+    game.answer(alice.id, 0, { text: 'Tiède' });
+    game.answer(bob.id, 0, { value: 48 });
+    game.next(); // reveal
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({
+      type: 'WAVELENGTH',
+      correctCount: 1,
+      answerCount: 1,
+    });
+    expect(report.questions[0]!.details.wavelength).toMatchObject({
+      spectrum: { left: 'Froid', right: 'Chaud' },
+      target: 50,
+      clue: 'Tiède',
+      psychic: { nickname: 'Alice' },
+      psychicPoints: 1000,
+      needles: [{ nickname: 'Bob', value: 48, points: 1000 }],
+    });
+  });
 });

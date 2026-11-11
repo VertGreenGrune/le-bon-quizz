@@ -10,6 +10,7 @@ import { COLOR_COUNT, COLORS_MAX_ZONES, type ColorBoard } from './colors.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import { JokerType } from './jokers.js';
 import { HauntType, SurvivalHearts } from './survival.js';
+import type { WavelengthSpectrum } from './wavelength.js';
 import {
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -55,6 +56,8 @@ export const ErrorCode = z.enum([
   'NOT_REVEALING',
   /** « 📺 Afficher sur la TV » (T47): no TV is waiting with that code (or too many wrong codes). */
   'TV_NOT_FOUND',
+  /** « Sur la même longueur d'onde » (T62): the clue uses a word of the scale's ends. */
+  'CLUE_REFUSED',
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -579,6 +582,49 @@ export interface WagerReveal {
 }
 
 /**
+ * « Sur la même longueur d'onde » (T62) on the TV: the scale and the psychic, then (stage
+ * `guess`, `timeLimitSec` = guessing time) the clue — never the target before the reveal. Stage
+ * `clue` has `timeLimitSec` = `clueTimeSec`.
+ */
+export type WavelengthShow =
+  | { stage: 'clue'; psychic?: LobbyMember; spectrum: WavelengthSpectrum }
+  | { stage: 'guess'; psychic?: LobbyMember; spectrum: WavelengthSpectrum; clue: string };
+
+/**
+ * « Sur la même longueur d'onde » on a phone: the scale and the psychic; `target` (0–100) for the
+ * psychic's phone only. Stage `clue`: the psychic types the clue (`player:answer { text }`, ≤
+ * `maxLength`, final); stage `guess`: the others move a needle (`player:answer { value }` 0–100).
+ */
+export type WavelengthPrompt =
+  | {
+      stage: 'clue';
+      psychic?: LobbyMember;
+      spectrum: WavelengthSpectrum;
+      maxLength: number;
+      target?: number;
+    }
+  | {
+      stage: 'guess';
+      psychic?: LobbyMember;
+      spectrum: WavelengthSpectrum;
+      clue: string;
+      target?: number;
+    };
+
+/**
+ * « Sur la même longueur d'onde » reveal (and report): the scale, the target, the clue (null: the
+ * psychic gave none, nobody scored), every needle (closest first) and the psychic's points.
+ */
+export interface WavelengthReveal {
+  spectrum: WavelengthSpectrum;
+  target: number;
+  clue: string | null;
+  psychic?: LobbyMember;
+  needles: (LobbyMember & { value: number; points: number })[];
+  psychicPoints: number;
+}
+
+/**
  * « Liste chrono » (T57), live on the TV: per item of the list (quiz order), how many players
  * found it — never its text —, and per player how many items they found.
  */
@@ -769,6 +815,8 @@ export interface QuestionShowPayload {
    * with the slots — never the right answer.
    */
   wager?: WagerShow;
+  /** « Sur la même longueur d'onde » (T62): the scale, the psychic, then the clue. */
+  wavelength?: WavelengthShow;
 }
 
 /**
@@ -839,6 +887,8 @@ export interface QuestionPromptPayload {
    * the stage ends), then bet on a slot (`{ choiceIndex }`, final; `timeLimitSec` = `betTimeSec`).
    */
   wager?: WagerPrompt;
+  /** « Sur la même longueur d'onde » (T62): clue (psychic) or needle (the others). */
+  wavelength?: WavelengthPrompt;
 }
 
 export interface AnswerCountPayload {
@@ -905,6 +955,8 @@ export interface RevealDetails {
   pointless?: PointlessReveal;
   /** « Paris sur les réponses » (T61): the answer, the slots, the winning one, the points. */
   wager?: WagerReveal;
+  /** « Sur la même longueur d'onde » (T62): target, clue, every needle. */
+  wavelength?: WavelengthReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
@@ -1095,6 +1147,19 @@ export interface PlayerResultPayload {
     won: boolean;
     author: boolean;
     authorPoints: number;
+  };
+  /**
+   * « Sur la même longueur d'onde » (T62): the scale, the target, the clue (null: none given);
+   * `psychic` = this player gave the clue (streak unchanged; `pointsEarned` = the average of the
+   * guessers' points); `yours` = the needle (absent without one).
+   */
+  wavelength?: {
+    spectrum: WavelengthSpectrum;
+    target: number;
+    clue: string | null;
+    psychic: boolean;
+    psychicName?: string;
+    yours?: number;
   };
   /**
    * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks

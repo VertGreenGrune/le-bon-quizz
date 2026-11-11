@@ -120,6 +120,7 @@ enum QuestionType {
   MISSING
   POINTLESS
   WAGER
+  WAVELENGTH
 }
 
 model Question {

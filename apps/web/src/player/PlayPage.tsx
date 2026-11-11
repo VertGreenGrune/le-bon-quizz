@@ -48,6 +48,8 @@ import { ListPad, ListResultLines, listResultTitle } from './list';
 import { PointlessResultLine, pointlessResultTitle } from './pointless';
 import { WagerAnswered, WagerBet, WagerGuess, WagerResultLines } from './wager';
 import { wagerResultTitle } from '../lib/wager';
+import { WavelengthAnswer, WavelengthAnswered, WavelengthResultLines } from './wavelength';
+import { wavelengthResultTitle } from '../lib/wavelength';
 import { ColorsAnswered, ColorsMemo, ColorsPad, ColorsResultLines } from './colors';
 import { MissingMemo } from './missing';
 import { getTheme, useTheme } from '../themes';
@@ -431,6 +433,14 @@ function AnswerScreen({
     ) : (
       <WagerBet prompt={prompt.wager} />
     );
+  if (prompt.type === 'WAVELENGTH' && prompt.wavelength)
+    return (
+      <WavelengthAnswer
+        key={prompt.wavelength.stage}
+        prompt={prompt.wavelength}
+        initial={previous && 'value' in previous ? previous.value : undefined}
+      />
+    );
   // Brouilleur: the buttons move all over the screen (single answer or « select all »).
   if (effects.scrambled)
     return (
@@ -641,6 +651,8 @@ function AnsweredValue({ s }: { s: PlayerState }) {
   if (a && ('order' in a || 'point' in a || 'playerId' in a)) return <MoreAnswered s={s} />;
   if (a && 'colors' in a && s.prompt?.colors?.stage === 'answer')
     return <ColorsAnswered board={s.prompt.colors.board} colors={a.colors} />;
+  if (a && 'value' in a && s.prompt?.wavelength)
+    return <WavelengthAnswered prompt={s.prompt.wavelength} value={a.value} />;
   const label = answerLabel(s);
   if (label !== null) {
     return (
@@ -695,21 +707,23 @@ function Result({ s }: { s: PlayerState }) {
         ? pointlessResultTitle(r, answered)
         : r.wager
           ? wagerResultTitle(r)
-          : r.draw
-            ? drawResultTitle(r.draw)
-            : r.bluff
-              ? r.bluff.found
-                ? 'Vérité trouvée !'
-                : partial
-                  ? 'Bien mythoné !'
-                  : 'Piégé !'
-              : r.correct
-                ? 'Correct !'
-                : partial
-                  ? 'Presque !'
-                  : answered
-                    ? 'Raté !'
-                    : 'Temps écoulé !';
+          : r.wavelength
+            ? wavelengthResultTitle(r)
+            : r.draw
+              ? drawResultTitle(r.draw)
+              : r.bluff
+                ? r.bluff.found
+                  ? 'Vérité trouvée !'
+                  : partial
+                    ? 'Bien mythoné !'
+                    : 'Piégé !'
+                : r.correct
+                  ? 'Correct !'
+                  : partial
+                    ? 'Presque !'
+                    : answered
+                      ? 'Raté !'
+                      : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
@@ -776,7 +790,9 @@ function Result({ s }: { s: PlayerState }) {
           Bonne réponse : {formatValue(r.correctValue, unit)}
         </p>
       ) : (
-        answered && answerLabel(s) && <p className="font-bold">Ta réponse : {answerLabel(s)}</p>
+        answered &&
+        !r.wavelength &&
+        answerLabel(s) && <p className="font-bold">Ta réponse : {answerLabel(s)}</p>
       )}
       {r.survival && <SurvivalResultLine survival={r.survival} max={s.survival?.hearts ?? 0} />}
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
@@ -785,6 +801,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.list && <ListResultLines list={r.list} />}
       {r.pointless && <PointlessResultLine pointless={r.pointless} />}
       {r.wager && <WagerResultLines wager={r.wager} />}
+      {r.wavelength && <WavelengthResultLines wavelength={r.wavelength} />}
       {r.colors && (
         <ColorsResultLines
           colors={r.colors}

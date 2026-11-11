@@ -75,6 +75,15 @@ import {
   wagerShow,
   type WagerState,
 } from './wager.js';
+import {
+  judgeNeedle,
+  wavelengthBonus,
+  wavelengthPrompt,
+  wavelengthResult,
+  wavelengthReveal,
+  wavelengthShow,
+  type WavelengthState,
+} from './wavelength.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
@@ -98,7 +107,8 @@ export type ExtraQuestion = Extract<
       | 'COLORS'
       | 'MISSING'
       | 'POINTLESS'
-      | 'WAGER';
+      | 'WAGER'
+      | 'WAVELENGTH';
   }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
@@ -115,7 +125,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'COLORS' ||
     q.type === 'MISSING' ||
     q.type === 'POINTLESS' ||
-    q.type === 'WAGER'
+    q.type === 'WAGER' ||
+    q.type === 'WAVELENGTH'
   );
 }
 
@@ -135,6 +146,8 @@ export interface QuestionSetup {
   missing?: MissingState;
   /** WAGER: the guesses, then the slots of the bets. */
   wager?: WagerState;
+  /** WAVELENGTH: the psychic, the scale, the target, the clue (set by `Game`: rotation, random). */
+  wavelength?: WavelengthState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -171,6 +184,13 @@ export function extraShowFields(
   if (q.type === 'WAGER' && setup.wager) {
     const wager = wagerShow(q, setup.wager, byId(players));
     return wager.stage === 'bet' ? { wager, timeLimitSec: q.betTimeSec } : { wager };
+  }
+  if (q.type === 'WAVELENGTH' && setup.wavelength) {
+    // The clue has its own time limit (the guesses use `timeLimitSec`).
+    const wavelength = wavelengthShow(setup.wavelength, byId(players));
+    return wavelength.stage === 'clue'
+      ? { wavelength, timeLimitSec: q.clueTimeSec }
+      : { wavelength };
   }
   return {};
 }
@@ -211,6 +231,13 @@ export function extraPromptFields(
       // The bets have their own time limit: the phone's countdown and Gel are computed from it.
       const wager = wagerPrompt(q, setup.wager!, playerId);
       return wager.stage === 'bet' ? { wager, timeLimitSec: q.betTimeSec } : { wager };
+    }
+    case 'WAVELENGTH': {
+      if (!setup.wavelength) return {};
+      const wavelength = wavelengthPrompt(setup.wavelength, byId(players), playerId);
+      return wavelength.stage === 'clue'
+        ? { wavelength, timeLimitSec: q.clueTimeSec }
+        : { wavelength };
     }
   }
 }
@@ -282,6 +309,10 @@ export function judgeExtra(
         choiceIndex: given.choiceIndex,
         ...judgeBet(q, setup.wager!, given.choiceIndex),
       };
+    case 'WAVELENGTH':
+      // The clue is stored by `Game.answer` (stage 1); this is a needle (stage 2).
+      if (!('value' in given)) throw invalid('Place l’aiguille sur l’échelle');
+      return { ...none, ...judgeNeedle(q, setup.wavelength!, given.value) };
   }
 }
 
@@ -298,6 +329,8 @@ export function extraBonusPoints(
   if (q.type === 'BLUFF') return bluffBonus(q, setup.bluff!, player, players);
   if (q.type === 'DRAW' && setup.draw) return drawBonus(q, setup.draw, player, players);
   if (q.type === 'WAGER') return wagerBonus(q, setup.wager!, player);
+  if (q.type === 'WAVELENGTH' && setup.wavelength)
+    return wavelengthBonus(setup.wavelength, player, players);
   return 0;
 }
 
@@ -380,6 +413,8 @@ export function extraRevealDetails(
       return { pointless: pointlessReveal(q, answers) };
     case 'WAGER':
       return wagerReveal(q, setup.wager!, byId(players));
+    case 'WAVELENGTH':
+      return setup.wavelength ? wavelengthReveal(setup.wavelength, byId(players)) : {};
   }
 }
 
@@ -397,6 +432,8 @@ export function extraResultFields(
   if (q.type === 'COLORS' && setup.colors) return { colors: colorsResult(setup.colors, player) };
   if (q.type === 'POINTLESS') return { pointless: pointlessResult(q, player, players) };
   if (q.type === 'WAGER') return wagerResult(q, setup.wager!, player);
+  if (q.type === 'WAVELENGTH' && setup.wavelength)
+    return wavelengthResult(setup.wavelength, player, byId(players));
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {
