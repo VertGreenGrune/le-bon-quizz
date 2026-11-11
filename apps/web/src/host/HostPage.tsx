@@ -269,7 +269,10 @@ export function HostPage() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <ThemedMain theme={getTheme(state.theme)} className="flex min-h-dvh flex-col select-none">
+      <ThemedMain
+        theme={getTheme(state.theme)}
+        className="flex h-dvh flex-col overflow-hidden select-none"
+      >
         <header className="flex items-center gap-4 px-6 py-3 text-lg font-semibold">
           <Link to="/" className="font-display font-black">
             Le Bon Quizz
@@ -323,7 +326,7 @@ export function HostPage() {
         <AnimatePresence mode="wait">
           <motion.div
             key={screenKey}
-            className="flex flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -24 }}

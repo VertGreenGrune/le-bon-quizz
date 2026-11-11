@@ -318,7 +318,7 @@ export function QuestionScreen({
     />
   );
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 p-6">
       <div className="flex flex-col items-center gap-2">
         <QuestionTypeBadge question={question} className="text-xl" />
         <h2 className="w-full rounded-2xl bg-white px-8 py-5 text-center text-4xl font-black text-black shadow-lg">
