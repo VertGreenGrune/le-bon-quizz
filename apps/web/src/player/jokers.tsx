@@ -25,6 +25,7 @@ import {
   jokerEffects,
   missingStage,
   myTeam,
+  wagerStage,
   type PlayerScreen,
   type PlayerState,
 } from './playerState';
@@ -37,6 +38,7 @@ import {
 const FULL_HEIGHT_TYPES = new Set<QuestionType>([
   'TYPE_ANSWER',
   'POINTLESS',
+  'WAGER',
   'SLIDER',
   'ORDER',
   'PIN',
@@ -389,7 +391,10 @@ export function FrozenOverlay({ s }: { s: PlayerState }) {
   // « Mytho ! »: the Gel only blocks the vote, not the writing of the lie.
   // « Couleurs perdues »: nor the memorizing (the Gel blocks the start of the answers).
   const frozen =
-    bluffStage(s) === 'write' || colorsStage(s) === 'memo' || missingStage(s) === 'memo'
+    bluffStage(s) === 'write' ||
+    colorsStage(s) === 'memo' ||
+    missingStage(s) === 'memo' ||
+    wagerStage(s) === 'guess'
       ? undefined
       : jokerEffects(s).frozen;
   const [now, setNow] = useState(Date.now);

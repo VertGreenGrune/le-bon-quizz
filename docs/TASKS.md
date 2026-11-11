@@ -3114,7 +3114,7 @@ pnpm format:check` before finishing.
 
 ### T61 — « Paris sur les réponses » (Wits & Wagers)
 
-- **Status:** in-progress (agent T61)
+- **Status:** done
 - **Depends on:** T57 merged. Wave 10, ports 3061 / 5261.
 - **Idea (« Wits & Wagers »):** a number question; everyone guesses, then everyone bets on the
   guess they think is closest without going over.
@@ -3134,6 +3134,53 @@ pnpm format:check` before finishing.
     (avatars), then the points.
   - **Jokers:** 🦜 Copieur copies the bet; ✖️2 Double, 🛡️ Bouclier, 🦹 Voleur as usual; Gel blocks
     the first 5 s of the bet stage; no 50/50 / Brouilleur / Sablier. No buzzer. Not cancellable.
+- **Summary:** shared: `quiz.ts` `WAGER` in the union (`wager { correct (decimals, |n| ≤
+  `WAGER_MAX_ABS` 10¹²), unit? (≤ 10) }`, `timeLimitSec` default 30, `betTimeSec` 5–60 default 20;
+  `WAGER_*` constants, `wagerBetPoints` (×1.5 on an outer slot), `wagerAuthorPoints` (= base / 2)),
+  `answerText` = the number + unit, not cancellable; `jokers.ts` line (no 50/50, Brouilleur,
+  Sablier); contract (`events.ts`, additive): `game:state.wager` (`WagerStatus`: stage + who
+  guessed), `question:show.wager` (`WagerShow`: guess, then slots with authors), `question:prompt.wager`
+  (`WagerPrompt`: guess with the phone's own `guess` after a rejoin, then slot values + `own`),
+  `RevealDetails.wager` (`WagerReveal`), `player:result.wager`. Server:
+  `game/questionTypes/wager.ts` (`writeGuess`, `startBets` — equal guesses merged, ascending, slot 0
+  « Plus petit que tout » —, `winningSlot`, `judgeBet`, `wagerBonus` for the authors, payloads), one
+  line per hook in `questionTypes/index.ts`; `Game.ts`: the guess stored like a « Mytho ! » lie
+  (`answer`, + a `game:state` broadcast for the TV), `finishAnswering` → `startSecondStage(betTimeSec)`
+  unless nobody guessed, `writingLies` generalized into `stageOneAnswers` (lies or guesses: what
+  stage 1 waits for), kicked player's guess dropped, the jokers' `memorizing` hook also true while
+  guessing (a Gel then blocks the start of the bets). Migration `20261112061000_wager`,
+  `quizzes.service.ts` config `{ wager, betTimeSec }`. Web: editor `editor/WagerFields.tsx` (right
+  number, unit, « Temps pour parier »; « Temps pour estimer »), draft fields `wagerCorrect` /
+  `wagerUnit` / `betTimeSec`, label « Paris sur les réponses », icon 💰; `lib/wager.ts` (`parseGuess`
+  with French comma / spaces / sign, `slotLabel`, `isOuterSlot`, `linePositions`,
+  `wagerResultTitle`); TV `host/wagerScreens.tsx` (guess stage: hint + avatars of who guessed,
+  picture / sound kept; bet stage: slot cards in a row with authors, « ×1,5 » on the outer ones;
+  reveal: number line with the right answer above and the guesses below, winning slot lit, bettors
+  per slot, points line); phone `player/wager.tsx` (number field with ± and unit, « Estimation
+  enregistrée ! » + « Changer mon estimation », slot buttons with « Toi » / « ×1,5 », « Pari
+  enregistré ! », result « Pari gagné ! / Bien estimé ! / Pari perdu ! » with answer, winning guess,
+  own guess and bet, author bonus); reducer action `wagerGuess`, `wagerStage` / `wagerGuessed`, joker
+  chip on both stages; report `reports/wagerCard.tsx` (« n / m joueurs ont gagné leur pari »).
+  Tests: `Game.wager.test.ts` (19: schema + helpers, guess stage (replace, who guessed, wrong kinds,
+  merged guesses), sorting with decimals / negatives, no answer in any phone / TV frame before the
+  reveal, scoring (winning bet, author bonus, lost bets), exact guess + outer slot, all over →
+  « Plus petit que tout », no guess but a bet / author without a bet, nobody guessed, alone, bets
+  final + refused slot, « Passer » on both stages, kick, rejoin in both stages + pause + TV resync,
+  teams, Survie, jokers: Copieur, Gel, Double / Bouclier / refused ones), persistence round trip +
+  saved reveal (Postgres), web `lib/wager.test.ts`, `playerState.wager.test.ts`,
+  `draft.wager.test.ts`, joker chip placement; e2e `e2e/wager.spec.ts` (host + 3 phones: a changed
+  guess, the TV's guessed avatars and slots, bets, 8849 in no phone / TV frame before the reveal,
+  reveal + results, report). Screenshots checked (TV 1600×900 guess / bet / reveal, Pixel 7 guess /
+  guessed / bet / results, editor, report).
+- **Deviations / decisions:** (1) **Nobody guessed → no bet stage**: the question is revealed at
+  once (only « Plus petit que tout » would be left, a free 1.5× bet for everyone). (2) Equal
+  guesses are merged on exact numeric equality. (3) The author bonus is never given for « Plus
+  petit que tout » (nobody wrote it) and is added even when the author didn't bet; it doesn't make
+  the answer `correct` (« Survie »: a lost bet costs a heart). (4) The TV doesn't show the bets live
+  during the bet stage (only the answer count), so later bettors can't follow the crowd. (5) The
+  guess stage ends as soon as every awaited player guessed (like « Mytho ! » lies): a guess can be
+  changed only while others are still guessing. (6) No « ✅ Accepter » (`acceptKind` null). **After
+  merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones / a real TV.
 
 ### T62 — « Sur la même longueur d'onde » (Wavelength)
 
@@ -3627,3 +3674,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `typedAnswers` also on POINTLESS reveals; joker table line. Server: `matchItem` moved to
   `game/matching.ts` (signature `(items, guess, typoTolerance, skip?)`), `Answer.item?`.
   Migration `20261112060000_pointless`.
+- 2026-11-11, agent T61 (additive, PLAN.md §3–§5): `QuestionType` gains `WAGER` (+
+  `WagerQuestion`, `WAGER_*`, `wagerBetPoints`, `wagerAuthorPoints`); `GameStatePayload.wager?`
+  (`WagerStatus`), `QuestionShowPayload.wager?` (`WagerShow`, `WagerSlot`),
+  `QuestionPromptPayload.wager?` (`WagerPrompt`), `RevealDetails.wager?` (`WagerReveal`),
+  `PlayerResultPayload.wager?`; joker table line; not cancellable. Server: `Game.writingLies` →
+  `stageOneAnswers` (BLUFF lies or WAGER guesses), the jokers' `memorizing` hook also covers the
+  guess stage. Migration `20261112061000_wager`.

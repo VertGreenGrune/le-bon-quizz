@@ -120,6 +120,7 @@ export type PlayerAction =
   | { type: 'lost'; code: ErrorCode }
   | { type: 'lie'; questionIndex: number; text: string | null }
   | { type: 'listFound'; questionIndex: number; item: ListFoundItem }
+  | { type: 'wagerGuess'; questionIndex: number; value: number | null }
   | { type: 'jokers'; payload: PlayerJokersPayload }
   | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number }
   | { type: 'survival'; payload: SurvivalStatePayload }
@@ -274,6 +275,21 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
       };
     }
 
+    case 'wagerGuess': {
+      // « Paris sur les réponses »: the guess sent (or « Changer » = null) is kept in the prompt,
+      // like the server's own copy after a rejoin.
+      const wager = state.prompt?.index === action.questionIndex ? state.prompt.wager : undefined;
+      if (wager?.stage !== 'guess') return state;
+      const { guess: _old, ...rest } = wager;
+      return {
+        ...state,
+        prompt: {
+          ...state.prompt!,
+          wager: action.value === null ? rest : { ...rest, guess: action.value },
+        },
+      };
+    }
+
     case 'toggleChoice': {
       if (state.myAnswer?.questionIndex === action.questionIndex) return state; // already sent
       const current =
@@ -414,6 +430,7 @@ export function playerScreen(s: PlayerState): PlayerScreen {
     case 'ANSWERING':
       if (s.myAnswer?.questionIndex === s.questionIndex || foundTheWord(s)) return 'answered';
       if (bluffStage(s) === 'write' && s.lie?.questionIndex === s.questionIndex) return 'answered';
+      if (wagerGuessed(s) !== null) return 'answered';
       return s.prompt?.index === s.questionIndex ? 'answer' : 'getReady';
     case 'REVEAL':
       return s.result ? 'result' : 'waitingResult';
@@ -436,6 +453,7 @@ export function copyingTarget(s: PlayerState) {
   const j = s.jokers;
   if (!j || j.questionIndex !== s.questionIndex || j.played?.joker !== 'copy') return null;
   if (bluffStage(s) === 'write') return null; // « Mytho ! »: the copier still writes its lie
+  if (wagerStage(s) === 'guess') return null; // « Paris sur les réponses »: it still guesses
   return j.effects.copied ? null : (j.played.target ?? null);
 }
 
@@ -471,6 +489,17 @@ export function selectedChoices(s: PlayerState): number[] {
 /** « Mytho ! » stage of the current question (null for the other types). */
 export function bluffStage(s: PlayerState): 'write' | 'vote' | null {
   return s.prompt?.index === s.questionIndex ? (s.prompt.bluff?.stage ?? null) : null;
+}
+
+/** « Paris sur les réponses » stage of the current question (null for the other types). */
+export function wagerStage(s: PlayerState): 'guess' | 'bet' | null {
+  return s.prompt?.index === s.questionIndex ? (s.prompt.wager?.stage ?? null) : null;
+}
+
+/** « Paris sur les réponses », guess stage: the guess this phone sent (null: none yet). */
+export function wagerGuessed(s: PlayerState): number | null {
+  const w = s.prompt?.index === s.questionIndex ? s.prompt.wager : undefined;
+  return w?.stage === 'guess' && w.guess !== undefined ? w.guess : null;
 }
 
 /** « Qu'est-ce qui a disparu ? » stage of the current question (null for the other types). */

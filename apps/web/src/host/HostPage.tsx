@@ -231,6 +231,7 @@ export function HostPage() {
           draw={state.draw}
           drawing={currentDrawing(state)}
           list={state.list}
+          wager={state.wager}
         />
       );
       primary =

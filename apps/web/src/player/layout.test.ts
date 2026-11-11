@@ -54,6 +54,9 @@ describe('joker bar placement', () => {
     expect(jokerBarMode(phone({ type: 'SLIDER', slider }), 'answer')).toBe('chip');
     expect(jokerBarMode(phone({ type: 'TYPE_ANSWER', maxLength: 40 }), 'answer')).toBe('chip');
     expect(jokerBarMode(phone({ type: 'POINTLESS', maxLength: 40 }), 'answer')).toBe('chip');
+    expect(jokerBarMode(phone({ type: 'WAGER', wager: { stage: 'guess' } }), 'answer')).toBe(
+      'chip',
+    );
     const write = { stage: 'write', maxLength: 40 } as const;
     expect(jokerBarMode(phone({ type: 'BLUFF', bluff: write }), 'answer')).toBe('chip');
     // « Couleurs perdues »: the big bar while memorizing, the chip on the board (T58).
