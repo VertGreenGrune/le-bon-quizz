@@ -832,4 +832,52 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
       missedCount: 2,
     });
   });
+  it('keeps a « Paris sur les réponses » question and saves the slots and bets', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Hauteur de la tour Eiffel ?',
+        type: 'WAGER',
+        wager: { correct: 330.5, unit: 'm' },
+        betTimeSec: 15,
+        timeLimitSec: 25,
+        basePoints: 2000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Paris', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo' });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next(); // intro → guesses
+    game.answer(alice.id, 0, { value: 300 });
+    game.answer(bob.id, 0, { value: 400 });
+    game.answer(alice.id, 0, { choiceIndex: 1 }); // 300: wins
+    game.answer(bob.id, 0, { choiceIndex: 2 });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({ type: 'WAGER', correctCount: 1, answerCount: 2 });
+    expect(report.questions[0]!.details.wager).toMatchObject({
+      correct: 330.5,
+      unit: 'm',
+      winning: 1,
+      betPoints: 2000,
+      authorPoints: 1000,
+      slots: [
+        { value: null, bettors: [] },
+        { value: 300, authors: [{ nickname: 'Alice' }], bettors: [{ nickname: 'Alice' }] },
+        { value: 400, authors: [{ nickname: 'Bob' }], bettors: [{ nickname: 'Bob' }] },
+      ],
+    });
+  });
 });

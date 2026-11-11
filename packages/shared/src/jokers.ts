@@ -177,6 +177,9 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   // « Pas évident ! » (T60): 50/50 = first letter of an item; points don't depend on the speed
   // (no Sablier); no buttons to scramble.
   POINTLESS: { jokers: true, unavailable: ['scramble', 'hourglass'], scramble: false },
+  // « Paris sur les réponses » (T61): Copieur copies the bet, Gel blocks the start of the bets;
+  // nothing to hide nor scramble, no time points (no Sablier).
+  WAGER: { jokers: true, unavailable: ['fifty', 'scramble', 'hourglass'], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

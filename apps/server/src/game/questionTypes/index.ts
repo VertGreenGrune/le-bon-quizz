@@ -65,6 +65,16 @@ import {
   type MissingState,
 } from './missing.js';
 import { judgePointless, pointlessResult, pointlessReveal, settlePointless } from './pointless.js';
+import {
+  judgeBet,
+  newWager,
+  wagerBonus,
+  wagerPrompt,
+  wagerResult,
+  wagerReveal,
+  wagerShow,
+  type WagerState,
+} from './wager.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
@@ -87,7 +97,8 @@ export type ExtraQuestion = Extract<
       | 'LIST'
       | 'COLORS'
       | 'MISSING'
-      | 'POINTLESS';
+      | 'POINTLESS'
+      | 'WAGER';
   }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
@@ -103,7 +114,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'LIST' ||
     q.type === 'COLORS' ||
     q.type === 'MISSING' ||
-    q.type === 'POINTLESS'
+    q.type === 'POINTLESS' ||
+    q.type === 'WAGER'
   );
 }
 
@@ -121,6 +133,8 @@ export interface QuestionSetup {
   colors?: ColorsState;
   /** MISSING: the stage (memorizing « avant », then answering on « après »). */
   missing?: MissingState;
+  /** WAGER: the guesses, then the slots of the bets. */
+  wager?: WagerState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -130,6 +144,7 @@ export function prepareQuestion(q: Question, random: () => number = Math.random)
   if (q.type === 'BLUFF') return { display: [], bluff: newBluff() };
   if (q.type === 'LIST') return { display: [], list: newList() };
   if (q.type === 'MISSING') return { display: [], missing: newMissing() };
+  if (q.type === 'WAGER') return { display: [], wager: newWager() };
   return NO_SETUP;
 }
 
@@ -153,6 +168,10 @@ export function extraShowFields(
   if (q.type === 'LIST') return { list: { total: q.items.length } };
   if (q.type === 'COLORS' && setup.colors) return colorsShow(q, setup.colors);
   if (q.type === 'MISSING' && setup.missing) return missingShow(q, setup.missing);
+  if (q.type === 'WAGER' && setup.wager) {
+    const wager = wagerShow(q, setup.wager, byId(players));
+    return wager.stage === 'bet' ? { wager, timeLimitSec: q.betTimeSec } : { wager };
+  }
   return {};
 }
 
@@ -188,6 +207,11 @@ export function extraPromptFields(
       return setup.missing ? missingPrompt(q, setup.missing) : {};
     case 'POINTLESS':
       return { maxLength: TYPE_ANSWER_MAX_LENGTH };
+    case 'WAGER': {
+      // The bets have their own time limit: the phone's countdown and Gel are computed from it.
+      const wager = wagerPrompt(q, setup.wager!, playerId);
+      return wager.stage === 'bet' ? { wager, timeLimitSec: q.betTimeSec } : { wager };
+    }
   }
 }
 
@@ -250,6 +274,14 @@ export function judgeExtra(
       return { ...none, ...judgeMissing(q, setup.missing!, given, timePoints) };
     case 'POINTLESS':
       return { ...none, ...judgePointless(q, given) };
+    case 'WAGER':
+      // The guesses are stored by `Game.answer` (stage 1); this is the bet (stage 2).
+      if (!('choiceIndex' in given)) throw invalid('Parie sur une des réponses');
+      return {
+        ...none,
+        choiceIndex: given.choiceIndex,
+        ...judgeBet(q, setup.wager!, given.choiceIndex),
+      };
   }
 }
 
@@ -265,6 +297,7 @@ export function extraBonusPoints(
 ): number {
   if (q.type === 'BLUFF') return bluffBonus(q, setup.bluff!, player, players);
   if (q.type === 'DRAW' && setup.draw) return drawBonus(q, setup.draw, player, players);
+  if (q.type === 'WAGER') return wagerBonus(q, setup.wager!, player);
   return 0;
 }
 
@@ -345,6 +378,8 @@ export function extraRevealDetails(
       return missingReveal(q, answers);
     case 'POINTLESS':
       return { pointless: pointlessReveal(q, answers) };
+    case 'WAGER':
+      return wagerReveal(q, setup.wager!, byId(players));
   }
 }
 
@@ -361,6 +396,7 @@ export function extraResultFields(
   if (q.type === 'LIST') return { list: listResult(q, setup.list!, player) };
   if (q.type === 'COLORS' && setup.colors) return { colors: colorsResult(setup.colors, player) };
   if (q.type === 'POINTLESS') return { pointless: pointlessResult(q, player, players) };
+  if (q.type === 'WAGER') return wagerResult(q, setup.wager!, player);
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {

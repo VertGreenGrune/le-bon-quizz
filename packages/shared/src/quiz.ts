@@ -35,6 +35,8 @@ import {
  *   without one element: players tap where it was (scored like PIN).
  * - `POINTLESS` (« Pas évident ! », T60): « Citez un pays d'Afrique » — each player types one
  *   answer; the fewer players gave the same right answer, the more points.
+ * - `WAGER` (« Paris sur les réponses », T61, Wits & Wagers): everyone guesses a number, then bets
+ *   on the guess closest to the right answer without going over.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -52,6 +54,7 @@ export const QuestionType = z.enum([
   'COLORS',
   'MISSING',
   'POINTLESS',
+  'WAGER',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -514,6 +517,48 @@ const PointlessQuestion = z
     { message: 'Items must be different', path: ['items'] },
   );
 
+/** « Paris sur les réponses » (T61): default times (guess / bet), bonuses. */
+export const WAGER_DEFAULT_GUESS_SEC = 30;
+export const WAGER_DEFAULT_BET_SEC = 20;
+export const WAGER_MIN_BET_SEC = 5;
+export const WAGER_MAX_BET_SEC = 60;
+/** Largest number a guess (or the answer) may be, either sign. */
+export const WAGER_MAX_ABS = 1e12;
+/** A winning bet on one of the two outer slots (the riskier ones) earns 50 % more. */
+export const WAGER_OUTER_BONUS = 0.5;
+/** The author(s) of the winning guess earn `basePoints × WAGER_AUTHOR_SHARE`. */
+export const WAGER_AUTHOR_SHARE = 0.5;
+
+/** « Paris sur les réponses »: what a winning bet earns (`outer`: first or last slot). */
+export function wagerBetPoints(basePoints: number, outer: boolean): number {
+  return Math.round(basePoints * (outer ? 1 + WAGER_OUTER_BONUS : 1));
+}
+
+/** « Paris sur les réponses »: what the author of the winning guess earns. */
+export function wagerAuthorPoints(basePoints: number): number {
+  return Math.round(basePoints * WAGER_AUTHOR_SHARE);
+}
+
+/**
+ * « Paris sur les réponses » (T61): `wager.correct` = the right number (decimals allowed),
+ * `timeLimitSec` = guessing time, `betTimeSec` = betting time. No time points.
+ */
+const WagerQuestion = z.object({
+  ...questionBase,
+  type: z.literal('WAGER'),
+  timeLimitSec: questionBase.timeLimitSec.default(WAGER_DEFAULT_GUESS_SEC),
+  wager: z.object({
+    correct: z.number().finite().min(-WAGER_MAX_ABS).max(WAGER_MAX_ABS),
+    unit: z.string().trim().max(10).optional(),
+  }),
+  betTimeSec: z
+    .number()
+    .int()
+    .min(WAGER_MIN_BET_SEC)
+    .max(WAGER_MAX_BET_SEC)
+    .default(WAGER_DEFAULT_BET_SEC),
+});
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -534,6 +579,7 @@ export const QuestionSchema = z.preprocess(
       ColorsQuestion,
       MissingQuestion,
       PointlessQuestion,
+      WagerQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -557,6 +603,7 @@ export type ListQuestion = Extract<Question, { type: 'LIST' }>;
 export type ColorsQuestion = Extract<Question, { type: 'COLORS' }>;
 export type MissingQuestion = Extract<Question, { type: 'MISSING' }>;
 export type PointlessQuestion = Extract<Question, { type: 'POINTLESS' }>;
+export type WagerQuestion = Extract<Question, { type: 'WAGER' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -584,10 +631,11 @@ export function isMultipleAnswer(q: Question): boolean {
 /**
  * « Annuler ma réponse » (T43): every type but « Buzzer » questions (judged out loud), « Dessine-moi »
  * (guesses), « Mytho ! » (the lie can be changed while writing, the vote is final) and « Liste
- * chrono » (items found stay found).
+ * chrono » (items found stay found) and « Paris sur les réponses » (the guess can be changed, the
+ * bet is final).
  */
 export function answerCancellable(type: QuestionType, buzzer?: boolean): boolean {
-  return !buzzer && type !== 'DRAW' && type !== 'BLUFF' && type !== 'LIST';
+  return !buzzer && type !== 'DRAW' && type !== 'BLUFF' && type !== 'LIST' && type !== 'WAGER';
 }
 
 /** The question's explanation, or undefined when it has none (empty / blank). */
@@ -633,6 +681,8 @@ export function answerText(q: Question, drawWord?: string, boardColors?: number[
       return (q.zones.length ? q.zones.map((z) => z.color) : (boardColors ?? [])).map(
         (c, i) => `${i + 1}. ${colorName(c)}`,
       );
+    case 'WAGER':
+      return [`${frenchNumber(q.wager.correct)}${q.wager.unit ? ` ${q.wager.unit}` : ''}`];
     default:
       return [];
   }

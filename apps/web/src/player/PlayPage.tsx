@@ -46,6 +46,8 @@ import { useWakeLock } from './useWakeLock';
 import { CancelAnswerButton } from './cancelAnswer';
 import { ListPad, ListResultLines, listResultTitle } from './list';
 import { PointlessResultLine, pointlessResultTitle } from './pointless';
+import { WagerAnswered, WagerBet, WagerGuess, WagerResultLines } from './wager';
+import { wagerResultTitle } from '../lib/wager';
 import { ColorsAnswered, ColorsMemo, ColorsPad, ColorsResultLines } from './colors';
 import { MissingMemo } from './missing';
 import { getTheme, useTheme } from '../themes';
@@ -423,6 +425,12 @@ function AnswerScreen({
     ) : (
       <BluffVote prompt={prompt.bluff} hidden={effects.hiddenChoices ?? []} />
     );
+  if (prompt.type === 'WAGER' && prompt.wager)
+    return prompt.wager.stage === 'guess' ? (
+      <WagerGuess unit={prompt.wager.unit} />
+    ) : (
+      <WagerBet prompt={prompt.wager} />
+    );
   // Brouilleur: the buttons move all over the screen (single answer or « select all »).
   if (effects.scrambled)
     return (
@@ -615,6 +623,7 @@ function answerLabel(s: PlayerState): string | null {
 
 function Answered({ s }: { s: PlayerState }) {
   if (s.prompt?.type === 'BLUFF') return <BluffAnswered s={s} />;
+  if (s.prompt?.type === 'WAGER') return <WagerAnswered s={s} />;
   if (s.prompt?.type === 'DRAW' || foundTheWord(s)) return <DrawFound s={s} />;
   return (
     <Message title="Réponse envoyée !" subtitle="On attend les autres…">
@@ -684,21 +693,23 @@ function Result({ s }: { s: PlayerState }) {
       ? listResultTitle(r)
       : r.pointless
         ? pointlessResultTitle(r, answered)
-        : r.draw
-          ? drawResultTitle(r.draw)
-          : r.bluff
-            ? r.bluff.found
-              ? 'Vérité trouvée !'
-              : partial
-                ? 'Bien mythoné !'
-                : 'Piégé !'
-            : r.correct
-              ? 'Correct !'
-              : partial
-                ? 'Presque !'
-                : answered
-                  ? 'Raté !'
-                  : 'Temps écoulé !';
+        : r.wager
+          ? wagerResultTitle(r)
+          : r.draw
+            ? drawResultTitle(r.draw)
+            : r.bluff
+              ? r.bluff.found
+                ? 'Vérité trouvée !'
+                : partial
+                  ? 'Bien mythoné !'
+                  : 'Piégé !'
+              : r.correct
+                ? 'Correct !'
+                : partial
+                  ? 'Presque !'
+                  : answered
+                    ? 'Raté !'
+                    : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
@@ -773,6 +784,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.draw && <DrawResultLines draw={r.draw} />}
       {r.list && <ListResultLines list={r.list} />}
       {r.pointless && <PointlessResultLine pointless={r.pointless} />}
+      {r.wager && <WagerResultLines wager={r.wager} />}
       {r.colors && (
         <ColorsResultLines
           colors={r.colors}

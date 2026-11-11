@@ -1,6 +1,7 @@
 import {
   AUDIO_DEFAULT_DURATION_SEC,
   BLUFF_DEFAULT_VOTE_SEC,
+  WAGER_DEFAULT_BET_SEC,
   COLORS_DEFAULT_CELLS,
   COLORS_DEFAULT_MEMO_SEC,
   LIBRARY_LIMIT,
@@ -49,7 +50,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'> &
   Pick<Extract<Question, { type: 'DRAW' }>, 'words'> &
   Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'> &
-  Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'>;
+  Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'> &
+  Pick<Extract<Question, { type: 'WAGER' }>, 'wager' | 'betTimeSec'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -121,6 +123,13 @@ function toQuestion(qu: QuestionRow): Question {
         memoSec: config.memoSec ?? MISSING_DEFAULT_MEMO_SEC,
         zone: config.zone!,
       };
+    case 'WAGER':
+      return {
+        ...base,
+        type: qu.type,
+        wager: config.wager!,
+        betTimeSec: config.betTimeSec ?? WAGER_DEFAULT_BET_SEC,
+      };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -146,6 +155,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'COLORS') return { memoSec: qu.memoSec, cells: qu.cells, zones: qu.zones };
   if (qu.type === 'MISSING')
     return { missingImageUrl: qu.missingImageUrl, memoSec: qu.memoSec, zone: qu.zone };
+  if (qu.type === 'WAGER') return { wager: qu.wager, betTimeSec: qu.betTimeSec };
   return undefined;
 }
 

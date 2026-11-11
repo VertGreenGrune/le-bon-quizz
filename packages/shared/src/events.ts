@@ -531,6 +531,51 @@ export interface GameStatePayload {
   draw?: DrawStatus;
   /** « Liste chrono » question during ANSWERING: how many items each player found so far. */
   list?: ListStatus;
+  /**
+   * « Paris sur les réponses » (T61) during ANSWERING: the stage, and in the guess stage who has
+   * guessed already (never the numbers).
+   */
+  wager?: WagerStatus;
+}
+
+/** « Paris sur les réponses » (T61): stage + who guessed (`game:state.wager`). */
+export interface WagerStatus {
+  stage: 'guess' | 'bet';
+  guessed: LobbyMember[];
+}
+
+/**
+ * « Paris sur les réponses »: a bet slot — `value` = a guess (several players may share it), `null`
+ * = the first slot « Plus petit que tout ». Slots are sorted ascending, « Plus petit que tout » first.
+ */
+export interface WagerSlot {
+  value: number | null;
+  authors: LobbyMember[];
+}
+
+/** « Paris sur les réponses » on the TV: the guess stage, then the slots to bet on (with authors). */
+export type WagerShow =
+  { stage: 'guess'; unit?: string } | { stage: 'bet'; unit?: string; slots: WagerSlot[] };
+
+/**
+ * « Paris sur les réponses » on a phone: guess (its current guess, after a reload), then bet on a
+ * slot (numbers only; `own` = the slot of its own guess). Never the right answer.
+ */
+export type WagerPrompt =
+  | { stage: 'guess'; unit?: string; guess?: number }
+  | { stage: 'bet'; unit?: string; slots: (number | null)[]; own?: number };
+
+/**
+ * « Paris sur les réponses » reveal: the right answer, every slot with its authors and who bet on
+ * it, the winning slot, what a winning bet earned and what its authors earned.
+ */
+export interface WagerReveal {
+  correct: number;
+  unit?: string;
+  slots: (WagerSlot & { bettors: LobbyMember[] })[];
+  winning: number;
+  betPoints: number;
+  authorPoints: number;
 }
 
 /**
@@ -719,6 +764,11 @@ export interface QuestionShowPayload {
    * `timeLimitSec` = `memoSec`); stage `answer` adds the picture « après » (`missingImageUrl`).
    */
   missing?: { stage: 'memo' } | { stage: 'answer'; missingImageUrl: string };
+  /**
+   * « Paris sur les réponses » (T61): guess stage, then bet stage (`timeLimitSec` = `betTimeSec`)
+   * with the slots — never the right answer.
+   */
+  wager?: WagerShow;
 }
 
 /**
@@ -784,6 +834,11 @@ export interface QuestionPromptPayload {
    * nor the zone).
    */
   missing?: { stage: 'memo' | 'answer' };
+  /**
+   * « Paris sur les réponses » (T61): type a number (`player:answer { value }`, can be changed until
+   * the stage ends), then bet on a slot (`{ choiceIndex }`, final; `timeLimitSec` = `betTimeSec`).
+   */
+  wager?: WagerPrompt;
 }
 
 export interface AnswerCountPayload {
@@ -848,6 +903,8 @@ export interface RevealDetails {
   missing?: { imageUrl: string; missingImageUrl: string; zone: PinZone; pins: PinMark[] };
   /** « Pas évident ! »: right answers given (rarest first), wrong ones, items nobody gave. */
   pointless?: PointlessReveal;
+  /** « Paris sur les réponses » (T61): the answer, the slots, the winning one, the points. */
+  wager?: WagerReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
@@ -1024,6 +1081,21 @@ export interface PlayerResultPayload {
    * gave that same right answer (themselves included, 0 when wrong / none) — 1 = « 💎 Pas évident ! ».
    */
   pointless?: { yours?: string; sharedBy: number };
+  /**
+   * « Paris sur les réponses » (T61): the right answer, the player's guess and bet (slot value,
+   * `null` = « Plus petit que tout »; absent without one), the winning slot's value, `won` = the bet
+   * was right, `author` = their guess was the winning one (+ `authorPoints`).
+   */
+  wager?: {
+    correct: number;
+    unit?: string;
+    guess?: number;
+    bet?: number | null;
+    winning: number | null;
+    won: boolean;
+    author: boolean;
+    authorPoints: number;
+  };
   /**
    * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks
    * (absent without an answer).

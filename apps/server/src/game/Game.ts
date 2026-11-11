@@ -80,6 +80,7 @@ import {
 import { checkListGuess, foundAll, listStatus } from './questionTypes/list.js';
 import { colorsHints, newColors, startColorsAnswer } from './questionTypes/colors.js';
 import { startMissingAnswer } from './questionTypes/missing.js';
+import { startBets, wagerStatus, writeGuess } from './questionTypes/wager.js';
 import { Jokers } from './jokers.js';
 import {
   ReplayRandom,
@@ -423,7 +424,9 @@ export class Game {
               rescore: (player, given) =>
                 this.scoreAnswer(player, given, player.answer!.responseMs),
               memorizing: () =>
-                this.setup.colors?.stage === 'memo' || this.setup.missing?.stage === 'memo',
+                this.setup.colors?.stage === 'memo' ||
+                this.setup.missing?.stage === 'memo' ||
+                this.setup.wager?.stage === 'guess',
               colorHints: () =>
                 this.setup.colors ? colorsHints(this.setup.colors, this.jokerRandom.next) : null,
               bluffLies: (playerId) =>
@@ -638,6 +641,7 @@ export class Game {
     this.touch();
     this.players.delete(playerId);
     this.setup.bluff?.lies.delete(playerId); // « Mytho ! »: their lie goes with them
+    if (this.setup.wager?.stage === 'guess') this.setup.wager.guesses.delete(playerId);
     // « Buzzer »: the hand is free again, the timer goes on.
     if (this.buzzer?.holder === playerId) {
       this.buzzer.holder = null;
@@ -918,6 +922,16 @@ export class Game {
       if (!('text' in given)) throw new GameError('INVALID_PAYLOAD', 'Écris un mytho');
       writeLie(question, bluff, player.id, given.text);
       this.touch();
+      this.onAnswersChanged();
+      return {};
+    }
+    // « Paris sur les réponses », stage 1: the guess is stored (replaceable), not scored.
+    const wager = this.setup.wager;
+    if (question.type === 'WAGER' && wager?.stage === 'guess') {
+      if (!('value' in given)) throw new GameError('INVALID_PAYLOAD', 'Donne un nombre');
+      writeGuess(wager, player.id, given.value);
+      this.touch();
+      this.broadcastState(); // who guessed, for the TV
       this.onAnswersChanged();
       return {};
     }
@@ -1247,6 +1261,8 @@ export class Game {
     const q = this.currentQuestion;
     if (this.phase === 'ANSWERING' && q?.type === 'LIST' && this.setup.list)
       state.list = listStatus(q, this.setup.list, this.players.values());
+    if (this.phase === 'ANSWERING' && this.setup.wager)
+      state.wager = wagerStatus(this.setup.wager, this.players);
     return state;
   }
 
@@ -1351,6 +1367,14 @@ export class Game {
     if (this.phase === 'ANSWERING' && question?.type === 'BLUFF' && bluff?.stage === 'write') {
       startVote(question, bluff);
       return this.startSecondStage(question.voteTimeSec * 1000, () => this.jokers?.onBluffVote());
+    }
+    // « Paris sur les réponses »: the bets — unless nobody guessed (nothing to bet on: reveal).
+    const wager = this.setup.wager;
+    if (this.phase === 'ANSWERING' && question?.type === 'WAGER' && wager?.stage === 'guess') {
+      if (wager.guesses.size > 0) {
+        startBets(wager);
+        return this.startSecondStage(question.betTimeSec * 1000);
+      }
     }
     this.enterReveal();
   }
@@ -1686,20 +1710,26 @@ export class Game {
     this.allAnsweredTimer = null;
   }
 
-  /** « Mytho ! » writing stage: the lies are what the question waits for. */
-  private writingLies(): boolean {
-    return this.setup.bluff?.stage === 'write';
+  /**
+   * First stage stored without scoring: « Mytho ! » lies, « Paris sur les réponses » guesses —
+   * what the question waits for then (null otherwise).
+   */
+  private stageOneAnswers(): ReadonlyMap<string, unknown> | null {
+    if (this.setup.bluff?.stage === 'write') return this.setup.bluff.lies;
+    if (this.setup.wager?.stage === 'guess') return this.setup.wager.guesses;
+    return null;
   }
 
-  /** Has the player done what the current stage asks (answer, or lie while writing)? */
+  /** Has the player done what the current stage asks (answer, or lie / guess in stage 1)? */
   private hasAnswered(p: Player): boolean {
-    return this.writingLies() ? !!this.setup.bluff?.lies.has(p.id) : !!p.answer;
+    const stageOne = this.stageOneAnswers();
+    return stageOne ? stageOne.has(p.id) : !!p.answer;
   }
 
   /** Is the current question still waiting for this player? */
   private isAwaited(p: Player, copying = new Set<string>()): boolean {
-    if (this.writingLies())
-      return !this.setup.bluff!.lies.has(p.id) && (p.socketId !== null || !this.excused.has(p.id));
+    const stageOne = this.stageOneAnswers();
+    if (stageOne) return !stageOne.has(p.id) && (p.socketId !== null || !this.excused.has(p.id));
     if (this.phase === 'ANSWERING' && p.answer) return false;
     // « Buzzer »: a player who answered wrong can't buzz for now (no pause for them).
     if (this.buzzer?.locked.includes(p.id)) return false;

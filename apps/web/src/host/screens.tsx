@@ -7,6 +7,7 @@ import {
   type BuzzerStatus,
   type DrawStatus,
   type ListStatus,
+  type WagerStatus,
   type DrawStroke,
   type LobbyMember,
   type QuestionRevealPayload,
@@ -28,6 +29,7 @@ import { BluffHint, BluffReveal } from './bluffScreens';
 import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { DrawIntroLine, DrawStage } from './drawScreens';
 import { ListStage } from './listScreens';
+import { WagerStage } from './wagerScreens';
 import { ColorsStage } from './colorsScreens';
 import { MissingStage } from './missingScreens';
 import { PointlessRevealView } from './pointlessScreens';
@@ -264,6 +266,7 @@ export function QuestionScreen({
   draw = null,
   drawing = [],
   list = null,
+  wager = null,
   onAccept,
 }: {
   question: QuestionShowPayload | null;
@@ -284,6 +287,8 @@ export function QuestionScreen({
   drawing?: readonly DrawStroke[];
   /** « Liste chrono »: what was found so far (`game:state.list`). */
   list?: ListStatus | null;
+  /** « Paris sur les réponses »: the stage and who guessed (`game:state.wager`). */
+  wager?: WagerStatus | null;
   /** Reveal: « ✅ Accepter » a refused answer (T44; MCQ, vrai / faux, réponse libre, curseur). */
   onAccept?: (input: AcceptInput) => void;
 }) {
@@ -343,6 +348,21 @@ export function QuestionScreen({
             <ListStage question={question} status={list} reveal={reveal?.list} instant={instant} />
           ) : question.type === 'COLORS' ? (
             <ColorsStage question={question} reveal={reveal?.colors} instant={instant} />
+          ) : question.type === 'WAGER' ? (
+            <WagerStage
+              question={question}
+              status={wager}
+              reveal={reveal?.wager}
+              instant={instant}
+              media={
+                !reveal && (picture || listen) ? (
+                  <>
+                    {picture}
+                    {listen}
+                  </>
+                ) : undefined
+              }
+            />
           ) : question.type === 'MISSING' ? (
             <MissingStage question={question} reveal={reveal?.missing} instant={instant} />
           ) : reveal ? (

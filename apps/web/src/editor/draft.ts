@@ -7,6 +7,8 @@ import {
   DRAW_DEFAULT_SEC,
   LIST_DEFAULT_SEC,
   POINTLESS_DEFAULT_SEC,
+  WAGER_DEFAULT_BET_SEC,
+  WAGER_DEFAULT_GUESS_SEC,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -71,6 +73,13 @@ export interface DraftQuestion {
    * `zone` (shared with PIN) = where the element was, `memoSec` (shared with COLORS).
    */
   missingImageUrl?: string;
+  /**
+   * WAGER (« Paris sur les réponses »): the right number (NaN while the field is empty), its
+   * unit, and the betting time (`timeLimitSec` = guessing time).
+   */
+  wagerCorrect: number;
+  wagerUnit: string;
+  betTimeSec: number;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -190,6 +199,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Chaque joueur donne une seule réponse (« Citez un pays d’Afrique ») : plus elle est rare parmi les joueurs, plus elle rapporte. Une bonne réponse que personne d’autre n’a donnée rapporte tous les points.',
   },
+  {
+    type: 'WAGER',
+    label: 'Paris sur les réponses',
+    description:
+      'Chaque joueur estime un nombre, puis tous parient sur l’estimation la plus proche sans dépasser la bonne réponse. On marque en pariant juste et quand son estimation est la gagnante.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -217,6 +232,9 @@ export function newQuestion(): DraftQuestion {
     colorCells: COLORS_DEFAULT_CELLS,
     colorZones: [],
     memoSec: COLORS_DEFAULT_MEMO_SEC,
+    wagerCorrect: Number.NaN,
+    wagerUnit: '',
+    betTimeSec: WAGER_DEFAULT_BET_SEC,
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -277,6 +295,13 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       };
     case 'MISSING':
       return { ...draft, missingImageUrl: q.missingImageUrl, zone: q.zone, memoSec: q.memoSec };
+    case 'WAGER':
+      return {
+        ...draft,
+        wagerCorrect: q.wager.correct,
+        wagerUnit: q.wager.unit ?? '',
+        betTimeSec: q.betTimeSec,
+      };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -403,6 +428,12 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         missingImageUrl: q.missingImageUrl || undefined,
         memoSec: q.memoSec,
         zone: q.zone,
+      };
+    case 'WAGER':
+      return {
+        ...base,
+        wager: { correct: q.wagerCorrect, unit: q.wagerUnit.trim() || undefined },
+        betTimeSec: q.betTimeSec,
       };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
@@ -547,6 +578,9 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
     q = { ...q, timeLimitSec: POINTLESS_DEFAULT_SEC };
   // « Couleurs perdues »: time to put every color back.
   if (type === 'COLORS' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: COLORS_DEFAULT_SEC };
+  // « Paris sur les réponses »: time to think of a number.
+  if (type === 'WAGER' && q.timeLimitSec === 20)
+    q = { ...q, timeLimitSec: WAGER_DEFAULT_GUESS_SEC };
   // Leaving a type without a right answer: back to the standard points.
   const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
   return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };

@@ -3,6 +3,7 @@ import {
   type BuzzerStatus,
   type DrawStatus,
   type ListStatus,
+  type WagerStatus,
   type DrawStroke,
   type DrawStrokesPayload,
   type GameMode,
@@ -56,6 +57,8 @@ export interface HostGameState {
   draw: DrawStatus | null;
   /** « Liste chrono » question (`game:state.list`): items found per item / per player. */
   list: ListStatus | null;
+  /** « Paris sur les réponses » (`game:state.wager`): the stage, who guessed already. */
+  wager: WagerStatus | null;
   /** « Dessine-moi »: the live drawing of question `index` (`draw:strokes`). */
   drawing: { index: number; strokes: DrawStroke[] };
   /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
@@ -112,6 +115,7 @@ export const initialHostState: HostGameState = {
   buzzer: null,
   draw: null,
   list: null,
+  wager: null,
   drawing: { index: -1, strokes: [] },
   comebacks: [],
   players: [],
@@ -158,6 +162,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         buzzer,
         draw: action.payload.draw ?? null,
         list: action.payload.list ?? null,
+        wager: action.payload.wager ?? null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         pausedSince: paused ? action.now - paused.sinceMs : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,

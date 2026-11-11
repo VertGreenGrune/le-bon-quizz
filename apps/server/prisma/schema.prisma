@@ -119,6 +119,7 @@ enum QuestionType {
   COLORS
   MISSING
   POINTLESS
+  WAGER
 }
 
 model Question {

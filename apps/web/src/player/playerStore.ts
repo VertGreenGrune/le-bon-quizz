@@ -397,6 +397,32 @@ export function sendStrokes(strokes: DrawStroke[], clear = false) {
 }
 
 /** « Mytho ! »: back to the text field to write another lie (until the vote starts). */
+/**
+ * « Paris sur les réponses », stage 1: sends (or replaces) the guess; resolves with the French
+ * error message, or null.
+ */
+export function sendWagerGuess(value: number): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  const { questionIndex } = state;
+  vibrate(40);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:answer', { pin: session.pin, questionIndex, value }, (err, res) => {
+        if (err) return resolve(errorMessage('TIMEOUT'));
+        if (!res.ok) return resolve(res.error.message);
+        dispatch({ type: 'wagerGuess', questionIndex, value });
+        resolve(null);
+      });
+  });
+}
+
+/** « Changer mon estimation »: back to the number field (the server keeps the old one meanwhile). */
+export function editWagerGuess() {
+  dispatch({ type: 'wagerGuess', questionIndex: state.questionIndex, value: null });
+}
+
 export function editLie() {
   dispatch({ type: 'lie', questionIndex: state.questionIndex, text: null });
 }
