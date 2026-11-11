@@ -3267,7 +3267,7 @@ pnpm format:check` before finishing.
 
 ### T63 — « Patate chaude » (hot potato round)
 
-- **Status:** todo
+- **Status:** in-progress (agent T63)
 - **Depends on:** wave 10 merged. Wave 11 (parallel with T64), ports 3063 / 5263.
 - **Idea:** a bomb passes from player to player; whoever holds it must answer right to pass it;
   when it goes off, the holder loses.
