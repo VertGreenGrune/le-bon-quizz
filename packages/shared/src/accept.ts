@@ -3,7 +3,7 @@ import type { Question } from './quiz.js';
 /**
  * « Accepter aussi cette réponse » (T44): what the host can accept at the reveal of a question
  * whose answer was set wrong — `choice` (MCQ / TRUE_FALSE: a refused choice becomes right too),
- * `text` (TYPE_ANSWER: a refused typed group) or `margin` (SLIDER: a wider margin). `null` for every
+ * `text` (TYPE_ANSWER / POINTLESS: a refused typed group) or `margin` (SLIDER: a wider margin). `null` for every
  * other type and for « Buzzer » questions (the host already judged out loud).
  */
 export type AcceptKind = 'choice' | 'text' | 'margin';
@@ -15,6 +15,7 @@ export function acceptKind(q: Pick<Question, 'type' | 'buzzer'>): AcceptKind | n
     case 'TRUE_FALSE':
       return 'choice';
     case 'TYPE_ANSWER':
+    case 'POINTLESS':
       return 'text';
     case 'SLIDER':
       return 'margin';

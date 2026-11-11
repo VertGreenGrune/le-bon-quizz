@@ -98,6 +98,7 @@ function toQuestion(qu: QuestionRow): Question {
     case 'DRAW':
       return { ...base, type: qu.type, words: config.words ?? [] };
     case 'LIST':
+    case 'POINTLESS':
       return {
         ...base,
         type: qu.type,
@@ -140,7 +141,8 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'WHO_OF_US') return { majorityBonus: qu.majorityBonus };
   if (qu.type === 'BLUFF') return { truth: qu.truth, voteTimeSec: qu.voteTimeSec };
   if (qu.type === 'DRAW') return { words: qu.words };
-  if (qu.type === 'LIST') return { items: qu.items, typoTolerance: qu.typoTolerance };
+  if (qu.type === 'LIST' || qu.type === 'POINTLESS')
+    return { items: qu.items, typoTolerance: qu.typoTolerance };
   if (qu.type === 'COLORS') return { memoSec: qu.memoSec, cells: qu.cells, zones: qu.zones };
   if (qu.type === 'MISSING')
     return { missingImageUrl: qu.missingImageUrl, memoSec: qu.memoSec, zone: qu.zone };

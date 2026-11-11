@@ -1,4 +1,5 @@
 import {
+  TYPE_ANSWER_MAX_LENGTH,
   WHO_OF_US_MAJORITY_BONUS,
   WORD_CLOUD_MAX_LENGTH,
   type AnswerInput,
@@ -63,6 +64,7 @@ import {
   newMissing,
   type MissingState,
 } from './missing.js';
+import { judgePointless, pointlessResult, pointlessReveal, settlePointless } from './pointless.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
@@ -84,7 +86,8 @@ export type ExtraQuestion = Extract<
       | 'DRAW'
       | 'LIST'
       | 'COLORS'
-      | 'MISSING';
+      | 'MISSING'
+      | 'POINTLESS';
   }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
@@ -99,7 +102,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'DRAW' ||
     q.type === 'LIST' ||
     q.type === 'COLORS' ||
-    q.type === 'MISSING'
+    q.type === 'MISSING' ||
+    q.type === 'POINTLESS'
   );
 }
 
@@ -182,6 +186,8 @@ export function extraPromptFields(
       return setup.colors ? colorsPrompt(q, setup.colors) : {};
     case 'MISSING':
       return setup.missing ? missingPrompt(q, setup.missing) : {};
+    case 'POINTLESS':
+      return { maxLength: TYPE_ANSWER_MAX_LENGTH };
   }
 }
 
@@ -242,6 +248,8 @@ export function judgeExtra(
       return { ...none, ...judgeColors(setup.colors!, given, timePoints) };
     case 'MISSING':
       return { ...none, ...judgeMissing(q, setup.missing!, given, timePoints) };
+    case 'POINTLESS':
+      return { ...none, ...judgePointless(q, given) };
   }
 }
 
@@ -267,6 +275,7 @@ export function settleExtra(
   players: Iterable<Player>,
 ): void {
   if (q.type === 'LIST') return settleList(q, setup.list!, players);
+  if (q.type === 'POINTLESS') return settlePointless(q, players);
   if (q.type !== 'WHO_OF_US' || !q.majorityBonus) return;
   const list = [...players];
   const winners = mostVoted(tallyVotes(list.flatMap((p) => p.answer?.votedFor ?? [])));
@@ -334,6 +343,8 @@ export function extraRevealDetails(
       return setup.colors ? { colors: colorsReveal(setup.colors, answers, players) } : {};
     case 'MISSING':
       return missingReveal(q, answers);
+    case 'POINTLESS':
+      return { pointless: pointlessReveal(q, answers) };
   }
 }
 
@@ -349,6 +360,7 @@ export function extraResultFields(
   if (q.type === 'DRAW' && setup.draw) return drawResult(setup.draw, player, byId(players));
   if (q.type === 'LIST') return { list: listResult(q, setup.list!, player) };
   if (q.type === 'COLORS' && setup.colors) return { colors: colorsResult(setup.colors, player) };
+  if (q.type === 'POINTLESS') return { pointless: pointlessResult(q, player, players) };
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {

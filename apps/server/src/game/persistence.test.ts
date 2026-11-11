@@ -785,4 +785,51 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
       ],
     });
   });
+
+  it('keeps a « Pas évident ! » question and saves the grouped answers', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Citez un pays d’Afrique',
+        type: 'POINTLESS',
+        items: ['Maroc', 'Égypte | Egypte', 'Tchad'],
+        typoTolerance: false,
+        timeLimitSec: 25,
+        basePoints: 2000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Pas évident', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    const chloe = game.join('Chloé', 's3', 'joker');
+    game.start();
+    game.next(); // intro → answers
+    game.answer(alice.id, 0, { text: 'Egypte' });
+    game.answer(bob.id, 0, { text: 'Égypte' });
+    game.answer(chloe.id, 0, { text: 'Paris' });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({
+      type: 'POINTLESS',
+      correctCount: 2,
+      answerCount: 3,
+    });
+    expect(report.questions[0]!.details.pointless).toMatchObject({
+      answers: [{ text: 'Égypte', points: 1000 }],
+      wrong: [{ text: 'Paris' }],
+      missed: ['Maroc', 'Tchad'],
+      missedCount: 2,
+    });
+  });
 });

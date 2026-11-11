@@ -16,6 +16,7 @@ const ICONS: Record<QuestionType, string> = {
   LIST: '📝',
   COLORS: '🖍️',
   MISSING: '🔍',
+  POINTLESS: '💎',
 };
 
 /** « 🎚️ Curseur », « 🔔 Buzzer · Réponse libre »… — the type shown on the TV. */

@@ -10,6 +10,7 @@ import {
   THIEF_SHARE,
   jokerAvailability,
   jokerRefusal,
+  listItemLabel,
   type AnswerInput,
   type GameMode,
   type GamePhase,
@@ -581,6 +582,12 @@ export class Jokers {
       }
       case 'TYPE_ANSWER': {
         const answer = q.acceptedAnswers[0]!.trim().replace(ARTICLE, '');
+        return { firstLetter: (answer[0] ?? '?').toLocaleUpperCase('fr') };
+      }
+      case 'POINTLESS': {
+        // « Pas évident ! » (T60): the first letter of one item, drawn at random.
+        const item = q.items[Math.floor(this.random() * q.items.length)]!;
+        const answer = listItemLabel(item).replace(ARTICLE, '');
         return { firstLetter: (answer[0] ?? '?').toLocaleUpperCase('fr') };
       }
       default:

@@ -3056,7 +3056,7 @@ pnpm format:check` before finishing.
 
 ### T60 — « Pas évident ! » (Pointless)
 
-- **Status:** in-progress (agent T60)
+- **Status:** done
 - **Depends on:** T57 merged (reuses its matching). Wave 10, ports 3060 / 5260.
 - **Idea (BBC « Pointless »):** « Citez un pays d'Afrique » — each player gives **one** answer; the
   rarer your right answer is among the players, the more you score.
@@ -3073,6 +3073,44 @@ pnpm format:check` before finishing.
     Maroc ».
   - **Jokers:** 🎯 50/50 = first letter of a random item; Copieur copies the answer (they then
     share it: fine); Gel, Double, Bouclier, Voleur, Sablier as usual; no Brouilleur. No buzzer.
+- **Summary:** shared: `quiz.ts` `POINTLESS` in the union (`items` 2–100 with « | »
+  spellings, different, `typoTolerance` default on, 30 s by default; `POINTLESS_*` constants,
+  `pointlessPoints` = round(basePoints / k)), `answerText` = the item labels, cancellable;
+  `accept.ts` `acceptKind` = `text`; `jokers.ts` line (no Brouilleur, no Sablier); contract
+  (`events.ts`, additive): `RevealDetails.pointless` (`PointlessReveal`: right answers rarest
+  first with players / points / `accepted?`, wrong groups, ≤ 10 `missed` + `missedCount`),
+  `player:result.pointless` (`{ yours?, sharedBy }`), `typedAnswers` also for POINTLESS; the
+  prompt only has `maxLength: 40`. Server: `game/questionTypes/pointless.ts` (`judgePointless` —
+  the item matched, provisional points —, `settlePointless` at the reveal, `pointlessReveal`,
+  `pointlessResult`), one line per hook in `questionTypes/index.ts`; `matchItem` moved from
+  `list.ts` to `matching.ts` (generic: items, guess, tolerance, skip; LIST unchanged);
+  `Answer.item`; 50/50 = first letter of a random item (`jokers.ts`); `rejudge.ts` accepts a
+  refused typed group (it then counts as its own answer, grouped by normalized text). Migration
+  `20261112060000_pointless`, `quizzes.service.ts` config `{ items, typoTolerance }`. Web: editor
+  `editor/PointlessFields.tsx` (answers one per line, counter, typo tolerance; reuses the draft's
+  `listItems`, so LIST ↔ POINTLESS keeps the lines), label « Pas évident ! », icon 💎; TV hint
+  « 💎 Une seule réponse : la plus rare possible ! », reveal `host/pointlessScreens.tsx` (right
+  answers rarest first with avatars and +points, 💎 rows outlined, « ✗ Raté » column struck with
+  « ✅ Accepter », « 🤔 Personne n’a pensé à : … », compact rows beyond 6 groups); the remote's
+  accept panel comes for free (`typedAnswers`); phone: the text answer screen (« Une seule
+  réponse » + rarity hint, 50/50 « Une des bonnes réponses commence par … », joker chip), result
+  `player/pointless.tsx` (« 💎 Pas évident ! » / « Bien vu ! », « Personne d’autre n’y a pensé ! » /
+  « 2 joueurs ont dit Maroc : les points sont partagés »); report `reports/pointlessCard.tsx`.
+  Tests: `Game.pointless.test.ts` (14: schema + helpers + shared `matchItem`, no leak to phones /
+  TV, k = 1 / 2 / 3 with spellings / articles / typos, wrong + no answer, wrong kind, cancel, rejoin
+  + TV resync, pause, teams, Survie, accept, jokers: availability, 50/50 + Copieur, Double + Gel),
+  persistence round trip + saved reveal (Postgres), web `draft.pointless.test.ts`,
+  `player/pointless.test.ts`, joker bar placement; e2e `e2e/pointless.spec.ts` (host + 4 phones:
+  shared Maroc, cancel then unique Djibouti with a typo, Zaïre refused then accepted on the TV, no
+  item / answer in any phone frame before the reveal, report). Screenshots checked (TV 1600×900
+  answering / reveal / after accept, Pixel 7 answer / shared / unique result, editor, report).
+- **Deviations / notes:** (1) **Sablier refused** (`unavailable`): the points have no time factor,
+  it would do nothing. (2) **« ✅ Accepter » done** (cheap: reuses TYPE_ANSWER's text accept); an
+  accepted text is its own answer (players who typed the same normalized text share it). (3) The
+  draft reuses LIST's `listItems` field. (4) An answer names the first item it matches (exact
+  first, then tolerant), so close items (Niger / Nigeria) stay apart. (5) During ANSWERING the TV
+  shows only the hint + the usual answer counter. **After merging, run
+  `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones / a real TV.
 
 ### T61 — « Paris sur les réponses » (Wits & Wagers)
 
@@ -3583,3 +3621,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   « après »), `RevealDetails.missing?`; `remote:answer.pin` also for MISSING. Server:
   `QuestionSetup.missing?`; the jokers' `memorizing` context is true during a MISSING memo stage
   too; `quiz:import` handles `missingImageUrl`. Migration `20261112059000_missing`.
+- 2026-11-11, agent T60 (additive, PLAN.md §3–§5): `QuestionType` gains `POINTLESS` (+
+  `PointlessQuestion`, `POINTLESS_*`, `pointlessPoints`), `acceptKind` = `text` for it,
+  `RevealDetails.pointless?` (`PointlessReveal`), `PlayerResultPayload.pointless?`,
+  `typedAnswers` also on POINTLESS reveals; joker table line. Server: `matchItem` moved to
+  `game/matching.ts` (signature `(items, guess, typoTolerance, skip?)`), `Answer.item?`.
+  Migration `20261112060000_pointless`.

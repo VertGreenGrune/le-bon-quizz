@@ -6,6 +6,7 @@ import {
   COLORS_DEFAULT_SEC,
   DRAW_DEFAULT_SEC,
   LIST_DEFAULT_SEC,
+  POINTLESS_DEFAULT_SEC,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -52,7 +53,10 @@ export interface DraftQuestion {
   voteTimeSec: number;
   /** DRAW: words to draw, one picked at random (none = the built-in list). */
   words: string[];
-  /** LIST (« Liste chrono »): the items to find, one per line (other spellings after « | »). */
+  /**
+   * LIST (« Liste chrono ») and POINTLESS (« Pas évident ! »): the items to find / accepted
+   * answers, one per line (other spellings after « | »).
+   */
   listItems: string[];
   /**
    * COLORS (« Couleurs perdues »): a generated board of `colorCells` shapes, or zones on the
@@ -180,6 +184,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Une image s’affiche à l’écran, puis la même image sans un élément : les joueurs touchent l’endroit où il était sur leur téléphone. Comme « Point sur l’image » : plus ils sont près, plus ils marquent.',
   },
+  {
+    type: 'POINTLESS',
+    label: 'Pas évident !',
+    description:
+      'Chaque joueur donne une seule réponse (« Citez un pays d’Afrique ») : plus elle est rare parmi les joueurs, plus elle rapporte. Une bonne réponse que personne d’autre n’a donnée rapporte tous les points.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -255,6 +265,7 @@ export function toDraftQuestion(q: Question): DraftQuestion {
     case 'DRAW':
       return { ...draft, words: [...q.words] };
     case 'LIST':
+    case 'POINTLESS':
       return { ...draft, listItems: [...q.items], typoTolerance: q.typoTolerance };
     case 'COLORS':
       return {
@@ -373,6 +384,7 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
     case 'DRAW':
       return { ...base, words: kept.words.map((i) => q.words[i]) };
     case 'LIST':
+    case 'POINTLESS':
       return {
         ...base,
         items: kept.listItems.map((i) => q.listItems[i]),
@@ -422,7 +434,7 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
     // LIST items are `items` in the API, `listItems` in the draft (ORDER keeps `items`).
     const listItem = /^questions\.(\d+)\.items/.exec(rawKey);
     const key =
-      listItem && draft.questions[Number(listItem[1])]?.type === 'LIST'
+      listItem && ['LIST', 'POINTLESS'].includes(draft.questions[Number(listItem[1])]?.type ?? '')
         ? rawKey.replace('.items', '.listItems')
         : rawKey;
     const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items|words|listItems)\.(\d+)(.*)$/.exec(
@@ -530,6 +542,9 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
   if (type === 'DRAW' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: DRAW_DEFAULT_SEC };
   // « Liste chrono »: time to type many answers.
   if (type === 'LIST' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: LIST_DEFAULT_SEC };
+  // « Pas évident ! »: time to think of a rare answer.
+  if (type === 'POINTLESS' && q.timeLimitSec === 20)
+    q = { ...q, timeLimitSec: POINTLESS_DEFAULT_SEC };
   // « Couleurs perdues »: time to put every color back.
   if (type === 'COLORS' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: COLORS_DEFAULT_SEC };
   // Leaving a type without a right answer: back to the standard points.

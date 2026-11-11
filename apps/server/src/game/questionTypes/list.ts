@@ -1,6 +1,5 @@
 import {
   listCorrect,
-  listItemAnswers,
   listItemLabel,
   listPoints,
   TYPE_ANSWER_MAX_LENGTH,
@@ -13,7 +12,7 @@ import {
   type PlayerResultPayload,
   type QuestionPromptPayload,
 } from '@lbq/shared';
-import { matchesAnswer } from '../matching.js';
+import { matchItem } from '../matching.js';
 import type { Answer, Player } from '../Game.js';
 
 /**
@@ -38,19 +37,9 @@ const member = ({ id, nickname, avatar }: Player): LobbyMember => ({ id, nicknam
 
 const foundBy = (state: ListState, playerId: string) => state.found.get(playerId) ?? [];
 
-/**
- * The item a guess names: an exact match first (so a found item is « déjà trouvé » rather than a
- * close unfound one), then with the typo tolerance. -1 = none.
- */
-function matchItem(q: ListQuestion, guess: string, skip: ReadonlySet<number>): number {
-  for (const tolerant of q.typoTolerance ? [false, true] : [false]) {
-    const index = q.items.findIndex(
-      (item, i) => !skip.has(i) && matchesAnswer(guess, listItemAnswers(item), tolerant),
-    );
-    if (index >= 0) return index;
-  }
-  return -1;
-}
+/** The item a guess names (`matchItem` of `matching.ts`, shared with « Pas évident ! »). */
+const matchListItem = (q: ListQuestion, guess: string, skip: ReadonlySet<number>) =>
+  matchItem(q.items, guess, q.typoTolerance, skip);
 
 /** Checks one guess and, when it names a new item, adds it to what the player found. */
 export function checkListGuess(
@@ -63,10 +52,10 @@ export function checkListGuess(
   const guess = text.trim().slice(0, TYPE_ANSWER_MAX_LENGTH);
   const found = foundBy(state, playerId);
   const done = new Set(found.map((f) => f.index));
-  const index = matchItem(q, guess, new Set());
+  const index = matchListItem(q, guess, new Set());
   if (index >= 0 && done.has(index)) {
     // Maybe another, unfound item also matches (two close spellings): prefer it.
-    const other = matchItem(q, guess, done);
+    const other = matchListItem(q, guess, done);
     if (other < 0) return { result: 'already', item: item(q, index), found: found.length };
     return add(q, state, playerId, other, ms);
   }

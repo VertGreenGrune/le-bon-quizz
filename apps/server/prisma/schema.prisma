@@ -118,6 +118,7 @@ enum QuestionType {
   LIST
   COLORS
   MISSING
+  POINTLESS
 }
 
 model Question {
