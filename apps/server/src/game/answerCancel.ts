@@ -13,6 +13,7 @@ export function checkCancellable(q: Question): void {
   if (answerCancellable(q.type, q.buzzer)) return;
   if (q.buzzer) throw refuse('Pas d’annulation au buzzer');
   if (q.type === 'DRAW') throw refuse('Propose simplement un autre mot');
+  if (q.type === 'LIST') throw refuse('Les éléments trouvés restent trouvés');
   throw refuse('La réponse d’un « Mytho ! » ne s’annule pas (le mytho se change tant qu’on écrit)');
 }
 

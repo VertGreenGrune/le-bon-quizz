@@ -2,6 +2,7 @@ import {
   BLUFF_DEFAULT_VOTE_SEC,
   BLUFF_DEFAULT_WRITE_SEC,
   DRAW_DEFAULT_SEC,
+  LIST_DEFAULT_SEC,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -47,6 +48,8 @@ export interface DraftQuestion {
   voteTimeSec: number;
   /** DRAW: words to draw, one picked at random (none = the built-in list). */
   words: string[];
+  /** LIST (« Liste chrono »): the items to find, one per line (other spellings after « | »). */
+  listItems: string[];
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -142,6 +145,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Un joueur dessine un mot secret sur son téléphone, en direct à l’écran ; les autres le devinent en l’écrivant. Le dessinateur change à chaque question.',
   },
+  {
+    type: 'LIST',
+    label: 'Liste chrono',
+    description:
+      'Les joueurs citent un maximum d’éléments d’une liste avant la fin du temps (« Citez les 7 nains »). Chaque élément trouvé rapporte une partie des points.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -164,6 +173,7 @@ export function newQuestion(): DraftQuestion {
     truth: '',
     voteTimeSec: BLUFF_DEFAULT_VOTE_SEC,
     words: [],
+    listItems: ['', ''],
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -211,6 +221,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       return { ...draft, truth: q.truth, voteTimeSec: q.voteTimeSec };
     case 'DRAW':
       return { ...draft, words: [...q.words] };
+    case 'LIST':
+      return { ...draft, listItems: [...q.items], typoTolerance: q.typoTolerance };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -252,7 +264,18 @@ function keptWords(q: DraftQuestion): number[] {
   return q.words.flatMap((w, i) => (w.trim() ? [i] : []));
 }
 
-type Kept = { choices: number[]; acceptedAnswers: number[]; items: number[]; words: number[] };
+/** Indexes of the LIST items sent: empty lines are dropped. */
+function keptListItems(q: DraftQuestion): number[] {
+  return q.listItems.flatMap((item, i) => (item.trim() ? [i] : []));
+}
+
+type Kept = {
+  choices: number[];
+  acceptedAnswers: number[];
+  items: number[];
+  words: number[];
+  listItems: number[];
+};
 
 /** The API body of one question: only the fields of its type. */
 function questionBody(q: DraftQuestion, kept: Kept): unknown {
@@ -298,6 +321,12 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
       return { ...base, truth: q.truth, voteTimeSec: q.voteTimeSec };
     case 'DRAW':
       return { ...base, words: kept.words.map((i) => q.words[i]) };
+    case 'LIST':
+      return {
+        ...base,
+        items: kept.listItems.map((i) => q.listItems[i]),
+        typoTolerance: q.typoTolerance,
+      };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
   }
@@ -315,6 +344,7 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
     acceptedAnswers: keptAnswers(q),
     items: keptItems(q),
     words: keptWords(q),
+    listItems: keptListItems(q),
   }));
   const result = validate(QuizInput, {
     ...draft,
@@ -323,8 +353,16 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
   });
   if (result.ok) return result;
   const errors: FieldErrors = {};
-  for (const [key, message] of Object.entries(result.errors)) {
-    const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items|words)\.(\d+)(.*)$/.exec(key);
+  for (const [rawKey, message] of Object.entries(result.errors)) {
+    // LIST items are `items` in the API, `listItems` in the draft (ORDER keeps `items`).
+    const listItem = /^questions\.(\d+)\.items/.exec(rawKey);
+    const key =
+      listItem && draft.questions[Number(listItem[1])]?.type === 'LIST'
+        ? rawKey.replace('.items', '.listItems')
+        : rawKey;
+    const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items|words|listItems)\.(\d+)(.*)$/.exec(
+      key,
+    );
     const list = m ? kept[Number(m[1])]?.[m[2] as keyof Kept] : undefined;
     const original = m ? `questions.${m[1]}.${m[2]}.${list?.[Number(m[3])] ?? m[3]}${m[4]}` : key;
     errors[original] = message;
@@ -378,6 +416,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     slider: { ...q.slider },
     items: [...q.items],
     words: [...q.words],
+    listItems: [...q.listItems],
   });
   return { ...draft, questions };
 }
@@ -420,6 +459,8 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
     q = { ...q, timeLimitSec: BLUFF_DEFAULT_WRITE_SEC };
   // « Dessine-moi »: drawing takes time too.
   if (type === 'DRAW' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: DRAW_DEFAULT_SEC };
+  // « Liste chrono »: time to type many answers.
+  if (type === 'LIST' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: LIST_DEFAULT_SEC };
   // Leaving a type without a right answer: back to the standard points.
   const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
   return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };

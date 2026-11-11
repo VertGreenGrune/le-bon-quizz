@@ -230,6 +230,7 @@ export function HostPage() {
           onAccept={(input) => question && game.accept(question.index, input)}
           draw={state.draw}
           drawing={currentDrawing(state)}
+          list={state.list}
         />
       );
       primary =

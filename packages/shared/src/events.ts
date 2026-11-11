@@ -311,6 +311,22 @@ export type AnswerInput =
  */
 export type DrawGuess = 'found' | 'close' | 'wrong';
 
+/**
+ * « Liste chrono » (T57), `player:answer` ack: `found` (a new item: `item` = its index in the
+ * list and its label), `already` (an item this player had found) or `wrong`.
+ */
+export interface ListGuessAck {
+  result: 'found' | 'already' | 'wrong';
+  item?: ListFoundItem;
+  /** Items this player found so far. */
+  found: number;
+}
+
+export interface ListFoundItem {
+  index: number;
+  text: string;
+}
+
 export interface PlayerJoinAck {
   playerId: string;
   sessionToken: string;
@@ -418,7 +434,10 @@ export interface ClientToServerEvents {
   /** Team mode, LOBBY only (else `GAME_ALREADY_STARTED`): picks / switches team. */
   'player:team': (p: PlayerTeamPayload, ack: (r: Ack) => void) => void;
   /** « Dessine-moi »: a guess (`text`); the ack tells whether it is right (`guess`). */
-  'player:answer': (p: PlayerAnswerPayload, ack: (r: Ack<{ guess?: DrawGuess }>) => void) => void;
+  'player:answer': (
+    p: PlayerAnswerPayload,
+    ack: (r: Ack<{ guess?: DrawGuess; list?: ListGuessAck }>) => void,
+  ) => void;
   /**
    * « Annuler ma réponse » (T43), ANSWERING: the answer is removed, the phone answers again (scored
    * from the new answer's time). `CANCEL_REFUSED` on « Buzzer » / « Dessine-moi » / « Mytho ! »
@@ -494,6 +513,17 @@ export interface GameStatePayload {
    * word, in order (never what they typed).
    */
   draw?: DrawStatus;
+  /** « Liste chrono » question during ANSWERING: how many items each player found so far. */
+  list?: ListStatus;
+}
+
+/**
+ * « Liste chrono » (T57), live on the TV: per item of the list (quiz order), how many players
+ * found it — never its text —, and per player how many items they found.
+ */
+export interface ListStatus {
+  items: number[];
+  players: (LobbyMember & { found: number })[];
 }
 
 export interface DrawStatus {
@@ -661,6 +691,8 @@ export interface QuestionShowPayload {
   buzzer?: { answer: string[] };
   /** DRAW: who draws, and the word as blanks (`wordHint`) — never the word itself. */
   draw?: { drawer?: LobbyMember; hint: string };
+  /** « Liste chrono »: the number of items to find (never the items). */
+  list?: { total: number };
 }
 
 /**
@@ -713,6 +745,8 @@ export interface QuestionPromptPayload {
   buzzer?: true;
   /** DRAW: the canvas + the word (drawer), or the guess field (the others). */
   draw?: DrawPrompt;
+  /** « Liste chrono »: the number of items, the max length and what this player found already. */
+  list?: { total: number; maxLength: number; found: ListFoundItem[] };
 }
 
 export interface AnswerCountPayload {
@@ -769,10 +803,17 @@ export interface RevealDetails {
   buzzer?: BuzzerReveal;
   /** DRAW: the word, the drawer, the whole drawing (vector) and who found it, fastest first. */
   draw?: DrawReveal;
+  /** « Liste chrono »: every item and who found it, then every player's count (most first). */
+  list?: ListReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
   accepted?: AcceptedAnswers;
+}
+
+export interface ListReveal {
+  items: { text: string; finders: LobbyMember[] }[];
+  players: (LobbyMember & { found: number })[];
 }
 
 export interface DrawReveal {
@@ -901,6 +942,8 @@ export interface PlayerResultPayload {
    * `drawerShare`: basePoints × share of the guessers who found it); `finders` = players who found it.
    */
   draw?: { word: string; drawer?: LobbyMember; drew: boolean; found: boolean; finders: number };
+  /** « Liste chrono »: how many items this player found, out of how many, and the ones missed. */
+  list?: { found: number; total: number; missed: string[] };
   /**
    * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks
    * (absent without an answer).

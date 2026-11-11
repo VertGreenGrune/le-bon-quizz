@@ -167,6 +167,8 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   BLUFF: { jokers: true, unavailable: ['scramble', 'hourglass'], scramble: false },
   // « Dessine-moi » (T30): no joker (one player draws, the others guess); a pending attack waits.
   DRAW: { jokers: false, unavailable: [], scramble: false },
+  // « Liste chrono » (T57): no joker (many answers per player); a pending attack waits.
+  LIST: { jokers: false, unavailable: [], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

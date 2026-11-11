@@ -3,6 +3,7 @@ import type {
   AnswerInput,
   AvatarId,
   DrawGuess,
+  ListGuessAck,
   DrawStroke,
   ErrorCode,
   HauntType,
@@ -346,6 +347,31 @@ export function sendGuess(text: string): Promise<{ guess: DrawGuess } | { error:
           dispatch({ type: 'answer', questionIndex, answer: { text } });
         }
         resolve({ guess });
+      });
+  });
+}
+
+/**
+ * « Liste chrono » (T57): sends one guess; resolves with the server's verdict (`found` items are
+ * added to the phone's list) or the French error message.
+ */
+export function sendListGuess(text: string): Promise<ListGuessAck | { error: string }> {
+  const session = loadSession();
+  if (!session) return Promise.resolve({ error: 'Session introuvable' });
+  const { questionIndex } = state;
+  vibrate(30);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:answer', { pin: session.pin, questionIndex, text }, (err, res) => {
+        if (err) return resolve({ error: errorMessage('TIMEOUT') });
+        if (!res.ok) return resolve({ error: res.error.message });
+        const list = res.list ?? { result: 'wrong' as const, found: 0 };
+        if (list.result === 'found' && list.item) {
+          vibrate([60, 40, 60]);
+          dispatch({ type: 'listFound', questionIndex, item: list.item });
+        }
+        resolve(list);
       });
   });
 }

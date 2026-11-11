@@ -38,6 +38,15 @@ import {
   judgeGuess,
   type DrawState,
 } from './draw.js';
+import {
+  listAnswer,
+  listPrompt,
+  listResult,
+  listReveal,
+  newList,
+  settleList,
+  type ListState,
+} from './list.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
@@ -49,7 +58,7 @@ import { wordCloud } from './wordCloud.js';
  */
 export type ExtraQuestion = Extract<
   Question,
-  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' | 'DRAW' }
+  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' | 'DRAW' | 'LIST' }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
 
@@ -60,7 +69,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'WHO_OF_US' ||
     q.type === 'WORD_CLOUD' ||
     q.type === 'BLUFF' ||
-    q.type === 'DRAW'
+    q.type === 'DRAW' ||
+    q.type === 'LIST'
   );
 }
 
@@ -72,6 +82,8 @@ export interface QuestionSetup {
   bluff?: BluffState;
   /** DRAW: the word, the drawer and the drawing (set by `Game`, which keeps the rotation). */
   draw?: DrawState;
+  /** LIST: the items each player found. */
+  list?: ListState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -79,6 +91,7 @@ export const NO_SETUP: QuestionSetup = { display: [] };
 export function prepareQuestion(q: Question, random: () => number = Math.random): QuestionSetup {
   if (q.type === 'ORDER') return { display: shuffleOrder(q.items.length, random) };
   if (q.type === 'BLUFF') return { display: [], bluff: newBluff() };
+  if (q.type === 'LIST') return { display: [], list: newList() };
   return NO_SETUP;
 }
 
@@ -99,6 +112,7 @@ export function extraShowFields(
     return bluff.stage === 'vote' ? { bluff, timeLimitSec: q.voteTimeSec } : { bluff };
   }
   if (q.type === 'DRAW' && setup.draw) return { draw: drawShow(setup.draw, byId(players)) };
+  if (q.type === 'LIST') return { list: { total: q.items.length } };
   return {};
 }
 
@@ -126,6 +140,8 @@ export function extraPromptFields(
     }
     case 'DRAW':
       return setup.draw ? { draw: drawPrompt(setup.draw, byId(players), playerId) } : {};
+    case 'LIST':
+      return { list: listPrompt(q, setup.list!, playerId) };
   }
 }
 
@@ -176,6 +192,12 @@ export function judgeExtra(
       // `Game.answer` only records right guesses (and refuses the drawer's).
       if (!('text' in given)) throw invalid('Cette question attend un mot');
       return { ...none, ...judgeGuess(setup.draw!, given.text, timePoints) };
+    case 'LIST': {
+      // `Game.answer` records it only once the player found every item (`questionTypes/list.ts`).
+      if (!('text' in given)) throw invalid('Cette question attend une réponse écrite');
+      const { responseMs: _ms, ...answer } = listAnswer(q, setup.list!, playerId);
+      return answer;
+    }
   }
 }
 
@@ -194,8 +216,13 @@ export function extraBonusPoints(
   return 0;
 }
 
-/** Before scoring the reveal: WHO_OF_US majority bonus. */
-export function settleExtra(q: ExtraQuestion, players: Iterable<Player>): void {
+/** Before scoring the reveal: WHO_OF_US majority bonus, LIST answers of the partial finders. */
+export function settleExtra(
+  q: ExtraQuestion,
+  setup: QuestionSetup,
+  players: Iterable<Player>,
+): void {
+  if (q.type === 'LIST') return settleList(q, setup.list!, players);
   if (q.type !== 'WHO_OF_US' || !q.majorityBonus) return;
   const list = [...players];
   const winners = mostVoted(tallyVotes(list.flatMap((p) => p.answer?.votedFor ?? [])));
@@ -257,6 +284,8 @@ export function extraRevealDetails(
       return bluffReveal(q, setup.bluff!, byId(players));
     case 'DRAW':
       return setup.draw ? drawReveal(setup.draw, byId(players)) : {};
+    case 'LIST':
+      return { list: listReveal(q, setup.list!, players) };
   }
 }
 
@@ -270,6 +299,7 @@ export function extraResultFields(
   const answer = player.answer;
   if (q.type === 'BLUFF') return bluffResult(q, setup.bluff!, player, byId(players));
   if (q.type === 'DRAW' && setup.draw) return drawResult(setup.draw, player, byId(players));
+  if (q.type === 'LIST') return { list: listResult(q, setup.list!, player) };
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {

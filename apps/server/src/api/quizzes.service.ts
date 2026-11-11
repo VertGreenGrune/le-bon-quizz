@@ -92,6 +92,13 @@ function toQuestion(qu: QuestionRow): Question {
       };
     case 'DRAW':
       return { ...base, type: qu.type, words: config.words ?? [] };
+    case 'LIST':
+      return {
+        ...base,
+        type: qu.type,
+        items: config.items ?? [],
+        typoTolerance: config.typoTolerance ?? true,
+      };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -112,6 +119,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'WHO_OF_US') return { majorityBonus: qu.majorityBonus };
   if (qu.type === 'BLUFF') return { truth: qu.truth, voteTimeSec: qu.voteTimeSec };
   if (qu.type === 'DRAW') return { words: qu.words };
+  if (qu.type === 'LIST') return { items: qu.items, typoTolerance: qu.typoTolerance };
   return undefined;
 }
 

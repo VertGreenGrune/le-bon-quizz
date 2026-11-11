@@ -2,6 +2,7 @@ import {
   mergeStrokes,
   type BuzzerStatus,
   type DrawStatus,
+  type ListStatus,
   type DrawStroke,
   type DrawStrokesPayload,
   type GameMode,
@@ -53,6 +54,8 @@ export interface HostGameState {
   buzzer: BuzzerStatus | null;
   /** « Dessine-moi » question (`game:state.draw`): who draws, who already found the word. */
   draw: DrawStatus | null;
+  /** « Liste chrono » question (`game:state.list`): items found per item / per player. */
+  list: ListStatus | null;
   /** « Dessine-moi »: the live drawing of question `index` (`draw:strokes`). */
   drawing: { index: number; strokes: DrawStroke[] };
   /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
@@ -108,6 +111,7 @@ export const initialHostState: HostGameState = {
   resumeAt: null,
   buzzer: null,
   draw: null,
+  list: null,
   drawing: { index: -1, strokes: [] },
   comebacks: [],
   players: [],
@@ -153,6 +157,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         paused,
         buzzer,
         draw: action.payload.draw ?? null,
+        list: action.payload.list ?? null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         pausedSince: paused ? action.now - paused.sinceMs : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,

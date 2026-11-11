@@ -6,6 +6,7 @@ import {
   answerCancellable,
   type BuzzerStatus,
   type DrawStatus,
+  type ListStatus,
   type DrawStroke,
   type LobbyMember,
   type QuestionRevealPayload,
@@ -26,6 +27,7 @@ import { MORE_TYPES, MoreTypeHint, MoreTypeReveal } from './moreTypeScreens';
 import { BluffHint, BluffReveal } from './bluffScreens';
 import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { DrawIntroLine, DrawStage } from './drawScreens';
+import { ListStage } from './listScreens';
 import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -258,6 +260,7 @@ export function QuestionScreen({
   onJudge = () => {},
   draw = null,
   drawing = [],
+  list = null,
   onAccept,
 }: {
   question: QuestionShowPayload | null;
@@ -276,6 +279,8 @@ export function QuestionScreen({
   /** « Dessine-moi »: who draws / found it (`game:state.draw`) and the live drawing. */
   draw?: DrawStatus | null;
   drawing?: readonly DrawStroke[];
+  /** « Liste chrono »: what was found so far (`game:state.list`). */
+  list?: ListStatus | null;
   /** Reveal: « ✅ Accepter » a refused answer (T44; MCQ, vrai / faux, réponse libre, curseur). */
   onAccept?: (input: AcceptInput) => void;
 }) {
@@ -331,6 +336,8 @@ export function QuestionScreen({
               reveal={reveal}
               instant={instant}
             />
+          ) : question.type === 'LIST' ? (
+            <ListStage question={question} status={list} reveal={reveal?.list} instant={instant} />
           ) : reveal ? (
             reveal.buzzer ? (
               <BuzzerRevealView reveal={reveal.buzzer} instant={instant} />
@@ -403,7 +410,11 @@ export function QuestionScreen({
             {answered}
           </motion.span>
           <span className="text-lg font-semibold">
-            {question.type === 'DRAW' ? 'trouvé' : 'réponse'}
+            {question.type === 'DRAW'
+              ? 'trouvé'
+              : question.type === 'LIST'
+                ? 'complète'
+                : 'réponse'}
             {answered > 1 ? 's' : ''}
             {answerTotal > 0 && <span className="opacity-70"> / {answerTotal}</span>}
           </span>

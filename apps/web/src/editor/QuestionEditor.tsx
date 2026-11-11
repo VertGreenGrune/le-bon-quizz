@@ -14,6 +14,7 @@ import { AudioField, ImageEffectField } from './MediaFields';
 import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './MoreTypeFields';
 import { BluffFields } from './BluffFields';
 import { DrawFields } from './DrawFields';
+import { ListFields } from './ListFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -299,6 +300,8 @@ export function QuestionEditor({
         <BluffFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'DRAW' ? (
         <DrawFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'LIST' ? (
+        <ListFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

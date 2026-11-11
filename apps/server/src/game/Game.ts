@@ -26,6 +26,8 @@ import {
   type AnswerInput,
   type AvatarId,
   type DrawGuess,
+  type ListGuessAck,
+  type ListQuestion,
   type DrawStroke,
   type DrawStrokesPayload,
   type GameMode,
@@ -75,6 +77,7 @@ import {
   newRotation,
   startDraw,
 } from './questionTypes/draw.js';
+import { checkListGuess, foundAll, listStatus } from './questionTypes/list.js';
 import { Jokers } from './jokers.js';
 import {
   ReplayRandom,
@@ -887,7 +890,7 @@ export class Game {
     playerId: string,
     questionIndex: number,
     input: number | AnswerInput,
-  ): { guess?: DrawGuess } {
+  ): { guess?: DrawGuess; list?: ListGuessAck } {
     const player = this.players.get(playerId);
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
     const question = this.currentQuestion;
@@ -909,6 +912,7 @@ export class Game {
       return {};
     }
     if (question.type === 'DRAW') return { guess: this.guess(player, given) };
+    if (question.type === 'LIST') return { list: this.listGuess(player, question, given) };
     if (bluff && 'choiceIndex' in given) checkVote(bluff, player.id, given.choiceIndex);
     const responseMs = Date.now() - this.answeringStartedAt;
     this.jokers?.checkAnswer(player, responseMs);
@@ -962,6 +966,23 @@ export class Game {
     // Who found it (never what they typed), for the TV and the phones.
     if (this.phase === 'ANSWERING' && this.questionIndex === index) this.broadcastState();
     return guess;
+  }
+
+  /**
+   * « Liste chrono »: one guess — a new item is kept (and told to the TV); the answer is recorded
+   * once every item is found, the others get theirs at the reveal (`questionTypes/list.ts`).
+   */
+  private listGuess(player: Player, question: ListQuestion, given: AnswerInput): ListGuessAck {
+    if (!('text' in given))
+      throw new GameError('INVALID_PAYLOAD', 'Cette question attend une réponse écrite');
+    const ms = Date.now() - this.answeringStartedAt;
+    const ack = checkListGuess(question, this.setup.list!, player.id, given.text, ms);
+    this.touch();
+    if (ack.result !== 'found') return ack;
+    const index = this.questionIndex;
+    if (foundAll(question, this.setup.list!, player.id)) this.recordAnswer(player, given, ms);
+    if (this.phase === 'ANSWERING' && this.questionIndex === index) this.broadcastState();
+    return ack;
   }
 
   /**
@@ -1213,6 +1234,9 @@ export class Game {
       state.buzzer = buzzerStatus(this.buzzer, this.players);
     if (this.isTimedPhase() && this.setup.draw)
       state.draw = drawStatus(this.setup.draw, this.players);
+    const q = this.currentQuestion;
+    if (this.phase === 'ANSWERING' && q?.type === 'LIST' && this.setup.list)
+      state.list = listStatus(q, this.setup.list, this.players.values());
     return state;
   }
 
@@ -1343,7 +1367,8 @@ export class Game {
     // « Buzzer »: nobody tapped a shape, and the type's own rules don't apply.
     const buzzer = !!question.buzzer;
     const distribution = buzzer ? [] : choices.map(() => 0);
-    if (isExtraQuestion(question) && !buzzer) settleExtra(question, this.players.values());
+    if (isExtraQuestion(question) && !buzzer)
+      settleExtra(question, this.setup, this.players.values());
     // A poll (or another type without a right answer) leaves the streak as it is.
     const poll = !hasRightAnswer(question.type);
     let correctCount = 0;

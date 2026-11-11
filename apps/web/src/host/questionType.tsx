@@ -13,6 +13,7 @@ const ICONS: Record<QuestionType, string> = {
   WORD_CLOUD: '☁️',
   BLUFF: '🤥',
   DRAW: '🎨',
+  LIST: '📝',
 };
 
 /** « 🎚️ Curseur », « 🔔 Buzzer · Réponse libre »… — the type shown on the TV. */

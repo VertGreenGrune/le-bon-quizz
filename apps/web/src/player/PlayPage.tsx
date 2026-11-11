@@ -44,6 +44,7 @@ import {
 import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from './playerStore';
 import { useWakeLock } from './useWakeLock';
 import { CancelAnswerButton } from './cancelAnswer';
+import { ListPad, ListResultLines, listResultTitle } from './list';
 import { getTheme, useTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
@@ -172,6 +173,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           <DrawerPad s={s} timer={<Countdown endsAt={s.answeringEndsAt} frozenMs={s.frozenMs} />} />
         );
       if (role === 'guesser') return <GuessPad s={s} />;
+      if (s.prompt?.type === 'LIST' && s.prompt.list) return <ListPad s={s} />;
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
       return <AnswerScreen s={s} prompt={s.prompt!} effects={jokerEffects(s)} />;
@@ -643,21 +645,23 @@ function Result({ s }: { s: PlayerState }) {
   const idle = (!!r.buzzer && !r.buzzer.won && !r.buzzer.wrong) || (drew && !r.draw!.finders);
   const title = r.buzzer
     ? buzzerResultTitle(r.buzzer)
-    : r.draw
-      ? drawResultTitle(r.draw)
-      : r.bluff
-        ? r.bluff.found
-          ? 'Vérité trouvée !'
-          : partial
-            ? 'Bien mythoné !'
-            : 'Piégé !'
-        : r.correct
-          ? 'Correct !'
-          : partial
-            ? 'Presque !'
-            : answered
-              ? 'Raté !'
-              : 'Temps écoulé !';
+    : r.list
+      ? listResultTitle(r)
+      : r.draw
+        ? drawResultTitle(r.draw)
+        : r.bluff
+          ? r.bluff.found
+            ? 'Vérité trouvée !'
+            : partial
+              ? 'Bien mythoné !'
+              : 'Piégé !'
+          : r.correct
+            ? 'Correct !'
+            : partial
+              ? 'Presque !'
+              : answered
+                ? 'Raté !'
+                : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
@@ -730,6 +734,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.streak >= 2 && <Streak streak={r.streak} bonus={r.streakBonus} />}
       {r.bluff && <BluffResultLines bluff={r.bluff} />}
       {r.draw && <DrawResultLines draw={r.draw} />}
+      {r.list && <ListResultLines list={r.list} />}
       {r.jokers && <JokerResultLines results={r.jokers} />}
       <motion.p
         initial={{ opacity: 0 }}

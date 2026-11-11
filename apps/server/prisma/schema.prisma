@@ -115,6 +115,7 @@ enum QuestionType {
   WORD_CLOUD
   BLUFF
   DRAW
+  LIST
 }
 
 model Question {

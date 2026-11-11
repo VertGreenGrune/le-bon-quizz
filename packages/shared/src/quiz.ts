@@ -14,6 +14,8 @@ import { z } from 'zod';
  *   true among the lies and the real answer (`truth`).
  * - `DRAW` (« Dessine-moi », T30): one player draws a secret word on their phone, live on the TV;
  *   the others type guesses.
+ * - `LIST` (« Liste chrono », T57): players type as many items of a list as they can (« Citez les
+ *   7 nains »); points per item found.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -27,6 +29,7 @@ export const QuestionType = z.enum([
   'WORD_CLOUD',
   'BLUFF',
   'DRAW',
+  'LIST',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -74,6 +77,33 @@ export const DRAW_DEFAULT_SEC = 90;
  */
 export function drawerShare(basePoints: number, finders: number, guessers: number): number {
   return guessers > 0 ? Math.round((basePoints * Math.min(finders, guessers)) / guessers) : 0;
+}
+/** « Liste chrono » (T57): items of the list, default time, share of items that makes it right. */
+export const LIST_MIN_ITEMS = 2;
+export const LIST_MAX_ITEMS = 30;
+/** One item, its other spellings included (« Prof | Professeur »). */
+export const LIST_ITEM_MAX_LENGTH = 80;
+export const LIST_DEFAULT_SEC = 60;
+/** Found at least this share of the items = a right answer (streak, « Survie » heart). */
+export const LIST_CORRECT_SHARE = 0.5;
+/** « Liste chrono »: an item's spellings, separated by « | » (the first one is shown). */
+export function listItemAnswers(item: string): string[] {
+  return item
+    .split('|')
+    .map((a) => a.trim())
+    .filter(Boolean);
+}
+/** « Liste chrono »: how an item is shown (its first spelling). */
+export function listItemLabel(item: string): string {
+  return listItemAnswers(item)[0] ?? item.trim();
+}
+/** « Liste chrono »: `basePoints` × the share of the items found (no time factor). */
+export function listPoints(basePoints: number, found: number, total: number): number {
+  return total > 0 ? Math.round((basePoints * Math.min(found, total)) / total) : 0;
+}
+/** « Liste chrono »: right when at least half of the items were found. */
+export function listCorrect(found: number, total: number): boolean {
+  return total > 0 && found >= Math.ceil(total * LIST_CORRECT_SHARE);
 }
 /** « Mytho ! »: points for fooling `fooled` players. */
 export function bluffFoolPoints(basePoints: number, fooled: number): number {
@@ -324,6 +354,33 @@ const DrawQuestion = z
     path: ['imageUrl'],
   });
 
+/**
+ * « Liste chrono » (T57): `items` = the answers to find (each with its other spellings after
+ * « | »), matched like typed answers; each player types as many as they can in `timeLimitSec`.
+ */
+const ListQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('LIST'),
+    timeLimitSec: questionBase.timeLimitSec.default(LIST_DEFAULT_SEC),
+    items: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(LIST_ITEM_MAX_LENGTH)
+          .refine((i) => listItemAnswers(i).length > 0, 'Empty item'),
+      )
+      .min(LIST_MIN_ITEMS)
+      .max(LIST_MAX_ITEMS),
+    typoTolerance: z.boolean().default(true),
+  })
+  .refine(
+    (q) =>
+      new Set(q.items.map((i) => listItemLabel(i).toLocaleLowerCase())).size === q.items.length,
+    { message: 'Items must be different', path: ['items'] },
+  );
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -340,6 +397,7 @@ export const QuestionSchema = z.preprocess(
       WordCloudQuestion,
       BluffQuestion,
       DrawQuestion,
+      ListQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -359,6 +417,7 @@ export type PinQuestion = Extract<Question, { type: 'PIN' }>;
 export type WhoOfUsQuestion = Extract<Question, { type: 'WHO_OF_US' }>;
 export type BluffQuestion = Extract<Question, { type: 'BLUFF' }>;
 export type DrawQuestion = Extract<Question, { type: 'DRAW' }>;
+export type ListQuestion = Extract<Question, { type: 'LIST' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -385,10 +444,11 @@ export function isMultipleAnswer(q: Question): boolean {
 
 /**
  * « Annuler ma réponse » (T43): every type but « Buzzer » questions (judged out loud), « Dessine-moi »
- * (guesses) and « Mytho ! » (the lie can be changed while writing, the vote is final).
+ * (guesses), « Mytho ! » (the lie can be changed while writing, the vote is final) and « Liste
+ * chrono » (items found stay found).
  */
 export function answerCancellable(type: QuestionType, buzzer?: boolean): boolean {
-  return !buzzer && type !== 'DRAW' && type !== 'BLUFF';
+  return !buzzer && type !== 'DRAW' && type !== 'BLUFF' && type !== 'LIST';
 }
 
 /** The question's explanation, or undefined when it has none (empty / blank). */
@@ -424,6 +484,8 @@ export function answerText(q: Question, drawWord?: string): string[] {
       return [q.truth];
     case 'DRAW':
       return drawWord ? [drawWord] : [];
+    case 'LIST':
+      return q.items.map(listItemLabel);
     default:
       return [];
   }

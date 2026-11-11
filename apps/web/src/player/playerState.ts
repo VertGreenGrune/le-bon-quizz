@@ -5,6 +5,7 @@ import {
   type AvatarId,
   type BuzzerStatus,
   type DrawStatus,
+  type ListFoundItem,
   type DrawStroke,
   type DrawStrokesPayload,
   type ErrorCode,
@@ -118,6 +119,7 @@ export type PlayerAction =
   | { type: 'kicked' }
   | { type: 'lost'; code: ErrorCode }
   | { type: 'lie'; questionIndex: number; text: string | null }
+  | { type: 'listFound'; questionIndex: number; item: ListFoundItem }
   | { type: 'jokers'; payload: PlayerJokersPayload }
   | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number }
   | { type: 'survival'; payload: SurvivalStatePayload }
@@ -261,6 +263,16 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         lie:
           action.text === null ? null : { questionIndex: action.questionIndex, text: action.text },
       };
+
+    case 'listFound': {
+      // « Liste chrono »: what this phone found is kept in the prompt (a rejoin sends it back).
+      const list = state.prompt?.index === action.questionIndex ? state.prompt.list : undefined;
+      if (!list || list.found.some((f) => f.index === action.item.index)) return state;
+      return {
+        ...state,
+        prompt: { ...state.prompt!, list: { ...list, found: [...list.found, action.item] } },
+      };
+    }
 
     case 'toggleChoice': {
       if (state.myAnswer?.questionIndex === action.questionIndex) return state; // already sent
