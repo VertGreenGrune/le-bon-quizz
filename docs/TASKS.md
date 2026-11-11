@@ -3184,7 +3184,7 @@ pnpm format:check` before finishing.
 
 ### T62 — « Sur la même longueur d'onde » (Wavelength)
 
-- **Status:** todo
+- **Status:** in-progress (agent T62)
 - **Depends on:** T57 merged. Wave 10, ports 3062 / 5262.
 - **Idea (« Wavelength »):** one player sees a secret position on a scale (« froid ↔ chaud ») and
   gives one clue; the others place a needle where they think it is.
