@@ -2843,6 +2843,247 @@ only one touching `content/**`; T49 doesn't edit quiz content.
   full), `strokePath`; e2e `draw.spec.ts` (undo, undo of « Tout effacer », landscape pad bigger
   and on screen). Not tried on real phones (palm size, iOS rotation of the home-screen app).
 
+### T57 — « Liste chrono » question type
+- **Status:** done
+- **User request (2026-11-11):** after an online search for new ideas (Only Connect, Jackbox,
+  Questions pour un champion…), the user picked « Liste chrono »: name as many items of a list as
+  you can before the end of the time.
+- **Summary:** shared: `LIST` type (`items` 2–30 with « | » spellings, `typoTolerance`, 60 s by
+  default), `listItemAnswers` / `listItemLabel` / `listPoints` / `listCorrect`, no joker, not
+  cancellable; contract (additive): `player:answer` ack `list` (`ListGuessAck`),
+  `game:state.list` (`ListStatus`), `question:show.list`, `question:prompt.list`,
+  `RevealDetails.list` (`ListReveal`), `player:result.list`. Server: `questionTypes/list.ts`
+  (matching exact then tolerant, found sets per player, answers recorded when the list is complete
+  or at the reveal), `Game.listGuess`; migration `20261111120000_list`; config in
+  `quizzes.service.ts`. Editor « Liste chrono » (`ListFields.tsx`: one item per line, typo
+  tolerance); TV `host/listScreens.tsx` (numbered boxes lit by finds, counts per player; reveal with
+  the finders' avatars) + « complète » counter; phone `player/list.tsx` (field + OK, « Déjà trouvé »
+  / « Non, pas … », found chips, « Liste complète ! », result « n / m trouvés » + « Il manquait »);
+  report `reports/listCard.tsx`. Tests: `Game.list.test.ts` (12), `draft.list.test.ts`,
+  `playerState.list.test.ts`, e2e `e2e/list.spec.ts` (typo / spelling / repeat / wrong, TV never
+  shows the items, Bob's frames never carry Alice's finds, phone reload, reveal, report). Checked
+  with screenshots (TV 1600×900, Pixel 7). Not tried on real phones.
+
+---
+
+## Phase 9 — New question types and modes (2026-11-11)
+
+**User requirement (2026-11-11):** after « Liste chrono » (T57), seven more: two memory games on a
+picture (the user's ideas), three types found online (Pointless, Wits & Wagers, Wavelength) and two
+modes (hot potato, auction). One task each, for **several agents in parallel**.
+
+### Wave 10 / 11 coordination — read before starting
+
+- **Depends on T57 merged** (`main` has the `LIST` type: every task adds a type next to it).
+- **Wave 10 (parallel, 5 agents):** T58, T59, T60, T61, T62 — five new question types.
+  **Wave 11 (parallel, after wave 10 is merged):** T63 (« Patate chaude »), T64 (« Enchères »):
+  they change the core game flow (`Game.ts` timers / settlement) and would collide with wave 10.
+- **Ports / DBs:** server `30<nn>` / web `52<nn>` (T58 → 3058 / 5258…), test DB `lbq_test_t<nn>`,
+  e2e DB `lbq_e2e_t<nn>`, local Postgres only (**never the Neon / production database**), shared
+  container, never `docker compose down`.
+- **Same pattern as T57 / T26 / T30** — copy it, don't refactor the shared code:
+  - all the type's server logic in **one new file** `apps/server/src/game/questionTypes/<type>.ts`,
+    wired by one line per hook in `questionTypes/index.ts` (`ExtraQuestion`, `prepareQuestion`,
+    `extraShowFields`, `extraPromptFields`, `judgeExtra`, `settleExtra`, `extraRevealDetails`,
+    `extraResultFields`) and the fewest possible lines in `Game.ts`;
+  - a type with **two stages** (memorize → answer, guess → bet, clue → guess) stays in `ANSWERING`
+    and restarts the timer for the second stage, exactly like « Mytho ! » (`finishAnswering`,
+    `setPhase('ANSWERING', …)`, a new `question:show` / `question:prompt` for the stage): pause,
+    3-2-1, rejoin and « Passer » then work for free;
+  - web: one new file per screen (`editor/<Type>Fields.tsx`, `host/<type>Screens.tsx`,
+    `player/<type>.tsx`, `reports/<type>Card.tsx`) + one dispatch line in `QuestionEditor.tsx`,
+    `screens.tsx`, `PlayPage.tsx`, `GameReportPage.tsx`; an icon in `host/questionType.tsx`, a
+    label + description in `editor/draft.ts` `QUESTION_TYPES`.
+- **Shared files are append-only** (everyone adds a line at the end of the same lists — the main
+  agent resolves those trivial conflicts at merge): `QuestionType` enum + the union in `quiz.ts`,
+  `AVAILABILITY` in `jokers.ts` (decided below), `answerText` / `answerCancellable`, the payload
+  interfaces in `events.ts` (new optional fields only), the Prisma `QuestionType` enum + **one
+  migration each** (`ALTER TYPE "QuestionType" ADD VALUE '<TYPE>'`, timestamp `202611120<nn>000`),
+  `quizzes.service.ts` config mapping, `DraftQuestion` fields (own names, e.g. `colorZones`).
+- Never send the answer to a phone before the reveal (zones, colors, the target, the right number…).
+- Every type works in solo / teams (averages) / « Survie » (a heart lost when not `correct`), with
+  the pause and both resyncs, and is imported by `quiz:import` (`quiz.json`).
+- Tests: `Game.<type>.test.ts` (like `Game.list.test.ts`), web unit tests for the pure helpers,
+  one e2e spec (`e2e/<type>.spec.ts`, host + 2 phones, frames checked for leaks); screenshots
+  (TV 1600×900, Pixel 7). PLAN.md §3–§5 + this board updated. `pnpm typecheck && pnpm test &&
+pnpm format:check` before finishing.
+
+### T58 — « Couleurs perdues » (color memory)
+
+- **Status:** todo
+- **Depends on:** T57 merged. Wave 10, ports 3058 / 5258.
+- **User idea:** players see a colored picture; after 20 s the colors disappear and they must put
+  the colors back with a palette.
+- **Design (decided — note any deviation):** type `COLORS`.
+  - **Palette:** 8 fixed colors in shared (`COLOR_PALETTE`: rouge, orange, jaune, vert, bleu,
+    violet, rose, noir — French names, hex), easy to tell apart.
+  - **Two sources of picture:**
+    1. **Generated** (default, no upload): `colors.cells` 4–12 (default 6) → the server draws a
+       random board at QUESTION_INTRO: `cells` simple shapes (circle, square, triangle, star,
+       heart, diamond…) in a grid, each with a random palette color (colors may repeat). Drawn as
+       SVG on the TV and the phones (same component).
+    2. **Picture + zones:** `imageUrl` + `colors.zones` 2–12 `{ x, y, radius, color }` (picture
+       fractions like PIN; the editor places them by clicking the picture and picks each zone's
+       color in the palette — the color the zone has on the picture).
+  - **Stage 1 « Mémorisez ! »** (`memoSec`, default 20, 5–60): the TV shows the colored board /
+    picture big with a countdown. Phones: « 👀 Regarde l'écran et retiens les couleurs ! » — they
+    get **nothing** of the board yet.
+  - **Stage 2 « À vous ! »** (`timeLimitSec`, default 30): the TV shows the board in grey
+    (generated: grey shapes; picture: CSS grayscale + numbered circles on the zones). Each phone
+    gets the grey board / picture and the zones (positions only, never the colors), taps a shape /
+    zone then a palette color, « Valider » sends `player:answer { colors: number[] }` (palette
+    index per zone, -1 = none). Cancellable (T43).
+  - **Scoring:** time points (from the stage 2 start) × share of zones right; `correct` = every
+    zone right (streak, « Survie »); « n / m bonnes couleurs » like ORDER's partial points.
+  - **Reveal:** the colored board again, each player's mini-board (✓ / ✗ per zone) best first,
+    per zone how many got it.
+  - **Jokers:** 🎯 50/50 = half of the zones already colored right on that phone; Gel, Double,
+    Bouclier, Voleur, Sablier as usual; no Brouilleur, no Copieur. No buzzer.
+  - Works with 12 zones on an iPhone SE.
+
+### T59 — « Qu'est-ce qui a disparu ? » (missing element)
+
+- **Status:** todo
+- **Depends on:** T57 merged. Wave 10, ports 3059 / 5259.
+- **User idea:** players see a picture; after 20 s an element of the picture disappears and they
+  must point where the missing element was.
+- **Design (decided — note any deviation):** type `MISSING`, reusing PIN's zone and scoring
+  (`questionTypes/pin.ts` `pinPoints`, `PinZoneSchema`, `components/PinPicture.tsx`).
+  - **Content:** two pictures of the same size: `imageUrl` (« avant », complete) and
+    `missingImageUrl` (« après », the element removed — made by the author in any photo editor),
+    + `zone { x, y, radius }` where the element was (drawn on « avant » in the editor, with a live
+    avant / après toggle to check). Schema: both pictures required, no image effect.
+  - **Stage 1 « Mémorisez ! »** (`memoSec`, default 20, 5–60): the TV shows « avant » big; phones:
+    « 👀 Regarde bien l'image… » with **no picture**.
+  - **Stage 2:** the TV switches to « après » (quick fade, « Quelque chose a disparu ! »); each phone
+    gets **only** « après » (`question:prompt.imageUrl` = `missingImageUrl`, never the zone nor
+    « avant ») and taps where the element was (the PIN answer screen, zoom included);
+    `player:answer { point }`.
+  - **Scoring:** exactly PIN (inside the zone = right, full time points from stage 2; partial just
+    outside). Reveal: « avant » with the zone circled + every player's pin (avatars), and an
+    avant / après toggle on the TV.
+  - **Jokers:** like PIN (no 50/50, no Brouilleur). No buzzer. Cancellable.
+  - `missingImageUrl` goes through `quiz:import` and `mediaUrl()` like `imageUrl`.
+
+### T60 — « Pas évident ! » (Pointless)
+
+- **Status:** todo
+- **Depends on:** T57 merged (reuses its matching). Wave 10, ports 3060 / 5260.
+- **Idea (BBC « Pointless »):** « Citez un pays d'Afrique » — each player gives **one** answer; the
+  rarer your right answer is among the players, the more you score.
+- **Design (decided):** type `POINTLESS`, `items` like LIST (2–100 accepted answers, « | »
+  spellings, `typoTolerance`), default 30 s. Each phone types one answer (`player:answer { text }`,
+  cancellable). Matching: `listItemAnswers` + `matchesAnswer` (exact first, then tolerant) — move
+  `matchItem` of `questionTypes/list.ts` into `matching.ts` if both need it (note it). At the
+  reveal, right answers are grouped by item: an item given by `k` players earns each of them
+  `round(basePoints / k)` (no time factor); a unique right answer = full points + a « 💎 Pas
+  évident ! » badge; wrong / no answer = 0. `correct` = a right answer.
+  - **Reveal:** the TV lists the right answers given, rarest first (avatars, « 💎 » for unique
+    ones), then the wrong ones (struck), then « Personne n'a pensé à : … » (up to 10 items nobody
+    gave). Phone result: « 💎 Pas évident ! Personne d'autre n'y a pensé » / « 3 joueurs ont dit
+    Maroc ».
+  - **Jokers:** 🎯 50/50 = first letter of a random item; Copieur copies the answer (they then
+    share it: fine); Gel, Double, Bouclier, Voleur, Sablier as usual; no Brouilleur. No buzzer.
+
+### T61 — « Paris sur les réponses » (Wits & Wagers)
+
+- **Status:** todo
+- **Depends on:** T57 merged. Wave 10, ports 3061 / 5261.
+- **Idea (« Wits & Wagers »):** a number question; everyone guesses, then everyone bets on the
+  guess they think is closest without going over.
+- **Design (decided):** type `WAGER`, `wager { correct, unit? }` (decimals allowed),
+  `timeLimitSec` default 30 (guess), `betTimeSec` default 20 (5–60).
+  - **Stage 1 « Estimez »:** each phone types a number (`player:answer { value }`, can change it
+    until the stage ends, like a « Mytho ! » lie); the TV shows who has answered.
+  - **Stage 2 « Pariez »:** the guesses, merged when equal, sorted ascending + a first slot
+    « Plus petit que tout » — on the TV with the authors' avatars and on every phone (numbers
+    only); each phone bets on **one** slot (`player:answer { choiceIndex }`, its own guess allowed,
+    final). Winning slot = the biggest guess **≤ the right answer** (none ≤ → « Plus petit que
+    tout »).
+  - **Scoring:** a bet on the winning slot = `basePoints` (+50 % on the two outer slots, the
+    riskier bets, like the board game's odds); the author(s) of the winning guess +
+    `basePoints / 2`; `correct` = won the bet (streak, « Survie »). No time points.
+  - **Reveal:** the right answer on the number line, the winning slot lights up, who bet on what
+    (avatars), then the points.
+  - **Jokers:** 🦜 Copieur copies the bet; ✖️2 Double, 🛡️ Bouclier, 🦹 Voleur as usual; Gel blocks
+    the first 5 s of the bet stage; no 50/50 / Brouilleur / Sablier. No buzzer. Not cancellable.
+
+### T62 — « Sur la même longueur d'onde » (Wavelength)
+
+- **Status:** todo
+- **Depends on:** T57 merged. Wave 10, ports 3062 / 5262.
+- **Idea (« Wavelength »):** one player sees a secret position on a scale (« froid ↔ chaud ») and
+  gives one clue; the others place a needle where they think it is.
+- **Design (decided):** type `WAVELENGTH`, `spectra: { left, right }[]` (0–30, ≤ 30 characters
+  each; none = a built-in French list `WAVELENGTH_SPECTRA` of ≥ 60 pairs: « Froid / Chaud »,
+  « Nul / Génial », « Sain / Malsain », « Enfant / Adulte »…), `clueTimeSec` default 30,
+  `timeLimitSec` default 30 (guess).
+  - At QUESTION_INTRO the server picks the **psychic** with the « Dessine-moi » rotation
+    (`questionTypes/draw.ts` `pickDrawer` / rotation — export and reuse, don't copy), a spectrum
+    and a random target (integer 10–90, never at an end).
+  - **Stage 1 « Indice »:** only the psychic's prompt has the target (a dial showing the target
+    zone); they type one clue (≤ 40 characters, `player:answer { text }`; refused if it contains a
+    word of the spectrum ends); the others: « X cherche un indice… ». TV: the spectrum, the
+    psychic, no target.
+  - **Stage 2 « Devinez »:** TV + phones show the spectrum and the clue; each guesser moves a
+    needle 0–100 (`player:answer { value }`, cancellable).
+  - **Scoring:** distance ≤ 5 → `basePoints`, ≤ 12 → 60 %, ≤ 20 → 30 %, else 0 (`correct` = ≤ 12);
+    the psychic scores the average of the guessers' points (streak unchanged, like the drawer;
+    awaited for the pause). No time points.
+  - **Reveal:** the target zone appears with the bands (5 / 12 / 20), every needle with its avatar,
+    « 🎯 Pile dessus ! » for the best.
+  - **Jokers:** none (like DRAW). No buzzer.
+
+### T63 — « Patate chaude » (hot potato round)
+
+- **Status:** todo
+- **Depends on:** wave 10 merged. Wave 11 (parallel with T64), ports 3063 / 5263.
+- **Idea:** a bomb passes from player to player; whoever holds it must answer right to pass it;
+  when it goes off, the holder loses.
+- **Design (decided):** type `HOT_POTATO` (one question = one round): `potato.questions` 3–30 quick
+  sub-questions `{ text, choices (2–4 texts), correct (index) }` + `fuseMinSec` / `fuseMaxSec`
+  (defaults 30 / 60): the server draws the fuse length (secret) at the start of ANSWERING;
+  `timeLimitSec` is ignored (the TV shows no clock, only a ticking bomb that speeds up).
+  - The server gives the bomb to a random player with a sub-question (in order, reshuffled when
+    used up). **Only the holder's phone** shows the sub-question text + its choices (this type's
+    exception to « no text on phones »: it's a fast round); the TV shows the bomb, the holder
+    (avatar, big), the sub-question and its choices; the other phones « 💣 X a la patate ! ».
+  - Right answer → the bomb goes to a **random other player** (never straight back to the one who
+    passed it, when there are ≥ 3) with the next sub-question; +`basePoints / 10` per pass.
+    Wrong → same holder, next sub-question, after a 2 s lock.
+  - **Explosion:** the holder gets 0 for the round and `correct = false` (streak reset, « Survie »:
+    a heart); everyone else `correct = true` + `basePoints / 2` + their passes. Holder offline →
+    pause (fuse frozen). Kicked holder → bomb to someone else. One player alone → reveal at once.
+  - **Reveal:** 💥 on the TV with the loser, then each player's passes.
+  - New `game:state.potato { holder }` (the sub-question only through `question:show` and the
+    holder's `question:prompt`), new sounds (tick, explosion; CC0 in `generate-sounds.mjs`).
+    Jokers: none. Not cancellable, no buzzer.
+
+### T64 — « Enchères » (auction option)
+
+- **Status:** todo
+- **Depends on:** wave 10 merged. Wave 11 (parallel with T63), ports 3064 / 5264.
+- **Note:** close to the « Quitte ou double » of T29 (cancelled 2026-10-22); the user asked for it
+  again on 2026-11-11, so it is wanted now.
+- **Design (decided):** question option `auction: true` (types with a right answer, not au buzzer,
+  not HOT_POTATO / WAVELENGTH) + optional `auctionTopic` (≤ 40, e.g. « Cinéma des années 80 »).
+  - A **bid stage at the start of QUESTION_INTRO** (10 s, `AUCTION_BID_MS`): the TV shows
+    « 💰 Enchères ! » and the topic (or the question type) — never the question —, the players and
+    who has bid; each phone bids secretly 0 … `min(total score, 1000)` (`player:bid { pin,
+    questionIndex, amount }`, steps of 50, can change until the end; a player under 200 points
+    can still bid up to 200). Then the usual intro and question.
+  - **At the reveal:** right → `+ bid`, wrong / no answer → `− bid` (total never below 0), after
+    Double ou rien and before Voleur; its own line on the phone result and on the TV (« 💰 Alice
+    avait misé 400 : + 400 ! », bids revealed one by one, biggest first), counted in the
+    leaderboard `gained`. Team mode: part of the player's points (so of the team average).
+    « Survie »: no effect on hearts.
+  - Pause during the bid stage freezes it; rejoin gets the bid back; `host:next` skips it (bids so
+    far count, others 0). Saved in the report (bids per player). Editor: « 💰 Enchères » checkbox +
+    topic field. Contract additive (`player:bid`, `game:state.auction`, `question:show.auction`,
+    `player:result.auction`, `RevealDetails.auction`).
+
+---
+
 ## Contract changes / cross-task notes
 _(Append here: date, agent, what changed in `packages/shared` or outside your scope, why.)_
 
