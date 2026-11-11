@@ -62,6 +62,11 @@ export interface DraftQuestion {
   colorCells: number;
   colorZones: ColorZone[];
   memoSec: number;
+  /**
+   * MISSING (« Qu'est-ce qui a disparu ? »): the picture « après » (`imageUrl` = « avant »);
+   * `zone` (shared with PIN) = where the element was, `memoSec` (shared with COLORS).
+   */
+  missingImageUrl?: string;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -169,6 +174,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Une image colorée s’affiche à l’écran, puis devient grise : les joueurs remettent les couleurs de mémoire avec une palette. Chaque zone juste rapporte une partie des points.',
   },
+  {
+    type: 'MISSING',
+    label: 'Qu’est-ce qui a disparu ?',
+    description:
+      'Une image s’affiche à l’écran, puis la même image sans un élément : les joueurs touchent l’endroit où il était sur leur téléphone. Comme « Point sur l’image » : plus ils sont près, plus ils marquent.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -253,6 +264,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
         colorZones: q.zones.map((z) => ({ ...z })),
         memoSec: q.memoSec,
       };
+    case 'MISSING':
+      return { ...draft, missingImageUrl: q.missingImageUrl, zone: q.zone, memoSec: q.memoSec };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -328,7 +341,8 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
       q.imageEffect !== 'none' &&
       q.type !== 'PIN' &&
       q.type !== 'DRAW' &&
-      q.type !== 'COLORS'
+      q.type !== 'COLORS' &&
+      q.type !== 'MISSING'
         ? q.imageEffect
         : undefined,
     // Kept in the draft when switching to a type without buzzer (and back), not saved there.
@@ -370,6 +384,13 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         memoSec: q.memoSec,
         cells: q.colorCells,
         zones: q.colorSource === 'picture' ? q.colorZones : [],
+      };
+    case 'MISSING':
+      return {
+        ...base,
+        missingImageUrl: q.missingImageUrl || undefined,
+        memoSec: q.memoSec,
+        zone: q.zone,
       };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
@@ -418,7 +439,10 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
 export function hasMedia(draft: QuizDraft): boolean {
   return (
     !!draft.coverImageUrl ||
-    draft.questions.some((q) => (q.imageUrl && q.type !== 'DRAW') || q.audio)
+    draft.questions.some(
+      (q) =>
+        (q.imageUrl && q.type !== 'DRAW') || (q.missingImageUrl && q.type === 'MISSING') || q.audio,
+    )
   );
 }
 

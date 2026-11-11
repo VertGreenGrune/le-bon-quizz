@@ -78,12 +78,22 @@ export async function prepareQuiz(
       q.imageUrl = await media(ref, 'image');
       if (!q.imageUrl) {
         // PIN, « Couleurs perdues » zones: the picture is the question.
-        if (q.type === 'PIN' || (q.type === 'COLORS' && Array.isArray(q.zones) && q.zones.length))
+        if (
+          q.type === 'PIN' ||
+          q.type === 'MISSING' ||
+          (q.type === 'COLORS' && Array.isArray(q.zones) && q.zones.length)
+        )
           throw new Error(`Image introuvable : ${String(ref)}`);
         warn(`Question ${i + 1} : image ${String(ref)} absente, question importée sans l’image`);
         delete q.imageUrl;
         delete q.imageEffect;
       }
+    }
+    // « Qu'est-ce qui a disparu ? » (T59): the picture « après » is required too.
+    if (q.missingImageUrl !== undefined) {
+      const ref = q.missingImageUrl;
+      q.missingImageUrl = await media(ref, 'image');
+      if (!q.missingImageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
     }
     const audio = q.audio as Json | undefined;
     if (audio) {

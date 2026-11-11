@@ -4,6 +4,7 @@ import {
   COLORS_DEFAULT_CELLS,
   COLORS_DEFAULT_MEMO_SEC,
   LIBRARY_LIMIT,
+  MISSING_DEFAULT_MEMO_SEC,
   type LibraryQuery,
   type LibraryQuiz,
   type LibrarySort,
@@ -47,7 +48,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'> &
   Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'> &
   Pick<Extract<Question, { type: 'DRAW' }>, 'words'> &
-  Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'>;
+  Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'> &
+  Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -110,6 +112,14 @@ function toQuestion(qu: QuestionRow): Question {
         cells: config.cells ?? COLORS_DEFAULT_CELLS,
         zones: config.zones ?? [],
       };
+    case 'MISSING':
+      return {
+        ...base,
+        type: qu.type,
+        missingImageUrl: config.missingImageUrl ?? '',
+        memoSec: config.memoSec ?? MISSING_DEFAULT_MEMO_SEC,
+        zone: config.zone!,
+      };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -132,6 +142,8 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'DRAW') return { words: qu.words };
   if (qu.type === 'LIST') return { items: qu.items, typoTolerance: qu.typoTolerance };
   if (qu.type === 'COLORS') return { memoSec: qu.memoSec, cells: qu.cells, zones: qu.zones };
+  if (qu.type === 'MISSING')
+    return { missingImageUrl: qu.missingImageUrl, memoSec: qu.memoSec, zone: qu.zone };
   return undefined;
 }
 

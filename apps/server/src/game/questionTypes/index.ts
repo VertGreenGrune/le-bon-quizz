@@ -55,6 +55,14 @@ import {
   judgeColors,
   type ColorsState,
 } from './colors.js';
+import {
+  judgeMissing,
+  missingPrompt,
+  missingReveal,
+  missingShow,
+  newMissing,
+  type MissingState,
+} from './missing.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
@@ -66,7 +74,18 @@ import { wordCloud } from './wordCloud.js';
  */
 export type ExtraQuestion = Extract<
   Question,
-  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' | 'DRAW' | 'LIST' | 'COLORS' }
+  {
+    type:
+      | 'ORDER'
+      | 'PIN'
+      | 'WHO_OF_US'
+      | 'WORD_CLOUD'
+      | 'BLUFF'
+      | 'DRAW'
+      | 'LIST'
+      | 'COLORS'
+      | 'MISSING';
+  }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
 
@@ -79,7 +98,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'BLUFF' ||
     q.type === 'DRAW' ||
     q.type === 'LIST' ||
-    q.type === 'COLORS'
+    q.type === 'COLORS' ||
+    q.type === 'MISSING'
   );
 }
 
@@ -95,6 +115,8 @@ export interface QuestionSetup {
   list?: ListState;
   /** COLORS: the board, its colors and the stage (set by `Game`, with its random source). */
   colors?: ColorsState;
+  /** MISSING: the stage (memorizing « avant », then answering on « après »). */
+  missing?: MissingState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -103,6 +125,7 @@ export function prepareQuestion(q: Question, random: () => number = Math.random)
   if (q.type === 'ORDER') return { display: shuffleOrder(q.items.length, random) };
   if (q.type === 'BLUFF') return { display: [], bluff: newBluff() };
   if (q.type === 'LIST') return { display: [], list: newList() };
+  if (q.type === 'MISSING') return { display: [], missing: newMissing() };
   return NO_SETUP;
 }
 
@@ -125,6 +148,7 @@ export function extraShowFields(
   if (q.type === 'DRAW' && setup.draw) return { draw: drawShow(setup.draw, byId(players)) };
   if (q.type === 'LIST') return { list: { total: q.items.length } };
   if (q.type === 'COLORS' && setup.colors) return colorsShow(q, setup.colors);
+  if (q.type === 'MISSING' && setup.missing) return missingShow(q, setup.missing);
   return {};
 }
 
@@ -156,6 +180,8 @@ export function extraPromptFields(
       return { list: listPrompt(q, setup.list!, playerId) };
     case 'COLORS':
       return setup.colors ? colorsPrompt(q, setup.colors) : {};
+    case 'MISSING':
+      return setup.missing ? missingPrompt(q, setup.missing) : {};
   }
 }
 
@@ -214,6 +240,8 @@ export function judgeExtra(
     }
     case 'COLORS':
       return { ...none, ...judgeColors(setup.colors!, given, timePoints) };
+    case 'MISSING':
+      return { ...none, ...judgeMissing(q, setup.missing!, given, timePoints) };
   }
 }
 
@@ -304,6 +332,8 @@ export function extraRevealDetails(
       return { list: listReveal(q, setup.list!, players) };
     case 'COLORS':
       return setup.colors ? { colors: colorsReveal(setup.colors, answers, players) } : {};
+    case 'MISSING':
+      return missingReveal(q, answers);
   }
 }
 

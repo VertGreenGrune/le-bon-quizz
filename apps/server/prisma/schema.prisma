@@ -117,6 +117,7 @@ enum QuestionType {
   DRAW
   LIST
   COLORS
+  MISSING
 }
 
 model Question {

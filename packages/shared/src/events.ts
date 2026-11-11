@@ -595,7 +595,7 @@ export interface RemoteAnswerPayload {
   index: number;
   /** `answerText` (« Dessine-moi »: the word drawn); [] for the types without a right answer. */
   answer: string[];
-  /** PIN: the picture and its zone (drawn small on the remote). */
+  /** PIN (and « Qu'est-ce qui a disparu ? », on « avant »): the picture and its zone. */
   pin?: { imageUrl: string; zone: PinZone };
   explanation?: string;
 }
@@ -714,6 +714,11 @@ export interface QuestionShowPayload {
    * `timeLimitSec` = `memoSec`), grey in stage `answer`.
    */
   colors?: { stage: 'memo' | 'answer'; board: ColorBoard; colors?: number[] };
+  /**
+   * « Qu'est-ce qui a disparu ? » (T59): `imageUrl` is the picture « avant » (stage `memo`,
+   * `timeLimitSec` = `memoSec`); stage `answer` adds the picture « après » (`missingImageUrl`).
+   */
+  missing?: { stage: 'memo' } | { stage: 'answer'; missingImageUrl: string };
 }
 
 /**
@@ -773,6 +778,12 @@ export interface QuestionPromptPayload {
    * `memoSec`), then the grey board — the zones' places, never their colors.
    */
   colors?: { stage: 'memo' } | { stage: 'answer'; board: ColorBoard };
+  /**
+   * « Qu'est-ce qui a disparu ? » (T59): nothing of the picture while memorizing (`memo`,
+   * `timeLimitSec` = `memoSec`), then `imageUrl` = the picture « après » only (never « avant »
+   * nor the zone).
+   */
+  missing?: { stage: 'memo' | 'answer' };
 }
 
 export interface AnswerCountPayload {
@@ -833,6 +844,8 @@ export interface RevealDetails {
   list?: ListReveal;
   /** « Couleurs perdues »: the colored board, per zone how many got it, every player's board. */
   colors?: ColorsReveal;
+  /** « Qu'est-ce qui a disparu ? »: both pictures, the zone (on « avant ») and every pin. */
+  missing?: { imageUrl: string; missingImageUrl: string; zone: PinZone; pins: PinMark[] };
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */

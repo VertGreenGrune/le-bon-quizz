@@ -23,6 +23,7 @@ import {
   bluffStage,
   colorsStage,
   jokerEffects,
+  missingStage,
   myTeam,
   type PlayerScreen,
   type PlayerState,
@@ -65,7 +66,8 @@ export function jokerBarMode(s: PlayerState, screen: PlayerScreen): JokerBarMode
   const fullHeight =
     (type !== undefined && FULL_HEIGHT_TYPES.has(type)) ||
     bluffStage(s) === 'write' ||
-    colorsStage(s) === 'answer';
+    colorsStage(s) === 'answer' ||
+    missingStage(s) === 'answer';
   return fullHeight ? 'chip' : 'bar';
 }
 
@@ -386,7 +388,9 @@ export function FrozenOverlay({ s }: { s: PlayerState }) {
   // « Mytho ! »: the Gel only blocks the vote, not the writing of the lie.
   // « Couleurs perdues »: nor the memorizing (the Gel blocks the start of the answers).
   const frozen =
-    bluffStage(s) === 'write' || colorsStage(s) === 'memo' ? undefined : jokerEffects(s).frozen;
+    bluffStage(s) === 'write' || colorsStage(s) === 'memo' || missingStage(s) === 'memo'
+      ? undefined
+      : jokerEffects(s).frozen;
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!frozen) return;

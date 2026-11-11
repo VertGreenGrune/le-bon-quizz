@@ -63,6 +63,16 @@ describe('joker bar placement', () => {
     expect(
       jokerBarMode(phone({ type: 'COLORS', colors: { stage: 'answer', board } }), 'answer'),
     ).toBe('chip');
+    // « Qu’est-ce qui a disparu ? »: the bar while memorizing, the chip on the picture (T59).
+    expect(jokerBarMode(phone({ type: 'MISSING', missing: { stage: 'memo' } }), 'answer')).toBe(
+      'bar',
+    );
+    expect(
+      jokerBarMode(
+        phone({ type: 'MISSING', missing: { stage: 'answer' }, imageUrl: 'apres.png' }),
+        'answer',
+      ),
+    ).toBe('chip');
   });
 
   it('is hidden outside the question screens, while paused and without jokers here', () => {

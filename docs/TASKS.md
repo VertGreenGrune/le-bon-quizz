@@ -2990,7 +2990,7 @@ pnpm format:check` before finishing.
 
 ### T59 — « Qu'est-ce qui a disparu ? » (missing element)
 
-- **Status:** in-progress (agent T59)
+- **Status:** done
 - **Depends on:** T57 merged. Wave 10, ports 3059 / 5259.
 - **User idea:** players see a picture; after 20 s an element of the picture disappears and they
   must point where the missing element was.
@@ -3011,6 +3011,48 @@ pnpm format:check` before finishing.
     avant / après toggle on the TV.
   - **Jokers:** like PIN (no 50/50, no Brouilleur). No buzzer. Cancellable.
   - `missingImageUrl` goes through `quiz:import` and `mediaUrl()` like `imageUrl`.
+- **Summary:** shared: `quiz.ts` `MISSING` in the union (`missingImageUrl` required, different from
+  `imageUrl`, which is required too; `zone` = `PinZoneSchema`; `memoSec` 5–60 default 20,
+  `MISSING_*_MEMO_SEC`; no image effect, no buzzer), `answerText` like PIN, cancellable;
+  `jokers.ts` line = PIN's (no 50/50, no Brouilleur); contract (`events.ts`, additive):
+  `question:show.missing` (`{ stage: 'memo' }` | `{ stage: 'answer', missingImageUrl }`),
+  `question:prompt.missing` (`{ stage }`; in stage `answer` `imageUrl` = « après »),
+  `RevealDetails.missing` (`{ imageUrl, missingImageUrl, zone, pins }`); answers are
+  `player:answer { point }` like PIN. Server: `game/questionTypes/missing.ts` (`newMissing`,
+  `startMissingAnswer`, `missingShow` / `missingPrompt` per stage, `judgeMissing` = `pinPoints`,
+  `missingReveal`), one line per hook in `questionTypes/index.ts`; `Game.ts`: the memo stage uses
+  `memoSec`, `finishAnswering` starts the answer stage through `startSecondStage`, the jokers'
+  `memorizing` covers MISSING (Gel during the memo blocks the first 5 s of the answers), the
+  remote's `pin` = « avant » + zone. Migration `20261112059000_missing`, `quizzes.service.ts` config
+  `{ missingImageUrl, memoSec, zone }`, `quiz:import` copies `missingImageUrl` (content-hash file +
+  URL rewrite) and refuses a missing « avant » / « après ». Web: TV `host/missingScreens.tsx`
+  (« 👀 Regardez bien l’image : un élément va disparaître ! » + « avant », then « 🔍 Quelque chose a
+  disparu ! » with « après » fading in over « avant », reveal: « avant » with the zone and the pins'
+  avatars, « n / m dans la zone », Avant / Après toggle), icon 🔍; phone `player/missing.tsx`
+  (« Regarde bien l’image sur l’écran… », no picture) then the PIN answer screen (zoom) on
+  « après », joker chip on the answer stage, no Gel overlay while memorizing (`missingStage`);
+  editor `editor/MissingFields.tsx` (picture « après », memo time, zone placed by clicking with an
+  Avant / Après toggle, size slider; the usual picture field is « avant ») + draft field
+  `missingImageUrl` (reuses `zone` and `memoSec`), counted by `hasMedia`; report
+  `reports/missingCard.tsx` (« avant » with zone + pins, « après » small); helpers `lib/missing.ts`.
+  Tests: `Game.missing.test.ts` (15: schema, stage 1 nothing on phones, stage 2 only « après », in /
+  near / far from stage 2's start + reveal, wrong kinds, remote, cancel, rejoin in each stage + TV
+  resync, pause in the memo, « Passer », teams, Survie, jokers: 50/50 / Brouilleur refused, Copieur,
+  Gel during the memo, Double + Sablier), persistence round trip + saved reveal (Postgres), import
+  of both pictures, web `lib/missing.test.ts`, `editor/draft.missing.test.ts`, joker bar placement;
+  e2e `e2e/missing.spec.ts` (two generated PNGs uploaded; editor toggle; Pixel 7 + iPhone SE; frames
+  never carry « avant », a zone or a radius, and nothing of « après » while memorizing; cancel then
+  partial answer; reveal + toggle; report). Screenshots checked (TV 1600×900 memo / answer / reveal
+  avant and après, Pixel 7 memo, iPhone SE answer with « Valider » on screen, result, editor,
+  report) — the reveal picture was shrunk to 42vh so « Suivant » stays on screen with an
+  explanation.
+- **Deviations / notes:** (1) The draft reuses PIN's `zone` and COLORS' `memoSec` (one new draft
+  field, `missingImageUrl`). (2) The TV gets « avant » in `question:show.imageUrl` in both stages
+  (host room only) — needed for the cross-fade and the reveal; `missingImageUrl` only from stage 2.
+  (3) The two pictures must be different URLs (same file = refused by the schema). (4) The zone is
+  measured in picture fractions, so « avant » and « après » must have the same proportions (said in
+  the editor). (5) No « ✅ Accepter » (not an accept kind). **After merging, run
+  `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones / a real TV.
 
 ### T60 — « Pas évident ! » (Pointless)
 
@@ -3535,3 +3577,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   argument (`boardColors`). Server: `Answer.colors?`, `QuestionSetup.colors?`, `JokerContext`
   gains optional `memorizing` / `colorHints`; `Game.startSecondStage` is shared by « Mytho ! » and
   « Couleurs perdues » (wave 10 two-stage types: reuse it). Migration `20261112058000_colors`.
+- 2026-11-12, T59 agent (additive, PLAN.md §3–§5): `QuestionType` gains `MISSING`
+  (`missingImageUrl`, `memoSec`, `zone`; constants `MISSING_*_MEMO_SEC`, type `MissingQuestion`);
+  `QuestionShowPayload.missing?`, `QuestionPromptPayload.missing?` (the phone's `imageUrl` is then
+  « après »), `RevealDetails.missing?`; `remote:answer.pin` also for MISSING. Server:
+  `QuestionSetup.missing?`; the jokers' `memorizing` context is true during a MISSING memo stage
+  too; `quiz:import` handles `missingImageUrl`. Migration `20261112059000_missing`.

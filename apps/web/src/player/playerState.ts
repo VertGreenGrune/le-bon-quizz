@@ -473,6 +473,11 @@ export function bluffStage(s: PlayerState): 'write' | 'vote' | null {
   return s.prompt?.index === s.questionIndex ? (s.prompt.bluff?.stage ?? null) : null;
 }
 
+/** « Qu'est-ce qui a disparu ? » stage of the current question (null for the other types). */
+export function missingStage(s: PlayerState): 'memo' | 'answer' | null {
+  return s.prompt?.index === s.questionIndex ? (s.prompt.missing?.stage ?? null) : null;
+}
+
 /** « Couleurs perdues » stage of the current question (null for the other types). */
 export function colorsStage(s: PlayerState): 'memo' | 'answer' | null {
   return s.prompt?.index === s.questionIndex ? (s.prompt.colors?.stage ?? null) : null;

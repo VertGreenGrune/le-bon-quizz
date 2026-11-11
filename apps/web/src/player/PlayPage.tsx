@@ -46,6 +46,7 @@ import { useWakeLock } from './useWakeLock';
 import { CancelAnswerButton } from './cancelAnswer';
 import { ListPad, ListResultLines, listResultTitle } from './list';
 import { ColorsAnswered, ColorsMemo, ColorsPad, ColorsResultLines } from './colors';
+import { MissingMemo } from './missing';
 import { getTheme, useTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
@@ -185,6 +186,8 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
             hints={jokerEffects(s).colorHints}
           />
         );
+      if (s.prompt?.type === 'MISSING' && s.prompt.missing?.stage === 'memo')
+        return <MissingMemo />;
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
       return <AnswerScreen s={s} prompt={s.prompt!} effects={jokerEffects(s)} />;
@@ -392,7 +395,8 @@ function AnswerScreen({
         initial={previous && 'order' in previous ? previous.order : undefined}
       />
     );
-  if (prompt.type === 'PIN' && prompt.imageUrl)
+  // « Qu'est-ce qui a disparu ? »: the same screen on the picture « après » (T59).
+  if ((prompt.type === 'PIN' || prompt.type === 'MISSING') && prompt.imageUrl)
     return (
       <PinAnswer
         imageUrl={prompt.imageUrl}

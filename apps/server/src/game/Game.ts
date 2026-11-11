@@ -79,6 +79,7 @@ import {
 } from './questionTypes/draw.js';
 import { checkListGuess, foundAll, listStatus } from './questionTypes/list.js';
 import { colorsHints, newColors, startColorsAnswer } from './questionTypes/colors.js';
+import { startMissingAnswer } from './questionTypes/missing.js';
 import { Jokers } from './jokers.js';
 import {
   ReplayRandom,
@@ -419,7 +420,8 @@ export class Game {
                 this.recordAnswer(player, given, responseMs),
               rescore: (player, given) =>
                 this.scoreAnswer(player, given, player.answer!.responseMs),
-              memorizing: () => this.setup.colors?.stage === 'memo',
+              memorizing: () =>
+                this.setup.colors?.stage === 'memo' || this.setup.missing?.stage === 'memo',
               colorHints: () =>
                 this.setup.colors ? colorsHints(this.setup.colors, this.jokerRandom.next) : null,
               bluffLies: (playerId) =>
@@ -1307,7 +1309,11 @@ export class Game {
     const question = this.currentQuestion;
     if (!question) return;
     // « Couleurs perdues »: stage 1 = memorizing (`memoSec`).
-    const limitMs = (question.type === 'COLORS' ? question.memoSec : question.timeLimitSec) * 1000;
+    // « Qu'est-ce qui a disparu ? »: stage 1 = memorizing « avant » (`memoSec`).
+    const limitMs =
+      (question.type === 'COLORS' || question.type === 'MISSING'
+        ? question.memoSec
+        : question.timeLimitSec) * 1000;
     this.setPhase('ANSWERING', limitMs);
     this.answeringStartedAt = Date.now();
     this.presentIds.clear();
@@ -1333,6 +1339,11 @@ export class Game {
     const colors = this.setup.colors;
     if (this.phase === 'ANSWERING' && question?.type === 'COLORS' && colors?.stage === 'memo') {
       startColorsAnswer(colors);
+      return this.startSecondStage(question.timeLimitSec * 1000);
+    }
+    const missing = this.setup.missing;
+    if (this.phase === 'ANSWERING' && question?.type === 'MISSING' && missing?.stage === 'memo') {
+      startMissingAnswer(missing);
       return this.startSecondStage(question.timeLimitSec * 1000);
     }
     if (this.phase === 'ANSWERING' && question?.type === 'BLUFF' && bluff?.stage === 'write') {
@@ -1833,7 +1844,8 @@ export class Game {
     return {
       index: this.questionIndex,
       answer: answerText(q, this.setup.draw?.word, this.setup.colors?.colors),
-      ...(q.type === 'PIN' && q.imageUrl && { pin: { imageUrl: q.imageUrl, zone: q.zone } }),
+      ...((q.type === 'PIN' || q.type === 'MISSING') &&
+        q.imageUrl && { pin: { imageUrl: q.imageUrl, zone: q.zone } }),
       ...(explanation && { explanation }),
     };
   }
