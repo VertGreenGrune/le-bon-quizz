@@ -21,6 +21,7 @@ import {
 import { playJoker } from './playerStore';
 import {
   bluffStage,
+  colorsStage,
   jokerEffects,
   myTeam,
   type PlayerScreen,
@@ -62,7 +63,9 @@ export function jokerBarMode(s: PlayerState, screen: PlayerScreen): JokerBarMode
   if (screen !== 'answer') return 'bar';
   const type = s.prompt?.index === s.questionIndex ? s.prompt.type : undefined;
   const fullHeight =
-    (type !== undefined && FULL_HEIGHT_TYPES.has(type)) || bluffStage(s) === 'write';
+    (type !== undefined && FULL_HEIGHT_TYPES.has(type)) ||
+    bluffStage(s) === 'write' ||
+    colorsStage(s) === 'answer';
   return fullHeight ? 'chip' : 'bar';
 }
 
@@ -381,7 +384,9 @@ function JokerSheet({
 /** Gel: over the answer controls while the player is frozen (pauses excluded). */
 export function FrozenOverlay({ s }: { s: PlayerState }) {
   // « Mytho ! »: the Gel only blocks the vote, not the writing of the lie.
-  const frozen = bluffStage(s) === 'write' ? undefined : jokerEffects(s).frozen;
+  // « Couleurs perdues »: nor the memorizing (the Gel blocks the start of the answers).
+  const frozen =
+    bluffStage(s) === 'write' || colorsStage(s) === 'memo' ? undefined : jokerEffects(s).frozen;
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!frozen) return;

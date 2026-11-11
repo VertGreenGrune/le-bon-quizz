@@ -47,6 +47,14 @@ import {
   settleList,
   type ListState,
 } from './list.js';
+import {
+  colorsPrompt,
+  colorsResult,
+  colorsReveal,
+  colorsShow,
+  judgeColors,
+  type ColorsState,
+} from './colors.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
 import { wordCloud } from './wordCloud.js';
@@ -58,7 +66,7 @@ import { wordCloud } from './wordCloud.js';
  */
 export type ExtraQuestion = Extract<
   Question,
-  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' | 'DRAW' | 'LIST' }
+  { type: 'ORDER' | 'PIN' | 'WHO_OF_US' | 'WORD_CLOUD' | 'BLUFF' | 'DRAW' | 'LIST' | 'COLORS' }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
 
@@ -70,7 +78,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'WORD_CLOUD' ||
     q.type === 'BLUFF' ||
     q.type === 'DRAW' ||
-    q.type === 'LIST'
+    q.type === 'LIST' ||
+    q.type === 'COLORS'
   );
 }
 
@@ -84,6 +93,8 @@ export interface QuestionSetup {
   draw?: DrawState;
   /** LIST: the items each player found. */
   list?: ListState;
+  /** COLORS: the board, its colors and the stage (set by `Game`, with its random source). */
+  colors?: ColorsState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -113,6 +124,7 @@ export function extraShowFields(
   }
   if (q.type === 'DRAW' && setup.draw) return { draw: drawShow(setup.draw, byId(players)) };
   if (q.type === 'LIST') return { list: { total: q.items.length } };
+  if (q.type === 'COLORS' && setup.colors) return colorsShow(q, setup.colors);
   return {};
 }
 
@@ -142,6 +154,8 @@ export function extraPromptFields(
       return setup.draw ? { draw: drawPrompt(setup.draw, byId(players), playerId) } : {};
     case 'LIST':
       return { list: listPrompt(q, setup.list!, playerId) };
+    case 'COLORS':
+      return setup.colors ? colorsPrompt(q, setup.colors) : {};
   }
 }
 
@@ -198,6 +212,8 @@ export function judgeExtra(
       const { responseMs: _ms, ...answer } = listAnswer(q, setup.list!, playerId);
       return answer;
     }
+    case 'COLORS':
+      return { ...none, ...judgeColors(setup.colors!, given, timePoints) };
   }
 }
 
@@ -286,6 +302,8 @@ export function extraRevealDetails(
       return setup.draw ? drawReveal(setup.draw, byId(players)) : {};
     case 'LIST':
       return { list: listReveal(q, setup.list!, players) };
+    case 'COLORS':
+      return setup.colors ? { colors: colorsReveal(setup.colors, answers, players) } : {};
   }
 }
 
@@ -300,6 +318,7 @@ export function extraResultFields(
   if (q.type === 'BLUFF') return bluffResult(q, setup.bluff!, player, byId(players));
   if (q.type === 'DRAW' && setup.draw) return drawResult(setup.draw, player, byId(players));
   if (q.type === 'LIST') return { list: listResult(q, setup.list!, player) };
+  if (q.type === 'COLORS' && setup.colors) return { colors: colorsResult(setup.colors, player) };
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {

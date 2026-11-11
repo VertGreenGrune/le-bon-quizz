@@ -55,6 +55,14 @@ describe('joker bar placement', () => {
     expect(jokerBarMode(phone({ type: 'TYPE_ANSWER', maxLength: 40 }), 'answer')).toBe('chip');
     const write = { stage: 'write', maxLength: 40 } as const;
     expect(jokerBarMode(phone({ type: 'BLUFF', bluff: write }), 'answer')).toBe('chip');
+    // « Couleurs perdues »: the big bar while memorizing, the chip on the board (T58).
+    expect(jokerBarMode(phone({ type: 'COLORS', colors: { stage: 'memo' } }), 'answer')).toBe(
+      'bar',
+    );
+    const board = { cols: 2, rows: 2, spots: [] };
+    expect(
+      jokerBarMode(phone({ type: 'COLORS', colors: { stage: 'answer', board } }), 'answer'),
+    ).toBe('chip');
   });
 
   it('is hidden outside the question screens, while paused and without jokers here', () => {

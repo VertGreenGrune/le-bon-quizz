@@ -680,4 +680,62 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     // Alice drew (Bob, the only guesser, found it: +1000), Bob found it.
     expect(report.results.every((r) => r.score > 0)).toBe(true);
   });
+
+  it('keeps a « Couleurs perdues » question and saves every player’s board', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Les couleurs du tableau ?',
+        type: 'COLORS',
+        imageUrl: 'https://example.com/uploads/tableau.png',
+        memoSec: 15,
+        cells: 6,
+        zones: [
+          { x: 0.2, y: 0.3, radius: 0.1, color: 0 },
+          { x: 0.7, y: 0.6, radius: 0.1, color: 4 },
+        ],
+        timeLimitSec: 30,
+        basePoints: 1000,
+      },
+      {
+        text: 'Formes',
+        type: 'COLORS',
+        memoSec: 20,
+        cells: 9,
+        zones: [],
+        timeLimitSec: 25,
+        basePoints: 2000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Couleurs', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next(); // intro → memorizing
+    game.next(); // → answers
+    game.answer(alice.id, 0, { colors: [0, 4] });
+    game.answer(bob.id, 0, { colors: [0, 1] });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({ type: 'COLORS', correctCount: 1, answerCount: 2 });
+    expect(report.questions[0]!.details.colors).toMatchObject({
+      colors: [0, 4],
+      zones: [2, 1],
+      answers: [
+        { nickname: 'Alice', colors: [0, 4], right: 2 },
+        { nickname: 'Bob', colors: [0, 1], right: 1 },
+      ],
+    });
+  });
 });

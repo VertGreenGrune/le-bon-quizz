@@ -28,6 +28,7 @@ import { BluffHint, BluffReveal } from './bluffScreens';
 import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { DrawIntroLine, DrawStage } from './drawScreens';
 import { ListStage } from './listScreens';
+import { ColorsStage } from './colorsScreens';
 import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -338,6 +339,8 @@ export function QuestionScreen({
             />
           ) : question.type === 'LIST' ? (
             <ListStage question={question} status={list} reveal={reveal?.list} instant={instant} />
+          ) : question.type === 'COLORS' ? (
+            <ColorsStage question={question} reveal={reveal?.colors} instant={instant} />
           ) : reveal ? (
             reveal.buzzer ? (
               <BuzzerRevealView reveal={reveal.buzzer} instant={instant} />

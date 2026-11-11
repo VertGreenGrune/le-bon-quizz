@@ -2910,7 +2910,7 @@ pnpm format:check` before finishing.
 
 ### T58 — « Couleurs perdues » (color memory)
 
-- **Status:** in-progress (agent T58)
+- **Status:** done
 - **Depends on:** T57 merged. Wave 10, ports 3058 / 5258.
 - **User idea:** players see a colored picture; after 20 s the colors disappear and they must put
   the colors back with a palette.
@@ -2940,6 +2940,53 @@ pnpm format:check` before finishing.
   - **Jokers:** 🎯 50/50 = half of the zones already colored right on that phone; Gel, Double,
     Bouclier, Voleur, Sablier as usual; no Brouilleur, no Copieur. No buzzer.
   - Works with 12 zones on an iPhone SE.
+- **Summary:** shared: new `colors.ts` (`COLOR_PALETTE` — Rouge, Orange, Jaune, Vert, Bleu, Violet,
+  Rose, Noir —, `COLOR_SHAPES` (8), limits / defaults, `ColorZoneSchema`, `ColorBoard` /
+  `ColorSpot`, `colorGrid` (4 → 2 × 2 … 12 → 4 × 3), `generatedBoard` (last row centred),
+  `colorsRight`, `colorsPoints`, `colorName`); `quiz.ts` `COLORS` in the union (`memoSec` 5–60
+  default 20, `cells` 4–12 default 6, `zones` 0–12 — picture ⇔ ≥ 2 zones, no image effect —,
+  `timeLimitSec` default 30), `answerText(q, drawWord?, boardColors?)`; `jokers.ts` line (no
+  Brouilleur, no Copieur); contract (`events.ts`, additive): `player:answer { colors }`,
+  `question:show.colors`, `question:prompt.colors`, `RevealDetails.colors` (`ColorsReveal`),
+  `player:result.colors`, `JokerEffects.colorHints`. Server: `game/questionTypes/colors.ts`
+  (`newColors` — picture zones, or shapes shuffled + random colors, never all the same —,
+  `startColorsAnswer`, `colorsShow` / `colorsPrompt` per stage, `judgeColors`, `colorsHints`,
+  `colorsReveal`, `colorsResult`), one line per hook in `questionTypes/index.ts`; `Game.ts`: the
+  board drawn at QUESTION_INTRO with the game's random source, the memo stage uses `memoSec`,
+  `finishAnswering` starts the answer stage through a new `startSecondStage(limitMs,
+  beforePrompts?)` (the « Mytho ! » vote now uses it too), `Answer.colors`, the remote's answer gets
+  the drawn colors; `jokers.ts`: 50/50 → `colorHints` (ctx `colorHints`), Gel played while
+  memorizing blocks the first 5 s of the answers (ctx `memorizing`). Migration
+  `20261112058000_colors`, `quizzes.service.ts` config `{ memoSec, cells, zones }`, `quiz:import`
+  refuses a missing picture when the question has zones. Web: `components/ColorBoard.tsx`
+  (`ColorBoardView`: generated SVG shapes or picture + round zones; colored / grey, numbers, ✓ / ✗
+  marks, labels, selection, `fit` to its parent with a ResizeObserver; text sized in container
+  units), `lib/colors.ts` (shape paths, fit box, phone painting helpers); TV
+  `host/colorsScreens.tsx` (« 👀 Mémorisez les couleurs ! » + colored board, « 🎨 À vous ! » + grey
+  numbered board, reveal: colored board with « n / m » per zone + every player's mini board), icon
+  🖍️; phone `player/colors.tsx` (« 👀 Regarde l’écran et retiens les couleurs ! » with no board,
+  then the grey board + 4 × 2 palette + « Valider (n/m) »: tap a zone then a color, the next empty
+  zone is selected, the same color again empties it, 50/50 zones pre-colored and locked; answered
+  screen shows the board; result « n / m bonnes couleurs » + the right board with ✓ / ✗); joker
+  chip on the answer stage, no Gel overlay while memorizing; editor `editor/ColorsFields.tsx`
+  (« 🔷 Formes au hasard » with a sample board and a shape count, or « 🖼️ Zones sur une image »:
+  click to add, palette per zone, size, remove; memo time) + draft fields `colorSource` /
+  `colorCells` / `colorZones` / `memoSec`; report `reports/colorsCard.tsx`. Tests:
+  `Game.colors.test.ts` (16: schema, helpers, nothing in phone frames while memorizing, stage
+  switch + timers, no colors before the reveal, scoring full / partial / none, wrong kinds,
+  generated board, cancel, rejoin in each stage + TV resync, pause during the memo, « Passer », teams,
+  Survie, 50/50 / no Copieur / Brouilleur, Gel during the memo, Double + Sablier), persistence round
+  trip + saved reveal (Postgres), web `lib/colors.test.ts`, `editor/draft.colors.test.ts`, joker bar
+  placement; e2e `e2e/colors.spec.ts` (picture board + 12-shape board, Pixel 7 + iPhone SE, frames
+  checked, reveal, report). Screenshots checked (TV 1600×900 memo / answer / reveal for both
+  sources, Pixel 7, iPhone SE with 12 zones: palette and « Valider » fully on screen, editor, report).
+- **Deviations / notes:** (1) The question fields are flat (`cells`, `zones`, `memoSec`), like the
+  other types' settings, not under a `colors` object. (2) A generated board's shapes are all
+  different up to 8 (then repeat); colors may repeat but never all the same. (3) While memorizing,
+  the picture board shows its zones as numbered dashed circles on the TV (the generated board has no
+  numbers until the answers). (4) A phone that reloads during the answer stage starts with an empty
+  board (its taps aren't kept). (5) No « ✅ Accepter » (not an accept kind). **After merging, run
+  `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones / a real TV.
 
 ### T59 — « Qu'est-ce qui a disparu ? » (missing element)
 
@@ -3480,3 +3527,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   looking at its silhouette — an unreadable black blob — and replaced by Scorvol. Typed answers
   accept the English names, and were tested against 29 realistic inputs. Imported (private) for
   vachet.clement.es2@gmail.com.
+- 2026-11-12, T58 agent (additive, PLAN.md §3–§5): new `packages/shared/src/colors.ts` (exported);
+  `QuestionType` gains `COLORS`; `AnswerInput` / `PlayerAnswerPayload` gain `{ colors: number[] }`
+  (code switching on the answer kind must handle it); `QuestionShowPayload.colors?`,
+  `QuestionPromptPayload.colors?`, `RevealDetails.colors?` (`ColorsReveal`),
+  `PlayerResultPayload.colors?`, `JokerEffects.colorHints?`; `answerText` takes an optional third
+  argument (`boardColors`). Server: `Answer.colors?`, `QuestionSetup.colors?`, `JokerContext`
+  gains optional `memorizing` / `colorHints`; `Game.startSecondStage` is shared by « Mytho ! » and
+  « Couleurs perdues » (wave 10 two-stage types: reuse it). Migration `20261112058000_colors`.

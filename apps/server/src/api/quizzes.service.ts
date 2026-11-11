@@ -1,6 +1,8 @@
 import {
   AUDIO_DEFAULT_DURATION_SEC,
   BLUFF_DEFAULT_VOTE_SEC,
+  COLORS_DEFAULT_CELLS,
+  COLORS_DEFAULT_MEMO_SEC,
   LIBRARY_LIMIT,
   type LibraryQuery,
   type LibraryQuiz,
@@ -44,7 +46,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'PIN' }>, 'zone'> &
   Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'> &
   Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'> &
-  Pick<Extract<Question, { type: 'DRAW' }>, 'words'>;
+  Pick<Extract<Question, { type: 'DRAW' }>, 'words'> &
+  Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -99,6 +102,14 @@ function toQuestion(qu: QuestionRow): Question {
         items: config.items ?? [],
         typoTolerance: config.typoTolerance ?? true,
       };
+    case 'COLORS':
+      return {
+        ...base,
+        type: qu.type,
+        memoSec: config.memoSec ?? COLORS_DEFAULT_MEMO_SEC,
+        cells: config.cells ?? COLORS_DEFAULT_CELLS,
+        zones: config.zones ?? [],
+      };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -120,6 +131,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'BLUFF') return { truth: qu.truth, voteTimeSec: qu.voteTimeSec };
   if (qu.type === 'DRAW') return { words: qu.words };
   if (qu.type === 'LIST') return { items: qu.items, typoTolerance: qu.typoTolerance };
+  if (qu.type === 'COLORS') return { memoSec: qu.memoSec, cells: qu.cells, zones: qu.zones };
   return undefined;
 }
 

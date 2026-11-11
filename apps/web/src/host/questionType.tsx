@@ -14,6 +14,7 @@ const ICONS: Record<QuestionType, string> = {
   BLUFF: '🤥',
   DRAW: '🎨',
   LIST: '📝',
+  COLORS: '🖍️',
 };
 
 /** « 🎚️ Curseur », « 🔔 Buzzer · Réponse libre »… — the type shown on the TV. */

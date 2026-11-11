@@ -4,6 +4,7 @@ export * from './jokers.js';
 export * from './survival.js';
 export * from './quiz.js';
 export * from './draw.js';
+export * from './colors.js';
 export * from './events.js';
 export * from './accept.js';
 export * from './demo-quiz.js';

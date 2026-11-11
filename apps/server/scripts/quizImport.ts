@@ -77,7 +77,9 @@ export async function prepareQuiz(
       const ref = q.imageUrl;
       q.imageUrl = await media(ref, 'image');
       if (!q.imageUrl) {
-        if (q.type === 'PIN') throw new Error(`Image introuvable : ${String(ref)}`);
+        // PIN, « Couleurs perdues » zones: the picture is the question.
+        if (q.type === 'PIN' || (q.type === 'COLORS' && Array.isArray(q.zones) && q.zones.length))
+          throw new Error(`Image introuvable : ${String(ref)}`);
         warn(`Question ${i + 1} : image ${String(ref)} absente, question importée sans l’image`);
         delete q.imageUrl;
         delete q.imageEffect;

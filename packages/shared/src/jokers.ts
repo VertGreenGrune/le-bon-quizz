@@ -169,6 +169,9 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   DRAW: { jokers: false, unavailable: [], scramble: false },
   // « Liste chrono » (T57): no joker (many answers per player); a pending attack waits.
   LIST: { jokers: false, unavailable: [], scramble: false },
+  // « Couleurs perdues » (T58): 50/50 colors half of the zones; no buttons to scramble, nothing
+  // to copy (everyone saw the same board).
+  COLORS: { jokers: true, unavailable: ['scramble', 'copy'], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

@@ -78,6 +78,7 @@ import {
   startDraw,
 } from './questionTypes/draw.js';
 import { checkListGuess, foundAll, listStatus } from './questionTypes/list.js';
+import { colorsHints, newColors, startColorsAnswer } from './questionTypes/colors.js';
 import { Jokers } from './jokers.js';
 import {
   ReplayRandom,
@@ -147,6 +148,8 @@ export interface Answer {
   order?: number[];
   point?: PinPoint;
   votedFor?: string;
+  /** COLORS: a palette index per zone (-1 = none). */
+  colors?: number[];
   responseMs: number;
   correct: boolean;
   points: number;
@@ -416,6 +419,9 @@ export class Game {
                 this.recordAnswer(player, given, responseMs),
               rescore: (player, given) =>
                 this.scoreAnswer(player, given, player.answer!.responseMs),
+              memorizing: () => this.setup.colors?.stage === 'memo',
+              colorHints: () =>
+                this.setup.colors ? colorsHints(this.setup.colors, this.jokerRandom.next) : null,
               bluffLies: (playerId) =>
                 this.setup.bluff?.stage === 'vote' ? otherLies(this.setup.bluff, playerId) : null,
               transport,
@@ -1266,6 +1272,9 @@ export class Game {
       const draw = startDraw(question, players, this.drawRotation, this.teamIds, this.random);
       this.setup = { ...this.setup, draw };
     }
+    // « Couleurs perdues »: a generated board is drawn now (the game's random source).
+    if (question.type === 'COLORS')
+      this.setup = { ...this.setup, colors: newColors(question, this.random) };
     this.buzzer = question.buzzer ? newBuzzerRound() : null;
     this.excused.clear();
     this.cancels.reset();
@@ -1297,7 +1306,8 @@ export class Game {
   private enterAnswering(): void {
     const question = this.currentQuestion;
     if (!question) return;
-    const limitMs = question.timeLimitSec * 1000;
+    // « Couleurs perdues »: stage 1 = memorizing (`memoSec`).
+    const limitMs = (question.type === 'COLORS' ? question.memoSec : question.timeLimitSec) * 1000;
     this.setPhase('ANSWERING', limitMs);
     this.answeringStartedAt = Date.now();
     this.presentIds.clear();
@@ -1320,22 +1330,33 @@ export class Game {
   private finishAnswering(): void {
     const question = this.currentQuestion;
     const bluff = this.setup.bluff;
+    const colors = this.setup.colors;
+    if (this.phase === 'ANSWERING' && question?.type === 'COLORS' && colors?.stage === 'memo') {
+      startColorsAnswer(colors);
+      return this.startSecondStage(question.timeLimitSec * 1000);
+    }
     if (this.phase === 'ANSWERING' && question?.type === 'BLUFF' && bluff?.stage === 'write') {
       startVote(question, bluff);
-      // Same phase, new timer: pauses, rejoins and `responseMs` work as for any question.
-      this.setPhase('ANSWERING', question.voteTimeSec * 1000);
-      this.answeringStartedAt = Date.now();
-      for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
-      this.broadcastState();
-      this.transport.toHost('question:show', this.showPayload());
-      this.jokers?.onBluffVote();
-      this.sendPrompts();
-      this.sendAnswerCount();
-      this.checkPause();
-      if (!this.pause && this.allAnswered()) this.enterReveal();
-      return;
+      return this.startSecondStage(question.voteTimeSec * 1000, () => this.jokers?.onBluffVote());
     }
     this.enterReveal();
+  }
+
+  /**
+   * Second stage of a two-stage question (« Mytho ! » vote, « Couleurs perdues » answers): same
+   * phase, new timer, so pauses, rejoins and `responseMs` work as for any question.
+   */
+  private startSecondStage(limitMs: number, beforePrompts?: () => void): void {
+    this.setPhase('ANSWERING', limitMs);
+    this.answeringStartedAt = Date.now();
+    for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
+    this.broadcastState();
+    this.transport.toHost('question:show', this.showPayload());
+    beforePrompts?.();
+    this.sendPrompts();
+    this.sendAnswerCount();
+    this.checkPause();
+    if (!this.pause && this.allAnswered()) this.enterReveal();
   }
 
   private enterReveal(): void {
@@ -1811,7 +1832,7 @@ export class Game {
     const explanation = questionExplanation(q);
     return {
       index: this.questionIndex,
-      answer: answerText(q, this.setup.draw?.word),
+      answer: answerText(q, this.setup.draw?.word, this.setup.colors?.colors),
       ...(q.type === 'PIN' && q.imageUrl && { pin: { imageUrl: q.imageUrl, zone: q.zone } }),
       ...(explanation && { explanation }),
     };

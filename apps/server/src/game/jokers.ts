@@ -51,6 +51,10 @@ export interface JokerContext {
    * are still being written).
    */
   bluffLies?(playerId: string): number[] | null;
+  /** « Couleurs perdues »: still memorizing (stage 1) — answers come in stage 2. */
+  memorizing?(): boolean;
+  /** « Couleurs perdues » 50/50: half of the zones with their right color. */
+  colorHints?(): { zone: number; color: number }[] | null;
   transport: GameTransport;
 }
 
@@ -486,7 +490,9 @@ export class Jokers {
    */
   private freezeNow(target: Player, th: JokerHand, by: LobbyMember): void {
     const q = this.ctx.question();
-    const writing = q?.type === 'BLUFF' && this.ctx.bluffLies?.(target.id) == null;
+    // « Couleurs perdues »: played while memorizing, it blocks the start of the answers.
+    const writing =
+      (q?.type === 'BLUFF' && this.ctx.bluffLies?.(target.id) == null) || !!this.ctx.memorizing?.();
     const from = this.ctx.phase() === 'ANSWERING' && !writing ? this.ctx.elapsedMs() : 0;
     th.frozenMs = Math.max(th.frozenMs, from + FREEZE_MS);
     th.effects.frozen = { ms: th.frozenMs, by };
@@ -567,6 +573,11 @@ export class Jokers {
         return {
           sliderRange: { min: round(min + low * step), max: round(min + (low + span) * step) },
         };
+      }
+      case 'COLORS': {
+        const hints = this.ctx.colorHints?.();
+        if (!hints?.length) throw refuse('Le 50/50 ne sert à rien ici');
+        return { colorHints: hints };
       }
       case 'TYPE_ANSWER': {
         const answer = q.acceptedAnswers[0]!.trim().replace(ARTICLE, '');
