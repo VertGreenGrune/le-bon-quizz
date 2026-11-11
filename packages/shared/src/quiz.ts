@@ -1,4 +1,17 @@
 import { z } from 'zod';
+import {
+  COLORS_DEFAULT_CELLS,
+  COLORS_DEFAULT_MEMO_SEC,
+  COLORS_DEFAULT_SEC,
+  COLORS_MAX_CELLS,
+  COLORS_MAX_MEMO_SEC,
+  COLORS_MAX_ZONES,
+  COLORS_MIN_CELLS,
+  COLORS_MIN_MEMO_SEC,
+  COLORS_MIN_ZONES,
+  ColorZoneSchema,
+  colorName,
+} from './colors.js';
 
 /**
  * - `MCQ` / `TRUE_FALSE`: shape buttons, one or more correct choices.
@@ -16,6 +29,8 @@ import { z } from 'zod';
  *   the others type guesses.
  * - `LIST` (« Liste chrono », T57): players type as many items of a list as they can (« Citez les
  *   7 nains »); points per item found.
+ * - `COLORS` (« Couleurs perdues », T58): a colored board on the TV, then grey: players put the
+ *   colors back with a palette; points per zone right.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -30,6 +45,7 @@ export const QuestionType = z.enum([
   'BLUFF',
   'DRAW',
   'LIST',
+  'COLORS',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -381,6 +397,47 @@ const ListQuestion = z
     { message: 'Items must be different', path: ['items'] },
   );
 
+/**
+ * « Couleurs perdues » (T58): a generated board of `cells` shapes with random colors (drawn when
+ * the question starts), or `imageUrl` + `zones` (each with the color it has on the picture).
+ * `memoSec` to memorize, then `timeLimitSec` to put the colors back.
+ */
+const ColorsQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('COLORS'),
+    timeLimitSec: questionBase.timeLimitSec.default(COLORS_DEFAULT_SEC),
+    memoSec: z
+      .number()
+      .int()
+      .min(COLORS_MIN_MEMO_SEC)
+      .max(COLORS_MAX_MEMO_SEC)
+      .default(COLORS_DEFAULT_MEMO_SEC),
+    cells: z
+      .number()
+      .int()
+      .min(COLORS_MIN_CELLS)
+      .max(COLORS_MAX_CELLS)
+      .default(COLORS_DEFAULT_CELLS),
+    zones: z.array(ColorZoneSchema).max(COLORS_MAX_ZONES).default([]),
+  })
+  .refine((q) => q.zones.length === 0 || q.zones.length >= COLORS_MIN_ZONES, {
+    message: 'At least 2 zones',
+    path: ['zones'],
+  })
+  .refine((q) => q.zones.length === 0 || !!q.imageUrl, {
+    message: 'Zones need an image',
+    path: ['imageUrl'],
+  })
+  .refine((q) => !q.imageUrl || q.zones.length > 0, {
+    message: 'Place the zones on the image',
+    path: ['zones'],
+  })
+  .refine((q) => !q.imageEffect || q.imageEffect === 'none', {
+    message: 'No image effect on this question',
+    path: ['imageEffect'],
+  });
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -398,6 +455,7 @@ export const QuestionSchema = z.preprocess(
       BluffQuestion,
       DrawQuestion,
       ListQuestion,
+      ColorsQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -418,6 +476,7 @@ export type WhoOfUsQuestion = Extract<Question, { type: 'WHO_OF_US' }>;
 export type BluffQuestion = Extract<Question, { type: 'BLUFF' }>;
 export type DrawQuestion = Extract<Question, { type: 'DRAW' }>;
 export type ListQuestion = Extract<Question, { type: 'LIST' }>;
+export type ColorsQuestion = Extract<Question, { type: 'COLORS' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -460,9 +519,10 @@ export function questionExplanation(q: Question): string | undefined {
  * The right answer in words, one line per accepted answer / item: what the host remote shows
  * secretly (`remote:answer`, T39) and what the host judges a « Buzzer » answer against.
  * `drawWord` = the word picked for a « Dessine-moi » (drawn when the question starts). Types
- * without a right answer (POLL, WHO_OF_US, WORD_CLOUD) → [].
+ * without a right answer (POLL, WHO_OF_US, WORD_CLOUD) → []. `boardColors`: the colors of a
+ * generated « Couleurs perdues » board.
  */
-export function answerText(q: Question, drawWord?: string): string[] {
+export function answerText(q: Question, drawWord?: string, boardColors?: number[]): string[] {
   switch (q.type) {
     case 'MCQ':
     case 'TRUE_FALSE':
@@ -486,6 +546,11 @@ export function answerText(q: Question, drawWord?: string): string[] {
       return drawWord ? [drawWord] : [];
     case 'LIST':
       return q.items.map(listItemLabel);
+    case 'COLORS':
+      // `boardColors`: the colors of a generated board (drawn when the question starts).
+      return (q.zones.length ? q.zones.map((z) => z.color) : (boardColors ?? [])).map(
+        (c, i) => `${i + 1}. ${colorName(c)}`,
+      );
     default:
       return [];
   }

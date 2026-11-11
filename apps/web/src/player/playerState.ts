@@ -473,6 +473,11 @@ export function bluffStage(s: PlayerState): 'write' | 'vote' | null {
   return s.prompt?.index === s.questionIndex ? (s.prompt.bluff?.stage ?? null) : null;
 }
 
+/** « Couleurs perdues » stage of the current question (null for the other types). */
+export function colorsStage(s: PlayerState): 'memo' | 'answer' | null {
+  return s.prompt?.index === s.questionIndex ? (s.prompt.colors?.stage ?? null) : null;
+}
+
 const errorMessages: Partial<Record<ErrorCode, string>> = {
   GAME_NOT_FOUND: 'Aucune partie avec ce code PIN.',
   GAME_ALREADY_STARTED: 'La partie a déjà commencé.',

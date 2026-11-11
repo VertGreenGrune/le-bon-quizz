@@ -45,6 +45,7 @@ import { chooseTeam, leaveGame, resumeSession, sendAnswer, usePlayerState } from
 import { useWakeLock } from './useWakeLock';
 import { CancelAnswerButton } from './cancelAnswer';
 import { ListPad, ListResultLines, listResultTitle } from './list';
+import { ColorsAnswered, ColorsMemo, ColorsPad, ColorsResultLines } from './colors';
 import { getTheme, useTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
@@ -174,6 +175,16 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
         );
       if (role === 'guesser') return <GuessPad s={s} />;
       if (s.prompt?.type === 'LIST' && s.prompt.list) return <ListPad s={s} />;
+      if (s.prompt?.type === 'COLORS' && s.prompt.colors)
+        return s.prompt.colors.stage === 'memo' ? (
+          <ColorsMemo />
+        ) : (
+          <ColorsPad
+            key={s.prompt.index}
+            board={s.prompt.colors.board}
+            hints={jokerEffects(s).colorHints}
+          />
+        );
       const copying = copyingTarget(s);
       if (copying) return <CopyWaiting target={copying} />;
       return <AnswerScreen s={s} prompt={s.prompt!} effects={jokerEffects(s)} />;
@@ -597,6 +608,8 @@ function AnsweredValue({ s }: { s: PlayerState }) {
     return <ShapeList indexes={s.myAnswer.choiceIndexes} />;
   const a = s.myAnswer;
   if (a && ('order' in a || 'point' in a || 'playerId' in a)) return <MoreAnswered s={s} />;
+  if (a && 'colors' in a && s.prompt?.colors?.stage === 'answer')
+    return <ColorsAnswered board={s.prompt.colors.board} colors={a.colors} />;
   const label = answerLabel(s);
   if (label !== null) {
     return (
@@ -735,6 +748,12 @@ function Result({ s }: { s: PlayerState }) {
       {r.bluff && <BluffResultLines bluff={r.bluff} />}
       {r.draw && <DrawResultLines draw={r.draw} />}
       {r.list && <ListResultLines list={r.list} />}
+      {r.colors && (
+        <ColorsResultLines
+          colors={r.colors}
+          board={s.prompt?.colors?.stage === 'answer' ? s.prompt.colors.board : undefined}
+        />
+      )}
       {r.jokers && <JokerResultLines results={r.jokers} />}
       <motion.p
         initial={{ opacity: 0 }}

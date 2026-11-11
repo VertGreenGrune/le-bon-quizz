@@ -116,6 +116,7 @@ enum QuestionType {
   BLUFF
   DRAW
   LIST
+  COLORS
 }
 
 model Question {

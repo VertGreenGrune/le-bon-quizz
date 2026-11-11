@@ -15,6 +15,7 @@ import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './Mo
 import { BluffFields } from './BluffFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
+import { ColorsFields } from './ColorsFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -190,7 +191,9 @@ export function QuestionEditor({
             label={
               q.type === 'PIN'
                 ? 'Image (obligatoire : les joueurs la touchent)'
-                : 'Image (facultative)'
+                : q.type === 'COLORS'
+                  ? 'Image (pour un tableau « Zones sur une image »)'
+                  : 'Image (facultative)'
             }
             value={q.imageUrl}
             onChange={(imageUrl) => onChange({ ...q, imageUrl })}
@@ -203,7 +206,9 @@ export function QuestionEditor({
                 ? 'Temps pour écrire'
                 : q.type === 'DRAW'
                   ? 'Temps pour dessiner'
-                  : 'Temps'}
+                  : q.type === 'COLORS'
+                    ? 'Temps pour répondre'
+                    : 'Temps'}
             </span>
             <select
               value={q.timeLimitSec}
@@ -275,7 +280,7 @@ export function QuestionEditor({
           onChange={(audio) => onChange({ ...q, audio })}
           onRevealChange={(audioOnReveal) => onChange({ ...q, audioOnReveal })}
         />
-        {q.imageUrl && q.type !== 'PIN' && q.type !== 'DRAW' && (
+        {q.imageUrl && q.type !== 'PIN' && q.type !== 'DRAW' && q.type !== 'COLORS' && (
           <ImageEffectField
             imageUrl={q.imageUrl}
             value={q.imageEffect}
@@ -302,6 +307,8 @@ export function QuestionEditor({
         <DrawFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'LIST' ? (
         <ListFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'COLORS' ? (
+        <ColorsFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

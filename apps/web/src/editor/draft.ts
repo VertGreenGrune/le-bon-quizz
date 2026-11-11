@@ -1,6 +1,9 @@
 import {
   BLUFF_DEFAULT_VOTE_SEC,
   BLUFF_DEFAULT_WRITE_SEC,
+  COLORS_DEFAULT_CELLS,
+  COLORS_DEFAULT_MEMO_SEC,
+  COLORS_DEFAULT_SEC,
   DRAW_DEFAULT_SEC,
   LIST_DEFAULT_SEC,
   MAX_ACCEPTED_ANSWERS,
@@ -11,6 +14,7 @@ import {
   buzzerAllowed,
   hasRightAnswer,
   type Choice,
+  type ColorZone,
   type ImageEffect,
   type PinZone,
   type Question,
@@ -50,6 +54,14 @@ export interface DraftQuestion {
   words: string[];
   /** LIST (« Liste chrono »): the items to find, one per line (other spellings after « | »). */
   listItems: string[];
+  /**
+   * COLORS (« Couleurs perdues »): a generated board of `colorCells` shapes, or zones on the
+   * picture (`colorZones`, each with its color); `memoSec` to memorize.
+   */
+  colorSource: 'generated' | 'picture';
+  colorCells: number;
+  colorZones: ColorZone[];
+  memoSec: number;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -151,6 +163,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Les joueurs citent un maximum d’éléments d’une liste avant la fin du temps (« Citez les 7 nains »). Chaque élément trouvé rapporte une partie des points.',
   },
+  {
+    type: 'COLORS',
+    label: 'Couleurs perdues',
+    description:
+      'Une image colorée s’affiche à l’écran, puis devient grise : les joueurs remettent les couleurs de mémoire avec une palette. Chaque zone juste rapporte une partie des points.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -174,6 +192,10 @@ export function newQuestion(): DraftQuestion {
     voteTimeSec: BLUFF_DEFAULT_VOTE_SEC,
     words: [],
     listItems: ['', ''],
+    colorSource: 'generated',
+    colorCells: COLORS_DEFAULT_CELLS,
+    colorZones: [],
+    memoSec: COLORS_DEFAULT_MEMO_SEC,
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -223,6 +245,14 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       return { ...draft, words: [...q.words] };
     case 'LIST':
       return { ...draft, listItems: [...q.items], typoTolerance: q.typoTolerance };
+    case 'COLORS':
+      return {
+        ...draft,
+        colorSource: q.zones.length ? 'picture' : 'generated',
+        colorCells: q.cells,
+        colorZones: q.zones.map((z) => ({ ...z })),
+        memoSec: q.memoSec,
+      };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -283,7 +313,10 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
   const base = {
     text: q.text,
     // « Dessine-moi »: the TV shows the drawing, a picture kept in the draft isn't sent.
-    imageUrl: (q.type !== 'DRAW' && q.imageUrl) || undefined,
+    // « Couleurs perdues »: the picture only for a board on a picture.
+    imageUrl:
+      (q.type !== 'DRAW' && (q.type !== 'COLORS' || q.colorSource === 'picture') && q.imageUrl) ||
+      undefined,
     type: q.type,
     timeLimitSec: q.timeLimitSec,
     basePoints: q.basePoints,
@@ -291,7 +324,11 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
     audioOnReveal: q.audio && q.audioOnReveal ? true : undefined,
     // An effect without a picture (removed after choosing it) is dropped; PIN / DRAW have none.
     imageEffect:
-      q.imageUrl && q.imageEffect !== 'none' && q.type !== 'PIN' && q.type !== 'DRAW'
+      q.imageUrl &&
+      q.imageEffect !== 'none' &&
+      q.type !== 'PIN' &&
+      q.type !== 'DRAW' &&
+      q.type !== 'COLORS'
         ? q.imageEffect
         : undefined,
     // Kept in the draft when switching to a type without buzzer (and back), not saved there.
@@ -326,6 +363,13 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         ...base,
         items: kept.listItems.map((i) => q.listItems[i]),
         typoTolerance: q.typoTolerance,
+      };
+    case 'COLORS':
+      return {
+        ...base,
+        memoSec: q.memoSec,
+        cells: q.colorCells,
+        zones: q.colorSource === 'picture' ? q.colorZones : [],
       };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
@@ -417,6 +461,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     items: [...q.items],
     words: [...q.words],
     listItems: [...q.listItems],
+    colorZones: q.colorZones.map((z) => ({ ...z })),
   });
   return { ...draft, questions };
 }
@@ -461,9 +506,34 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
   if (type === 'DRAW' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: DRAW_DEFAULT_SEC };
   // « Liste chrono »: time to type many answers.
   if (type === 'LIST' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: LIST_DEFAULT_SEC };
+  // « Couleurs perdues »: time to put every color back.
+  if (type === 'COLORS' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: COLORS_DEFAULT_SEC };
   // Leaving a type without a right answer: back to the standard points.
   const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
   return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };
+}
+
+// ---------- « Couleurs perdues » ----------
+
+/** Editor: a new zone where the picture was clicked (the color picked last, or red). */
+export function addColorZone(q: DraftQuestion, x: number, y: number): DraftQuestion {
+  const color = q.colorZones.at(-1)?.color ?? 0;
+  const radius = q.colorZones.at(-1)?.radius ?? 0.06;
+  return { ...q, colorZones: [...q.colorZones, { x, y, radius, color }] };
+}
+
+export function updateColorZone(
+  q: DraftQuestion,
+  index: number,
+  patch: Partial<ColorZone>,
+): DraftQuestion {
+  const z = q.colorZones[index];
+  if (!z) return q;
+  return { ...q, colorZones: replaceAt(q.colorZones, index, { ...z, ...patch }) };
+}
+
+export function removeColorZone(q: DraftQuestion, index: number): DraftQuestion {
+  return { ...q, colorZones: q.colorZones.filter((_, i) => i !== index) };
 }
 
 // ---------- Choices ----------

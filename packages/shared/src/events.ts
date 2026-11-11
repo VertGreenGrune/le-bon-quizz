@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { AcceptedAnswers } from './accept.js';
 import { AvatarId } from './avatars.js';
 import { DRAW_MAX_CHUNKS, DrawStrokeSchema, type DrawStroke } from './draw.js';
+import { COLOR_COUNT, COLORS_MAX_ZONES, type ColorBoard } from './colors.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import { JokerType } from './jokers.js';
 import { HauntType, SurvivalHearts } from './survival.js';
@@ -224,6 +225,20 @@ export const PlayerAnswerPayload = z.union([
   }),
   z.strictObject({ ...answerTarget, point: PinPointSchema }),
   z.strictObject({ ...answerTarget, playerId: z.string().min(1).max(64) }),
+  // « Couleurs perdues » (T58): a palette index per zone, -1 = no color.
+  z.strictObject({
+    ...answerTarget,
+    colors: z
+      .array(
+        z
+          .number()
+          .int()
+          .min(-1)
+          .max(COLOR_COUNT - 1),
+      )
+      .min(1)
+      .max(COLORS_MAX_ZONES),
+  }),
 ]);
 
 /** « Buzzer »: the player hits BUZZ on the current question. */
@@ -303,7 +318,8 @@ export type AnswerInput =
   | { value: number }
   | { order: number[] }
   | { point: PinPoint }
-  | { playerId: string };
+  | { playerId: string }
+  | { colors: number[] };
 
 /**
  * « Dessine-moi », `player:answer` ack: `found` (the guess is right — recorded, scored), `close`
@@ -693,6 +709,11 @@ export interface QuestionShowPayload {
   draw?: { drawer?: LobbyMember; hint: string };
   /** « Liste chrono »: the number of items to find (never the items). */
   list?: { total: number };
+  /**
+   * « Couleurs perdues » (T58): the board; its `colors` only while memorizing (stage `memo`,
+   * `timeLimitSec` = `memoSec`), grey in stage `answer`.
+   */
+  colors?: { stage: 'memo' | 'answer'; board: ColorBoard; colors?: number[] };
 }
 
 /**
@@ -747,6 +768,11 @@ export interface QuestionPromptPayload {
   draw?: DrawPrompt;
   /** « Liste chrono »: the number of items, the max length and what this player found already. */
   list?: { total: number; maxLength: number; found: ListFoundItem[] };
+  /**
+   * « Couleurs perdues » (T58): nothing of the board while memorizing (`memo`, `timeLimitSec` =
+   * `memoSec`), then the grey board — the zones' places, never their colors.
+   */
+  colors?: { stage: 'memo' } | { stage: 'answer'; board: ColorBoard };
 }
 
 export interface AnswerCountPayload {
@@ -805,10 +831,27 @@ export interface RevealDetails {
   draw?: DrawReveal;
   /** « Liste chrono »: every item and who found it, then every player's count (most first). */
   list?: ListReveal;
+  /** « Couleurs perdues »: the colored board, per zone how many got it, every player's board. */
+  colors?: ColorsReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
   accepted?: AcceptedAnswers;
+}
+
+export interface ColorsReveal {
+  board: ColorBoard;
+  colors: number[];
+  /** Per zone, how many players put the right color. */
+  zones: number[];
+  /** Every player, best first, no answer last (`colors` null). */
+  answers: {
+    nickname: string;
+    avatar: AvatarId;
+    colors: number[] | null;
+    right: number;
+    points: number;
+  }[];
 }
 
 export interface ListReveal {
@@ -944,6 +987,8 @@ export interface PlayerResultPayload {
   draw?: { word: string; drawer?: LobbyMember; drew: boolean; found: boolean; finders: number };
   /** « Liste chrono »: how many items this player found, out of how many, and the ones missed. */
   list?: { found: number; total: number; missed: string[] };
+  /** « Couleurs perdues »: zones right out of how many, the right colors and the player's. */
+  colors?: { right: number; total: number; colors: number[]; yours?: number[] };
   /**
    * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks
    * (absent without an answer).
@@ -975,6 +1020,8 @@ export interface JokerEffects {
   scrambled?: { by: LobbyMember; choices: { index: number; text: string }[] };
   /** Copieur: the target answered, so did you (copied answer, not shown). */
   copied?: true;
+  /** 50/50, « Couleurs perdues » (T58): zones already colored right on this phone. */
+  colorHints?: { zone: number; color: number }[];
 }
 
 /** To each player of a game with jokers: their hand and what jokers do to them right now. */
