@@ -3056,7 +3056,7 @@ pnpm format:check` before finishing.
 
 ### T60 — « Pas évident ! » (Pointless)
 
-- **Status:** todo
+- **Status:** in-progress (agent T60)
 - **Depends on:** T57 merged (reuses its matching). Wave 10, ports 3060 / 5260.
 - **Idea (BBC « Pointless »):** « Citez un pays d'Afrique » — each player gives **one** answer; the
   rarer your right answer is among the players, the more you score.
