@@ -8,6 +8,7 @@ import {
   type DrawStatus,
   type ListStatus,
   type WagerStatus,
+  type PotatoStatus,
   type DrawStroke,
   type LobbyMember,
   type QuestionRevealPayload,
@@ -31,6 +32,7 @@ import { DrawIntroLine, DrawStage } from './drawScreens';
 import { ListStage } from './listScreens';
 import { WagerStage } from './wagerScreens';
 import { WavelengthIntroLine, WavelengthStage } from './wavelengthScreens';
+import { PotatoRevealView, PotatoStage } from './potatoScreens';
 import { ColorsStage } from './colorsScreens';
 import { MissingStage } from './missingScreens';
 import { PointlessRevealView } from './pointlessScreens';
@@ -269,6 +271,8 @@ export function QuestionScreen({
   drawing = [],
   list = null,
   wager = null,
+  potato = null,
+  paused = false,
   onAccept,
 }: {
   question: QuestionShowPayload | null;
@@ -291,12 +295,34 @@ export function QuestionScreen({
   list?: ListStatus | null;
   /** « Paris sur les réponses »: the stage and who guessed (`game:state.wager`). */
   wager?: WagerStatus | null;
+  /** « Patate chaude »: the holder, the passes, the round's time (`game:state.potato`). */
+  potato?: (PotatoStatus & { at: number }) | null;
+  /** The game is paused (« Patate chaude »: the bomb stops ticking). */
+  paused?: boolean;
   /** Reveal: « ✅ Accepter » a refused answer (T44; MCQ, vrai / faux, réponse libre, curseur). */
   onAccept?: (input: AcceptInput) => void;
 }) {
   if (!question) {
     return <p className="m-auto animate-pulse text-3xl">Chargement de la question…</p>;
   }
+  // « Patate chaude »: no clock (the fuse is secret), the bomb and the holder's sub-question.
+  if (question.type === 'HOT_POTATO')
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-6">
+        <div className="flex flex-col items-center gap-2">
+          <QuestionTypeBadge question={question} className="text-xl" />
+          <h2 className="w-full rounded-2xl bg-white px-8 py-3 text-center text-3xl font-black text-black shadow-lg">
+            {question.text}
+          </h2>
+        </div>
+        {reveal?.potato ? (
+          <PotatoRevealView reveal={reveal.potato} instant={instant} />
+        ) : (
+          <PotatoStage show={question.potato} status={potato} paused={paused} instant={instant} />
+        )}
+        {reveal?.explanation && <ExplanationCard text={reveal.explanation} instant={instant} />}
+      </div>
+    );
   const totalMs = question.timeLimitSec * 1000;
   // Picture effect: unrecognisable at the start of ANSWERING, clear at the end (frozen with the
   // clock while paused).

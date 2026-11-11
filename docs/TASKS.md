@@ -3267,7 +3267,7 @@ pnpm format:check` before finishing.
 
 ### T63 — « Patate chaude » (hot potato round)
 
-- **Status:** in-progress (agent T63)
+- **Status:** done
 - **Depends on:** wave 10 merged. Wave 11 (parallel with T64), ports 3063 / 5263.
 - **Idea:** a bomb passes from player to player; whoever holds it must answer right to pass it;
   when it goes off, the holder loses.
@@ -3289,6 +3289,67 @@ pnpm format:check` before finishing.
   - New `game:state.potato { holder }` (the sub-question only through `question:show` and the
     holder's `question:prompt`), new sounds (tick, explosion; CC0 in `generate-sounds.mjs`).
     Jokers: none. Not cancellable, no buzzer.
+- **Summary:** shared: new `potato.ts` (limits: 3–30 sub-questions, text ≤ 120, 2–4 choices ≤ 75,
+  fuse 10–300 s default 30 / 60, `POTATO_WRONG_LOCK_MS` 2 s, `potatoPassPoints` = `basePoints / 10`,
+  `potatoSurvivorPoints` = `basePoints / 2`, `PotatoSubQuestion`, `PotatoSub`); `quiz.ts`
+  `HOT_POTATO` in the union (`potato: { questions, fuseMinSec, fuseMaxSec }`, `PotatoSubQuestionSchema`
+  with `correct` < choices, min ≤ max), `answerText` = every sub-question « text → answer », not
+  cancellable; `jokers.ts` line (no joker); contract (`events.ts`, additive): `game:state.potato`
+  (`PotatoStatus`: holder, from, elapsedMs, passes), `question:show.potato` (`PotatoShow`: holder,
+  sub, lockMs, fuseMinSec), `question:prompt.potato` (`PotatoPrompt`: `sub` / `lockMs` for the
+  holder only, own passes), `RevealDetails.potato` (`PotatoReveal`), `player:result.potato`, the
+  `player:answer` ack `potato?: PotatoAnswerAck` (`pass` / `wrong`). Server:
+  `game/questionTypes/hotPotato.ts` (`drawFuseMs`, `startPotato` — first holder among the connected
+  players, fuse drawn with the game's random source —, `nextSub` (quiz order, then reshuffled, no
+  repeat across the reshuffle), `pickReceiver` (connected first, never straight back), `answerPotato`,
+  `handOff`, `settlePotato`, payloads, `potatoRemoteAnswer`), one line per hook in
+  `questionTypes/index.ts`; `Game.ts`: the round starts in `enterAnswering` with the fuse as the
+  ANSWERING timer, the holder's answers intercepted in `answer()` (`potatoAnswer`), `sendPotatoTurn`
+  (state + show + prompts + remote answer at each turn), `statePayload` drops `remainingMs` and adds
+  `potato` during the round, only the holder is awaited (`isAwaited`) and the round only ends with
+  the fuse / the host (`allAnswered` = nobody holds it), kick / « Continuer sans » of the holder →
+  `potatoHandOff`, alone = like a poll (streaks, hearts). Migration `20261112063000_hot_potato`,
+  `quizzes.service.ts` config `{ potato }`. Web: editor `editor/PotatoFields.tsx` (sub-questions
+  with shape-coloured choices, ✓ radio for the right one, + / ✕ choices and sub-questions, « Mèche :
+  au moins / au plus »; no picture, no time field) + pure helpers `editor/potatoDraft.ts`, draft
+  `potatoQuestions` / `fuseMinSec` / `fuseMaxSec` (picture and effect never sent), label « Patate
+  chaude », icon 💣; TV `host/potatoScreens.tsx` (no clock: shaking / glowing 💣 that ticks faster
+  and faster from `elapsedMs`, the holder's avatar and name, « passée par X », the pass counter,
+  the sub-question and its choices, « ❌ Raté ! Question suivante… » during the lock, « ⏸ La mèche
+  est en pause »; reveal « 💥 BOUM ! X a explosé avec la patate », the last sub-question and its
+  answer, every player's passes / points in 2 or 3 columns), `hostReducer` `potato` (+ local time),
+  `QuestionScreen` early return for the type; sounds `potato-tick.wav` / `potato-boom.wav` (CC0,
+  appended to `generate-sounds.mjs`: the other files are unchanged; the boom replaces the reveal
+  sting); phone `player/potato.tsx` (holder: « 💣 Tu as la patate ! Vite ! », the sub-question, big
+  shape buttons with their text, « ❌ Raté ! » lock, vibration when it lands; others: « X a la patate
+  ! », « ✅ Passée ! », own passes), no countdown in the header, result « 💥 Boum ! Elle t’a explosé
+  dans les mains ! » / « Sauvé ! » with passes and survivor points (neutral when played alone),
+  store `sendPotatoAnswer`; report `reports/potatoCard.tsx` (loser, sub-questions asked, passes and
+  points). Tests: `Game.hotPotato.test.ts` (16: schema + helpers, only the holder gets the
+  sub-question / no `correct` / no fuse / no `remainingMs`, passes never straight back, 2 players,
+  wrong answer + lock + refusals, fuse explosion scoring + streak, « Passer », holder offline →
+  pause with the fuse frozen and both rejoins, another player offline → no pause and never passed
+  to, « Continuer sans » the holder, kicked holder, alone, TV resync + remote answer, teams,
+  Survie, no joker), persistence round trip + saved reveal (Postgres), web `lib/potato.test.ts`,
+  `editor/draft.potato.test.ts`; e2e `e2e/hot-potato.spec.ts` (host + 3 phones, 20 s fuse: editor,
+  wrong answer + lock on phone and TV, two passes, TV reload mid-round, frames: a sub-question
+  only ever reached the holder's phone, no `"correct"` nor fuse in any frame, explosion, results,
+  « Suivant » in view, report). Screenshots checked (TV 1600×900 round / wrong / reveal, Pixel 7
+  holder / wrong / waiting / boom / saved, editor, report).
+- **Deviations / decisions:** (1) **« Passer » = the bomb goes off now** on the current holder.
+  (2) **No `danger` level from the server:** the TV computes its ticking pace from
+  `game:state.potato.elapsedMs` (pauses excluded), speeding up until `fuseMinSec` (sent in
+  `question:show.potato`, it is not secret) and staying at its fastest after — so the fuse never
+  leaks and no extra server timer is needed. (3) The remote gets the current sub-question and its
+  right choice (`remote:answer` refreshed at every turn). (4) A wrong answer shows the next
+  sub-question at once but locks it for 2 s (`FROZEN`), on the phone and the TV. (5) The bomb is
+  passed to connected players first (an offline one would pause the game); only the holder is
+  awaited. (6) Survivors = players connected at the start, who held the bomb, or connected at the
+  end; a player absent the whole round gets nothing (no heart lost either). (7) Played alone (< 2
+  players at the start): revealed at once, nobody scores, streaks and hearts untouched; all others
+  kicked mid-round: the last one keeps the bomb. (8) No picture (the TV shows the bomb); the sound
+  clip still works. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on
+  real phones / a real TV.
 
 ### T64 — « Enchères » (auction option)
 
@@ -3317,6 +3378,7 @@ pnpm format:check` before finishing.
 
 ## Contract changes / cross-task notes
 _(Append here: date, agent, what changed in `packages/shared` or outside your scope, why.)_
+
 
 - 2026-10-20, main agent (T0): players receive `question:prompt` instead of `question:show`
   (one event name = one payload type, needed for typed Socket.IO). `game:state` carries
@@ -3746,3 +3808,10 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `wavelength` argument; joker table line; cancellable. Server: `QuestionSetup.wavelength?`,
   `Game.isPsychic` / `isGuessingPsychic` next to `isDrawer`, the clue stage in `isAwaited` /
   `hasAnswered`. Migration `20261112062000_wavelength`.
+- 2026-11-11, T63 agent (additive, PLAN.md §3–§5): `QuestionType` gains `HOT_POTATO` (+ `potato`
+  config, `PotatoSubQuestionSchema`), new `packages/shared/src/potato.ts`; `GameStatePayload.potato?`
+  (`PotatoStatus`) — **during a « Patate chaude » round `game:state` has no `remainingMs`**;
+  `QuestionShowPayload.potato?`, `QuestionPromptPayload.potato?`, `RevealDetails.potato?`,
+  `PlayerResultPayload.potato?`, `player:answer` ack `potato?: PotatoAnswerAck`. Host sounds
+  `potato-tick` / `potato-boom`; `phaseSound(prev, next, potato?)`, `useHostSounds({ potato })`.
+  Migration `20261112063000_hot_potato`.

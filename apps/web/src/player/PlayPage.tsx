@@ -50,6 +50,8 @@ import { WagerAnswered, WagerBet, WagerGuess, WagerResultLines } from './wager';
 import { wagerResultTitle } from '../lib/wager';
 import { WavelengthAnswer, WavelengthAnswered, WavelengthResultLines } from './wavelength';
 import { wavelengthResultTitle } from '../lib/wavelength';
+import { PotatoPad, PotatoResultLines } from './potato';
+import { potatoResultTitle } from '../lib/potato';
 import { ColorsAnswered, ColorsMemo, ColorsPad, ColorsResultLines } from './colors';
 import { MissingMemo } from './missing';
 import { getTheme, useTheme } from '../themes';
@@ -174,6 +176,8 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
     case 'answer': {
       // Remounted when the hand changes: an old « X a buzzé avant toi » goes away.
       if (s.prompt?.buzzer) return <BuzzerPad key={s.buzzer?.holder?.id ?? 'open'} s={s} />;
+      if (s.prompt?.type === 'HOT_POTATO' && s.prompt.potato)
+        return <PotatoPad prompt={s.prompt.potato} playerId={s.playerId} />;
       const role = drawRole(s);
       if (role === 'drawer')
         return (
@@ -252,7 +256,10 @@ function TopBar({ s, screen }: { s: PlayerState; screen: ReturnType<typeof playe
             {s.questionIndex + 1}/{s.totalQuestions}
           </span>
         )}
-        {s.phase === 'ANSWERING' && <Countdown endsAt={s.answeringEndsAt} frozenMs={s.frozenMs} />}
+        {/* « Patate chaude »: no clock, the fuse is secret. */}
+        {s.phase === 'ANSWERING' && s.prompt?.type !== 'HOT_POTATO' && (
+          <Countdown endsAt={s.answeringEndsAt} frozenMs={s.frozenMs} />
+        )}
         <motion.span
           key={s.totalScore}
           initial={s.totalScore > 0 ? { scale: 1.5 } : false}
@@ -698,7 +705,11 @@ function Result({ s }: { s: PlayerState }) {
   // « Dessine-moi »: the drawer had nothing to answer (green when the drawing was found).
   const drew = !!r.draw?.drew;
   // « Buzzer »: not buzzing isn't a mistake (neutral screen).
-  const idle = (!!r.buzzer && !r.buzzer.won && !r.buzzer.wrong) || (drew && !r.draw!.finders);
+  // « Patate chaude » alone: nothing was played.
+  const idle =
+    (!!r.buzzer && !r.buzzer.won && !r.buzzer.wrong) ||
+    (drew && !r.draw!.finders) ||
+    (!!r.potato && !r.potato.loser);
   const title = r.buzzer
     ? buzzerResultTitle(r.buzzer)
     : r.list
@@ -709,21 +720,23 @@ function Result({ s }: { s: PlayerState }) {
           ? wagerResultTitle(r)
           : r.wavelength
             ? wavelengthResultTitle(r)
-            : r.draw
-              ? drawResultTitle(r.draw)
-              : r.bluff
-                ? r.bluff.found
-                  ? 'Vérité trouvée !'
-                  : partial
-                    ? 'Bien mythoné !'
-                    : 'Piégé !'
-                : r.correct
-                  ? 'Correct !'
-                  : partial
-                    ? 'Presque !'
-                    : answered
-                      ? 'Raté !'
-                      : 'Temps écoulé !';
+            : r.potato
+              ? potatoResultTitle(r)
+              : r.draw
+                ? drawResultTitle(r.draw)
+                : r.bluff
+                  ? r.bluff.found
+                    ? 'Vérité trouvée !'
+                    : partial
+                      ? 'Bien mythoné !'
+                      : 'Piégé !'
+                  : r.correct
+                    ? 'Correct !'
+                    : partial
+                      ? 'Presque !'
+                      : answered
+                        ? 'Raté !'
+                        : 'Temps écoulé !';
   const unit = s.prompt?.slider?.unit;
   return (
     <div
@@ -744,7 +757,17 @@ function Result({ s }: { s: PlayerState }) {
         className="flex size-28 items-center justify-center rounded-full bg-white/20 text-7xl font-black"
         aria-hidden="true"
       >
-        {drew ? '🎨' : r.correct ? '✓' : partial ? '≈' : idle ? '🔔' : '✗'}
+        {drew
+          ? '🎨'
+          : r.potato?.exploded
+            ? '💥'
+            : r.correct
+              ? '✓'
+              : partial
+                ? '≈'
+                : idle
+                  ? '🔔'
+                  : '✗'}
       </motion.div>
       <h2 className="text-4xl font-black">{title}</h2>
       {r.accepted && (
@@ -802,6 +825,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.pointless && <PointlessResultLine pointless={r.pointless} />}
       {r.wager && <WagerResultLines wager={r.wager} />}
       {r.wavelength && <WavelengthResultLines wavelength={r.wavelength} />}
+      {r.potato && <PotatoResultLines potato={r.potato} />}
       {r.colors && (
         <ColorsResultLines
           colors={r.colors}

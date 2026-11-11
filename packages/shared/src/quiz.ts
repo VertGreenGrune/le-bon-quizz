@@ -21,6 +21,18 @@ import {
   WAVELENGTH_MIN_CLUE_SEC,
   type WavelengthSpectrum,
 } from './wavelength.js';
+import {
+  POTATO_CHOICE_MAX_LENGTH,
+  POTATO_DEFAULT_FUSE_MAX_SEC,
+  POTATO_DEFAULT_FUSE_MIN_SEC,
+  POTATO_MAX_CHOICES,
+  POTATO_MAX_FUSE_SEC,
+  POTATO_MAX_QUESTIONS,
+  POTATO_MIN_CHOICES,
+  POTATO_MIN_FUSE_SEC,
+  POTATO_MIN_QUESTIONS,
+  POTATO_TEXT_MAX_LENGTH,
+} from './potato.js';
 
 /**
  * - `MCQ` / `TRUE_FALSE`: shape buttons, one or more correct choices.
@@ -48,6 +60,8 @@ import {
  *   on the guess closest to the right answer without going over.
  * - `WAVELENGTH` (« Sur la même longueur d'onde », T62, Wavelength): one player sees a secret
  *   position on a scale (« Froid ↔ Chaud ») and gives a clue; the others place a needle.
+ * - `HOT_POTATO` (« Patate chaude », T63): a bomb passes from player to player; the holder answers
+ *   quick sub-questions to pass it on; whoever holds it when the secret fuse runs out loses.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -67,6 +81,7 @@ export const QuestionType = z.enum([
   'POINTLESS',
   'WAGER',
   'WAVELENGTH',
+  'HOT_POTATO',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -597,6 +612,54 @@ const WavelengthQuestion = z.object({
     .default(WAVELENGTH_DEFAULT_CLUE_SEC),
 });
 
+/** « Patate chaude » (T63): one sub-question (2–4 choices, `correct` = the right one). */
+export const PotatoSubQuestionSchema = z
+  .object({
+    text: z.string().trim().min(1).max(POTATO_TEXT_MAX_LENGTH),
+    choices: z
+      .array(z.string().trim().min(1).max(POTATO_CHOICE_MAX_LENGTH))
+      .min(POTATO_MIN_CHOICES)
+      .max(POTATO_MAX_CHOICES),
+    correct: z.number().int().min(0),
+  })
+  .refine((s) => s.correct < s.choices.length, {
+    message: 'The right answer must be one of the choices',
+    path: ['correct'],
+  });
+
+/**
+ * « Patate chaude » (T63): `potato.questions` = the quick sub-questions (asked in order, shuffled
+ * again once used up), the fuse drawn in [`fuseMinSec`, `fuseMaxSec`] when the round starts.
+ * `timeLimitSec` is not used (the fuse is the clock).
+ */
+const HotPotatoQuestion = z.object({
+  ...questionBase,
+  type: z.literal('HOT_POTATO'),
+  potato: z
+    .object({
+      questions: z
+        .array(PotatoSubQuestionSchema)
+        .min(POTATO_MIN_QUESTIONS)
+        .max(POTATO_MAX_QUESTIONS),
+      fuseMinSec: z
+        .number()
+        .int()
+        .min(POTATO_MIN_FUSE_SEC)
+        .max(POTATO_MAX_FUSE_SEC)
+        .default(POTATO_DEFAULT_FUSE_MIN_SEC),
+      fuseMaxSec: z
+        .number()
+        .int()
+        .min(POTATO_MIN_FUSE_SEC)
+        .max(POTATO_MAX_FUSE_SEC)
+        .default(POTATO_DEFAULT_FUSE_MAX_SEC),
+    })
+    .refine((p) => p.fuseMinSec <= p.fuseMaxSec, {
+      message: 'The shortest fuse must not be longer than the longest one',
+      path: ['fuseMaxSec'],
+    }),
+});
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -619,6 +682,7 @@ export const QuestionSchema = z.preprocess(
       PointlessQuestion,
       WagerQuestion,
       WavelengthQuestion,
+      HotPotatoQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -644,6 +708,7 @@ export type MissingQuestion = Extract<Question, { type: 'MISSING' }>;
 export type PointlessQuestion = Extract<Question, { type: 'POINTLESS' }>;
 export type WagerQuestion = Extract<Question, { type: 'WAGER' }>;
 export type WavelengthQuestion = Extract<Question, { type: 'WAVELENGTH' }>;
+export type HotPotatoQuestion = Extract<Question, { type: 'HOT_POTATO' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -671,11 +736,18 @@ export function isMultipleAnswer(q: Question): boolean {
 /**
  * « Annuler ma réponse » (T43): every type but « Buzzer » questions (judged out loud), « Dessine-moi »
  * (guesses), « Mytho ! » (the lie can be changed while writing, the vote is final) and « Liste
- * chrono » (items found stay found) and « Paris sur les réponses » (the guess can be changed, the
- * bet is final).
+ * chrono » (items found stay found), « Paris sur les réponses » (the guess can be changed, the
+ * bet is final) and « Patate chaude » (a round, not an answer).
  */
 export function answerCancellable(type: QuestionType, buzzer?: boolean): boolean {
-  return !buzzer && type !== 'DRAW' && type !== 'BLUFF' && type !== 'LIST' && type !== 'WAGER';
+  return (
+    !buzzer &&
+    type !== 'DRAW' &&
+    type !== 'BLUFF' &&
+    type !== 'LIST' &&
+    type !== 'WAGER' &&
+    type !== 'HOT_POTATO'
+  );
 }
 
 /** The question's explanation, or undefined when it has none (empty / blank). */
@@ -736,6 +808,9 @@ export function answerText(
             `(0 = ${wavelength.spectrum.left}, 100 = ${wavelength.spectrum.right})`,
           ]
         : [];
+    case 'HOT_POTATO':
+      // Every sub-question with its right choice (the remote shows the current one first).
+      return q.potato.questions.map((s) => `${s.text} → ${s.choices[s.correct] ?? ''}`);
     default:
       return [];
   }

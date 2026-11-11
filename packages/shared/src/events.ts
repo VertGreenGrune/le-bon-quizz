@@ -11,6 +11,7 @@ import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js
 import { JokerType } from './jokers.js';
 import { HauntType, SurvivalHearts } from './survival.js';
 import type { WavelengthSpectrum } from './wavelength.js';
+import type { PotatoSub } from './potato.js';
 import {
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -330,6 +331,9 @@ export type AnswerInput =
  */
 export type DrawGuess = 'found' | 'close' | 'wrong';
 
+/** « Patate chaude » (T63): the holder's answer — right (the bomb goes on) or wrong. */
+export type PotatoAnswerAck = 'pass' | 'wrong';
+
 /**
  * « Liste chrono » (T57), `player:answer` ack: `found` (a new item: `item` = its index in the
  * list and its label), `already` (an item this player had found) or `wrong`.
@@ -455,7 +459,7 @@ export interface ClientToServerEvents {
   /** « Dessine-moi »: a guess (`text`); the ack tells whether it is right (`guess`). */
   'player:answer': (
     p: PlayerAnswerPayload,
-    ack: (r: Ack<{ guess?: DrawGuess; list?: ListGuessAck }>) => void,
+    ack: (r: Ack<{ guess?: DrawGuess; list?: ListGuessAck; potato?: PotatoAnswerAck }>) => void,
   ) => void;
   /**
    * « Annuler ma réponse » (T43), ANSWERING: the answer is removed, the phone answers again (scored
@@ -539,6 +543,61 @@ export interface GameStatePayload {
    * guessed already (never the numbers).
    */
   wager?: WagerStatus;
+  /**
+   * « Patate chaude » (T63) during ANSWERING: who holds the bomb (the TV and every phone). No
+   * `remainingMs` then: the fuse length is secret.
+   */
+  potato?: PotatoStatus;
+}
+
+/**
+ * « Patate chaude » (T63), `game:state.potato`: the holder (absent: nobody — a game alone), who
+ * passed it to them, the round's time so far (pauses excluded: the TV speeds its ticking up) and
+ * the passes so far. Never the fuse.
+ */
+export interface PotatoStatus {
+  holder?: LobbyMember;
+  from?: LobbyMember;
+  elapsedMs: number;
+  passes: number;
+}
+
+/**
+ * « Patate chaude » on the TV (`question:show.potato`, re-sent at each pass / wrong answer): the
+ * holder and their sub-question with its choices — never the right one. `lockMs`: the holder just
+ * answered wrong and waits that long. `fuseMinSec`: the shortest fuse (the ticking reaches its
+ * fastest pace there).
+ */
+export interface PotatoShow {
+  holder?: LobbyMember;
+  sub?: PotatoSub;
+  lockMs?: number;
+  fuseMinSec: number;
+}
+
+/**
+ * « Patate chaude » on a phone: who holds the bomb; `sub` (+ `lockMs` after a wrong answer) for the
+ * holder's phone only — the others never get the sub-question. `passes` = this player's passes.
+ * The holder answers with `player:answer { choiceIndex }` (ack `potato: 'pass' | 'wrong'`).
+ */
+export interface PotatoPrompt {
+  holder?: LobbyMember;
+  from?: LobbyMember;
+  sub?: PotatoSub;
+  lockMs?: number;
+  passes: number;
+}
+
+/**
+ * « Patate chaude » reveal (and report): who held the bomb when it went off (absent: a game
+ * alone), every player's passes and points (loser first, then most passes), how many
+ * sub-questions were asked and the last one with its answer.
+ */
+export interface PotatoReveal {
+  loser?: LobbyMember;
+  players: (LobbyMember & { passes: number; points: number })[];
+  asked: number;
+  last?: { text: string; answer: string };
 }
 
 /** « Paris sur les réponses » (T61): stage + who guessed (`game:state.wager`). */
@@ -817,6 +876,8 @@ export interface QuestionShowPayload {
   wager?: WagerShow;
   /** « Sur la même longueur d'onde » (T62): the scale, the psychic, then the clue. */
   wavelength?: WavelengthShow;
+  /** « Patate chaude » (T63): the holder and their sub-question (never the right choice). */
+  potato?: PotatoShow;
 }
 
 /**
@@ -889,6 +950,8 @@ export interface QuestionPromptPayload {
   wager?: WagerPrompt;
   /** « Sur la même longueur d'onde » (T62): clue (psychic) or needle (the others). */
   wavelength?: WavelengthPrompt;
+  /** « Patate chaude » (T63): the holder; the sub-question for the holder's phone only. */
+  potato?: PotatoPrompt;
 }
 
 export interface AnswerCountPayload {
@@ -957,6 +1020,8 @@ export interface RevealDetails {
   wager?: WagerReveal;
   /** « Sur la même longueur d'onde » (T62): target, clue, every needle. */
   wavelength?: WavelengthReveal;
+  /** « Patate chaude » (T63): the loser, everyone's passes and points. */
+  potato?: PotatoReveal;
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
@@ -1160,6 +1225,18 @@ export interface PlayerResultPayload {
     psychic: boolean;
     psychicName?: string;
     yours?: number;
+  };
+  /**
+   * « Patate chaude » (T63): `exploded` = the bomb went off in this player's hands (0 points);
+   * `loser` = who held it (absent: nobody, a game alone); the passes and what they earned;
+   * `survivorPoints` = the share for not holding it at the end (0 for the loser).
+   */
+  potato?: {
+    exploded: boolean;
+    loser?: LobbyMember;
+    passes: number;
+    passPoints: number;
+    survivorPoints: number;
   };
   /**
    * « Select all » MCQ: the right choices (« Il fallait cocher : … ») and the player's ticks

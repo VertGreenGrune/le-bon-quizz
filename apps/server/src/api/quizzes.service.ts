@@ -53,7 +53,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'> &
   Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'> &
   Pick<Extract<Question, { type: 'WAGER' }>, 'wager' | 'betTimeSec'> &
-  Pick<Extract<Question, { type: 'WAVELENGTH' }>, 'spectra' | 'clueTimeSec'>;
+  Pick<Extract<Question, { type: 'WAVELENGTH' }>, 'spectra' | 'clueTimeSec'> &
+  Pick<Extract<Question, { type: 'HOT_POTATO' }>, 'potato'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -139,6 +140,8 @@ function toQuestion(qu: QuestionRow): Question {
         spectra: config.spectra ?? [],
         clueTimeSec: config.clueTimeSec ?? WAVELENGTH_DEFAULT_CLUE_SEC,
       };
+    case 'HOT_POTATO':
+      return { ...base, type: qu.type, potato: config.potato! };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -166,6 +169,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
     return { missingImageUrl: qu.missingImageUrl, memoSec: qu.memoSec, zone: qu.zone };
   if (qu.type === 'WAGER') return { wager: qu.wager, betTimeSec: qu.betTimeSec };
   if (qu.type === 'WAVELENGTH') return { spectra: qu.spectra, clueTimeSec: qu.clueTimeSec };
+  if (qu.type === 'HOT_POTATO') return { potato: qu.potato };
   return undefined;
 }
 

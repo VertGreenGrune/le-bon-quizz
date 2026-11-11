@@ -927,4 +927,59 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
       needles: [{ nickname: 'Bob', value: 48, points: 1000 }],
     });
   });
+  it('keeps a « Patate chaude » question and saves the loser and the passes', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Patate chaude !',
+        type: 'HOT_POTATO',
+        timeLimitSec: 20,
+        basePoints: 1000,
+        potato: {
+          questions: [
+            { text: '1 + 1 ?', choices: ['1', '2'], correct: 1 },
+            { text: '2 + 2 ?', choices: ['4', '5', '6'], correct: 0 },
+            {
+              text: 'Capitale de la France ?',
+              choices: ['Lyon', 'Paris', 'Nice', 'Lille'],
+              correct: 1,
+            },
+          ],
+          fuseMinSec: 20,
+          fuseMaxSec: 40,
+        },
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Patate', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', random: () => 0.5 });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next(); // intro → round (random 0.5: Bob holds it)
+    game.answer(bob.id, 0, { choiceIndex: 1 }); // pass to Alice
+    game.next(); // the bomb goes off on Alice
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({ type: 'HOT_POTATO', correctCount: 1 });
+    expect(report.questions[0]!.details.potato).toMatchObject({
+      loser: { nickname: 'Alice' },
+      players: [
+        { nickname: 'Alice', passes: 0, points: 0 },
+        { nickname: 'Bob', passes: 1, points: 600 },
+      ],
+      asked: 2,
+      last: { text: '2 + 2 ?', answer: '4' },
+    });
+    expect(alice).toBeDefined();
+  });
 });

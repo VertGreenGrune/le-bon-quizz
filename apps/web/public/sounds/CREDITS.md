@@ -15,6 +15,8 @@ noise — no samples, no third-party recordings). They are dedicated to the publ
 | `joker.wav`            | A player plays a joker (announcement)                             | generated (`generate-sounds`) | CC0 1.0 |
 | `eliminated.wav`       | « Survie »: a player loses their last heart                       | generated (`generate-sounds`) | CC0 1.0 |
 | `buzz.wav`             | « Buzzer »: a player takes the hand                               | generated (`generate-sounds`) | CC0 1.0 |
+| `potato-tick.wav`      | « Patate chaude »: the bomb ticks (faster and faster)             | generated (`generate-sounds`) | CC0 1.0 |
+| `potato-boom.wav`      | « Patate chaude »: the bomb goes off                              | generated (`generate-sounds`) | CC0 1.0 |
 | `lobby-halloween.wav`  | TV theme Halloween (spooky organ): lobby music, 8 s loop          | generated (`generate-sounds`) | CC0 1.0 |
 | `reveal-halloween.wav` | TV theme Halloween (spooky organ): answer revealed                | generated (`generate-sounds`) | CC0 1.0 |
 | `podium-halloween.wav` | TV theme Halloween (spooky organ): podium roll + fanfare          | generated (`generate-sounds`) | CC0 1.0 |

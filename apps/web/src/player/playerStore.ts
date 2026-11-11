@@ -8,6 +8,7 @@ import type {
   ErrorCode,
   HauntType,
   JokerType,
+  PotatoAnswerAck,
   TeamId,
 } from '@lbq/shared';
 import { getSocket } from '../lib/socket';
@@ -433,6 +434,28 @@ export function sendWavelengthClue(text: string): Promise<string | null> {
       .emit('player:answer', { pin: session.pin, questionIndex, text }, (err, res) => {
         if (err) return resolve(errorMessage('TIMEOUT'));
         resolve(res.ok ? null : res.error.message);
+      });
+  });
+}
+
+/**
+ * « Patate chaude », the holder: answers the sub-question. Resolves with `pass` / `wrong`, or the
+ * French error message (locked after a wrong answer, the bomb already left…).
+ */
+export function sendPotatoAnswer(
+  choiceIndex: number,
+): Promise<{ result: PotatoAnswerAck } | { error: string }> {
+  const session = loadSession();
+  if (!session) return Promise.resolve({ error: 'Session introuvable' });
+  const { questionIndex } = state;
+  vibrate(30);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:answer', { pin: session.pin, questionIndex, choiceIndex }, (err, res) => {
+        if (err) return resolve({ error: errorMessage('TIMEOUT') });
+        if (!res.ok) return resolve({ error: res.error.message });
+        resolve({ result: res.potato ?? 'pass' });
       });
   });
 }
