@@ -34,6 +34,7 @@ import { heartsText, survivalLabel } from '../lib/survival';
 import { GainBadge } from '../components/GainBadge';
 import { nextSliderMargin, type AcceptInput } from './accept';
 import { AcceptButton, AcceptedTag } from './acceptControls';
+import { QuestionTypeBadge } from './questionType';
 
 // ---------- Lobby ----------
 
@@ -194,13 +195,16 @@ export function QuestionIntroScreen({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-10 p-8">
-      <motion.p
+      <motion.div
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="rounded-full bg-panel px-6 py-2 font-display text-2xl font-bold"
+        className="flex flex-wrap items-center justify-center gap-4"
       >
-        Question {index + 1} / {total}
-      </motion.p>
+        <p className="rounded-full bg-panel px-6 py-2 font-display text-2xl font-bold">
+          Question {index + 1} / {total}
+        </p>
+        {question && <QuestionTypeBadge question={question} className="py-2 text-2xl" />}
+      </motion.div>
       <motion.h2
         key={index}
         initial={{ scale: 0.6, opacity: 0 }}
@@ -300,9 +304,12 @@ export function QuestionScreen({
   );
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <h2 className="rounded-2xl bg-white px-8 py-5 text-center text-4xl font-black text-black shadow-lg">
-        {question.text}
-      </h2>
+      <div className="flex flex-col items-center gap-2">
+        <QuestionTypeBadge question={question} className="text-xl" />
+        <h2 className="w-full rounded-2xl bg-white px-8 py-5 text-center text-4xl font-black text-black shadow-lg">
+          {question.text}
+        </h2>
+      </div>
 
       <div className="flex min-h-0 flex-1 items-center justify-between gap-6">
         <Countdown remainingMs={remainingMs} totalMs={totalMs} done={reveal != null} />
