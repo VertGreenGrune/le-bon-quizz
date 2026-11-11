@@ -2910,7 +2910,7 @@ pnpm format:check` before finishing.
 
 ### T58 — « Couleurs perdues » (color memory)
 
-- **Status:** todo
+- **Status:** in-progress (agent T58)
 - **Depends on:** T57 merged. Wave 10, ports 3058 / 5258.
 - **User idea:** players see a colored picture; after 20 s the colors disappear and they must put
   the colors back with a palette.
