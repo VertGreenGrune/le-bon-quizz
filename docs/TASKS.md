@@ -2990,7 +2990,7 @@ pnpm format:check` before finishing.
 
 ### T59 — « Qu'est-ce qui a disparu ? » (missing element)
 
-- **Status:** todo
+- **Status:** in-progress (agent T59)
 - **Depends on:** T57 merged. Wave 10, ports 3059 / 5259.
 - **User idea:** players see a picture; after 20 s an element of the picture disappears and they
   must point where the missing element was.
