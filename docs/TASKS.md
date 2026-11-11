@@ -3114,7 +3114,7 @@ pnpm format:check` before finishing.
 
 ### T61 — « Paris sur les réponses » (Wits & Wagers)
 
-- **Status:** todo
+- **Status:** in-progress (agent T61)
 - **Depends on:** T57 merged. Wave 10, ports 3061 / 5261.
 - **Idea (« Wits & Wagers »):** a number question; everyone guesses, then everyone bets on the
   guess they think is closest without going over.
