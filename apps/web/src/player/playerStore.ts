@@ -418,6 +418,25 @@ export function sendWagerGuess(value: number): Promise<string | null> {
   });
 }
 
+/**
+ * « Sur la même longueur d'onde », the psychic: sends the clue (final; the guesses start with a
+ * new prompt); resolves with the French error message (a word of the scale…) or null.
+ */
+export function sendWavelengthClue(text: string): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  const { questionIndex } = state;
+  vibrate(40);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:answer', { pin: session.pin, questionIndex, text }, (err, res) => {
+        if (err) return resolve(errorMessage('TIMEOUT'));
+        resolve(res.ok ? null : res.error.message);
+      });
+  });
+}
+
 /** « Changer mon estimation »: back to the number field (the server keeps the old one meanwhile). */
 export function editWagerGuess() {
   dispatch({ type: 'wagerGuess', questionIndex: state.questionIndex, value: null });

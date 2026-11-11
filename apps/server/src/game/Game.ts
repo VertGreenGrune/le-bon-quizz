@@ -81,6 +81,7 @@ import { checkListGuess, foundAll, listStatus } from './questionTypes/list.js';
 import { colorsHints, newColors, startColorsAnswer } from './questionTypes/colors.js';
 import { startMissingAnswer } from './questionTypes/missing.js';
 import { startBets, wagerStatus, writeGuess } from './questionTypes/wager.js';
+import { startGuesses, startWavelength, writeClue } from './questionTypes/wavelength.js';
 import { Jokers } from './jokers.js';
 import {
   ReplayRandom,
@@ -375,6 +376,8 @@ export class Game {
   private recordingCopies = 0;
   /** « Dessine-moi »: who drew how often, so everyone draws in turn (`questionTypes/draw.ts`). */
   private readonly drawRotation = newRotation();
+  /** « Sur la même longueur d'onde »: the psychics' turns (same rule) and the scales used. */
+  private readonly wavelengthRotation = newRotation();
   /** Random source (« Dessine-moi » words; tests can fix it). */
   private readonly random: () => number;
   private readonly sliderRandom: () => number;
@@ -935,6 +938,17 @@ export class Game {
       this.onAnswersChanged();
       return {};
     }
+    // « Sur la même longueur d'onde », stage 1: the psychic's clue (final) starts the guesses.
+    const wavelength = this.setup.wavelength;
+    if (question.type === 'WAVELENGTH' && wavelength?.stage === 'clue') {
+      if (!('text' in given)) throw new GameError('INVALID_PAYLOAD', 'Attends l’indice !');
+      writeClue(wavelength, player.id, given.text);
+      this.touch();
+      this.finishAnswering();
+      return {};
+    }
+    if (wavelength && player.id === wavelength.psychicId)
+      throw new GameError('INVALID_PAYLOAD', 'C’est toi qui as donné l’indice !');
     if (question.type === 'DRAW') return { guess: this.guess(player, given) };
     if (question.type === 'LIST') return { list: this.listGuess(player, question, given) };
     if (bluff && 'choiceIndex' in given) checkVote(bluff, player.id, given.choiceIndex);
@@ -1292,6 +1306,18 @@ export class Game {
       const draw = startDraw(question, players, this.drawRotation, this.teamIds, this.random);
       this.setup = { ...this.setup, draw };
     }
+    // « Sur la même longueur d'onde »: the psychic in turn, a scale and the secret target.
+    if (question.type === 'WAVELENGTH') {
+      const players = [...this.players.values()];
+      const wavelength = startWavelength(
+        question,
+        players,
+        this.wavelengthRotation,
+        this.teamIds,
+        this.random,
+      );
+      this.setup = { ...this.setup, wavelength };
+    }
     // « Couleurs perdues »: a generated board is drawn now (the game's random source).
     if (question.type === 'COLORS')
       this.setup = { ...this.setup, colors: newColors(question, this.random) };
@@ -1328,10 +1354,13 @@ export class Game {
     if (!question) return;
     // « Couleurs perdues »: stage 1 = memorizing (`memoSec`).
     // « Qu'est-ce qui a disparu ? »: stage 1 = memorizing « avant » (`memoSec`).
+    // « Sur la même longueur d'onde »: stage 1 = the psychic's clue (`clueTimeSec`).
     const limitMs =
       (question.type === 'COLORS' || question.type === 'MISSING'
         ? question.memoSec
-        : question.timeLimitSec) * 1000;
+        : question.type === 'WAVELENGTH'
+          ? question.clueTimeSec
+          : question.timeLimitSec) * 1000;
     this.setPhase('ANSWERING', limitMs);
     this.answeringStartedAt = Date.now();
     this.presentIds.clear();
@@ -1375,6 +1404,17 @@ export class Game {
         startBets(wager);
         return this.startSecondStage(question.betTimeSec * 1000);
       }
+    }
+    // « Sur la même longueur d'onde »: the guesses — unless the psychic gave no clue (reveal).
+    const wavelength = this.setup.wavelength;
+    if (
+      this.phase === 'ANSWERING' &&
+      question?.type === 'WAVELENGTH' &&
+      wavelength?.stage === 'clue' &&
+      wavelength.clue !== null
+    ) {
+      startGuesses(wavelength);
+      return this.startSecondStage(question.timeLimitSec * 1000);
     }
     this.enterReveal();
   }
@@ -1427,8 +1467,9 @@ export class Game {
     const distribution = buzzer ? [] : choices.map(() => 0);
     if (isExtraQuestion(question) && !buzzer)
       settleExtra(question, this.setup, this.players.values());
-    // A poll (or another type without a right answer) leaves the streak as it is.
-    const poll = !hasRightAnswer(question.type);
+    // A poll (or another type without a right answer) leaves the streak as it is — and so does a
+    // « Sur la même longueur d'onde » without a clue (nothing to guess).
+    const poll = !hasRightAnswer(question.type) || this.setup.wavelength?.clue === null;
     let correctCount = 0;
     let answerCount = 0;
     for (const p of this.players.values()) {
@@ -1440,7 +1481,7 @@ export class Game {
         if (i < distribution.length) distribution[i] = (distribution[i] ?? 0) + 1;
       const correct = a?.correct ?? false;
       // « Dessine-moi »: the drawer had nothing to answer, their streak is left as it is.
-      const drew = this.isDrawer(p);
+      const drew = this.isDrawer(p) || this.isPsychic(p);
       // Bouclier: a wrong answer keeps the streak.
       if (!poll && !drew && (correct || !this.jokers?.savesStreak(p.id)))
         p.streak = correct ? p.streak + 1 : 0;
@@ -1470,6 +1511,9 @@ export class Game {
       this.questionIndex,
       (p) =>
         question.type === 'DRAW' ||
+        // « Sur la même longueur d'onde »: never the psychic; nobody without a clue.
+        this.isPsychic(p) ||
+        this.setup.wavelength?.clue === null ||
         (buzzer ? !p.answer : this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer)),
     );
     this.jokerRandom.stop();
@@ -1722,12 +1766,23 @@ export class Game {
 
   /** Has the player done what the current stage asks (answer, or lie / guess in stage 1)? */
   private hasAnswered(p: Player): boolean {
+    const wavelength = this.setup.wavelength;
+    if (wavelength?.stage === 'clue')
+      return p.id === wavelength.psychicId && wavelength.clue !== null;
     const stageOne = this.stageOneAnswers();
     return stageOne ? stageOne.has(p.id) : !!p.answer;
   }
 
   /** Is the current question still waiting for this player? */
   private isAwaited(p: Player, copying = new Set<string>()): boolean {
+    // « Sur la même longueur d'onde », stage 1: only the psychic has something to do (the clue).
+    const wavelength = this.setup.wavelength;
+    if (wavelength?.stage === 'clue')
+      return (
+        p.id === wavelength.psychicId &&
+        wavelength.clue === null &&
+        (p.socketId !== null || !this.excused.has(p.id))
+      );
     const stageOne = this.stageOneAnswers();
     if (stageOne) return !stageOne.has(p.id) && (p.socketId !== null || !this.excused.has(p.id));
     if (this.phase === 'ANSWERING' && p.answer) return false;
@@ -1745,7 +1800,8 @@ export class Game {
 
   /** Everyone answered, except the players the host continued without (and the drawer). */
   private allAnswered(): boolean {
-    for (const p of this.players.values()) if (!this.isDrawer(p) && this.isAwaited(p)) return false;
+    for (const p of this.players.values())
+      if (!this.isDrawer(p) && !this.isGuessingPsychic(p) && this.isAwaited(p)) return false;
     return true;
   }
 
@@ -1755,6 +1811,19 @@ export class Game {
    */
   private isDrawer(p: Player): boolean {
     return this.setup.draw?.drawerId === p.id;
+  }
+
+  /** « Sur la même longueur d'onde »: the player who sees the target and gives the clue. */
+  private isPsychic(p: Player): boolean {
+    return this.setup.wavelength?.psychicId === p.id;
+  }
+
+  /**
+   * « Sur la même longueur d'onde », stage 2: like the drawer, the psychic has nothing to answer
+   * (left out of « all answered » and of the count), but is still awaited when they drop.
+   */
+  private isGuessingPsychic(p: Player): boolean {
+    return this.setup.wavelength?.stage === 'guess' && this.isPsychic(p);
   }
 
   // ---------- Pause ----------
@@ -1875,7 +1944,12 @@ export class Game {
     const explanation = questionExplanation(q);
     return {
       index: this.questionIndex,
-      answer: answerText(q, this.setup.draw?.word, this.setup.colors?.colors),
+      answer: answerText(
+        q,
+        this.setup.draw?.word,
+        this.setup.colors?.colors,
+        this.setup.wavelength,
+      ),
       ...((q.type === 'PIN' || q.type === 'MISSING') &&
         q.imageUrl && { pin: { imageUrl: q.imageUrl, zone: q.zone } }),
       ...(explanation && { explanation }),
@@ -1915,7 +1989,7 @@ export class Game {
     let answered = 0;
     let total = 0;
     for (const p of this.players.values()) {
-      if (this.isDrawer(p)) continue;
+      if (this.isDrawer(p) || this.isGuessingPsychic(p)) continue;
       const done = this.hasAnswered(p);
       if (done) answered++;
       if (done || this.isAwaited(p)) total++;

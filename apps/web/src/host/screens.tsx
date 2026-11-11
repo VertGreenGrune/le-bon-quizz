@@ -30,6 +30,7 @@ import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { DrawIntroLine, DrawStage } from './drawScreens';
 import { ListStage } from './listScreens';
 import { WagerStage } from './wagerScreens';
+import { WavelengthIntroLine, WavelengthStage } from './wavelengthScreens';
 import { ColorsStage } from './colorsScreens';
 import { MissingStage } from './missingScreens';
 import { PointlessRevealView } from './pointlessScreens';
@@ -222,6 +223,7 @@ export function QuestionIntroScreen({
         {question?.text ?? '…'}
       </motion.h2>
       <DrawIntroLine question={question} />
+      <WavelengthIntroLine question={question} />
       {jokers && (
         <motion.p
           data-testid="intro-jokers"
@@ -363,6 +365,20 @@ export function QuestionScreen({
                 ) : undefined
               }
             />
+          ) : question.type === 'WAVELENGTH' ? (
+            <WavelengthStage
+              question={question}
+              reveal={reveal?.wavelength}
+              instant={instant}
+              media={
+                !reveal && (picture || listen) ? (
+                  <>
+                    {picture}
+                    {listen}
+                  </>
+                ) : undefined
+              }
+            />
           ) : question.type === 'MISSING' ? (
             <MissingStage question={question} reveal={reveal?.missing} instant={instant} />
           ) : reveal ? (
@@ -447,7 +463,9 @@ export function QuestionScreen({
               ? 'trouvé'
               : question.type === 'LIST'
                 ? 'complète'
-                : 'réponse'}
+                : question.wavelength?.stage === 'clue'
+                  ? 'indice'
+                  : 'réponse'}
             {answered > 1 ? 's' : ''}
             {answerTotal > 0 && <span className="opacity-70"> / {answerTotal}</span>}
           </span>

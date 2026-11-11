@@ -14,6 +14,7 @@ import { AudioField, ImageEffectField } from './MediaFields';
 import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './MoreTypeFields';
 import { BluffFields } from './BluffFields';
 import { WagerFields } from './WagerFields';
+import { WavelengthFields } from './WavelengthFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
 import { PointlessFields } from './PointlessFields';
@@ -211,11 +212,13 @@ export function QuestionEditor({
                 ? 'Temps pour écrire'
                 : q.type === 'WAGER'
                   ? 'Temps pour estimer'
-                  : q.type === 'DRAW'
-                    ? 'Temps pour dessiner'
-                    : q.type === 'COLORS' || q.type === 'MISSING'
-                      ? 'Temps pour répondre'
-                      : 'Temps'}
+                  : q.type === 'WAVELENGTH'
+                    ? 'Temps pour deviner'
+                    : q.type === 'DRAW'
+                      ? 'Temps pour dessiner'
+                      : q.type === 'COLORS' || q.type === 'MISSING'
+                        ? 'Temps pour répondre'
+                        : 'Temps'}
             </span>
             <select
               value={q.timeLimitSec}
@@ -326,6 +329,8 @@ export function QuestionEditor({
         <PointlessFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'WAGER' ? (
         <WagerFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'WAVELENGTH' ? (
+        <WavelengthFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

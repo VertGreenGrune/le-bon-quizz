@@ -2,6 +2,7 @@ import {
   AUDIO_DEFAULT_DURATION_SEC,
   BLUFF_DEFAULT_VOTE_SEC,
   WAGER_DEFAULT_BET_SEC,
+  WAVELENGTH_DEFAULT_CLUE_SEC,
   COLORS_DEFAULT_CELLS,
   COLORS_DEFAULT_MEMO_SEC,
   LIBRARY_LIMIT,
@@ -51,7 +52,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'DRAW' }>, 'words'> &
   Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'> &
   Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'> &
-  Pick<Extract<Question, { type: 'WAGER' }>, 'wager' | 'betTimeSec'>;
+  Pick<Extract<Question, { type: 'WAGER' }>, 'wager' | 'betTimeSec'> &
+  Pick<Extract<Question, { type: 'WAVELENGTH' }>, 'spectra' | 'clueTimeSec'>;
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -130,6 +132,13 @@ function toQuestion(qu: QuestionRow): Question {
         wager: config.wager!,
         betTimeSec: config.betTimeSec ?? WAGER_DEFAULT_BET_SEC,
       };
+    case 'WAVELENGTH':
+      return {
+        ...base,
+        type: qu.type,
+        spectra: config.spectra ?? [],
+        clueTimeSec: config.clueTimeSec ?? WAVELENGTH_DEFAULT_CLUE_SEC,
+      };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -156,6 +165,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'MISSING')
     return { missingImageUrl: qu.missingImageUrl, memoSec: qu.memoSec, zone: qu.zone };
   if (qu.type === 'WAGER') return { wager: qu.wager, betTimeSec: qu.betTimeSec };
+  if (qu.type === 'WAVELENGTH') return { spectra: qu.spectra, clueTimeSec: qu.clueTimeSec };
   return undefined;
 }
 

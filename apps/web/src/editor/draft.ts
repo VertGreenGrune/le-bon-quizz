@@ -9,6 +9,8 @@ import {
   POINTLESS_DEFAULT_SEC,
   WAGER_DEFAULT_BET_SEC,
   WAGER_DEFAULT_GUESS_SEC,
+  WAVELENGTH_DEFAULT_CLUE_SEC,
+  WAVELENGTH_DEFAULT_GUESS_SEC,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -26,6 +28,7 @@ import {
   type QuizDetail,
 } from '@lbq/shared';
 import { validate, type FieldErrors, type Validation } from '../api/validation';
+import { parseSpectrumLine, spectrumLine } from '../lib/wavelength';
 
 /**
  * Editor model of one question: the fields of every question type at once, so switching type
@@ -80,6 +83,12 @@ export interface DraftQuestion {
   wagerCorrect: number;
   wagerUnit: string;
   betTimeSec: number;
+  /**
+   * WAVELENGTH (« Sur la même longueur d'onde »): the scales, one per line « Froid / Chaud » (none
+   * = the built-in list), and the psychic's time for the clue (`timeLimitSec` = guessing time).
+   */
+  spectraLines: string[];
+  clueTimeSec: number;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -205,6 +214,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Chaque joueur estime un nombre, puis tous parient sur l’estimation la plus proche sans dépasser la bonne réponse. On marque en pariant juste et quand son estimation est la gagnante.',
   },
+  {
+    type: 'WAVELENGTH',
+    label: 'Sur la même longueur d’onde',
+    description:
+      'Un joueur (chacun son tour) voit une position secrète sur une échelle (« Froid ↔ Chaud ») et donne un indice ; les autres placent une aiguille. Plus on est près, plus on marque — et le médium gagne la moyenne des points des autres.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -235,6 +250,8 @@ export function newQuestion(): DraftQuestion {
     wagerCorrect: Number.NaN,
     wagerUnit: '',
     betTimeSec: WAGER_DEFAULT_BET_SEC,
+    spectraLines: [],
+    clueTimeSec: WAVELENGTH_DEFAULT_CLUE_SEC,
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -302,6 +319,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
         wagerUnit: q.wager.unit ?? '',
         betTimeSec: q.betTimeSec,
       };
+    case 'WAVELENGTH':
+      return { ...draft, spectraLines: q.spectra.map(spectrumLine), clueTimeSec: q.clueTimeSec };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -343,6 +362,11 @@ function keptWords(q: DraftQuestion): number[] {
   return q.words.flatMap((w, i) => (w.trim() ? [i] : []));
 }
 
+/** Indexes of the WAVELENGTH scales sent: empty lines are dropped (none = the built-in list). */
+function keptSpectra(q: DraftQuestion): number[] {
+  return q.spectraLines.flatMap((line, i) => (line.trim() ? [i] : []));
+}
+
 /** Indexes of the LIST items sent: empty lines are dropped. */
 function keptListItems(q: DraftQuestion): number[] {
   return q.listItems.flatMap((item, i) => (item.trim() ? [i] : []));
@@ -354,6 +378,7 @@ type Kept = {
   items: number[];
   words: number[];
   listItems: number[];
+  spectraLines: number[];
 };
 
 /** The API body of one question: only the fields of its type. */
@@ -435,6 +460,12 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         wager: { correct: q.wagerCorrect, unit: q.wagerUnit.trim() || undefined },
         betTimeSec: q.betTimeSec,
       };
+    case 'WAVELENGTH':
+      return {
+        ...base,
+        spectra: kept.spectraLines.map((i) => parseSpectrumLine(q.spectraLines[i]!)),
+        clueTimeSec: q.clueTimeSec,
+      };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
   }
@@ -453,6 +484,7 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
     items: keptItems(q),
     words: keptWords(q),
     listItems: keptListItems(q),
+    spectraLines: keptSpectra(q),
   }));
   const result = validate(QuizInput, {
     ...draft,
@@ -467,10 +499,11 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
     const key =
       listItem && ['LIST', 'POINTLESS'].includes(draft.questions[Number(listItem[1])]?.type ?? '')
         ? rawKey.replace('.items', '.listItems')
-        : rawKey;
-    const m = /^questions\.(\d+)\.(choices|acceptedAnswers|items|words|listItems)\.(\d+)(.*)$/.exec(
-      key,
-    );
+        : rawKey.replace(/^(questions\.\d+)\.spectra\b/, '$1.spectraLines');
+    const m =
+      /^questions\.(\d+)\.(choices|acceptedAnswers|items|words|listItems|spectraLines)\.(\d+)(.*)$/.exec(
+        key,
+      );
     const list = m ? kept[Number(m[1])]?.[m[2] as keyof Kept] : undefined;
     const original = m ? `questions.${m[1]}.${m[2]}.${list?.[Number(m[3])] ?? m[3]}${m[4]}` : key;
     errors[original] = message;
@@ -528,6 +561,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     items: [...q.items],
     words: [...q.words],
     listItems: [...q.listItems],
+    spectraLines: [...q.spectraLines],
     colorZones: q.colorZones.map((z) => ({ ...z })),
   });
   return { ...draft, questions };
@@ -581,6 +615,9 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
   // « Paris sur les réponses »: time to think of a number.
   if (type === 'WAGER' && q.timeLimitSec === 20)
     q = { ...q, timeLimitSec: WAGER_DEFAULT_GUESS_SEC };
+  // « Sur la même longueur d'onde »: time to place the needle.
+  if (type === 'WAVELENGTH' && q.timeLimitSec === 20)
+    q = { ...q, timeLimitSec: WAVELENGTH_DEFAULT_GUESS_SEC };
   // Leaving a type without a right answer: back to the standard points.
   const noPoints = !hasRightAnswer(q.type) && q.basePoints === 0;
   return { ...q, type, basePoints: noPoints ? 1000 : q.basePoints };

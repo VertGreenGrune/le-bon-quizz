@@ -3184,7 +3184,7 @@ pnpm format:check` before finishing.
 
 ### T62 — « Sur la même longueur d'onde » (Wavelength)
 
-- **Status:** in-progress (agent T62)
+- **Status:** done
 - **Depends on:** T57 merged. Wave 10, ports 3062 / 5262.
 - **Idea (« Wavelength »):** one player sees a secret position on a scale (« froid ↔ chaud ») and
   gives one clue; the others place a needle where they think it is.
@@ -3207,6 +3207,63 @@ pnpm format:check` before finishing.
   - **Reveal:** the target zone appears with the bands (5 / 12 / 20), every needle with its avatar,
     « 🎯 Pile dessus ! » for the best.
   - **Jokers:** none (like DRAW). No buzzer.
+- **Summary:** shared: new `wavelength.ts` (exported: `WavelengthSpectrum`, `WAVELENGTH_*` limits /
+  defaults, `WAVELENGTH_BANDS` (5 → 100 %, 12 → 60 %, 20 → 30 %), `WAVELENGTH_CORRECT_DISTANCE` 12,
+  `wavelengthPoints`, `WAVELENGTH_SPECTRA` = 70 French pairs, `spectrumKey`); `quiz.ts` `WAVELENGTH`
+  in the union (`spectra` 0–30 × ≤ 30 characters, `clueTimeSec` 10–120 default 30, `timeLimitSec`
+  default 30), `answerText(q, …, wavelength?)` = « 63 sur 100 » + the scale (remote), cancellable;
+  `jokers.ts` line (no joker); contract (`events.ts`, additive): error `CLUE_REFUSED`,
+  `question:show.wavelength` (`WavelengthShow`), `question:prompt.wavelength` (`WavelengthPrompt`,
+  `target` for the psychic's phone only), `RevealDetails.wavelength` (`WavelengthReveal`),
+  `player:result.wavelength`. Server: `game/questionTypes/wavelength.ts` (`startWavelength` —
+  psychic through the exported « Dessine-moi » `pickDrawer` on its own `DrawRotation`, whose
+  `usedWords` hold the scales used —, `pickSpectrum`, `pickTarget`, `forbiddenWord` (normalized
+  words of the ends, small words ignored, plural « s / x » dropped), `writeClue`, `judgeNeedle`,
+  `psychicPoints` (average over the guessers), payloads), one line per hook in
+  `questionTypes/index.ts`; `Game.ts`: `wavelengthRotation`, the setup drawn at QUESTION_INTRO with
+  the game's random source, stage 1 = `clueTimeSec`, the clue path in `answer()` (then
+  `finishAnswering()` at once, no 2 s grace), `finishAnswering` → `startSecondStage(timeLimitSec)`
+  only with a clue, `isAwaited` / `hasAnswered` in the clue stage (only the psychic),
+  `isPsychic` / `isGuessingPsychic` (left out of « all answered » / the count like the drawer,
+  streak kept, no « Survie » heart), no clue = streaks kept + no heart lost (`poll` flag), the
+  remote gets the target. Migration `20261112062000_wavelength`, `quizzes.service.ts` config
+  `{ spectra, clueTimeSec }`. Web: `components/WavelengthScale.tsx` (gradient bar, bands + target,
+  avatars on lanes so close needles don't overlap, own needle; TV / phone / small sizes),
+  `lib/wavelength.ts` (`bandsFor`, `parseSpectrumLine` / `spectrumLine`, `closestNeedles`,
+  `needleLanes`, `wavelengthResultTitle`); editor `editor/WavelengthFields.tsx` (scales one per
+  line « Froid / Chaud » with per-line errors, « Temps pour l’indice »; « Temps pour deviner »),
+  draft `spectraLines` / `clueTimeSec`, label « Sur la même longueur d’onde », icon 🔮; TV
+  `host/wavelengthScreens.tsx` (intro « 🔮 X va voir la cible et donner un indice ! », clue stage
+  « X cherche un indice… » + the scale, guess stage: the clue big + the scale, reveal: clue, bands,
+  every needle with its avatar, « 🎯 Pile dessus » / « 👏 Le plus proche », psychic's points;
+  counter « indice / 1 » in stage 1); phone `player/wavelength.tsx` (psychic: target zone + clue
+  field with the refusal message, then « Les autres cherchent… »; others: « X cherche un indice… »,
+  then the clue + needle (range, − / +, Valider); answered screen with the needle; result with the
+  target bands and the needle — « 🎯 Pile dessus ! / Bien vu ! / Presque ! / Raté ! / Bien joué,
+  médium ! »), store `sendWavelengthClue`; report `reports/wavelengthCard.tsx`. Tests:
+  `Game.wavelength.test.ts` (17: schema + helpers, forbidden words, rotation + no repeated scale,
+  target only on the psychic's phone (TV / others checked) + remote, clue stage rules + refusal,
+  bands + psychic average + streak kept, missing needle = 0, no clue, alone, cancel + grace,
+  « Passer », psychic / guesser offline in each stage + both rejoins + TV resync, kicked psychic,
+  teams (averages + teams take turns), Survie (heart, psychic spared, no clue), no joker),
+  persistence round trip + saved reveal (Postgres), web `lib/wavelength.test.ts`,
+  `draft.wavelength.test.ts`; e2e `e2e/wavelength.spec.ts` (host + 3 phones: editor, intro,
+  refused clue, psychic reload, clue, needles, `"target"` in no TV / Bob / Chloé frame before the
+  reveal, reveal + « Suivant » in view with an explanation card, results, report). Screenshots
+  checked (TV 1600×900 intro / clue / guess / reveal, Pixel 7 clue / wait / needle / answered /
+  results, editor, report).
+- **Deviations / decisions:** (1) **No clue before the timer** (or the psychic kicked during the
+  clue): no guess stage, revealed at once, nobody scores, streaks kept and no « Survie » heart lost
+  (nothing to guess). (2) New error code `CLUE_REFUSED` for a clue with a word of the scale
+  (anything else from a wrong player / stage = `INVALID_PAYLOAD`); the clue is final (no change).
+  (3) The psychic's rotation is its own (`DrawRotation` instance), separate from « Dessine-moi »'s,
+  so everyone is psychic in turn on these questions. (4) A guesser who drops during the clue stage
+  doesn't pause the game (they have nothing to do yet); the psychic does, in both stages. (5) No
+  `game:state.wavelength`: the stage travels in `question:show` / `question:prompt` (re-sent at
+  each stage and in both resyncs). (6) The scale is a horizontal bar (not a half-circle dial). The
+  psychic counts in the report's `playerCount` (never `correct`), like the drawer. (7) No
+  `acceptKind`. **After merging, run `pnpm --filter @lbq/server db:migrate`.** Not tried on real
+  phones / a real TV.
 
 ### T63 — « Patate chaude » (hot potato round)
 
@@ -3681,3 +3738,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `PlayerResultPayload.wager?`; joker table line; not cancellable. Server: `Game.writingLies` →
   `stageOneAnswers` (BLUFF lies or WAGER guesses), the jokers' `memorizing` hook also covers the
   guess stage. Migration `20261112061000_wager`.
+- 2026-11-12, agent T62 (additive, PLAN.md §3–§5): new `packages/shared/src/wavelength.ts`
+  (exported); `QuestionType` gains `WAVELENGTH` (+ `spectra`, `clueTimeSec`); `ErrorCode` gains
+  `CLUE_REFUSED`; `QuestionShowPayload.wavelength?` (`WavelengthShow`),
+  `QuestionPromptPayload.wavelength?` (`WavelengthPrompt`), `RevealDetails.wavelength?`
+  (`WavelengthReveal`), `PlayerResultPayload.wavelength?`; `answerText` takes a 4th optional
+  `wavelength` argument; joker table line; cancellable. Server: `QuestionSetup.wavelength?`,
+  `Game.isPsychic` / `isGuessingPsychic` next to `isDrawer`, the clue stage in `isAwaited` /
+  `hasAnswered`. Migration `20261112062000_wavelength`.
