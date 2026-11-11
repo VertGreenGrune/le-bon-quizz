@@ -121,6 +121,7 @@ enum QuestionType {
   POINTLESS
   WAGER
   WAVELENGTH
+  HOT_POTATO
 }
 
 model Question {

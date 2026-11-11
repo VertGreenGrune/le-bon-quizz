@@ -15,6 +15,7 @@ import { OrderItemsField, PinZoneField, WhoOfUsField, WordCloudHint } from './Mo
 import { BluffFields } from './BluffFields';
 import { WagerFields } from './WagerFields';
 import { WavelengthFields } from './WavelengthFields';
+import { PotatoFields } from './PotatoFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
 import { PointlessFields } from './PointlessFields';
@@ -190,6 +191,10 @@ export function QuestionEditor({
           <p className="self-center rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-600">
             🎨 Pas d’image : l’écran affiche le dessin en direct.
           </p>
+        ) : q.type === 'HOT_POTATO' ? (
+          <p className="self-center rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-600">
+            💣 Pas d’image : l’écran affiche la bombe et la question du joueur qui l’a.
+          </p>
         ) : (
           <ImageField
             label={
@@ -206,7 +211,7 @@ export function QuestionEditor({
           />
         )}
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
+          <label className={`flex flex-col gap-1 ${q.type === 'HOT_POTATO' ? 'hidden' : ''}`}>
             <span className="text-sm font-bold text-gray-600">
               {q.type === 'BLUFF'
                 ? 'Temps pour écrire'
@@ -293,6 +298,7 @@ export function QuestionEditor({
         {q.imageUrl &&
           q.type !== 'PIN' &&
           q.type !== 'DRAW' &&
+          q.type !== 'HOT_POTATO' &&
           q.type !== 'COLORS' &&
           q.type !== 'MISSING' && (
             <ImageEffectField
@@ -331,6 +337,8 @@ export function QuestionEditor({
         <WagerFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'WAVELENGTH' ? (
         <WavelengthFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'HOT_POTATO' ? (
+        <PotatoFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

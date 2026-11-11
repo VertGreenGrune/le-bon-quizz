@@ -109,6 +109,7 @@ export function HostPage() {
     buzzerHolder: holder?.id ?? null,
     theme: state.theme,
     radio,
+    potato: currentQuestion(state)?.type === 'HOT_POTATO',
   });
 
   // Sound clip of the question (host screen only): paused with the game, until the 3-2-1 ends,
@@ -232,6 +233,8 @@ export function HostPage() {
           drawing={currentDrawing(state)}
           list={state.list}
           wager={state.wager}
+          potato={state.potato}
+          paused={state.paused !== null}
         />
       );
       primary =

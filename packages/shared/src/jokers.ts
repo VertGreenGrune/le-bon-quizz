@@ -182,6 +182,8 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   WAGER: { jokers: true, unavailable: ['fifty', 'scramble', 'hourglass'], scramble: false },
   // « Sur la même longueur d'onde » (T62): no joker (one player gives a clue, like DRAW).
   WAVELENGTH: { jokers: false, unavailable: [], scramble: false },
+  // « Patate chaude » (T63): no joker (a fast round, one player answers at a time).
+  HOT_POTATO: { jokers: false, unavailable: [], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

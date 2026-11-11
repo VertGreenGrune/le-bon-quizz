@@ -498,3 +498,25 @@ function bells(buf, start, vol = 0.05) {
   );
   save('podium-space', buf);
 }
+
+// ======== « Patate chaude » (T63): the bomb's tick and its explosion ========
+// Appended last so the shared noise seed leaves every file above unchanged.
+
+// ---- potato-tick: a short, dry clock tick (played faster and faster by the TV) ----
+{
+  const buf = buffer(0.12);
+  tone(buf, 0, 0.05, hz('E6'), { wave: 'square', vol: 0.12, decay: 0.012 });
+  tone(buf, 0, 0.08, hz('E5'), { wave: 'triangle', vol: 0.25, decay: 0.02 });
+  noiseBurst(buf, 0, 0.03, { vol: 0.12, decay: 0.006 });
+  save('potato-tick', buf);
+}
+
+// ---- potato-boom: a big explosion — noise blast, falling rumble, low thump ----
+{
+  const buf = buffer(2.4);
+  noiseBurst(buf, 0, 2.3, { vol: 0.5, decay: 0.45 });
+  noiseBurst(buf, 0, 0.25, { vol: 0.4, decay: 0.05 });
+  tone(buf, 0, 1.6, (t) => 90 * Math.exp(-t / 0.5) + 30, { vol: 0.6, decay: 0.5 });
+  tone(buf, 0, 0.4, (t) => 160 * Math.exp(-t / 0.08) + 40, { vol: 0.5, decay: 0.12 });
+  save('potato-boom', buf);
+}

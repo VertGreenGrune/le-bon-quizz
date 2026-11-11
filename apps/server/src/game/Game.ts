@@ -30,6 +30,8 @@ import {
   type ListQuestion,
   type DrawStroke,
   type DrawStrokesPayload,
+  type HotPotatoQuestion,
+  type PotatoAnswerAck,
   type GameMode,
   type GamePause,
   type GamePhase,
@@ -82,6 +84,13 @@ import { colorsHints, newColors, startColorsAnswer } from './questionTypes/color
 import { startMissingAnswer } from './questionTypes/missing.js';
 import { startBets, wagerStatus, writeGuess } from './questionTypes/wager.js';
 import { startGuesses, startWavelength, writeClue } from './questionTypes/wavelength.js';
+import {
+  answerPotato,
+  handOff,
+  potatoRemoteAnswer,
+  potatoStatus,
+  startPotato,
+} from './questionTypes/hotPotato.js';
 import { Jokers } from './jokers.js';
 import {
   ReplayRandom,
@@ -645,6 +654,8 @@ export class Game {
     this.players.delete(playerId);
     this.setup.bluff?.lies.delete(playerId); // « Mytho ! »: their lie goes with them
     if (this.setup.wager?.stage === 'guess') this.setup.wager.guesses.delete(playerId);
+    // « Patate chaude »: a kicked holder hands the bomb to someone else.
+    const potatoMoved = this.setup.potato?.holderId === playerId && this.potatoHandOff();
     // « Buzzer »: the hand is free again, the timer goes on.
     if (this.buzzer?.holder === playerId) {
       this.buzzer.holder = null;
@@ -661,6 +672,7 @@ export class Game {
     this.sendTeams();
     this.sendSurvival();
     this.jokers?.onKick();
+    if (potatoMoved) this.sendPotatoTurn();
     this.checkPause();
     if (this.phase === 'ANSWERING' && !this.pause) this.onAnswersChanged();
   }
@@ -682,6 +694,12 @@ export class Game {
     for (const p of this.awaitedOffline()) {
       this.excused.add(p.id);
       this.presentIds.delete(p.id);
+    }
+    // « Patate chaude »: the host continued without the holder — someone else gets the bomb.
+    const holderId = this.setup.potato?.holderId;
+    if (this.phase === 'ANSWERING' && holderId && this.excused.has(holderId)) {
+      this.potatoHandOff(this.excused);
+      this.sendPotatoTurn();
     }
     if (this.phase === 'ANSWERING') this.sendAnswerCount();
     this.checkPause();
@@ -907,7 +925,7 @@ export class Game {
     playerId: string,
     questionIndex: number,
     input: number | AnswerInput,
-  ): { guess?: DrawGuess; list?: ListGuessAck } {
+  ): { guess?: DrawGuess; list?: ListGuessAck; potato?: PotatoAnswerAck } {
     const player = this.players.get(playerId);
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
     const question = this.currentQuestion;
@@ -919,6 +937,9 @@ export class Game {
       throw new GameError('INVALID_PAYLOAD', 'Question au buzzer : appuie sur BUZZ');
 
     const given = typeof input === 'number' ? { choiceIndex: input } : input;
+    // « Patate chaude »: only the holder answers, to pass the bomb on (nothing recorded yet).
+    if (question.type === 'HOT_POTATO')
+      return { potato: this.potatoAnswer(player, question, given) };
     // « Mytho ! », stage 1: the lie is stored, not scored (nor copied); stage 2 is the vote.
     const bluff = this.setup.bluff;
     if (question.type === 'BLUFF' && bluff?.stage === 'write') {
@@ -1193,6 +1214,52 @@ export class Game {
     return scoringMs === responseMs ? 0 : player.answer.points - judge(points(responseMs)).points;
   }
 
+  /** « Patate chaude »: the holder's answer — a pass or a wrong answer, then the new turn. */
+  private potatoAnswer(
+    player: Player,
+    question: HotPotatoQuestion,
+    given: AnswerInput,
+  ): PotatoAnswerAck {
+    const potato = this.setup.potato;
+    if (!potato) throw new GameError('NOT_ANSWERING', 'Trop tard !');
+    const result = answerPotato(
+      question,
+      potato,
+      player.id,
+      given,
+      Date.now(),
+      [...this.players.values()],
+      this.random,
+    );
+    this.touch();
+    this.sendPotatoTurn();
+    return result;
+  }
+
+  /** « Patate chaude »: the holder leaves — the bomb goes to another player (true: it moved). */
+  private potatoHandOff(exclude?: ReadonlySet<string>): boolean {
+    const question = this.currentQuestion;
+    const potato = this.setup.potato;
+    if (this.phase !== 'ANSWERING' || question?.type !== 'HOT_POTATO' || !potato) return false;
+    const others = [...this.players.values()].filter((p) => p.id !== potato.holderId);
+    handOff(question, potato, others, this.random, exclude);
+    return true;
+  }
+
+  /**
+   * « Patate chaude »: a new turn (pass, wrong answer, new holder) — the holder for everyone, the
+   * sub-question to the TV and the holder's phone, the right choice to the remotes.
+   */
+  private sendPotatoTurn({ prompts = true } = {}): void {
+    if (this.phase !== 'ANSWERING') return;
+    if (prompts) this.broadcastState();
+    this.transport.toHost('question:show', this.showPayload());
+    if (prompts) this.sendPrompts();
+    const answer = this.remoteAnswerPayload();
+    if (answer)
+      for (const sid of this.remoteSockets) this.transport.toSocket(sid, 'remote:answer', answer);
+  }
+
   // ---------- Queries ----------
 
   findBySession(sessionToken: string): Player | undefined {
@@ -1277,6 +1344,12 @@ export class Game {
       state.list = listStatus(q, this.setup.list, this.players.values());
     if (this.phase === 'ANSWERING' && this.setup.wager)
       state.wager = wagerStatus(this.setup.wager, this.players);
+    // « Patate chaude »: the holder, never the fuse (so no time left either).
+    if (this.phase === 'ANSWERING' && this.setup.potato) {
+      delete state.remainingMs;
+      const end = this.pause?.frozenAt ?? Date.now();
+      state.potato = potatoStatus(this.setup.potato, this.players, end - this.answeringStartedAt);
+    }
     return state;
   }
 
@@ -1361,12 +1434,20 @@ export class Game {
         : question.type === 'WAVELENGTH'
           ? question.clueTimeSec
           : question.timeLimitSec) * 1000;
-    this.setPhase('ANSWERING', limitMs);
+    // « Patate chaude »: the round's clock is the secret fuse, drawn now with the first holder.
+    if (question.type === 'HOT_POTATO')
+      this.setup = {
+        ...this.setup,
+        potato: startPotato(question, [...this.players.values()], this.random),
+      };
+    this.setPhase('ANSWERING', this.setup.potato?.fuseMs ?? limitMs);
     this.answeringStartedAt = Date.now();
     this.presentIds.clear();
     for (const p of this.players.values()) if (p.socketId) this.presentIds.add(p.id);
     this.broadcastState();
     this.sendPrompts();
+    // « Patate chaude »: the TV and the remotes get the first holder's sub-question.
+    if (this.setup.potato) this.sendPotatoTurn({ prompts: false });
     this.sendAnswerCount();
     this.checkPause();
     // Nobody to wait for → don't block on the timer.
@@ -1469,7 +1550,11 @@ export class Game {
       settleExtra(question, this.setup, this.players.values());
     // A poll (or another type without a right answer) leaves the streak as it is — and so does a
     // « Sur la même longueur d'onde » without a clue (nothing to guess).
-    const poll = !hasRightAnswer(question.type) || this.setup.wavelength?.clue === null;
+    // « Patate chaude » played alone: nothing happened either.
+    const poll =
+      !hasRightAnswer(question.type) ||
+      this.setup.wavelength?.clue === null ||
+      !!this.setup.potato?.alone;
     let correctCount = 0;
     let answerCount = 0;
     for (const p of this.players.values()) {
@@ -1514,6 +1599,7 @@ export class Game {
         // « Sur la même longueur d'onde »: never the psychic; nobody without a clue.
         this.isPsychic(p) ||
         this.setup.wavelength?.clue === null ||
+        !!this.setup.potato?.alone ||
         (buzzer ? !p.answer : this.excused.has(p.id) || (!this.presentIds.has(p.id) && !p.answer)),
     );
     this.jokerRandom.stop();
@@ -1775,6 +1861,9 @@ export class Game {
 
   /** Is the current question still waiting for this player? */
   private isAwaited(p: Player, copying = new Set<string>()): boolean {
+    // « Patate chaude »: only the holder has something to do.
+    const potato = this.phase === 'ANSWERING' ? this.setup.potato : undefined;
+    if (potato) return p.id === potato.holderId && (p.socketId !== null || !this.excused.has(p.id));
     // « Sur la même longueur d'onde », stage 1: only the psychic has something to do (the clue).
     const wavelength = this.setup.wavelength;
     if (wavelength?.stage === 'clue')
@@ -1800,6 +1889,8 @@ export class Game {
 
   /** Everyone answered, except the players the host continued without (and the drawer). */
   private allAnswered(): boolean {
+    // « Patate chaude »: only the fuse (or the host) ends a round — unless nobody holds the bomb.
+    if (this.phase === 'ANSWERING' && this.setup.potato) return this.setup.potato.holderId === null;
     for (const p of this.players.values())
       if (!this.isDrawer(p) && !this.isGuessingPsychic(p) && this.isAwaited(p)) return false;
     return true;
@@ -1944,12 +2035,10 @@ export class Game {
     const explanation = questionExplanation(q);
     return {
       index: this.questionIndex,
-      answer: answerText(
-        q,
-        this.setup.draw?.word,
-        this.setup.colors?.colors,
-        this.setup.wavelength,
-      ),
+      answer:
+        q.type === 'HOT_POTATO' && this.setup.potato
+          ? potatoRemoteAnswer(q, this.setup.potato)
+          : answerText(q, this.setup.draw?.word, this.setup.colors?.colors, this.setup.wavelength),
       ...((q.type === 'PIN' || q.type === 'MISSING') &&
         q.imageUrl && { pin: { imageUrl: q.imageUrl, zone: q.zone } }),
       ...(explanation && { explanation }),

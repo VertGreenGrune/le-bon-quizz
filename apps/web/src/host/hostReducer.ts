@@ -4,6 +4,7 @@ import {
   type DrawStatus,
   type ListStatus,
   type WagerStatus,
+  type PotatoStatus,
   type DrawStroke,
   type DrawStrokesPayload,
   type GameMode,
@@ -59,6 +60,11 @@ export interface HostGameState {
   list: ListStatus | null;
   /** « Paris sur les réponses » (`game:state.wager`): the stage, who guessed already. */
   wager: WagerStatus | null;
+  /**
+   * « Patate chaude » (`game:state.potato`): the holder, the passes, the round's time so far (at
+   * the local time `at`).
+   */
+  potato: (PotatoStatus & { at: number }) | null;
   /** « Dessine-moi »: the live drawing of question `index` (`draw:strokes`). */
   drawing: { index: number; strokes: DrawStroke[] };
   /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
@@ -116,6 +122,7 @@ export const initialHostState: HostGameState = {
   draw: null,
   list: null,
   wager: null,
+  potato: null,
   drawing: { index: -1, strokes: [] },
   comebacks: [],
   players: [],
@@ -163,6 +170,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         draw: action.payload.draw ?? null,
         list: action.payload.list ?? null,
         wager: action.payload.wager ?? null,
+        potato: action.payload.potato ? { ...action.payload.potato, at: action.now } : null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         pausedSince: paused ? action.now - paused.sinceMs : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,

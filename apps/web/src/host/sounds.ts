@@ -4,7 +4,16 @@ import { getTheme, type ThemedSound } from '../themes';
 
 /** Host screen only — phones never play sounds. Files and licenses: `public/sounds/CREDITS.md`. */
 export type SoundName =
-  'lobby' | 'join' | 'tick' | 'reveal' | 'podium' | 'joker' | 'eliminated' | 'buzz';
+  | 'lobby'
+  | 'join'
+  | 'tick'
+  | 'reveal'
+  | 'podium'
+  | 'joker'
+  | 'eliminated'
+  | 'buzz'
+  | 'potato-tick'
+  | 'potato-boom';
 
 const VOLUME: Record<SoundName, number> = {
   lobby: 0.45,
@@ -15,6 +24,8 @@ const VOLUME: Record<SoundName, number> = {
   joker: 0.7,
   eliminated: 0.8,
   buzz: 0.8,
+  'potato-tick': 0.6,
+  'potato-boom': 0.9,
 };
 
 /**
@@ -313,10 +324,17 @@ export function useSoundLevels(): SoundLevels {
 /** Seconds at the end of ANSWERING that tick. */
 export const TICK_FROM_SEC = 5;
 
-/** Which one-shot sound a phase change triggers (none when the screen is first shown). */
-export function phaseSound(prev: GamePhase | null, next: GamePhase | null): SoundName | null {
+/**
+ * Which one-shot sound a phase change triggers (none when the screen is first shown). `potato`:
+ * a « Patate chaude » round — its reveal is the explosion.
+ */
+export function phaseSound(
+  prev: GamePhase | null,
+  next: GamePhase | null,
+  potato = false,
+): SoundName | null {
   if (prev === null || prev === next) return null; // first state after a (re)load: no replay
-  if (next === 'REVEAL') return 'reveal';
+  if (next === 'REVEAL') return potato ? 'potato-boom' : 'reveal';
   if (next === 'PODIUM') return 'podium';
   return null;
 }
@@ -347,6 +365,7 @@ export function useHostSounds({
   buzzerHolder = null,
   theme = 'classic',
   radio = false,
+  potato = false,
 }: {
   phase: GamePhase | null;
   /** null while paused: the frozen clock doesn't tick. */
@@ -360,6 +379,8 @@ export function useHostSounds({
   theme?: QuizTheme;
   /** The theme's radio is the background music: no lobby loop. */
   radio?: boolean;
+  /** The current question is a « Patate chaude » round (its reveal = the explosion). */
+  potato?: boolean;
 }) {
   const prevPhase = useRef<GamePhase | null>(null);
   const prevCount = useRef<number | null>(null);
@@ -369,7 +390,7 @@ export function useHostSounds({
   useEffect(() => setSoundTheme(theme), [theme]);
 
   useEffect(() => {
-    const sound = phaseSound(prevPhase.current, phase);
+    const sound = phaseSound(prevPhase.current, phase, potato);
     if (sound) playSound(sound);
     if (phase !== null) prevPhase.current = phase;
   }, [phase]);

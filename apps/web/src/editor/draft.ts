@@ -11,6 +11,9 @@ import {
   WAGER_DEFAULT_GUESS_SEC,
   WAVELENGTH_DEFAULT_CLUE_SEC,
   WAVELENGTH_DEFAULT_GUESS_SEC,
+  POTATO_DEFAULT_FUSE_MAX_SEC,
+  POTATO_DEFAULT_FUSE_MIN_SEC,
+  POTATO_MIN_QUESTIONS,
   MAX_ACCEPTED_ANSWERS,
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -89,6 +92,13 @@ export interface DraftQuestion {
    */
   spectraLines: string[];
   clueTimeSec: number;
+  /**
+   * HOT_POTATO (« Patate chaude »): the quick sub-questions (2–4 choices, `correct` = index of the
+   * right one) and the fuse range in seconds (`timeLimitSec` isn't used).
+   */
+  potatoQuestions: PotatoDraftSub[];
+  fuseMinSec: number;
+  fuseMaxSec: number;
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -98,6 +108,17 @@ export interface DraftQuestion {
   buzzer: boolean;
   /** « 💡 Le saviez-vous ? » (T37), any type; empty = none. */
   explanation: string;
+}
+
+/** « Patate chaude »: one sub-question being edited. */
+export interface PotatoDraftSub {
+  text: string;
+  choices: string[];
+  correct: number;
+}
+
+export function newPotatoSub(): PotatoDraftSub {
+  return { text: '', choices: ['', ''], correct: 0 };
 }
 
 /**
@@ -220,6 +241,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Un joueur (chacun son tour) voit une position secrète sur une échelle (« Froid ↔ Chaud ») et donne un indice ; les autres placent une aiguille. Plus on est près, plus on marque — et le médium gagne la moyenne des points des autres.',
   },
+  {
+    type: 'HOT_POTATO',
+    label: 'Patate chaude',
+    description:
+      'Une bombe passe de joueur en joueur : celui qui l’a répond à de petites questions sur son téléphone, une bonne réponse la passe à un autre. Quand la mèche (secrète) arrive au bout, celui qui la tient perd la manche.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -252,6 +279,9 @@ export function newQuestion(): DraftQuestion {
     betTimeSec: WAGER_DEFAULT_BET_SEC,
     spectraLines: [],
     clueTimeSec: WAVELENGTH_DEFAULT_CLUE_SEC,
+    potatoQuestions: Array.from({ length: POTATO_MIN_QUESTIONS }, newPotatoSub),
+    fuseMinSec: POTATO_DEFAULT_FUSE_MIN_SEC,
+    fuseMaxSec: POTATO_DEFAULT_FUSE_MAX_SEC,
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -321,6 +351,13 @@ export function toDraftQuestion(q: Question): DraftQuestion {
       };
     case 'WAVELENGTH':
       return { ...draft, spectraLines: q.spectra.map(spectrumLine), clueTimeSec: q.clueTimeSec };
+    case 'HOT_POTATO':
+      return {
+        ...draft,
+        potatoQuestions: q.potato.questions.map((s) => ({ ...s, choices: [...s.choices] })),
+        fuseMinSec: q.potato.fuseMinSec,
+        fuseMaxSec: q.potato.fuseMaxSec,
+      };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
   }
@@ -389,7 +426,10 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
     // « Dessine-moi »: the TV shows the drawing, a picture kept in the draft isn't sent.
     // « Couleurs perdues »: the picture only for a board on a picture.
     imageUrl:
-      (q.type !== 'DRAW' && (q.type !== 'COLORS' || q.colorSource === 'picture') && q.imageUrl) ||
+      (q.type !== 'DRAW' &&
+        q.type !== 'HOT_POTATO' &&
+        (q.type !== 'COLORS' || q.colorSource === 'picture') &&
+        q.imageUrl) ||
       undefined,
     type: q.type,
     timeLimitSec: q.timeLimitSec,
@@ -402,6 +442,7 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
       q.imageEffect !== 'none' &&
       q.type !== 'PIN' &&
       q.type !== 'DRAW' &&
+      q.type !== 'HOT_POTATO' &&
       q.type !== 'COLORS' &&
       q.type !== 'MISSING'
         ? q.imageEffect
@@ -465,6 +506,15 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         ...base,
         spectra: kept.spectraLines.map((i) => parseSpectrumLine(q.spectraLines[i]!)),
         clueTimeSec: q.clueTimeSec,
+      };
+    case 'HOT_POTATO':
+      return {
+        ...base,
+        potato: {
+          questions: q.potatoQuestions,
+          fuseMinSec: q.fuseMinSec,
+          fuseMaxSec: q.fuseMaxSec,
+        },
       };
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
@@ -562,6 +612,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     words: [...q.words],
     listItems: [...q.listItems],
     spectraLines: [...q.spectraLines],
+    potatoQuestions: q.potatoQuestions.map((s) => ({ ...s, choices: [...s.choices] })),
     colorZones: q.colorZones.map((z) => ({ ...z })),
   });
   return { ...draft, questions };
