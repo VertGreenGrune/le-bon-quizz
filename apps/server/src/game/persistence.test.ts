@@ -738,4 +738,51 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
       ],
     });
   });
+
+  it('keeps a « Qu’est-ce qui a disparu ? » question and saves both pictures and the pins', async () => {
+    const host = await user('host@test.fr');
+    const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
+    const questions: Question[] = [
+      {
+        text: 'Qu’est-ce qui a disparu ?',
+        type: 'MISSING',
+        imageUrl: 'https://example.com/uploads/avant.png',
+        missingImageUrl: 'https://example.com/uploads/apres.png',
+        memoSec: 15,
+        zone: { x: 0.4, y: 0.6, radius: 0.1 },
+        timeLimitSec: 25,
+        basePoints: 2000,
+      },
+    ];
+    const q = await createQuiz(prisma, host.id, { title: 'Disparu', questions });
+    const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
+    expect(quiz.questions).toEqual(questions);
+
+    const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
+    const alice = game.join('Alice', 's1', 'batman');
+    const bob = game.join('Bob', 's2', 'robin');
+    game.start();
+    game.next(); // intro → memorizing
+    game.next(); // → answers
+    game.answer(alice.id, 0, { point: { x: 0.4, y: 0.6 } });
+    game.answer(bob.id, 0, { point: { x: 0.9, y: 0.1 } });
+    game.end();
+    game.dispose();
+    await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
+
+    const [summary] = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
+    const report = (
+      await app.inject({ url: `/api/games/${summary!.id}`, headers })
+    ).json<GameReport>();
+    expect(report.questions[0]).toMatchObject({ type: 'MISSING', correctCount: 1, answerCount: 2 });
+    expect(report.questions[0]!.details.missing).toMatchObject({
+      imageUrl: 'https://example.com/uploads/avant.png',
+      missingImageUrl: 'https://example.com/uploads/apres.png',
+      zone: { x: 0.4, y: 0.6, radius: 0.1 },
+      pins: [
+        { nickname: 'Alice', correct: true },
+        { nickname: 'Bob', correct: false },
+      ],
+    });
+  });
 });

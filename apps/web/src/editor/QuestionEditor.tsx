@@ -16,6 +16,7 @@ import { BluffFields } from './BluffFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
 import { ColorsFields } from './ColorsFields';
+import { MissingFields } from './MissingFields';
 import {
   MAX_ACCEPTED_ANSWERS,
   MAX_CHOICES,
@@ -193,7 +194,9 @@ export function QuestionEditor({
                 ? 'Image (obligatoire : les joueurs la touchent)'
                 : q.type === 'COLORS'
                   ? 'Image (pour un tableau « Zones sur une image »)'
-                  : 'Image (facultative)'
+                  : q.type === 'MISSING'
+                    ? 'Image « avant » (obligatoire : complète)'
+                    : 'Image (facultative)'
             }
             value={q.imageUrl}
             onChange={(imageUrl) => onChange({ ...q, imageUrl })}
@@ -206,7 +209,7 @@ export function QuestionEditor({
                 ? 'Temps pour écrire'
                 : q.type === 'DRAW'
                   ? 'Temps pour dessiner'
-                  : q.type === 'COLORS'
+                  : q.type === 'COLORS' || q.type === 'MISSING'
                     ? 'Temps pour répondre'
                     : 'Temps'}
             </span>
@@ -280,13 +283,17 @@ export function QuestionEditor({
           onChange={(audio) => onChange({ ...q, audio })}
           onRevealChange={(audioOnReveal) => onChange({ ...q, audioOnReveal })}
         />
-        {q.imageUrl && q.type !== 'PIN' && q.type !== 'DRAW' && q.type !== 'COLORS' && (
-          <ImageEffectField
-            imageUrl={q.imageUrl}
-            value={q.imageEffect}
-            onChange={(imageEffect) => onChange({ ...q, imageEffect })}
-          />
-        )}
+        {q.imageUrl &&
+          q.type !== 'PIN' &&
+          q.type !== 'DRAW' &&
+          q.type !== 'COLORS' &&
+          q.type !== 'MISSING' && (
+            <ImageEffectField
+              imageUrl={q.imageUrl}
+              value={q.imageEffect}
+              onChange={(imageEffect) => onChange({ ...q, imageEffect })}
+            />
+          )}
       </div>
 
       {q.type === 'TYPE_ANSWER' ? (
@@ -309,6 +316,8 @@ export function QuestionEditor({
         <ListFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'COLORS' ? (
         <ColorsFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'MISSING' ? (
+        <MissingFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

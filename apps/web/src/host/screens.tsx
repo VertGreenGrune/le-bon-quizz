@@ -29,6 +29,7 @@ import { BuzzerPanel, BuzzerRevealView } from './buzzerScreens';
 import { DrawIntroLine, DrawStage } from './drawScreens';
 import { ListStage } from './listScreens';
 import { ColorsStage } from './colorsScreens';
+import { MissingStage } from './missingScreens';
 import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -341,6 +342,8 @@ export function QuestionScreen({
             <ListStage question={question} status={list} reveal={reveal?.list} instant={instant} />
           ) : question.type === 'COLORS' ? (
             <ColorsStage question={question} reveal={reveal?.colors} instant={instant} />
+          ) : question.type === 'MISSING' ? (
+            <MissingStage question={question} reveal={reveal?.missing} instant={instant} />
           ) : reveal ? (
             reveal.buzzer ? (
               <BuzzerRevealView reveal={reveal.buzzer} instant={instant} />

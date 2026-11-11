@@ -31,6 +31,8 @@ import {
  *   7 nains »); points per item found.
  * - `COLORS` (« Couleurs perdues », T58): a colored board on the TV, then grey: players put the
  *   colors back with a palette; points per zone right.
+ * - `MISSING` (« Qu'est-ce qui a disparu ? », T59): a picture on the TV, then the same picture
+ *   without one element: players tap where it was (scored like PIN).
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -46,6 +48,7 @@ export const QuestionType = z.enum([
   'DRAW',
   'LIST',
   'COLORS',
+  'MISSING',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -438,6 +441,39 @@ const ColorsQuestion = z
     path: ['imageEffect'],
   });
 
+/** « Qu'est-ce qui a disparu ? » (T59): time to memorize the picture « avant ». */
+export const MISSING_MIN_MEMO_SEC = 5;
+export const MISSING_MAX_MEMO_SEC = 60;
+export const MISSING_DEFAULT_MEMO_SEC = 20;
+
+/**
+ * « Qu'est-ce qui a disparu ? » (T59): `imageUrl` = the picture « avant » (complete, shown on the
+ * TV for `memoSec`), `missingImageUrl` = the same picture « après » with one element removed (TV
+ * and phones for `timeLimitSec`), `zone` = where the element was (picture fractions, like PIN).
+ */
+const MissingQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('MISSING'),
+    missingImageUrl: z.string().url(),
+    memoSec: z
+      .number()
+      .int()
+      .min(MISSING_MIN_MEMO_SEC)
+      .max(MISSING_MAX_MEMO_SEC)
+      .default(MISSING_DEFAULT_MEMO_SEC),
+    zone: PinZoneSchema,
+  })
+  .refine((q) => !!q.imageUrl, { message: 'The picture « avant » is required', path: ['imageUrl'] })
+  .refine((q) => q.missingImageUrl !== q.imageUrl, {
+    message: 'The two pictures must be different',
+    path: ['missingImageUrl'],
+  })
+  .refine((q) => !q.imageEffect || q.imageEffect === 'none', {
+    message: 'No image effect on this question',
+    path: ['imageEffect'],
+  });
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -456,6 +492,7 @@ export const QuestionSchema = z.preprocess(
       DrawQuestion,
       ListQuestion,
       ColorsQuestion,
+      MissingQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -477,6 +514,7 @@ export type BluffQuestion = Extract<Question, { type: 'BLUFF' }>;
 export type DrawQuestion = Extract<Question, { type: 'DRAW' }>;
 export type ListQuestion = Extract<Question, { type: 'LIST' }>;
 export type ColorsQuestion = Extract<Question, { type: 'COLORS' }>;
+export type MissingQuestion = Extract<Question, { type: 'MISSING' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -537,6 +575,7 @@ export function answerText(q: Question, drawWord?: string, boardColors?: number[
     case 'ORDER':
       return q.items.map((item, i) => `${i + 1}. ${item}`);
     case 'PIN':
+    case 'MISSING':
       return [
         `Zone : à ${percent(q.zone.x)} depuis la gauche, ${percent(q.zone.y)} depuis le haut`,
       ];

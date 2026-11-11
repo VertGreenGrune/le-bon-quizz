@@ -172,6 +172,8 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   // « Couleurs perdues » (T58): 50/50 colors half of the zones; no buttons to scramble, nothing
   // to copy (everyone saw the same board).
   COLORS: { jokers: true, unavailable: ['scramble', 'copy'], scramble: false },
+  // « Qu'est-ce qui a disparu ? » (T59): like PIN (a point on a picture).
+  MISSING: { jokers: true, unavailable: ['fifty'], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

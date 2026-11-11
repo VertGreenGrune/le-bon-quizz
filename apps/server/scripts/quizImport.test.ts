@@ -126,6 +126,34 @@ describe('prepareQuiz', () => {
     await expect(prepareQuiz(folder, store())).rejects.toThrow('questions.0.choices');
   });
 
+  it('copies both pictures of a « Qu’est-ce qui a disparu ? » question (T59)', async () => {
+    writeFileSync(path.join(folder, 'images', 'apres.png'), Buffer.concat([PNG, Buffer.from('x')]));
+    const missing = (missingImageUrl: string) => ({
+      type: 'MISSING',
+      text: 'Qu’est-ce qui a disparu ?',
+      imageUrl: 'images/photo.png',
+      missingImageUrl,
+      zone: { x: 0.5, y: 0.5, radius: 0.1 },
+    });
+    writeQuiz({ title: 'Quiz', questions: [missing('images/apres.png')] });
+    const quiz = await prepareQuiz(folder, store());
+    const q = quiz.questions[0]!;
+    if (q.type !== 'MISSING') throw new Error('expected MISSING');
+    expect(q.imageUrl).toMatch(/\/uploads\/[0-9a-f]{32}\.png$/);
+    expect(q.missingImageUrl).toMatch(/^http:\/\/localhost:3001\/uploads\/[0-9a-f]{32}\.png$/);
+    expect(q.missingImageUrl).not.toBe(q.imageUrl);
+    expect(readdirSync(uploads)).toHaveLength(2);
+
+    // Either picture missing: an error (the pictures are the question).
+    writeQuiz({ title: 'Quiz', questions: [missing('images/absente.png')] });
+    await expect(prepareQuiz(folder, store(), () => {})).rejects.toThrow('images/absente.png');
+    writeQuiz({
+      title: 'Quiz',
+      questions: [{ ...missing('images/apres.png'), imageUrl: 'images/avant-absente.png' }],
+    });
+    await expect(prepareQuiz(folder, store(), () => {})).rejects.toThrow('avant-absente.png');
+  });
+
   it('keeps the TV theme of quiz.json (T40)', async () => {
     writeQuiz({ title: 'Quiz', theme: 'halloween', questions: [question()] });
     expect((await prepareQuiz(folder, store())).theme).toBe('halloween');
