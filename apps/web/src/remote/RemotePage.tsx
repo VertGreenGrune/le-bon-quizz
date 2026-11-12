@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { auctionDeltaLabel } from '../lib/auction';
 import { useParams } from 'react-router';
 import { SHAPES, TEAM_NAMES, type LobbyMember, type QuestionType, type TeamId } from '@lbq/shared';
 import { GainBadge } from '../components/GainBadge';
@@ -284,9 +285,30 @@ const typeLabel = (type: QuestionType) => QUESTION_TYPES.find((t) => t.type === 
 function QuestionPanel({ state }: { state: RemoteState }) {
   const host = state.host;
   const question = currentQuestion(host);
+  // « Enchères » (T64): the bids first; at the reveal, what each bid did.
+  if (host.phase === 'QUESTION_INTRO' && host.auction?.stage === 'bid')
+    return (
+      <section className="rounded-2xl bg-white/10 p-4" data-testid="remote-auction">
+        <p className="text-xl font-black">💰 Enchères en cours</p>
+        <p className="mt-1 font-semibold">
+          {host.auction.topic ?? typeLabel(host.auction.questionType)} ·{' '}
+          {host.auction.bidders.length} / {host.players.length} ont misé
+        </p>
+      </section>
+    );
   if (!question) return null;
+  const bids = host.phase === 'REVEAL' ? host.reveal?.auction?.bids : undefined;
   return (
     <section className="rounded-2xl bg-white/10 p-4">
+      {bids && bids.length > 0 && (
+        <ul className="mb-3 space-y-1 text-sm font-semibold" data-testid="remote-auction-bids">
+          {bids.map((b) => (
+            <li key={b.id}>
+              💰 {b.nickname} : {b.amount} → {auctionDeltaLabel(b.delta)}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="text-sm font-semibold opacity-75">
         {typeLabel(question.type)}
         {question.buzzer && ' · 🔔 Buzzer'}

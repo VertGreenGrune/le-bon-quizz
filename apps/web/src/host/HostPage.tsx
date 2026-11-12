@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AuctionBidScreen, AuctionRevealStrip } from './auctionScreens';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
@@ -16,6 +17,7 @@ import { ThiefWheels } from './thiefWheel';
 import {
   currentDrawing,
   currentQuestion,
+  isBidding,
   isLastQuestion,
   offlinePlayers,
   remainingMsAt,
@@ -129,7 +131,9 @@ export function HostPage() {
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
   // entrance animations (podium reveal, re-ordering…) instead of replaying them.
-  const screenKey = screenKeyFor(state.phase, state.questionIndex);
+  const screenKey = isBidding(state)
+    ? `auction-${state.questionIndex}`
+    : screenKeyFor(state.phase, state.questionIndex);
   const view = `${screenKey}/${state.phase}`;
   const firstView = useRef<string | null>(null);
   if (state.phase !== null) firstView.current ??= view;
@@ -200,6 +204,20 @@ export function HostPage() {
       };
       break;
     case 'QUESTION_INTRO':
+      // « Enchères » (T64): the bids first, without the question.
+      if (state.auction && isBidding(state)) {
+        screen = (
+          <AuctionBidScreen
+            index={state.questionIndex}
+            total={state.totalQuestions}
+            auction={state.auction}
+            players={state.players}
+            remainingMs={remainingMs}
+          />
+        );
+        primary = { label: 'Fermer les enchères', onClick: game.next };
+        break;
+      }
       screen = (
         <QuestionIntroScreen
           index={state.questionIndex}
@@ -349,6 +367,9 @@ export function HostPage() {
         {(state.jokers || state.mode === 'survival') && <JokerAnnouncements />}
         {phase === 'REVEAL' && state.reveal?.wheels && (
           <ThiefWheels key={state.questionIndex} wheels={state.reveal.wheels} instant={instant} />
+        )}
+        {phase === 'REVEAL' && state.reveal?.auction && (
+          <AuctionRevealStrip bids={state.reveal.auction.bids} instant={instant} />
         )}
         {phase === 'LEADERBOARD' && survival && !instant && (
           <EliminationMoment survival={survival} questionIndex={state.questionIndex} />

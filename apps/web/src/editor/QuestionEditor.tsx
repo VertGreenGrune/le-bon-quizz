@@ -2,6 +2,8 @@ import {
   EXPLANATION_MAX_LENGTH,
   SHAPES,
   TYPE_ANSWER_MAX_LENGTH,
+  AUCTION_TOPIC_MAX_LENGTH,
+  auctionAllowed,
   buzzerAllowed,
   hasRightAnswer,
   type Question,
@@ -279,6 +281,41 @@ export function QuestionEditor({
                 </span>
               </span>
             </label>
+          )}
+          {auctionAllowed(q.type, q.buzzer && buzzerAllowed(q.type)) && (
+            <div className="flex max-w-72 flex-col gap-2">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={q.auction}
+                  onChange={(e) => onChange({ ...q, auction: e.target.checked })}
+                  className="mt-0.5 size-5 shrink-0 accent-brand"
+                />
+                <span className="text-sm">
+                  <span className="font-bold">💰 Enchères</span>
+                  <span className="block text-gray-500">
+                    Avant de voir la question, chacun mise des points en secret : gagnés si la
+                    réponse est bonne, perdus sinon.
+                  </span>
+                </span>
+              </label>
+              {q.auction && (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-semibold">Thème annoncé (facultatif)</span>
+                  <input
+                    type="text"
+                    value={q.auctionTopic}
+                    maxLength={AUCTION_TOPIC_MAX_LENGTH}
+                    placeholder="ex. Cinéma des années 80"
+                    onChange={(e) => onChange({ ...q, auctionTopic: e.target.value })}
+                    className="rounded-lg border-2 border-gray-200 px-3 py-1.5 focus:border-brand focus:outline-none"
+                  />
+                  {err('.auctionTopic') && (
+                    <span className="text-xs text-answer-red">{err('.auctionTopic')}</span>
+                  )}
+                </label>
+              )}
+            </div>
           )}
         </div>
       </div>

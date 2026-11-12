@@ -1,5 +1,6 @@
 import {
   mergeStrokes,
+  type AuctionStatus,
   type BuzzerStatus,
   type DrawStatus,
   type ListStatus,
@@ -65,6 +66,8 @@ export interface HostGameState {
    * the local time `at`).
    */
   potato: (PotatoStatus & { at: number }) | null;
+  /** « Enchères » (T64, `game:state.auction`): the bid stage, the topic, who has bid. */
+  auction: AuctionStatus | null;
   /** « Dessine-moi »: the live drawing of question `index` (`draw:strokes`). */
   drawing: { index: number; strokes: DrawStroke[] };
   /** Players who just came back online (« <pseudo> est de retour ! »), with the local time. */
@@ -123,6 +126,7 @@ export const initialHostState: HostGameState = {
   list: null,
   wager: null,
   potato: null,
+  auction: null,
   drawing: { index: -1, strokes: [] },
   comebacks: [],
   players: [],
@@ -171,6 +175,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         list: action.payload.list ?? null,
         wager: action.payload.wager ?? null,
         potato: action.payload.potato ? { ...action.payload.potato, at: action.now } : null,
+        auction: action.payload.auction ?? null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         pausedSince: paused ? action.now - paused.sinceMs : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,
@@ -244,6 +249,11 @@ export function offlinePlayers(state: Pick<HostGameState, 'players'>): LobbyMemb
 export function remainingMsAt(state: HostGameState, now: number): number | null {
   if (state.paused || state.buzzer?.holder) return state.frozenMs;
   return state.deadline != null ? Math.max(0, state.deadline - now) : null;
+}
+
+/** « Enchères » (T64): the bid stage is on — the question isn’t known yet. */
+export function isBidding(state: Pick<HostGameState, 'phase' | 'auction'>): boolean {
+  return state.phase === 'QUESTION_INTRO' && state.auction?.stage === 'bid';
 }
 
 /** The question for the current index, or null if `question:show` hasn't arrived yet. */

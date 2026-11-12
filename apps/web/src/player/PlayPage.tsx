@@ -58,6 +58,7 @@ import { getTheme, useTheme } from '../themes';
 import { ThemedMain } from '../themes/ThemedMain';
 import { ExplanationNote, MultiAnswerButtons, MultipleResultLine, ShapeList } from './multiAnswer';
 import { MovingButtons } from './MovingButtons';
+import { AuctionResultLine, BidPad } from './auction';
 import { EliminatedOverlay, HauntBar, HeartsBadge, SurvivalResultLine } from './survival';
 import { heartsText, survivalLabel } from '../lib/survival';
 import {
@@ -154,6 +155,8 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           <FullscreenButton variant="big" />
         </Message>
       );
+    case 'bid':
+      return <BidPad key={`${s.questionIndex}-${s.bid ? 1 : 0}`} s={s} />;
     case 'getReady':
       return (
         <Message
@@ -832,6 +835,7 @@ function Result({ s }: { s: PlayerState }) {
           board={s.prompt?.colors?.stage === 'answer' ? s.prompt.colors.board : undefined}
         />
       )}
+      {r.auction && <AuctionResultLine auction={r.auction} />}
       {r.jokers && <JokerResultLines results={r.jokers} />}
       <motion.p
         initial={{ opacity: 0 }}

@@ -20,6 +20,7 @@ import {
   QuizInput,
   SHAPES,
   buzzerAllowed,
+  auctionAllowed,
   hasRightAnswer,
   type Choice,
   type ColorZone,
@@ -106,6 +107,10 @@ export interface DraftQuestion {
   imageEffect: ImageEffect;
   /** « Buzzer » (T28); only sent for the types that take it (`buzzerAllowed`). */
   buzzer: boolean;
+  /** « Enchères » (T64): bids before the question (`auctionAllowed` types, not au buzzer). */
+  auction: boolean;
+  /** « Enchères »: the topic shown during the bids (empty = the question type). */
+  auctionTopic: string;
   /** « 💡 Le saviez-vous ? » (T37), any type; empty = none. */
   explanation: string;
 }
@@ -285,6 +290,8 @@ export function newQuestion(): DraftQuestion {
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
+    auction: false,
+    auctionTopic: '',
     explanation: '',
   };
 }
@@ -309,6 +316,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
   draft.audioOnReveal = q.audioOnReveal ?? false;
   draft.imageEffect = q.imageEffect ?? 'none';
   draft.buzzer = q.buzzer ?? false;
+  draft.auction = q.auction ?? false;
+  draft.auctionTopic = q.auctionTopic ?? '';
   draft.explanation = q.explanation ?? '';
   switch (q.type) {
     case 'TYPE_ANSWER':
@@ -449,6 +458,11 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         : undefined,
     // Kept in the draft when switching to a type without buzzer (and back), not saved there.
     buzzer: q.buzzer && buzzerAllowed(q.type) ? true : undefined,
+    // Same for the bids (T64): never au buzzer.
+    ...(isAuctionDraft(q) && {
+      auction: true,
+      ...(q.auctionTopic.trim() && { auctionTopic: q.auctionTopic.trim() }),
+    }),
     explanation: q.explanation.trim() || undefined,
   };
   switch (q.type) {
@@ -774,6 +788,11 @@ export function moveItem(q: DraftQuestion, from: number, to: number): DraftQuest
   const [item] = items.splice(from, 1);
   items.splice(to, 0, item!);
   return { ...q, items };
+}
+
+/** « Enchères » (T64): the question takes bids (its type allows them, not au buzzer). */
+export function isAuctionDraft(q: DraftQuestion): boolean {
+  return q.auction && auctionAllowed(q.type, q.buzzer && buzzerAllowed(q.type));
 }
 
 /**

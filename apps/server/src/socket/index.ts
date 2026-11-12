@@ -12,6 +12,7 @@ import {
   HostTokenPayload,
   PlayerAnswerPayload,
   PlayerAvatarsPayload,
+  PlayerBidPayload,
   PlayerBuzzPayload,
   PlayerUnanswerPayload,
   PlayerDrawPayload,
@@ -515,6 +516,14 @@ export function registerSocketHandlers(
         const { game, playerId } = asPlayer(pin);
         game.buzz(playerId, questionIndex);
         return {};
+      }),
+    );
+
+    socket.on(
+      'player:bid',
+      handler(socket, PlayerBidPayload, ({ pin, questionIndex, amount }) => {
+        const { game, playerId } = asPlayer(pin);
+        return game.bid(playerId, questionIndex, amount);
       }),
     );
 
