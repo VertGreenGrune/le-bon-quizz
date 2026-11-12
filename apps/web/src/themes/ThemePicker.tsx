@@ -44,7 +44,11 @@ export function ThemeField({
       <span id="theme-label" className="text-sm font-bold text-gray-600">
         Thème de la TV
       </span>
-      <div role="radiogroup" aria-labelledby="theme-label" className="grid grid-cols-5 gap-2">
+      <div
+        role="radiogroup"
+        aria-labelledby="theme-label"
+        className="grid grid-cols-3 gap-2 sm:grid-cols-5"
+      >
         {QUIZ_THEMES.map((theme) => (
           <button
             key={theme}
@@ -52,7 +56,7 @@ export function ThemeField({
             role="radio"
             aria-checked={value === theme}
             onClick={() => onChange(theme)}
-            className={`flex flex-col items-center gap-1 rounded-xl border-2 p-1 text-sm font-bold ${
+            className={`flex min-w-0 flex-col items-center gap-1 rounded-xl border-2 p-1 text-xs font-bold sm:text-sm ${
               value === theme ? 'border-brand bg-brand/10' : 'border-gray-200 hover:border-brand/50'
             }`}
           >

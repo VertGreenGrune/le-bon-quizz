@@ -10,7 +10,7 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
   const flash = (useLocation().state as { flash?: string } | null)?.flash;
   return (
     <div className="flex min-h-dvh flex-col bg-gray-100 text-gray-900">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-3 bg-brand px-4 py-3 text-white shadow">
+      <header className="z-10 flex flex-wrap items-center gap-x-3 gap-y-2 bg-brand px-4 py-3 text-white shadow md:sticky md:top-0">
         <Link to="/editor" className="text-xl font-black tracking-tight">
           Le Bon Quizz
         </Link>
@@ -27,7 +27,8 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
           Mes parties
         </Link>
         <span className="flex-1" />
-        {actions}
+        {/* On a phone the page's actions sit in a bar at the bottom of the screen instead. */}
+        {actions && <span className="hidden items-center gap-3 md:flex">{actions}</span>}
         {user && (
           <span className="flex items-center gap-2 text-sm">
             <span className="hidden opacity-80 sm:inline">{user.name}</span>
@@ -56,6 +57,14 @@ export function EditorShell({ actions, children }: { actions?: ReactNode; childr
         </p>
       )}
       {children}
+      {actions && (
+        <div
+          data-testid="phone-actions"
+          className="sticky bottom-0 z-10 flex items-center justify-end gap-1.5 overflow-x-auto border-t [&>*]:shrink-0 [&>*]:px-2.5 [&>*]:text-sm [&>*]:whitespace-nowrap border-gray-200 bg-white/95 px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur md:hidden"
+        >
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

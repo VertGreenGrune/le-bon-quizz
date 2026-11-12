@@ -228,7 +228,7 @@ export function QuizEditorPage() {
             onClick={() => setStarting(true)}
             disabled={saving}
           >
-            ▶ Lancer la partie
+            ▶ Lancer<span className="max-sm:hidden"> la partie</span>
           </button>
         </>
       }
@@ -273,7 +273,7 @@ export function QuizEditorPage() {
         )}
 
         <fieldset disabled={!canEdit} className="contents">
-          <section className="grid gap-4 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-[1fr_16rem]">
+          <section className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-2xl bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_16rem]">
             <div className="flex flex-col gap-3">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-bold text-gray-600">Titre du quiz</span>
@@ -323,8 +323,8 @@ export function QuizEditorPage() {
             />
           </section>
 
-          <div className="grid gap-4 md:grid-cols-[14rem_1fr]">
-            <nav aria-label="Questions" className="flex flex-col gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
+            <nav aria-label="Questions" className="flex min-w-0 flex-col gap-2">
               {errors.questions && (
                 <p className="text-sm font-semibold text-answer-red">{errors.questions}</p>
               )}
@@ -337,7 +337,7 @@ export function QuizEditorPage() {
                         type="button"
                         onClick={() => setCurrent(i)}
                         aria-current={i === index}
-                        className={`flex w-40 items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 text-left shadow-sm md:w-full ${i === index ? 'border-brand' : 'border-transparent hover:border-gray-300'}`}
+                        className={`flex w-36 items-center gap-2 rounded-xl border-2 bg-white px-3 py-2 text-left shadow-sm md:w-full ${i === index ? 'border-brand' : 'border-transparent hover:border-gray-300'}`}
                       >
                         <span className="text-sm font-black text-gray-400">{i + 1}</span>
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold">

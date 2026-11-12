@@ -7,6 +7,7 @@ import {
   buzzerAllowed,
   hasRightAnswer,
   type Question,
+  type QuestionType,
 } from '@lbq/shared';
 import type { FieldErrors } from '../api/validation';
 import { ShapeIcon, shapeBg } from '../components/shapes';
@@ -122,8 +123,27 @@ export function QuestionEditor({
         </button>
       </div>
 
+      {/* Phone: a compact list (18 types would take half the screen as buttons). */}
+      <label className="flex flex-col gap-1 sm:hidden">
+        <span className="text-sm font-bold text-gray-600">Type de question</span>
+        <select
+          value={q.type}
+          onChange={(e) => onChange(setQuestionType(q, e.target.value as QuestionType))}
+          className={selectClass}
+          data-testid="type-select"
+        >
+          {QUESTION_TYPES.map(({ type, label }) => (
+            <option key={type} value={type}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-gray-500">
+          {QUESTION_TYPES.find((t) => t.type === q.type)?.description}
+        </span>
+      </label>
       <div
-        className="flex flex-wrap gap-1 self-start rounded-lg bg-gray-100 p-1"
+        className="hidden flex-wrap gap-1 self-start rounded-lg bg-gray-100 p-1 sm:flex"
         role="radiogroup"
         aria-label="Type"
       >
@@ -188,7 +208,7 @@ export function QuestionEditor({
         <FieldError message={err('.explanation')} />
       </label>
 
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
         {q.type === 'DRAW' ? (
           <p className="self-center rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-600">
             🎨 Pas d’image : l’écran affiche le dessin en direct.
@@ -320,7 +340,7 @@ export function QuestionEditor({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
         <AudioField
           value={q.audio}
           onReveal={q.audioOnReveal}
@@ -400,7 +420,7 @@ function ChoicesField({ q, err, onChange }: FieldProps) {
             : `coche ${isTF ? 'la bonne réponse' : 'la ou les bonnes réponses'}`}
         </span>
       </span>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
         {q.choices.map((c, i) => {
           const shape = SHAPES[i]!;
           const textErr = err(`.choices.${i}.text`);
@@ -560,7 +580,7 @@ function SliderField({ q, err, onChange }: FieldProps) {
           — juste si l’écart avec la bonne réponse ne dépasse pas la tolérance (0 = valeur exacte)
         </span>
       </span>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 sm:grid-cols-6">
         {SLIDER_FIELDS.map(({ key, label }) => {
           const fieldErr = err(`.slider.${key}`);
           return (

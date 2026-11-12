@@ -132,7 +132,7 @@ export function PotatoFields({ q, err, onChange }: FieldProps) {
                   </button>
                 )}
               </div>
-              <div className="grid gap-2 pl-9 sm:grid-cols-2">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-2 pl-9 sm:grid-cols-2">
                 {sub.choices.map((choice, k) => {
                   const shape = SHAPES[k]!;
                   const right = sub.correct === k;

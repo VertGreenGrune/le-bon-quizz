@@ -39,7 +39,7 @@ export function MissingFields({ q, err, onChange }: FieldProps) {
         pendant le temps pour mémoriser, puis « après » : les joueurs touchent l’endroit où se
         trouvait l’élément.
       </p>
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex flex-col gap-1">
           <ImageField
             label="Image « après » (sans l’élément, même taille)"
