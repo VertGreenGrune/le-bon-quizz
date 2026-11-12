@@ -3869,3 +3869,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   with bids sends **no `question:show` during the bid stage** (QUESTION_INTRO starts without the
   question; it comes when the bids close), and no `introMs` then. Migration
   `20261112064000_auction`.
+- 2026-11-12, main agent (demo quiz): `DEMO_QUIZ` (quiz `demo`, home page « Animer une partie
+  (démo) ») is now a tour of the game: 22 questions, one of every type (the 18 types) + « select
+  all », picture effect, « Buzzer », « Enchères » and explanations; its pictures are small SVG
+  drawings in `data:` URLs (no upload, works without a DB). The old 7-question quiz is kept as
+  **`CLASSIC_DEMO_QUIZ`**, the fixture of every unit test; the e2e server plays it as `demo`
+  through `E2E_CLASSIC_DEMO` (set in `playwright.config.ts`, read in `game/persistence.ts`, never
+  set in production). New `packages/shared/src/demo-quiz.test.ts` fails if a question type is
+  missing from the demo. A seeded `demo` row (`db:seed`) is only refreshed by re-running the seed.

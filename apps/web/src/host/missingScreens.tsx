@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { QuestionShowPayload, RevealDetails } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import { PinMarker, PinPicture, PinZoneMark } from '../components/PinPicture';
@@ -13,7 +13,7 @@ import {
 
 /**
  * « Qu'est-ce qui a disparu ? » (T59) on the TV: the picture « avant » while memorizing, « après »
- * (cross-faded) while the phones answer, then « avant » with the zone and every pin, with an
+ * (after a 1 s blackout, no fade) while the phones answer, then « avant » with the zone and every pin, with an
  * avant / après toggle.
  */
 export function MissingStage({
@@ -43,14 +43,6 @@ export function MissingStage({
           : '🔍 Quelque chose a disparu ! Touchez l’endroit sur vos téléphones'}
       </motion.p>
       <div className="relative flex min-h-0 justify-center">
-        {/* « avant » stays underneath while « après » fades in over it. */}
-        {!memo && question.imageUrl && (
-          <img
-            src={mediaUrl(question.imageUrl)}
-            alt=""
-            className="absolute inset-0 m-auto max-h-[52vh] max-w-full rounded-xl"
-          />
-        )}
         {src && (
           <motion.img
             key={stage}
@@ -58,14 +50,37 @@ export function MissingStage({
             alt=""
             data-testid="missing-picture"
             data-side={memo ? 'avant' : 'apres'}
-            initial={instant ? false : { opacity: 0 }}
+            // Memorizing: the picture fades in. Answering: « après » replaces « avant » at once,
+            // hidden by the blackout below (no fade, so nothing gives the element away).
+            initial={instant || !memo ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: memo ? 0.4 : 1.2 }}
+            transition={{ duration: 0.4 }}
             className="relative block max-h-[52vh] max-w-full rounded-xl shadow-lg"
           />
         )}
+        {!memo && !instant && <Blackout key={stage} />}
       </div>
     </div>
+  );
+}
+
+/** How long the picture stays black while the element disappears. */
+export const MISSING_BLACKOUT_MS = 1000;
+
+/** A black screen over the picture for `MISSING_BLACKOUT_MS`, then gone at once (no fade). */
+function Blackout() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setOn(false), MISSING_BLACKOUT_MS);
+    return () => clearTimeout(id);
+  }, []);
+  if (!on) return null;
+  return (
+    <div
+      className="absolute inset-0 rounded-xl bg-black"
+      data-testid="missing-blackout"
+      aria-hidden="true"
+    />
   );
 }
 

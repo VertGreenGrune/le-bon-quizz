@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   MAX_ACCEPTED_ANSWERS,
   PlayerAnswerPayload,
   PlayerJoinPayload,
@@ -56,12 +56,12 @@ describe('« Buzzer » option (T28)', () => {
 
 describe('shared schemas', () => {
   it('demo quiz is valid', () => {
-    expect(QuizSchema.safeParse(DEMO_QUIZ).success).toBe(true);
+    expect(QuizSchema.safeParse(CLASSIC_DEMO_QUIZ).success).toBe(true);
   });
 
   it('rejects a question without a correct choice', () => {
     const bad = {
-      ...DEMO_QUIZ,
+      ...CLASSIC_DEMO_QUIZ,
       questions: [
         {
           text: 'Q',
@@ -343,9 +343,9 @@ describe('explanations and « select all » (T37)', () => {
 
 describe('TV themes (T40)', () => {
   it('is optional on a quiz and refuses unknown themes', () => {
-    expect(QuizSchema.parse(DEMO_QUIZ).theme).toBeUndefined();
-    expect(QuizSchema.parse({ ...DEMO_QUIZ, theme: 'halloween' }).theme).toBe('halloween');
-    expect(QuizSchema.safeParse({ ...DEMO_QUIZ, theme: 'disco' }).success).toBe(false);
+    expect(QuizSchema.parse(CLASSIC_DEMO_QUIZ).theme).toBeUndefined();
+    expect(QuizSchema.parse({ ...CLASSIC_DEMO_QUIZ, theme: 'halloween' }).theme).toBe('halloween');
+    expect(QuizSchema.safeParse({ ...CLASSIC_DEMO_QUIZ, theme: 'disco' }).success).toBe(false);
   });
 
   it('can be overridden in host:create', () => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEMO_QUIZ, type GameStatePayload, type ServerToClientEvents } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ, type GameStatePayload, type ServerToClientEvents } from '@lbq/shared';
 import { Game, type GameTransport } from './Game.js';
 
 type Sent = { to: string; event: keyof ServerToClientEvents; payload: unknown };
@@ -31,7 +31,7 @@ describe('Game TV theme', () => {
     const rec = recorder();
     game = new Game(
       '123456',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       rec.transport,
       {},
       { mode: 'solo', allAnsweredGraceMs: 0 },
@@ -45,14 +45,20 @@ describe('Game TV theme', () => {
 
   it("uses the quiz's theme, or the start dialog's override", () => {
     const rec = recorder();
-    game = new Game('123456', { ...DEMO_QUIZ, theme: 'halloween' }, rec.transport);
+    game = new Game('123456', { ...CLASSIC_DEMO_QUIZ, theme: 'halloween' }, rec.transport);
     expect(game.theme).toBe('halloween');
     game.dispose();
 
-    game = new Game('123456', { ...DEMO_QUIZ, theme: 'halloween' }, rec.transport, undefined, {
-      mode: 'solo',
-      theme: 'christmas',
-    });
+    game = new Game(
+      '123456',
+      { ...CLASSIC_DEMO_QUIZ, theme: 'halloween' },
+      rec.transport,
+      undefined,
+      {
+        mode: 'solo',
+        theme: 'christmas',
+      },
+    );
     expect(game.theme).toBe('christmas');
     expect(game.statePayload().theme).toBe('christmas');
   });
@@ -60,7 +66,7 @@ describe('Game TV theme', () => {
   it('sends the theme in every game:state, including both resyncs', () => {
     vi.useFakeTimers();
     const rec = recorder();
-    game = new Game('123456', { ...DEMO_QUIZ, theme: 'space' }, rec.transport, undefined, {
+    game = new Game('123456', { ...CLASSIC_DEMO_QUIZ, theme: 'space' }, rec.transport, undefined, {
       mode: 'teams',
     });
     const alice = game.join('Alice', 's1');

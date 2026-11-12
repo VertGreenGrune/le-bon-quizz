@@ -1,5 +1,5 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ } from '@lbq/shared';
 import { answerOnPhone } from './answers';
 
 /**
@@ -22,7 +22,7 @@ const shot = async (page: Page, name: string) => {
 test('« Survie »: hearts, a ghost haunts a survivor, the last survivor wins', async ({
   browser,
 }) => {
-  const [q1, q2, q3] = DEMO_QUIZ.questions;
+  const [q1, q2, q3] = CLASSIC_DEMO_QUIZ.questions;
 
   // ---- Start dialog: Survie, 1 heart, no jokers ----
   const hostContext = await browser.newContext({ viewport: { width: 1600, height: 900 } });

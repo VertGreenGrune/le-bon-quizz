@@ -1,10 +1,22 @@
-import { DEMO_QUIZ, type ChainQuiz, type GameMode, type Quiz } from '@lbq/shared';
+import {
+  CLASSIC_DEMO_QUIZ,
+  DEMO_QUIZ as FULL_DEMO_QUIZ,
+  type ChainQuiz,
+  type GameMode,
+  type Quiz,
+} from '@lbq/shared';
 import { getPlayableQuiz, listQuizzes, listSharedQuizzes } from '../api/quizzes.service.js';
 import { getUserBySessionToken } from '../auth/session.js';
 import type { PrismaClient } from '../db.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { GameError } from './errors.js';
 import type { Game, PlayerStanding, QuestionStats, TeamStanding } from './Game.js';
+
+/**
+ * The built-in demo. The end-to-end tests play the classic 7-question one (`E2E_CLASSIC_DEMO`,
+ * set by `playwright.config.ts`; never in production).
+ */
+const DEMO_QUIZ: Quiz = process.env.E2E_CLASSIC_DEMO ? CLASSIC_DEMO_QUIZ : FULL_DEMO_QUIZ;
 
 /** A quiz ready to be played, and the DB row it comes from (null for the built-in demo). */
 export interface LoadedQuiz {

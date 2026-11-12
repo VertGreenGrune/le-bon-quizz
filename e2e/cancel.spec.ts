@@ -1,12 +1,12 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ, SHAPES } from '@lbq/shared';
 
 /**
  * « Annuler ma réponse » (T43) on the first demo question (a classic MCQ): Alice answers wrong,
  * cancels, answers right; Bob answers last, cancels during the 2 s « everyone answered » grace
  * and answers wrong. The results follow the second answers.
  */
-const question = DEMO_QUIZ.questions[0]!;
+const question = CLASSIC_DEMO_QUIZ.questions[0]!;
 if (question.type !== 'MCQ') throw new Error('the first demo question must be an MCQ');
 const right = question.choices.findIndex((c) => c.isCorrect);
 const wrong = question.choices.findIndex((c) => !c.isCorrect);

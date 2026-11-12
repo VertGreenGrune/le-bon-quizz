@@ -1,5 +1,5 @@
 import { expect, test, devices, type Page } from '@playwright/test';
-import { DEMO_QUIZ } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ } from '@lbq/shared';
 
 /**
  * « 🔁 Enchaîner un quiz » (T48): once a quiz is over, the host starts another one in the same
@@ -25,7 +25,9 @@ test('the host chains a second quiz with the same PIN and players', async ({ bro
 
   // First quiz: started, then ended early by the host.
   await host.getByRole('button', { name: 'Commencer' }).click();
-  await expect(host.getByText(`Question 1 / ${DEMO_QUIZ.questions.length}`).first()).toBeVisible();
+  await expect(
+    host.getByText(`Question 1 / ${CLASSIC_DEMO_QUIZ.questions.length}`).first(),
+  ).toBeVisible();
   host.once('dialog', (d) => void d.accept());
   await host.getByRole('button', { name: 'Terminer', exact: true }).click();
   for (const phone of phones) {
@@ -36,7 +38,7 @@ test('the host chains a second quiz with the same PIN and players', async ({ bro
   // Chain: pick the quiz, then the options.
   await host.getByRole('button', { name: '🔁 Enchaîner un quiz' }).click();
   const dialog = host.getByRole('dialog', { name: '🔁 Enchaîner un quiz' });
-  await dialog.getByRole('button', { name: new RegExp(DEMO_QUIZ.title) }).click();
+  await dialog.getByRole('button', { name: new RegExp(CLASSIC_DEMO_QUIZ.title) }).click();
   await host.getByRole('button', { name: '▶ Lancer' }).click();
 
   // Same room: same URL / PIN, the players are already in the new lobby.
@@ -53,6 +55,8 @@ test('the host chains a second quiz with the same PIN and players', async ({ bro
 
   // The chained quiz plays from 0.
   await host.getByRole('button', { name: 'Commencer' }).click();
-  await expect(host.getByText(`Question 1 / ${DEMO_QUIZ.questions.length}`).first()).toBeVisible();
+  await expect(
+    host.getByText(`Question 1 / ${CLASSIC_DEMO_QUIZ.questions.length}`).first(),
+  ).toBeVisible();
   for (const phone of phones) await expect(phone.getByText(/Question 1/).first()).toBeVisible();
 });

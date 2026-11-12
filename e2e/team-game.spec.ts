@@ -1,5 +1,5 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ } from '@lbq/shared';
 import { answerOnPhone, resultHeading, type Plan } from './answers';
 
 /**
@@ -16,7 +16,7 @@ const PLAYERS: { nickname: string; team: string; plan: Plan }[] = [
 ];
 /** Polls: everybody votes, nobody scores (team scores don't move). */
 const planFor = (q: number, plan: Plan): Plan =>
-  DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
+  CLASSIC_DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
 
 async function newPhone(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ ...devices['Pixel 7'] });
@@ -71,9 +71,9 @@ test('team game: players pick teams, fair team scores, team podium', async ({ br
   // Phones show their team in the header band during the game.
   await expect(phones[0]!.getByText('Alice · Équipe Rouge')).toBeVisible();
 
-  const total = DEMO_QUIZ.questions.length;
+  const total = CLASSIC_DEMO_QUIZ.questions.length;
   for (let q = 0; q < total; q++) {
-    const question = DEMO_QUIZ.questions[q]!;
+    const question = CLASSIC_DEMO_QUIZ.questions[q]!;
     await expect(host.getByRole('heading', { name: question.text })).toBeVisible();
     for (const [i, phone] of phones.entries()) {
       await answerOnPhone(phone, question, planFor(q, PLAYERS[i]!.plan));

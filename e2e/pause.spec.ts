@@ -1,5 +1,5 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ } from '@lbq/shared';
 import { answerOnPhone, resultHeading, type Plan } from './answers';
 
 /**
@@ -7,7 +7,8 @@ import { answerOnPhone, resultHeading, type Plan } from './answers';
  * then resumes with a 3-2-1 countdown once they are back (same phone, reopened tab, or another
  * phone taking over the nickname).
  */
-const plan = (q: number): Plan => (DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : 'right');
+const plan = (q: number): Plan =>
+  CLASSIC_DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : 'right';
 
 async function newPhone(browser: Browser): Promise<Page> {
   const context = await browser.newContext({ ...devices['Pixel 7'] });
@@ -35,7 +36,7 @@ async function startGame(browser: Browser, nicknames: string[]) {
 
 /** Everyone answers question `q`, then the host goes on to the next question (or the podium). */
 async function playQuestion(host: Page, phones: Page[], q: number, answered: Page[] = []) {
-  const question = DEMO_QUIZ.questions[q]!;
+  const question = CLASSIC_DEMO_QUIZ.questions[q]!;
   for (const phone of phones) {
     if (!answered.includes(phone)) await answerOnPhone(phone, question, plan(q));
   }
@@ -45,12 +46,13 @@ async function playQuestion(host: Page, phones: Page[], q: number, answered: Pag
     ).toBeVisible();
   }
   await host.getByRole('button', { name: 'Suivant' }).click();
-  const last = q === DEMO_QUIZ.questions.length - 1;
+  const last = q === CLASSIC_DEMO_QUIZ.questions.length - 1;
   await host.getByRole('button', { name: last ? 'Voir le podium' : 'Question suivante' }).click();
 }
 
 async function finishGame(host: Page, phones: Page[], from: number) {
-  for (let q = from; q < DEMO_QUIZ.questions.length; q++) await playQuestion(host, phones, q);
+  for (let q = from; q < CLASSIC_DEMO_QUIZ.questions.length; q++)
+    await playQuestion(host, phones, q);
   await expect(host.getByRole('heading', { name: 'Podium' })).toBeVisible();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   for (const phone of phones) {
@@ -86,7 +88,7 @@ test('a phone goes offline mid-question: the game pauses, then resumes', async (
   const [alice, bob] = phones as [Page, Page];
 
   // Question 1: Alice answers, Bob loses the network before answering.
-  const q0 = DEMO_QUIZ.questions[0]!;
+  const q0 = CLASSIC_DEMO_QUIZ.questions[0]!;
   await answerOnPhone(alice, q0, plan(0));
   await expect(alice.getByText('Réponse envoyée !')).toBeVisible();
   await expect(bob.getByRole('button', { name: /^Réponse / }).first()).toBeVisible();

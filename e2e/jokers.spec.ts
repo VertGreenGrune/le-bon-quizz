@@ -1,5 +1,5 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ, SHAPES } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ, SHAPES } from '@lbq/shared';
 import { answerOnPhone } from './answers';
 
 /**
@@ -57,7 +57,7 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
   await host.getByRole('button', { name: 'Commencer' }).click();
 
   // ---- Question 1 (MCQ), during the 8 s intro: Alice freezes Bob, Chloé copies Bob ----
-  const q1 = DEMO_QUIZ.questions[0]!;
+  const q1 = CLASSIC_DEMO_QUIZ.questions[0]!;
   await expect(host.getByTestId('intro-jokers')).toContainText('Jouez vos jokers !');
   await expect(alice!.getByTestId('joker-bar')).toContainText('Joue tes jokers !');
   await shot(host, 'host-intro');
@@ -100,7 +100,7 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
     'data-blocked',
     'Ce joker ne marche pas sur cette question',
   );
-  const q2 = DEMO_QUIZ.questions[1]!;
+  const q2 = CLASSIC_DEMO_QUIZ.questions[1]!;
   await answerOnPhone(alice!, q2, 'right');
   await expect(alice!.getByTestId('joker-bar')).toContainText('Encore un joker');
   // Copieur is « before answering » only: the sheet says why.
@@ -122,7 +122,7 @@ test('jokers: the start dialog option, Gel and Copieur between two phones', asyn
   await expect(host.getByTestId('intro-jokers')).toBeVisible();
   await playJoker(bob!, 'Voleur'); // no target: the wheel picks among everyone
   await expect(host.getByTestId('joker-announcement')).toContainText('Bob lance la roue du Voleur');
-  const q3 = DEMO_QUIZ.questions[2]!;
+  const q3 = CLASSIC_DEMO_QUIZ.questions[2]!;
   for (const phone of [alice!, bob!, chloe!]) await answerOnPhone(phone, q3, 'right');
   await expect(host.getByTestId('thief-wheel')).toBeVisible({ timeout: 10_000 });
   await expect(host.getByTestId('thief-wheel')).toContainText('La roue de Bob tourne');

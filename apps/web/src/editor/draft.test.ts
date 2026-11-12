@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_QUIZ, MAX_ACCEPTED_ANSWERS } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ, MAX_ACCEPTED_ANSWERS } from '@lbq/shared';
 import {
   addAcceptedAnswer,
   addChoice,
@@ -222,14 +222,14 @@ describe('new question types', () => {
     const draft = fromDetail({
       access: 'owner',
       ownerName: 'Moi',
-      ...DEMO_QUIZ,
+      ...CLASSIC_DEMO_QUIZ,
       visibility: 'PRIVATE',
       theme: 'classic',
       createdAt: '',
       updatedAt: '',
     });
     const res = validateDraft(draft);
-    expect(res.ok && res.data.questions).toEqual(DEMO_QUIZ.questions);
+    expect(res.ok && res.data.questions).toEqual(CLASSIC_DEMO_QUIZ.questions);
   });
 
   it('keeps the visibility: private for a new quiz, as saved otherwise', () => {
@@ -237,7 +237,7 @@ describe('new question types', () => {
     const draft = fromDetail({
       access: 'owner',
       ownerName: 'Moi',
-      ...DEMO_QUIZ,
+      ...CLASSIC_DEMO_QUIZ,
       visibility: 'PUBLIC',
       theme: 'classic',
       createdAt: '',
@@ -307,7 +307,7 @@ describe('media (sound clip, picture effect)', () => {
     const draft = fromDetail({
       access: 'owner',
       ownerName: 'Moi',
-      ...DEMO_QUIZ,
+      ...CLASSIC_DEMO_QUIZ,
       visibility: 'PRIVATE',
       theme: 'classic',
       createdAt: '',

@@ -5,7 +5,7 @@ import {
   type Quiz,
   type ServerToClientEvents,
 } from '@lbq/shared';
-import { CLASSIC_QUIZ as DEMO_QUIZ, introOf } from './testing.js';
+import { CLASSIC_QUIZ as CLASSIC_DEMO_QUIZ, introOf } from './testing.js';
 import { Game, type GameTransport } from './Game.js';
 import { GameError } from './errors.js';
 import { GameManager, GAME_IDLE_TTL_MS, HOST_GONE_TTL_MS, generatePin } from './GameManager.js';
@@ -47,7 +47,7 @@ describe('Game state machine', () => {
     rec = recorder();
     game = new Game(
       '123456',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       rec.transport,
       {},
       { mode: 'solo', allAnsweredGraceMs: 0 },
@@ -66,8 +66,8 @@ describe('Game state machine', () => {
       phase: 'LOBBY',
       mode: 'solo',
       questionIndex: -1,
-      totalQuestions: DEMO_QUIZ.questions.length,
-      quizTitle: DEMO_QUIZ.title,
+      totalQuestions: CLASSIC_DEMO_QUIZ.questions.length,
+      quizTitle: CLASSIC_DEMO_QUIZ.title,
     });
   });
 
@@ -107,7 +107,7 @@ describe('Game state machine', () => {
     expect(show?.payload).toEqual({
       index: 0,
       type: 'MCQ',
-      text: DEMO_QUIZ.questions[0]!.text,
+      text: CLASSIC_DEMO_QUIZ.questions[0]!.text,
       choices: ['Lyon', 'Paris', 'Marseille', 'Bordeaux'],
       timeLimitSec: 20,
     });
@@ -196,11 +196,11 @@ describe('Game state machine', () => {
   it('plays the whole quiz: leaderboard between questions, then podium, then ENDED', () => {
     const [alice, bob] = joinAll('Alice', 'Bob');
     game.start();
-    for (let q = 0; q < DEMO_QUIZ.questions.length; q++) {
+    for (let q = 0; q < CLASSIC_DEMO_QUIZ.questions.length; q++) {
       expect(game.phase).toBe('QUESTION_INTRO');
       expect(game.questionIndex).toBe(q);
       vi.advanceTimersByTime(introOf(game));
-      const correct = DEMO_QUIZ.questions[q]!.choices.findIndex((c) => c.isCorrect);
+      const correct = CLASSIC_DEMO_QUIZ.questions[q]!.choices.findIndex((c) => c.isCorrect);
       game.answer(alice!.id, q, correct);
       game.answer(bob!.id, q, (correct + 1) % 2);
       expect(game.phase).toBe('REVEAL');
@@ -249,9 +249,9 @@ describe('Game state machine', () => {
   describe('streaks', () => {
     /** 8 instant-answer questions (2 choices, choice 0 correct); question 6 is worth 0 points. */
     const streakQuiz: Quiz = {
-      ...DEMO_QUIZ,
+      ...CLASSIC_DEMO_QUIZ,
       questions: Array.from({ length: 8 }, (_, i) => ({
-        ...DEMO_QUIZ.questions[1]!,
+        ...CLASSIC_DEMO_QUIZ.questions[1]!,
         text: `Q${i}`,
         basePoints: i === 6 ? 0 : 1000,
         choices: [
@@ -347,7 +347,7 @@ describe('Game state machine', () => {
       game.answer(
         alice!.id,
         1,
-        DEMO_QUIZ.questions[1]!.choices.findIndex((c) => c.isCorrect),
+        CLASSIC_DEMO_QUIZ.questions[1]!.choices.findIndex((c) => c.isCorrect),
       );
       game.disconnect('sock-0');
       game.resync(game.rejoin(alice!.sessionToken, 'sock-new'));
@@ -364,7 +364,7 @@ describe('Game state machine', () => {
     const onEnded = vi.fn();
     const g = new Game(
       '654321',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       rec.transport,
       { onEnded },
       { mode: 'solo', allAnsweredGraceMs: 0 },
@@ -508,7 +508,7 @@ describe('Game state machine', () => {
       expect(rec.last('game:state')).toMatchObject({ phase: 'ANSWERING', remainingMs: 15_000 });
       expect(rec.last('question:show')).toMatchObject({
         index: 0,
-        text: DEMO_QUIZ.questions[0]!.text,
+        text: CLASSIC_DEMO_QUIZ.questions[0]!.text,
       });
       expect(rec.last('answer:count')).toEqual({ answered: 1, total: 2 });
     });
@@ -638,7 +638,7 @@ describe('GameManager', () => {
 
   it('creates, finds and sweeps games', () => {
     const games = new GameManager();
-    const game = games.create(DEMO_QUIZ, () => noop);
+    const game = games.create(CLASSIC_DEMO_QUIZ, () => noop);
     expect(games.get(game.pin)).toBe(game);
     expect(() => games.get('000000' === game.pin ? '000001' : '000000')).toThrow(GameError);
 
@@ -652,7 +652,7 @@ describe('GameManager', () => {
   it('ends (and so saves) a started game whose host screen is gone', () => {
     const games = new GameManager();
     const onEnded = vi.fn();
-    const game = games.create(DEMO_QUIZ, () => noop, { onEnded });
+    const game = games.create(CLASSIC_DEMO_QUIZ, () => noop, { onEnded });
     game.join('Alice', 's1');
     game.hostConnected('h1');
     game.start();
@@ -671,7 +671,7 @@ describe('GameManager', () => {
   it('ends an idle game before dropping it', () => {
     const games = new GameManager();
     const onEnded = vi.fn();
-    const game = games.create(DEMO_QUIZ, () => noop, { onEnded });
+    const game = games.create(CLASSIC_DEMO_QUIZ, () => noop, { onEnded });
     game.join('Alice', 's1');
     game.start();
     games.sweep(game.lastActivityAt + GAME_IDLE_TTL_MS + 1000);

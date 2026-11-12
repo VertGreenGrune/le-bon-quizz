@@ -36,6 +36,8 @@ export default defineConfig({
       env: {
         PORT: String(SERVER_PORT),
         E2E_JOKER_HAND: 'freeze,copy,fifty,double,thief',
+        // The specs play the classic 7-question demo (`CLASSIC_DEMO_QUIZ`), not the full tour.
+        E2E_CLASSIC_DEMO: '1',
         ...(DATABASE_URL && { DATABASE_URL }),
       },
       reuseExistingServer: !process.env.CI,

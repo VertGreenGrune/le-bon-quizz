@@ -209,6 +209,9 @@ test('« Qu’est-ce qui a disparu ? »: « avant » on the TV, « après » on 
     { timeout: 15_000 },
   );
   await expect(host.getByTestId('missing-picture')).toHaveAttribute('data-side', 'apres');
+  // The element disappears during a 1 s blackout (no fade), then « après » shows at once.
+  await expect(host.getByTestId('missing-blackout')).toBeVisible();
+  await expect(host.getByTestId('missing-blackout')).toBeHidden({ timeout: 3_000 });
   await expect(alice.getByTestId('pin-picture').locator('img')).toHaveAttribute(
     'src',
     new RegExp(fileName(apres)),

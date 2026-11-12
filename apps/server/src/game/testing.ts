@@ -1,6 +1,6 @@
 /** Test helpers (not used by the app). */
 import {
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   correctChoiceIndexes,
   isMultipleAnswer,
   type AnswerInput,
@@ -14,8 +14,8 @@ type ClassicQuestion = Extract<Question, { type: 'MCQ' | 'TRUE_FALSE' }>;
 
 /** The demo quiz without the poll / typed / slider questions: always one right choice. */
 export const CLASSIC_QUIZ: Quiz & { questions: ClassicQuestion[] } = {
-  ...DEMO_QUIZ,
-  questions: DEMO_QUIZ.questions.filter(
+  ...CLASSIC_DEMO_QUIZ,
+  questions: CLASSIC_DEMO_QUIZ.questions.filter(
     (q): q is ClassicQuestion => q.type === 'MCQ' || q.type === 'TRUE_FALSE',
   ),
 };

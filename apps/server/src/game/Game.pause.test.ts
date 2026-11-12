@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
   RESUME_COUNTDOWN_MS,
@@ -355,7 +355,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
     const play = (withPause: boolean) => {
       const g = new Game(
         '111111',
-        DEMO_QUIZ,
+        CLASSIC_DEMO_QUIZ,
         recorder().transport,
         {},
         { mode: 'solo', allAnsweredGraceMs: 0 },
@@ -363,7 +363,7 @@ describe('Game pause (a player or the host screen loses the connection)', () => 
       const [alice, bob] = ['Alice', 'Bob'].map((n) => g.join(n, `s-${n}`));
       let bobSocket = 's-Bob';
       g.start();
-      for (let i = 0; i < DEMO_QUIZ.questions.length; i++) {
+      for (let i = 0; i < CLASSIC_DEMO_QUIZ.questions.length; i++) {
         vi.advanceTimersByTime(introOf(g) + 1_000);
         if (withPause) {
           g.disconnect(bobSocket);

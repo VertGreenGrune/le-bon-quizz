@@ -1,5 +1,5 @@
 import { expect, test, devices, type Browser, type Page } from '@playwright/test';
-import { DEMO_QUIZ, type AvatarId } from '@lbq/shared';
+import { CLASSIC_DEMO_QUIZ, type AvatarId } from '@lbq/shared';
 import { answerOnPhone, expectHostReveal, resultHeading, type Plan } from './answers';
 
 /**
@@ -16,7 +16,7 @@ import { answerOnPhone, expectHostReveal, resultHeading, type Plan } from './ans
  * resume the game (`host:rejoin`).
  */
 const vote = (q: number, plan: Plan): Plan =>
-  DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
+  CLASSIC_DEMO_QUIZ.questions[q]!.type === 'POLL' ? 'vote' : plan;
 
 const PLAYERS: { nickname: string; avatar: AvatarId; plan: (q: number) => Plan }[] = [
   { nickname: 'Alice', avatar: 'batman', plan: (q) => vote(q, 'right') },
@@ -39,7 +39,7 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
   await expect(host).toHaveURL(/\/host\/\d{6}$/);
   const pin = new URL(host.url()).pathname.split('/').pop()!;
   await expect(host.getByText(pin, { exact: true })).toBeVisible();
-  await expect(host.getByTestId('lobby-quiz-title')).toHaveText(DEMO_QUIZ.title);
+  await expect(host.getByTestId('lobby-quiz-title')).toHaveText(CLASSIC_DEMO_QUIZ.title);
   await expect(host.getByText('En attente des joueurs…')).toBeVisible();
 
   // ---- Players join from their phones ----
@@ -60,7 +60,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     await phone.getByRole('button', { name: 'Entrer' }).click();
     await expect(phone).toHaveURL(/\/play$/);
     await expect(phone.getByText('Tu es dans la partie !')).toBeVisible();
-    await expect(phone.getByTestId('phone-quiz-title')).toHaveText(`Quiz : ${DEMO_QUIZ.title}`);
+    await expect(phone.getByTestId('phone-quiz-title')).toHaveText(
+      `Quiz : ${CLASSIC_DEMO_QUIZ.title}`,
+    );
     // The host lobby shows the player with the chosen avatar.
     const inLobby = host.getByRole('button', { name: p.nickname });
     await expect(inLobby).toBeVisible();
@@ -72,9 +74,9 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
   // ---- Start ----
   await host.getByRole('button', { name: 'Commencer' }).click();
 
-  const total = DEMO_QUIZ.questions.length;
+  const total = CLASSIC_DEMO_QUIZ.questions.length;
   for (let q = 0; q < total; q++) {
-    const question = DEMO_QUIZ.questions[q]!;
+    const question = CLASSIC_DEMO_QUIZ.questions[q]!;
 
     // Intro: question on the shared screen, "get ready" on phones.
     await expect(host.getByText(`Question ${q + 1} / ${total}`).first()).toBeVisible();

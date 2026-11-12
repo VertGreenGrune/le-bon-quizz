@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AVATARS,
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   isAvatarId,
   type LobbyPlayersPayload,
   type LobbyTeamsPayload,
@@ -36,7 +36,7 @@ describe('Game avatars', () => {
     rec = recorder();
     game = new Game(
       '123456',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       rec.transport,
       {},
       { mode: 'solo', allAnsweredGraceMs: 0 },
@@ -78,7 +78,7 @@ describe('Game avatars', () => {
 
     game.start();
     game.next(); // → ANSWERING
-    game.answer(alice.id, 0, rightAnswer(DEMO_QUIZ.questions[0]!));
+    game.answer(alice.id, 0, rightAnswer(CLASSIC_DEMO_QUIZ.questions[0]!));
     game.next(); // → REVEAL
     game.next(); // → LEADERBOARD
     const board = rec.last<StandingsPayload>('leaderboard');
@@ -98,7 +98,7 @@ describe('Game avatars', () => {
     const alice = game.join('Alice', 's1', 'penguin');
     game.join('Bob', 's2', 'alfred'); // never answers
     game.start();
-    DEMO_QUIZ.questions.forEach((q, i) => {
+    CLASSIC_DEMO_QUIZ.questions.forEach((q, i) => {
       game.next(); // → ANSWERING
       game.answer(alice.id, i, rightAnswer(q));
       game.next(); // → REVEAL
@@ -113,8 +113,8 @@ describe('Game avatars', () => {
   });
 
   it('slider reveal: the closest guess carries its avatar', () => {
-    const sliderIndex = DEMO_QUIZ.questions.findIndex((q) => q.type === 'SLIDER');
-    const quiz = { ...DEMO_QUIZ, questions: [DEMO_QUIZ.questions[sliderIndex]!] };
+    const sliderIndex = CLASSIC_DEMO_QUIZ.questions.findIndex((q) => q.type === 'SLIDER');
+    const quiz = { ...CLASSIC_DEMO_QUIZ, questions: [CLASSIC_DEMO_QUIZ.questions[sliderIndex]!] };
     game.dispose();
     game = new Game('123456', quiz, rec.transport, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     const alice = game.join('Alice', 's1', 'freeze');
@@ -131,7 +131,7 @@ describe('Game avatars', () => {
     game.dispose();
     game = new Game(
       '123456',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       rec.transport,
       {},
       { mode: 'teams', allAnsweredGraceMs: 0 },

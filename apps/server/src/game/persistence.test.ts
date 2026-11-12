@@ -5,6 +5,7 @@ import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  CLASSIC_DEMO_QUIZ,
   DEMO_QUIZ,
   choiceTexts,
   correctChoiceIndexes,
@@ -39,7 +40,7 @@ const noop: GameTransport = {
 };
 
 /** Questions Alice can get right (every one but the poll). */
-const SCORED = DEMO_QUIZ.questions.filter((q) => q.type !== 'POLL').length;
+const SCORED = CLASSIC_DEMO_QUIZ.questions.filter((q) => q.type !== 'POLL').length;
 
 /** What the reveal of `q` contains when only Alice answered, right. */
 function aliceOnlyDetails(q: Question): RevealDetails {
@@ -63,7 +64,7 @@ async function expectCode(p: Promise<unknown>, code: string) {
 }
 
 /** A finished game: Alice answers everything right, Bob never answers. */
-function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
+function playedGame(quiz: Quiz = CLASSIC_DEMO_QUIZ): Game {
   const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
   const alice = game.join('Alice', 's1', 'batman');
   game.join('Bob', 's2', 'robin');
@@ -83,22 +84,28 @@ function playedGame(quiz: Quiz = DEMO_QUIZ): Game {
 describe('gameRecord', () => {
   it('is null for anonymous hosts and games that never started', () => {
     expect(gameRecord(playedGame(), null, null)).toBeNull();
-    const lobby = new Game('111111', DEMO_QUIZ, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
+    const lobby = new Game(
+      '111111',
+      CLASSIC_DEMO_QUIZ,
+      noop,
+      {},
+      { mode: 'solo', allAnsweredGraceMs: 0 },
+    );
     lobby.end();
     expect(gameRecord(lobby, 'host', null)).toBeNull();
   });
 
   it('snapshots title, pin, times and standings', () => {
     const r = gameRecord(playedGame(), 'host', 'demo')!;
-    expect(r).toMatchObject({ hostId: 'host', quizId: 'demo', quizTitle: DEMO_QUIZ.title });
+    expect(r).toMatchObject({ hostId: 'host', quizId: 'demo', quizTitle: CLASSIC_DEMO_QUIZ.title });
     expect(r.startedAt.getTime()).toBeLessThanOrEqual(r.endedAt.getTime());
     expect(r.results.map((x) => [x.nickname, x.avatar, x.rank, x.correctCount])).toEqual([
       ['Alice', 'batman', 1, SCORED],
       ['Bob', 'robin', 2, 0],
     ]);
     // One entry per question: only Alice (of 2 players) answered, always right.
-    expect(r.questions).toHaveLength(DEMO_QUIZ.questions.length);
-    DEMO_QUIZ.questions.forEach((q, i) => {
+    expect(r.questions).toHaveLength(CLASSIC_DEMO_QUIZ.questions.length);
+    CLASSIC_DEMO_QUIZ.questions.forEach((q, i) => {
       const answer = rightAnswer(q);
       const picked = 'choiceIndex' in answer ? answer.choiceIndex : -1;
       expect(r.questions[i]).toEqual({
@@ -164,7 +171,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
 
   const user = (email: string) =>
     prisma.user.create({ data: { email, name: email, passwordHash: 'x' } });
-  const { id: _demoId, ...demoInput } = DEMO_QUIZ;
+  const { id: _demoId, ...demoInput } = CLASSIC_DEMO_QUIZ;
 
   it('authenticates a session token', async () => {
     const u = await user('a@test.fr');
@@ -181,7 +188,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect(loaded.dbQuizId).toBe(q.id);
     expect(loaded.quiz).toMatchObject({ id: q.id, title: 'Mon quiz' });
     // Every question type survives the round trip (choices, accepted answers, slider…).
-    expect(loaded.quiz.questions).toEqual(DEMO_QUIZ.questions);
+    expect(loaded.quiz.questions).toEqual(CLASSIC_DEMO_QUIZ.questions);
     expect(loaded.quiz).not.toHaveProperty('createdAt');
 
     await expectCode(persistence.loadQuiz(q.id, other.id), 'QUIZ_NOT_FOUND');
@@ -309,7 +316,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect((await persistence.loadQuiz(priv.id, owner.id)).dbQuizId).toBe(priv.id);
     const loaded = await persistence.loadQuiz(pub.id, other.id);
     expect(loaded.dbQuizId).toBe(pub.id);
-    expect(loaded.quiz.questions).toEqual(DEMO_QUIZ.questions);
+    expect(loaded.quiz.questions).toEqual(CLASSIC_DEMO_QUIZ.questions);
     expect(loaded.quiz).not.toHaveProperty('visibility');
     await expectCode(persistence.loadQuiz(priv.id, other.id), 'QUIZ_NOT_FOUND');
     // Public quizzes still need a logged-in host.
@@ -330,7 +337,11 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
 
     const list = (await app.inject({ url: '/api/games', headers })).json<GameSummary[]>();
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ quizId: q.id, quizTitle: DEMO_QUIZ.title, playerCount: 2 });
+    expect(list[0]).toMatchObject({
+      quizId: q.id,
+      quizTitle: CLASSIC_DEMO_QUIZ.title,
+      playerCount: 2,
+    });
     expect(list[0]!.endedAt).not.toBeNull();
 
     const res = await app.inject({ url: `/api/games/${list[0]!.id}`, headers });
@@ -351,10 +362,10 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect(old.json<GameReport>().results.map((r) => r.avatar)).toEqual([null, null]);
     const questions = res.json<GameReport>().questions;
     expect(questions.map((q) => [q.index, q.type, q.correctCount, q.answerCount])).toEqual(
-      DEMO_QUIZ.questions.map((q, i) => [i, q.type, q.type === 'POLL' ? 0 : 1, 1]),
+      CLASSIC_DEMO_QUIZ.questions.map((q, i) => [i, q.type, q.type === 'POLL' ? 0 : 1, 1]),
     );
     // Type-specific details survive the JSON column.
-    DEMO_QUIZ.questions.forEach((q, i) =>
+    CLASSIC_DEMO_QUIZ.questions.forEach((q, i) =>
       expect(questions[i]!.details).toEqual(aliceOnlyDetails(q)),
     );
   });
@@ -364,7 +375,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
     const game = new Game(
       '222222',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       noop,
       {},
       { mode: 'teams', allAnsweredGraceMs: 0, teamCount: 3 },
@@ -376,7 +387,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     game.setTeam(bob.id, 0);
     game.setTeam(chloe.id, 0);
     game.start();
-    DEMO_QUIZ.questions.forEach((q, i) => {
+    CLASSIC_DEMO_QUIZ.questions.forEach((q, i) => {
       game.next(); // → ANSWERING
       game.answer(alice.id, i, rightAnswer(q));
       game.next(); // → REVEAL (Bob and Chloé never answer)
@@ -412,7 +423,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
     const game = new Game(
       '333333',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       noop,
       {},
       { mode: 'solo', allAnsweredGraceMs: 0, jokers: true },
@@ -423,7 +434,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     game.jokers!.setHand(alice.id, ['double', 'shield']);
     game.useJoker(alice.id, 0, 'double');
     game.next(); // → ANSWERING
-    game.answer(alice.id, 0, rightAnswer(DEMO_QUIZ.questions[0]!));
+    game.answer(alice.id, 0, rightAnswer(CLASSIC_DEMO_QUIZ.questions[0]!));
     game.next();
     game.end();
     game.dispose();
@@ -448,7 +459,7 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };
     const game = new Game(
       '444444',
-      DEMO_QUIZ,
+      CLASSIC_DEMO_QUIZ,
       noop,
       {},
       { mode: 'survival', allAnsweredGraceMs: 0, hearts: 1 },
@@ -457,8 +468,8 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const bob = game.join('Bob', 's2');
     game.start();
     game.next(); // → ANSWERING
-    game.answer(alice.id, 0, wrongAnswer(DEMO_QUIZ.questions[0]!));
-    game.answer(bob.id, 0, wrongAnswer(DEMO_QUIZ.questions[0]!)); // → REVEAL
+    game.answer(alice.id, 0, wrongAnswer(CLASSIC_DEMO_QUIZ.questions[0]!));
+    game.answer(bob.id, 0, wrongAnswer(CLASSIC_DEMO_QUIZ.questions[0]!)); // → REVEAL
     game.next();
     game.next(); // nobody alive: podium
     expect(game.phase).toBe('PODIUM');

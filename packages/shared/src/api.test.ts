@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_QUIZ, LibraryQuery, LoginBody, QuizInput, RegisterBody } from './index.js';
+import { CLASSIC_DEMO_QUIZ, LibraryQuery, LoginBody, QuizInput, RegisterBody } from './index.js';
 
 describe('REST API schemas', () => {
   it('normalizes emails', () => {
@@ -9,12 +9,12 @@ describe('REST API schemas', () => {
   });
 
   it('QuizInput accepts the demo quiz without its id', () => {
-    const { id: _id, ...input } = DEMO_QUIZ;
+    const { id: _id, ...input } = CLASSIC_DEMO_QUIZ;
     expect(QuizInput.safeParse(input).success).toBe(true);
   });
 
   it('QuizInput: visibility is optional, PRIVATE or PUBLIC', () => {
-    const { id: _id, ...input } = DEMO_QUIZ;
+    const { id: _id, ...input } = CLASSIC_DEMO_QUIZ;
     expect(QuizInput.parse(input).visibility).toBeUndefined();
     expect(QuizInput.parse({ ...input, visibility: 'PUBLIC' }).visibility).toBe('PUBLIC');
     expect(QuizInput.safeParse({ ...input, visibility: 'SHARED' }).success).toBe(false);

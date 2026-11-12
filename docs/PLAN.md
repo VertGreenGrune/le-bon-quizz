@@ -239,7 +239,7 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     ANSWERING has two stages, like « Couleurs perdues » (`Game.startSecondStage`): **memo**
     (`memoSec`) — the TV shows « avant » (`question:show.imageUrl`, `missing: { stage: 'memo' }`),
     the phones get `{ stage: 'memo' }` only (no picture) and can't answer (`NOT_ANSWERING`);
-    **answer** (`timeLimitSec`) — the TV cross-fades to « après » (`missing.missingImageUrl`), each
+    **answer** (`timeLimitSec`) — the TV goes black for 1 s and shows « après » (`missing.missingImageUrl`, no fade), each
     phone gets **only** « après » (`question:prompt.imageUrl` = `missingImageUrl`, never « avant »
     nor the zone) and taps the spot (the PIN screen, zoom included): `player:answer { point }`,
     scored exactly like PIN (`pinPoints`) from the start of the answer stage. Cancellable (T43).

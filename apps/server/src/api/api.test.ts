@@ -11,7 +11,7 @@ import path from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   type AuthResponse,
   type LibraryQuiz,
   type QuizDetail,
@@ -23,7 +23,7 @@ import { registerApi } from './index.js';
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
-const { id: _demoId, ...demoInput } = DEMO_QUIZ;
+const { id: _demoId, ...demoInput } = CLASSIC_DEMO_QUIZ;
 const quizInput: QuizInput = demoInput;
 
 describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {

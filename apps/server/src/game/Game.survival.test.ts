@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   FREEZE_MS,
   PAUSE_GRACE_MS,
   QUESTION_INTRO_MS,
@@ -165,10 +165,12 @@ describe('« Survie » mode', () => {
       const cases: Record<string, Case> = {
         MCQ: { question: mcq('QCM'), right: () => RIGHT, wrong: () => WRONG },
         TRUE_FALSE: {
-          question: DEMO_QUIZ.questions.find((q) => q.type === 'TRUE_FALSE')!,
+          question: CLASSIC_DEMO_QUIZ.questions.find((q) => q.type === 'TRUE_FALSE')!,
         },
-        TYPE_ANSWER: { question: DEMO_QUIZ.questions.find((q) => q.type === 'TYPE_ANSWER')! },
-        SLIDER: { question: DEMO_QUIZ.questions.find((q) => q.type === 'SLIDER')! },
+        TYPE_ANSWER: {
+          question: CLASSIC_DEMO_QUIZ.questions.find((q) => q.type === 'TYPE_ANSWER')!,
+        },
+        SLIDER: { question: CLASSIC_DEMO_QUIZ.questions.find((q) => q.type === 'SLIDER')! },
         ORDER: {
           question: { ...base, text: 'Ordre', type: 'ORDER', items: ITEMS },
           right: rightOrder,
@@ -185,7 +187,7 @@ describe('« Survie » mode', () => {
           partial: true,
         },
         POLL: {
-          question: DEMO_QUIZ.questions.find((q) => q.type === 'POLL')!,
+          question: CLASSIC_DEMO_QUIZ.questions.find((q) => q.type === 'POLL')!,
           noRightAnswer: true,
         },
         WHO_OF_US: {
@@ -289,7 +291,7 @@ describe('« Survie » mode', () => {
     });
 
     it('a correct ghost answer earns a haunt (not on a question without a right answer)', () => {
-      const poll = DEMO_QUIZ.questions.find((q) => q.type === 'POLL')!;
+      const poll = CLASSIC_DEMO_QUIZ.questions.find((q) => q.type === 'POLL')!;
       create({ hearts: 1 }, { ...quiz, questions: [mcq('A'), poll, mcq('B')] });
       const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
       play([

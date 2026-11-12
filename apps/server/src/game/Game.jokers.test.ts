@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEMO_QUIZ,
+  CLASSIC_DEMO_QUIZ,
   FREEZE_MS,
   JOKERS_AT_START,
   jokerAllowed,
@@ -198,7 +198,7 @@ describe('Jokers', () => {
     });
 
     it('narrows the slider around the answer, gives the first letter of a typed answer', () => {
-      create(DEMO_QUIZ);
+      create(CLASSIC_DEMO_QUIZ);
       const [alice] = joinAll('Alice');
       game.start();
       const toIndex = (i: number) => {
@@ -225,7 +225,7 @@ describe('Jokers', () => {
     });
 
     it('is not offered on a true/false question, no joker at all on a poll', () => {
-      create(DEMO_QUIZ);
+      create(CLASSIC_DEMO_QUIZ);
       const [alice] = joinAll('Alice');
       game.start();
       toAnswering();
@@ -335,7 +335,7 @@ describe('Jokers', () => {
     });
 
     it('Brouilleur: moving buttons (choices + texts sent), right away on this question', () => {
-      create(DEMO_QUIZ);
+      create(CLASSIC_DEMO_QUIZ);
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       for (let i = 0; i < 3; i++) {
@@ -358,7 +358,7 @@ describe('Jokers', () => {
     });
 
     it('Brouilleur is refused on questions without buttons (joker kept)', () => {
-      create(DEMO_QUIZ);
+      create(CLASSIC_DEMO_QUIZ);
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       for (let i = 0; i < 4; i++) {
@@ -740,7 +740,7 @@ describe('Jokers', () => {
     });
 
     it('works on every question type that takes jokers (typed, slider)', () => {
-      create(DEMO_QUIZ);
+      create(CLASSIC_DEMO_QUIZ);
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       for (let i = 0; i < 7; i++) {
