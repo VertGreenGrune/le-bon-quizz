@@ -3420,6 +3420,53 @@ pnpm format:check` before finishing.
   `remote:answer` is still sent at the start of the intro (host only). **After merging, run
   `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones / a real TV.
 
+### T65 — « Couleurs perdues »: paint bucket on the picture, only the colors used
+
+- **Status:** todo
+- **Depends on:** T58 (done). Ports 3065 / 5265, test DB `lbq_test_t65`, e2e DB `lbq_e2e_t65`.
+- **User requirement (2026-11-12):** with their own picture, the quiz creator taps **sections** of
+  the picture; during the game those sections are **white**, and the color each one had is the
+  color to find. Players are offered **only the colors of those sections** (e.g. pink, purple,
+  green), never the 8 built-in colors. Decided with the user: the section is chosen with a
+  **paint bucket** (« pot de peinture »: the area of similar color around the tap, with a
+  tolerance), and the **generated shapes mode also offers only the colors used on its board**.
+- **Design (decided — note any deviation):**
+  - **Zones on a picture** (`imageUrl` + `zones`): a zone = `{ x, y, tolerance, color }` — the tap
+    point (picture fractions), the paint-bucket tolerance (0–100, default 30) and the region's
+    color (`#rrggbb`, its average color, sampled by the editor). Old zones (`radius` + a palette
+    index) must still load and play (preprocess the index into its palette hex; no paint-bucket
+    region → the legacy round zone).
+  - **Editor** (`editor/ColorsFields.tsx`): tap the picture → flood fill (canvas, from the tap point,
+    tolerance per zone, on a downscaled copy ≤ 1000 px is fine) → the region is highlighted and
+    numbered, its average color shown as a swatch; « Tolérance » slider per zone (recomputes);
+    remove a zone; regions must not overlap (a tap inside an existing region selects it). The
+    editor then draws every region **white** on a copy of the picture and uploads it
+    (`/api/uploads/image`) as **`blankImageUrl`** (new question field, required when there are
+    paint-bucket zones; regenerated when zones change — debounce; identical bytes deduplicate on
+    the server). Reading the picture's pixels needs CORS: serve `/uploads/*` with
+    `Access-Control-Allow-Origin` (the configured web origin) and load it with
+    `crossOrigin="anonymous"`; data: URLs work as is.
+  - **Offered colors (both modes):** the **distinct colors of the board** — picture: the zones'
+    colors (exact duplicates merged), generated: the palette colors actually drawn — sorted by
+    hue (never in zone order: no hint). Sent to the phones in the answer stage as
+    `colors.palette: { hex, name? }[]` (names only for the built-in palette); answers stay
+    `player:answer { colors: number[] }` but are **indexes into that offered palette** (-1 = none);
+    the server compares the colors, not the indexes. 50/50 hints, reveal, results, report and the
+    remote's answer use hex colors.
+  - **Game:** memo stage unchanged (the colored picture on the TV, nothing on the phones). Answer
+    stage: the TV and the phones show **`blankImageUrl`** (sections white, numbered markers at the
+    tap points); without it (old questions, `quiz:import` without a blank picture) the legacy grey
+    picture + round zones. Phone: tap a section (nearest marker) then a swatch of the offered
+    palette. Reveal: the original picture with ✓ / ✗ markers, every player's answers.
+  - `quiz:import` copies `blankImageUrl` like the other pictures (optional).
+- **Tests:** shared schema (new zone, legacy zone preprocessed, `blankImageUrl` required with
+  paint-bucket zones), server (offered palette = distinct colors sorted, never in zone order, no
+  color before the reveal, answers judged by color, generated mode restricted to the drawn colors,
+  legacy question still plays), web pure helpers (flood fill on a small synthetic image, average
+  color, whitening, palette sort), e2e (editor: upload a generated PNG with 3 colored areas, tap
+  them, `blankImageUrl` uploaded; game: phones offered exactly the 3 colors, right / wrong answers,
+  frames carry no zone color before the reveal). Screenshots (editor on a phone too, TV, Pixel 7).
+
 ---
 
 ## Contract changes / cross-task notes
