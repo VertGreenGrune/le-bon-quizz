@@ -3422,7 +3422,7 @@ pnpm format:check` before finishing.
 
 ### T65 — « Couleurs perdues »: paint bucket on the picture, only the colors used
 
-- **Status:** todo
+- **Status:** in-progress (agent T65)
 - **Depends on:** T58 (done). Ports 3065 / 5265, test DB `lbq_test_t65`, e2e DB `lbq_e2e_t65`.
 - **User requirement (2026-11-12):** with their own picture, the quiz creator taps **sections** of
   the picture; during the game those sections are **white**, and the color each one had is the
