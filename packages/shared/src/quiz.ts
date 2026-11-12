@@ -33,6 +33,7 @@ import {
   POTATO_MIN_QUESTIONS,
   POTATO_TEXT_MAX_LENGTH,
 } from './potato.js';
+import { AUCTION_TOPIC_MAX_LENGTH, auctionAllowed } from './auction.js';
 
 /**
  * - `MCQ` / `TRUE_FALSE`: shape buttons, one or more correct choices.
@@ -239,6 +240,13 @@ const questionBase = {
    * answers out loud and the host judges it (`BUZZER_QUESTION_TYPES` only).
    */
   buzzer: z.boolean().optional(),
+  /**
+   * « Enchères » (T64): before seeing the question, players bid on it (`auctionAllowed` types,
+   * not au buzzer); a right answer wins the bid, a wrong / missing one loses it.
+   */
+  auction: z.boolean().optional(),
+  /** « Enchères »: the topic shown during the bids (absent = the question type). */
+  auctionTopic: z.string().trim().max(AUCTION_TOPIC_MAX_LENGTH).optional(),
   /**
    * « 💡 Le saviez-vous ? » (T37): more about the answer, shown from REVEAL on only (it usually
    * gives the answer away). Empty = none.
@@ -691,6 +699,10 @@ export const QuestionSchema = z.preprocess(
     .refine((q) => !q.buzzer || buzzerAllowed(q.type), {
       message: 'This question type cannot be played with the buzzer',
       path: ['buzzer'],
+    })
+    .refine((q) => !q.auction || auctionAllowed(q.type, q.buzzer), {
+      message: 'This question cannot take bids',
+      path: ['auction'],
     }),
 );
 export type Question = z.infer<typeof QuestionSchema>;

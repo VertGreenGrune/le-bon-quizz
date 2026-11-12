@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import {
+  AUCTION_BID_MS,
   DEFAULT_TEAM_COUNT,
   LEADERBOARD_SIZE,
   MAX_PLAYERS_PER_GAME,
@@ -92,6 +93,15 @@ import {
   startPotato,
 } from './questionTypes/hotPotato.js';
 import { Jokers } from './jokers.js';
+import {
+  auctionReveal,
+  auctionStatus,
+  bidOf,
+  newAuction,
+  placeBid,
+  settleBid,
+  type AuctionRound,
+} from './auction.js';
 import {
   ReplayRandom,
   Settlement,
@@ -340,6 +350,8 @@ export class Game {
   private reveal: QuestionRevealPayload | null = null;
   /** Drawn when the current question starts (ORDER shuffle), see `questionTypes/`. */
   private setup: QuestionSetup = NO_SETUP;
+  /** « Enchères » (T64): the bids of the current question (null: no bids on it). */
+  private auction: AuctionRound | null = null;
   /** SLIDER: where the phone sliders start for the current question (T49), null otherwise. */
   private sliderStartValue: number | null = null;
   private phaseEndsAt: number | null = null;
@@ -622,7 +634,8 @@ export class Game {
       case 'LOBBY':
         return this.start();
       case 'QUESTION_INTRO':
-        return this.enterAnswering();
+        // « Enchères »: « Passer » closes the bids first (the bids so far count).
+        return this.auction?.stage === 'bid' ? this.closeBids() : this.enterAnswering();
       case 'ANSWERING':
         return this.finishAnswering();
       case 'REVEAL':
@@ -757,7 +770,7 @@ export class Game {
     this.sendTeams(send);
     this.sendSurvival(send);
     const phase = this.phase;
-    if (this.currentQuestion && phase !== 'PODIUM' && phase !== 'ENDED')
+    if (this.currentQuestion && phase !== 'PODIUM' && phase !== 'ENDED' && !this.biddingNow())
       send('question:show', this.showPayload());
     if (phase === 'ANSWERING' && this.setup.draw) send('draw:strokes', this.drawingPayload());
     if (phase === 'ANSWERING' || phase === 'REVEAL') this.sendAnswerCount(send);
@@ -893,6 +906,7 @@ export class Game {
     this.sendTeams(send);
     this.sendSurvival(send);
     this.jokers?.sendState(player, send);
+    if (this.auction && this.isTimedPhase()) this.sendBid(player);
     if (this.phase === 'ANSWERING' && !player.answer) {
       this.transport.toSocket(sid, 'question:prompt', this.promptPayload(player));
       // « Dessine-moi »: the drawer's phone gets its drawing back.
@@ -1169,6 +1183,8 @@ export class Game {
     if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
     if (!this.jokers || !this.withJokers)
       throw new GameError('JOKER_REFUSED', 'Pas de jokers dans cette partie');
+    if (this.biddingNow())
+      throw new GameError('JOKER_REFUSED', 'Attends la fin des enchères pour jouer un joker');
     this.touch();
     this.jokers.use(player, questionIndex, joker, targetId);
   }
@@ -1333,8 +1349,10 @@ export class Game {
     } else if (this.phaseEndsAt !== null) {
       state.remainingMs = Math.max(0, this.phaseEndsAt - Date.now());
     }
-    if (this.phase === 'QUESTION_INTRO' && this.currentQuestion)
+    if (this.phase === 'QUESTION_INTRO' && this.currentQuestion && !this.biddingNow())
       state.introMs = this.introMs(this.currentQuestion);
+    if (this.auction && this.currentQuestion && this.isTimedPhase())
+      state.auction = auctionStatus(this.auction, this.currentQuestion, this.players);
     if (this.phase === 'ANSWERING' && this.buzzer)
       state.buzzer = buzzerStatus(this.buzzer, this.players);
     if (this.isTimedPhase() && this.setup.draw)
@@ -1395,15 +1413,18 @@ export class Game {
     if (question.type === 'COLORS')
       this.setup = { ...this.setup, colors: newColors(question, this.random) };
     this.buzzer = question.buzzer ? newBuzzerRound() : null;
+    this.auction = newAuction(question, this.players.values());
     this.excused.clear();
     this.cancels.reset();
     for (const p of this.players.values()) {
       p.answer = null;
       p.lastResult = null;
     }
-    this.setPhase('QUESTION_INTRO', this.introMs(question));
+    // « Enchères »: the bids first, without the question (it comes with `closeBids`).
+    this.setPhase('QUESTION_INTRO', this.auction ? AUCTION_BID_MS : this.introMs(question));
     this.broadcastState();
-    this.transport.toHost('question:show', this.showPayload());
+    if (this.auction) for (const p of this.players.values()) this.sendBid(p);
+    else this.transport.toHost('question:show', this.showPayload());
     const answer = this.remoteAnswerPayload();
     if (answer)
       for (const sid of this.remoteSockets) this.transport.toSocket(sid, 'remote:answer', answer);
@@ -1420,6 +1441,47 @@ export class Game {
   private introMs(question: Question): number {
     const jokers = this.jokers !== null && jokerAvailability(question.type, question.buzzer).jokers;
     return introDurationMs(question.text, jokers);
+  }
+
+  /** « Enchères » (T64): a player's bid during the bid stage (`player:bid`). */
+  bid(playerId: string, questionIndex: number, amount: number): { amount: number } {
+    const player = this.players.get(playerId);
+    if (!player) throw new GameError('SESSION_NOT_FOUND', 'Joueur introuvable');
+    if (!this.auction || this.phase !== 'QUESTION_INTRO' || questionIndex !== this.questionIndex)
+      throw new GameError('NOT_ANSWERING', 'Les enchères sont closes');
+    if (this.pause) throw new GameError('GAME_PAUSED', 'Partie en pause');
+    const before = bidOf(this.auction, player.id);
+    const kept = placeBid(this.auction, player.id, amount);
+    this.touch();
+    // Who has bid changed: the TV shows it (never the amounts).
+    if (before > 0 !== kept > 0) this.broadcastState();
+    return { amount: kept };
+  }
+
+  /** « Enchères »: end of the bid stage (timer or host) → the usual intro, with the question. */
+  private closeBids(): void {
+    const question = this.currentQuestion;
+    if (!this.auction || !question) return;
+    this.auction.stage = 'play';
+    this.setPhase('QUESTION_INTRO', this.introMs(question));
+    this.broadcastState();
+    this.transport.toHost('question:show', this.showPayload());
+    this.checkPause({ immediate: true });
+  }
+
+  /** « Enchères »: the bid stage is on (the question isn't shown yet). */
+  private biddingNow(): boolean {
+    return this.phase === 'QUESTION_INTRO' && this.auction?.stage === 'bid';
+  }
+
+  private sendBid(player: Player): void {
+    const round = this.auction;
+    if (!round || !player.socketId) return;
+    this.transport.toSocket(player.socketId, 'auction:bid', {
+      index: this.questionIndex,
+      max: round.max.get(player.id) ?? 0,
+      amount: bidOf(round, player.id),
+    });
   }
 
   private enterAnswering(): void {
@@ -1542,6 +1604,7 @@ export class Game {
     const accepted = this.settlement?.accepted ?? {};
     if (again) this.jokerRandom.replay();
     else this.jokerRandom.record();
+    this.auction?.deltas.clear();
     const choices = choiceTexts(question);
     // « Buzzer »: nobody tapped a shape, and the type's own rules don't apply.
     const buzzer = !!question.buzzer;
@@ -1578,7 +1641,15 @@ export class Game {
           ? extraBonusPoints(question, this.setup, p, this.players.values())
           : 0;
       const questionPoints = (a?.points ?? 0) + bonus + others;
-      const pointsEarned = this.jokers?.adjustPoints(p, correct, questionPoints) ?? questionPoints;
+      const adjusted = this.jokers?.adjustPoints(p, correct, questionPoints) ?? questionPoints;
+      // « Enchères »: + / − the bid, after Double ou rien and before Voleur (excused / absent for
+      // the whole question: the bid is cancelled).
+      const refunded = this.excused.has(p.id) || (!this.presentIds.has(p.id) && !a);
+      const pointsEarned =
+        adjusted +
+        (this.auction
+          ? settleBid(this.auction, p.id, correct, p.totalScore + adjusted, refunded)
+          : 0);
       p.totalScore += pointsEarned;
       if (correct) {
         p.correctCount++;
@@ -1609,6 +1680,7 @@ export class Game {
     const details = this.revealDetails(question, accepted);
     if (isMultipleAnswer(question)) details.multiple = { allFound: correctCount };
     if (hasAccepts(accepted)) details.accepted = accepted;
+    if (this.auction) details.auction = auctionReveal(this.auction, this.players);
     const explanation = questionExplanation(question);
     this.questionStats.push({
       index: this.questionIndex,
@@ -2052,7 +2124,8 @@ export class Game {
       this.checkPause({ immediate: true });
       if (this.pause) return;
     }
-    if (this.phase === 'QUESTION_INTRO') this.enterAnswering();
+    if (this.biddingNow()) this.closeBids();
+    else if (this.phase === 'QUESTION_INTRO') this.enterAnswering();
     else if (this.phase === 'ANSWERING') this.finishAnswering();
   }
 
@@ -2117,6 +2190,7 @@ export class Game {
         q.imageEffect !== 'none' && { imageEffect: q.imageEffect }),
       // ORDER au buzzer keeps its (shuffled) items: they are needed to say the order.
       ...(isExtraQuestion(q) && extraShowFields(q, this.setup, this.players.values())),
+      ...(this.auction && { auction: this.auction.topic ? { topic: this.auction.topic } : {} }),
     };
   }
 
@@ -2185,6 +2259,12 @@ export class Game {
       ...(explanation && { explanation }),
       ...(this.phase === 'REVEAL' &&
         this.settlement?.acceptedIds.has(player.id) && { accepted: true as const }),
+      ...(this.auction && {
+        auction: {
+          bid: bidOf(this.auction, player.id),
+          delta: this.auction.deltas.get(player.id)?.delta ?? 0,
+        },
+      }),
     };
   }
 

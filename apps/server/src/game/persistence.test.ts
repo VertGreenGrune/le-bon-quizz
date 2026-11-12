@@ -206,6 +206,18 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     expect(quiz.questions[1]).not.toHaveProperty('buzzer');
   });
 
+  it('keeps the « Enchères » option and its topic (T64)', async () => {
+    const owner = await user('owner@test.fr');
+    const [first, ...rest] = demoInput.questions;
+    const q = await createQuiz(prisma, owner.id, {
+      ...demoInput,
+      questions: [{ ...first!, auction: true, auctionTopic: ' Cinéma ' }, ...rest],
+    });
+    const { quiz } = await persistence.loadQuiz(q.id, owner.id);
+    expect(quiz.questions[0]).toMatchObject({ auction: true, auctionTopic: 'Cinéma' });
+    expect(quiz.questions[1]).not.toHaveProperty('auction');
+  });
+
   it('keeps the explanations, saves them with the « select all » counts in the report', async () => {
     const host = await user('host@test.fr');
     const headers = { authorization: `Bearer ${await createSession(prisma, host.id)}` };

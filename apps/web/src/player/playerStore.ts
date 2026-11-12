@@ -105,6 +105,7 @@ function attach() {
   socket.on('podium', ({ top, teams }) => dispatch({ type: 'podium', top, teams }));
   socket.on('survival:state', (payload) => dispatch({ type: 'survival', payload }));
   socket.on('draw:strokes', (payload) => dispatch({ type: 'drawStrokes', payload }));
+  socket.on('auction:bid', (payload) => dispatch({ type: 'auctionBid', payload }));
   socket.on('player:kicked', () => {
     clearSession();
     boundSocketId = undefined;
@@ -456,6 +457,27 @@ export function sendPotatoAnswer(
         if (err) return resolve({ error: errorMessage('TIMEOUT') });
         if (!res.ok) return resolve({ error: res.error.message });
         resolve({ result: res.potato ?? 'pass' });
+      });
+  });
+}
+
+/**
+ * « Enchères » (T64), the bid stage: sends the bid (replaces the previous one); resolves with the
+ * French error message (bids closed, above the max…) or null.
+ */
+export function sendBid(amount: number): Promise<string | null> {
+  const session = loadSession();
+  if (!session) return Promise.resolve('Session introuvable');
+  const { questionIndex } = state;
+  vibrate(30);
+  return new Promise((resolve) => {
+    getSocket()
+      .timeout(ACK_TIMEOUT_MS)
+      .emit('player:bid', { pin: session.pin, questionIndex, amount }, (err, res) => {
+        if (err) return resolve(errorMessage('TIMEOUT'));
+        if (!res.ok) return resolve(res.error.message);
+        dispatch({ type: 'bidPlaced', questionIndex, amount: res.amount });
+        resolve(null);
       });
   });
 }

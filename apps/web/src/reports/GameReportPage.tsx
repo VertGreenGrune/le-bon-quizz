@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AuctionDetails } from './auctionCard';
 import { Link, useParams } from 'react-router';
 import {
   SHAPES,
@@ -338,6 +339,7 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
       ) : (
         <ChoiceBars q={q} noAnswer={noAnswer} />
       )}
+      {q.details.auction && <AuctionDetails q={q} />}
       {accepted && (
         <p
           className="mt-2 rounded-lg bg-answer-green/10 px-3 py-2 text-sm font-semibold text-gray-700"

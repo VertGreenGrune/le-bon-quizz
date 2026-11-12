@@ -12,6 +12,7 @@ import { JokerType } from './jokers.js';
 import { HauntType, SurvivalHearts } from './survival.js';
 import type { WavelengthSpectrum } from './wavelength.js';
 import type { PotatoSub } from './potato.js';
+import { AUCTION_MAX_BID, AUCTION_STEP } from './auction.js';
 import {
   ORDER_MAX_ITEMS,
   ORDER_MIN_ITEMS,
@@ -314,6 +315,17 @@ export type PlayerAvatarsPayload = z.infer<typeof PlayerAvatarsPayload>;
 export type PlayerAnswerPayload = z.infer<typeof PlayerAnswerPayload>;
 export type PlayerJokerPayload = z.infer<typeof PlayerJokerPayload>;
 export type PlayerHauntPayload = z.infer<typeof PlayerHauntPayload>;
+
+/**
+ * « Enchères » (T64), the bid stage of QUESTION_INTRO: the player's secret bid on the coming
+ * question (0 … its max, by steps of 50), changeable until the stage ends.
+ */
+export const PlayerBidPayload = z.object({
+  pin: Pin,
+  questionIndex: z.number().int().min(0),
+  amount: z.number().int().min(0).max(AUCTION_MAX_BID).multipleOf(AUCTION_STEP),
+});
+export type PlayerBidPayload = z.infer<typeof PlayerBidPayload>;
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput =
   | { choiceIndex: number }
@@ -496,6 +508,12 @@ export interface ClientToServerEvents {
    * The server then sends `joker:used` (`haunt: true`) and `survival:state`.
    */
   'player:haunt': (p: PlayerHauntPayload, ack: (r: Ack) => void) => void;
+  /**
+   * « Enchères » (T64), bid stage only: the player's bid (replaces the previous one); ack = the
+   * bid kept. `NOT_ANSWERING` (the bids are closed), `INVALID_PAYLOAD` (above the player's max),
+   * `GAME_PAUSED`.
+   */
+  'player:bid': (p: PlayerBidPayload, ack: (r: Ack<{ amount: number }>) => void) => void;
 }
 
 // ---------- Server → client payloads ----------
@@ -548,6 +566,39 @@ export interface GameStatePayload {
    * `remainingMs` then: the fuse length is secret.
    */
   potato?: PotatoStatus;
+  /**
+   * « Enchères » (T64), QUESTION_INTRO / ANSWERING of a question with bids: the stage (`bid`:
+   * the question isn't shown yet), the topic, who has bid (never the amounts).
+   */
+  auction?: AuctionStatus;
+}
+
+/** « Enchères » (T64), `game:state.auction`. */
+export interface AuctionStatus {
+  stage: 'bid' | 'play';
+  /** The topic given by the quiz (absent: show the question type). */
+  topic?: string;
+  questionType: QuestionType;
+  /** Players with a bid above 0, in the order they bid. */
+  bidders: LobbyMember[];
+}
+
+/**
+ * « Enchères » (T64), `auction:bid` to each player at the start of the bid stage (and in the
+ * rejoin resync): their highest possible bid and their bid so far.
+ */
+export interface AuctionBidPayload {
+  index: number;
+  max: number;
+  amount: number;
+}
+
+/** « Enchères » (T64): one player's bid at the reveal. */
+export interface AuctionBid extends LobbyMember {
+  amount: number;
+  correct: boolean;
+  /** What it did to the score: + bid, − bid (less when the total would go below 0), 0. */
+  delta: number;
 }
 
 /**
@@ -878,6 +929,8 @@ export interface QuestionShowPayload {
   wavelength?: WavelengthShow;
   /** « Patate chaude » (T63): the holder and their sub-question (never the right choice). */
   potato?: PotatoShow;
+  /** « Enchères » (T64): the question had bids (sent once the bid stage is over). */
+  auction?: { topic?: string };
 }
 
 /**
@@ -1022,6 +1075,8 @@ export interface RevealDetails {
   wavelength?: WavelengthReveal;
   /** « Patate chaude » (T63): the loser, everyone's passes and points. */
   potato?: PotatoReveal;
+  /** « Enchères » (T64): every bid above 0, biggest first. */
+  auction?: { bids: AuctionBid[] };
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
   multiple?: { allFound: number };
   /** Answers the host accepted at the reveal (T44; `correctIndexes` already includes the choices). */
@@ -1247,6 +1302,8 @@ export interface PlayerResultPayload {
   explanation?: string;
   /** The answer was refused, then accepted by the host (T44): « ✅ Réponse acceptée … ». */
   accepted?: true;
+  /** « Enchères » (T64): the player's bid and what it did to the score (+ bid / − bid / 0). */
+  auction?: { bid: number; delta: number };
 }
 
 /** What a joker does to one phone's controls on the current question (that phone only). */
@@ -1351,6 +1408,7 @@ export interface ServerToClientEvents {
   'remote:status': (p: RemoteStatusPayload) => void; // host room
   'tv:control': (p: TvControlPayload) => void; // the TV sockets only
   'tv:paired': (p: { pin: string; hostToken: string }) => void; // that `/tv` page (T47)
+  'auction:bid': (p: AuctionBidPayload) => void; // each player (« Enchères », T64)
   error: (p: ErrorPayload) => void; // sender
 }
 

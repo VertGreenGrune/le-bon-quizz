@@ -151,6 +151,10 @@ model Question {
   imageEffect      ImageEffect?
   /// « Buzzer » (T28): phones get a BUZZ button, the host judges the answer said out loud.
   buzzer           Boolean      @default(false)
+  /// « Enchères » (T64): players bid on the question before seeing it.
+  auction          Boolean      @default(false)
+  /// « Enchères »: the topic shown during the bids (null = the question type).
+  auctionTopic     String?
   /// « 💡 Le saviez-vous ? » (T37): shown from the reveal on; null = none.
   explanation      String?
 

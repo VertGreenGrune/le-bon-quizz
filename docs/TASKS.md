@@ -3353,7 +3353,7 @@ pnpm format:check` before finishing.
 
 ### T64 — « Enchères » (auction option)
 
-- **Status:** in-progress (agent T64)
+- **Status:** done
 - **Depends on:** wave 10 merged. Wave 11 (parallel with T63), ports 3064 / 5264.
 - **Note:** close to the « Quitte ou double » of T29 (cancelled 2026-10-22); the user asked for it
   again on 2026-11-11, so it is wanted now.
@@ -3373,6 +3373,52 @@ pnpm format:check` before finishing.
     far count, others 0). Saved in the report (bids per player). Editor: « 💰 Enchères » checkbox +
     topic field. Contract additive (`player:bid`, `game:state.auction`, `question:show.auction`,
     `player:result.auction`, `RevealDetails.auction`).
+- **Summary:** shared: new `auction.ts` (`AUCTION_BID_MS` 10 s, `AUCTION_STEP` 50, `AUCTION_MAX_BID`
+  1000, `AUCTION_MIN_MAX_BID` 200, `AUCTION_TOPIC_MAX_LENGTH` 40, `AUCTION_EXCLUDED_TYPES`,
+  `auctionAllowed(type, buzzer)`, `auctionMaxBid`, `auctionDelta`); `questionBase.auction?` /
+  `auctionTopic?` + a union refinement (allowed types only, never au buzzer); contract (`events.ts`,
+  additive): `player:bid` (`PlayerBidPayload`, ack `{ amount }`), server → player `auction:bid`
+  (`AuctionBidPayload { index, max, amount }`), `game:state.auction` (`AuctionStatus`: stage, topic,
+  question type, bidders — never amounts), `question:show.auction`, `RevealDetails.auction`
+  (`AuctionBid[]`, biggest first), `player:result.auction { bid, delta }`. Server: `game/auction.ts`
+  (`newAuction` — max per player fixed at the start of the stage —, `placeBid`, `settleBid`,
+  `auctionStatus`, `auctionReveal`); `Game.ts` hooks: the intro starts with the bid stage
+  (`AUCTION_BID_MS`, no `question:show` — not in the host resync either —, `auction:bid` to each
+  phone), `closeBids` (timer / `host:next`) → the usual intro + `question:show`, `bid()`, jokers
+  refused during the bids, the bid applied in `settleReveal` after `adjustPoints` (Double) and
+  before `afterScoring` (Voleur wheels), deltas cleared at each settlement (so a T44 accept redoes
+  them), bid cancelled for excused / absent-the-whole-question players, `auction:bid` in the phone
+  resync. Socket `player:bid`. Migration `20261112064000_auction` (`Question.auction`,
+  `auctionTopic`), `quizzes.service.ts` mapping (so `quiz:import`, copies and the library keep it).
+  Web: editor « 💰 Enchères » checkbox + « Thème annoncé (facultatif) » (`isAuctionDraft`, French
+  refinement message), TV `host/auctionScreens.tsx` (`AuctionBidScreen`: « 💰 Enchères ! », the
+  topic or the type, players with « 💰 a misé », countdown, « Fermer les enchères » as the main
+  button; `AuctionRevealStrip` above the footer: « Alice avait misé 200 : + 200 », biggest first, one
+  by one), reducer `auction` + `isBidding`; phone `player/auction.tsx` (`BidPad`: − / +, quick 0 / ¼ /
+  ½ / « Tapis », « Miser n », « ✅ Mise enregistrée », changeable; `AuctionResultLine` on the result),
+  `playerState` `auction` / `bid` + screen `bid`, store `sendBid`; remote: « 💰 Enchères en cours ·
+  n / m ont misé », the bids at the reveal; report `reports/auctionCard.tsx`; `lib/auction.ts`.
+  Tests: `Game.auction.test.ts` (12: shared rules / allowed types / max / floor, nothing of the
+  question before the bids close (frames, host resync, timer), bid limits / steps / change / closed /
+  amounts never in `game:state` / jokers refused, + / − / floor at 0 in result, reveal, stats and
+  gains, Double → bid → Voleur order, accept turns − into +, teams, Survie hearts, pause + rejoin,
+  « Passer », « Continuer sans » cancels the bid), persistence round trip (Postgres), web
+  `lib/auction.test.ts`, `playerState.auction.test.ts` (phone + TV), `draft.auction.test.ts`; e2e
+  `e2e/auction.spec.ts` (editor, bid stage on TV + 2 phones, changed bid, no question text in any
+  TV / phone frame before the close, no phone gets the other's bid, + 200 / − 150 on the TV strip and
+  the phones, « Suivant » in view, report). Screenshots checked (TV 1600×900 bids / reveal, Pixel 7
+  bid pad / results, editor, report).
+- **Deviations / decisions:** (1) **Allowed types:** every type with a right answer except
+  `DRAW` (the drawer has nothing to answer), `WAVELENGTH` (the psychic) and `HOT_POTATO` (a round)
+  — so BLUFF, WAGER, POINTLESS, LIST, COLORS, MISSING, ORDER, PIN… take bids; never au buzzer.
+  (2) New server → player event `auction:bid` (not in the decided list): each phone needs its own
+  max and bid, which `game:state` (to all) must not carry. (3) The max is fixed when the bid stage
+  starts (`max(min(score, 1000) on a step, 200)`). (4) A player excused with « Continuer sans » or
+  absent for the whole question gets the bid cancelled (not lost), like « Survie » hearts. (5) Jokers
+  are refused during the bid stage (the question isn't known yet); they work as usual in the rest
+  of the intro. (6) No `introMs` during the bid stage (the TV shows its own countdown); the remote's
+  `remote:answer` is still sent at the start of the intro (host only). **After merging, run
+  `pnpm --filter @lbq/server db:migrate`.** Not tried on real phones / a real TV.
 
 ---
 
@@ -3815,3 +3861,11 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   `PlayerResultPayload.potato?`, `player:answer` ack `potato?: PotatoAnswerAck`. Host sounds
   `potato-tick` / `potato-boom`; `phaseSound(prev, next, potato?)`, `useHostSounds({ potato })`.
   Migration `20261112063000_hot_potato`.
+- 2026-11-12, T64 agent (additive, PLAN.md §2–§5): new `packages/shared/src/auction.ts`;
+  `Question.auction?` / `auctionTopic?` (+ refinement); `player:bid` (`PlayerBidPayload`, ack
+  `{ amount }`), new server → player event `auction:bid` (`AuctionBidPayload`),
+  `GameStatePayload.auction?` (`AuctionStatus`), `QuestionShowPayload.auction?`,
+  `RevealDetails.auction?` (`AuctionBid`), `PlayerResultPayload.auction?`. Behaviour: a question
+  with bids sends **no `question:show` during the bid stage** (QUESTION_INTRO starts without the
+  question; it comes when the bids close), and no `introMs` then. Migration
+  `20261112064000_auction`.

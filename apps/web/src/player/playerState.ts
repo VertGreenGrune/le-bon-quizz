@@ -2,6 +2,8 @@ import {
   answerCancellable,
   mergeStrokes,
   type AnswerInput,
+  type AuctionBidPayload,
+  type AuctionStatus,
   type AvatarId,
   type BuzzerStatus,
   type DrawStatus,
@@ -95,6 +97,10 @@ export interface PlayerState {
   jokerNews: (JokerUsedPayload & { at: number }) | null;
   /** « Survie »: everyone's hearts (`survival:state`). */
   survival: SurvivalStatePayload | null;
+  /** « Enchères » (T64, `game:state.auction`): the bid stage, the topic. */
+  auction: AuctionStatus | null;
+  /** « Enchères »: this phone's max and bid (`auction:bid`, the `player:bid` ack). */
+  bid: { questionIndex: number; max: number; amount: number } | null;
 }
 
 export type PlayerAction =
@@ -124,7 +130,9 @@ export type PlayerAction =
   | { type: 'jokers'; payload: PlayerJokersPayload }
   | { type: 'jokerUsed'; payload: JokerUsedPayload; now: number }
   | { type: 'survival'; payload: SurvivalStatePayload }
-  | { type: 'drawStrokes'; payload: DrawStrokesPayload };
+  | { type: 'drawStrokes'; payload: DrawStrokesPayload }
+  | { type: 'auctionBid'; payload: AuctionBidPayload }
+  | { type: 'bidPlaced'; questionIndex: number; amount: number };
 
 export const initialPlayerState: PlayerState = {
   connected: false,
@@ -162,6 +170,8 @@ export const initialPlayerState: PlayerState = {
   jokers: null,
   jokerNews: null,
   survival: null,
+  auction: null,
+  bid: null,
 };
 
 export function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
@@ -212,6 +222,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         paused,
         buzzer,
         draw: action.payload.draw ?? null,
+        auction: action.payload.auction ?? null,
         frozenMs: frozen ? (remainingMs ?? null) : null,
         resumeAt: paused && !waiting ? state.resumeAt : null,
         phase,
@@ -229,6 +240,16 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         result: sameQuestion || phase === 'PODIUM' || phase === 'ENDED' ? state.result : null,
       };
     }
+
+    case 'auctionBid': {
+      const { index, max, amount } = action.payload;
+      return { ...state, bid: { questionIndex: index, max, amount } };
+    }
+
+    case 'bidPlaced':
+      return state.bid?.questionIndex === action.questionIndex
+        ? { ...state, bid: { ...state.bid, amount: action.amount } }
+        : state;
 
     case 'resuming':
       return state.paused ? { ...state, resumeAt: action.now + action.inMs } : state;
@@ -389,6 +410,7 @@ export function myTeam(s: PlayerState): LobbyTeamsPayload['teams'][number] | nul
 export type PlayerScreen =
   | 'connecting'
   | 'lobby'
+  | 'bid'
   | 'getReady'
   | 'answer'
   | 'answered'
@@ -426,7 +448,8 @@ export function playerScreen(s: PlayerState): PlayerScreen {
     case 'LOBBY':
       return 'lobby';
     case 'QUESTION_INTRO':
-      return 'getReady';
+      // « Enchères » (T64): the bids before the question.
+      return s.auction?.stage === 'bid' ? 'bid' : 'getReady';
     case 'ANSWERING':
       if (s.myAnswer?.questionIndex === s.questionIndex || foundTheWord(s)) return 'answered';
       if (bluffStage(s) === 'write' && s.lie?.questionIndex === s.questionIndex) return 'answered';
