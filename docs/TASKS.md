@@ -3353,7 +3353,7 @@ pnpm format:check` before finishing.
 
 ### T64 — « Enchères » (auction option)
 
-- **Status:** todo
+- **Status:** in-progress (agent T64)
 - **Depends on:** wave 10 merged. Wave 11 (parallel with T63), ports 3064 / 5264.
 - **Note:** close to the « Quitte ou double » of T29 (cancelled 2026-10-22); the user asked for it
   again on 2026-11-11, so it is wanted now.
