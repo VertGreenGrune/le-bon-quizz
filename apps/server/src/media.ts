@@ -137,6 +137,10 @@ export async function mediaRoutes(
       .header('content-type', file.contentType)
       .header('x-content-type-options', 'nosniff')
       .header('cache-control', 'public, max-age=31536000, immutable')
+      // T65: the editor reads a picture's pixels (« Couleurs perdues » paint bucket) from a
+      // canvas: public files, no credentials, so any page may read them.
+      .header('access-control-allow-origin', '*')
+      .header('cross-origin-resource-policy', 'cross-origin')
       .header('accept-ranges', 'bytes');
     const header = request.headers.range;
     const range = header ? parseRange(header, size) : undefined;

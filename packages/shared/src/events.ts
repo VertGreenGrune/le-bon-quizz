@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { AcceptedAnswers } from './accept.js';
 import { AvatarId } from './avatars.js';
 import { DRAW_MAX_CHUNKS, DrawStrokeSchema, type DrawStroke } from './draw.js';
-import { COLOR_COUNT, COLORS_MAX_ZONES, type ColorBoard } from './colors.js';
+import { COLORS_MAX_ZONES, type ColorBoard, type OfferedColor } from './colors.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
 import { JokerType } from './jokers.js';
 import { HauntType, SurvivalHearts } from './survival.js';
@@ -230,7 +230,7 @@ export const PlayerAnswerPayload = z.union([
   }),
   z.strictObject({ ...answerTarget, point: PinPointSchema }),
   z.strictObject({ ...answerTarget, playerId: z.string().min(1).max(64) }),
-  // « Couleurs perdues » (T58): a palette index per zone, -1 = no color.
+  // « Couleurs perdues » (T58): per zone an index in the offered palette (T65), -1 = no color.
   z.strictObject({
     ...answerTarget,
     colors: z
@@ -239,7 +239,7 @@ export const PlayerAnswerPayload = z.union([
           .number()
           .int()
           .min(-1)
-          .max(COLOR_COUNT - 1),
+          .max(COLORS_MAX_ZONES - 1),
       )
       .min(1)
       .max(COLORS_MAX_ZONES),
@@ -911,10 +911,16 @@ export interface QuestionShowPayload {
   /** « Liste chrono »: the number of items to find (never the items). */
   list?: { total: number };
   /**
-   * « Couleurs perdues » (T58): the board; its `colors` only while memorizing (stage `memo`,
-   * `timeLimitSec` = `memoSec`), grey in stage `answer`.
+   * « Couleurs perdues » (T58): the board; its `colors` (hex per zone, T65) only while memorizing
+   * (stage `memo`, `timeLimitSec` = `memoSec`); in stage `answer` the board without its colors
+   * (the blank picture when there is one) and the offered `palette` (T65).
    */
-  colors?: { stage: 'memo' | 'answer'; board: ColorBoard; colors?: number[] };
+  colors?: {
+    stage: 'memo' | 'answer';
+    board: ColorBoard;
+    colors?: string[];
+    palette?: OfferedColor[];
+  };
   /**
    * « Qu'est-ce qui a disparu ? » (T59): `imageUrl` is the picture « avant » (stage `memo`,
    * `timeLimitSec` = `memoSec`); stage `answer` adds the picture « après » (`missingImageUrl`).
@@ -987,9 +993,11 @@ export interface QuestionPromptPayload {
   list?: { total: number; maxLength: number; found: ListFoundItem[] };
   /**
    * « Couleurs perdues » (T58): nothing of the board while memorizing (`memo`, `timeLimitSec` =
-   * `memoSec`), then the grey board — the zones' places, never their colors.
+   * `memoSec`), then the board without its colors — the zones' places, never their colors — and
+   * the colors to pick from (T65: only the board's colors, sorted by hue; answers are indexes in
+   * this `palette`).
    */
-  colors?: { stage: 'memo' } | { stage: 'answer'; board: ColorBoard };
+  colors?: { stage: 'memo' } | { stage: 'answer'; board: ColorBoard; palette: OfferedColor[] };
   /**
    * « Qu'est-ce qui a disparu ? » (T59): nothing of the picture while memorizing (`memo`,
    * `timeLimitSec` = `memoSec`), then `imageUrl` = the picture « après » only (never « avant »
@@ -1084,15 +1092,18 @@ export interface RevealDetails {
 }
 
 export interface ColorsReveal {
+  /** Everything: the colored picture and the blank one. */
   board: ColorBoard;
-  colors: number[];
+  /** The right color of each zone (`#rrggbb`, T65; palette indexes in reports saved before). */
+  colors: string[];
   /** Per zone, how many players put the right color. */
   zones: number[];
   /** Every player, best first, no answer last (`colors` null). */
   answers: {
     nickname: string;
     avatar: AvatarId;
-    colors: number[] | null;
+    /** The color put on each zone (null = none). */
+    colors: (string | null)[] | null;
     right: number;
     points: number;
   }[];
@@ -1246,8 +1257,17 @@ export interface PlayerResultPayload {
   draw?: { word: string; drawer?: LobbyMember; drew: boolean; found: boolean; finders: number };
   /** « Liste chrono »: how many items this player found, out of how many, and the ones missed. */
   list?: { found: number; total: number; missed: string[] };
-  /** « Couleurs perdues »: zones right out of how many, the right colors and the player's. */
-  colors?: { right: number; total: number; colors: number[]; yours?: number[] };
+  /**
+   * « Couleurs perdues »: zones right out of how many, the right colors and the player's (hex,
+   * T65), and the whole board (T65: the colored picture, now that it can be seen).
+   */
+  colors?: {
+    right: number;
+    total: number;
+    colors: string[];
+    yours?: (string | null)[];
+    board?: ColorBoard;
+  };
   /**
    * « Pas évident ! »: what the player answered (the item's label when right), how many players
    * gave that same right answer (themselves included, 0 when wrong / none) — 1 = « 💎 Pas évident ! ».
@@ -1327,7 +1347,7 @@ export interface JokerEffects {
   /** Copieur: the target answered, so did you (copied answer, not shown). */
   copied?: true;
   /** 50/50, « Couleurs perdues » (T58): zones already colored right on this phone. */
-  colorHints?: { zone: number; color: number }[];
+  colorHints?: { zone: number; color: string }[];
 }
 
 /** To each player of a game with jokers: their hand and what jokers do to them right now. */

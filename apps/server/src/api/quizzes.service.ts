@@ -4,6 +4,8 @@ import {
   WAGER_DEFAULT_BET_SEC,
   WAVELENGTH_DEFAULT_CLUE_SEC,
   COLORS_DEFAULT_CELLS,
+  ColorZoneSchema,
+  type ColorZone,
   COLORS_DEFAULT_MEMO_SEC,
   LIBRARY_LIMIT,
   MISSING_DEFAULT_MEMO_SEC,
@@ -50,11 +52,16 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'WHO_OF_US' }>, 'majorityBonus'> &
   Pick<Extract<Question, { type: 'BLUFF' }>, 'truth' | 'voteTimeSec'> &
   Pick<Extract<Question, { type: 'DRAW' }>, 'words'> &
-  Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones'> &
+  Pick<Extract<Question, { type: 'COLORS' }>, 'memoSec' | 'cells' | 'zones' | 'blankImageUrl'> &
   Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'> &
   Pick<Extract<Question, { type: 'WAGER' }>, 'wager' | 'betTimeSec'> &
   Pick<Extract<Question, { type: 'WAVELENGTH' }>, 'spectra' | 'clueTimeSec'> &
   Pick<Extract<Question, { type: 'HOT_POTATO' }>, 'potato'>;
+
+function readColorZones(zones: unknown): ColorZone[] {
+  const parsed = ColorZoneSchema.array().safeParse(zones ?? []);
+  return parsed.success ? parsed.data : [];
+}
 
 function toQuestion(qu: QuestionRow): Question {
   const base = {
@@ -118,7 +125,9 @@ function toQuestion(qu: QuestionRow): Question {
         type: qu.type,
         memoSec: config.memoSec ?? COLORS_DEFAULT_MEMO_SEC,
         cells: config.cells ?? COLORS_DEFAULT_CELLS,
-        zones: config.zones ?? [],
+        // T58 zones stored a palette index: read as its hex color (T65).
+        zones: readColorZones(config.zones),
+        ...(config.blankImageUrl && { blankImageUrl: config.blankImageUrl }),
       };
     case 'MISSING':
       return {
@@ -166,7 +175,13 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'DRAW') return { words: qu.words };
   if (qu.type === 'LIST' || qu.type === 'POINTLESS')
     return { items: qu.items, typoTolerance: qu.typoTolerance };
-  if (qu.type === 'COLORS') return { memoSec: qu.memoSec, cells: qu.cells, zones: qu.zones };
+  if (qu.type === 'COLORS')
+    return {
+      memoSec: qu.memoSec,
+      cells: qu.cells,
+      zones: qu.zones,
+      ...(qu.blankImageUrl && { blankImageUrl: qu.blankImageUrl }),
+    };
   if (qu.type === 'MISSING')
     return { missingImageUrl: qu.missingImageUrl, memoSec: qu.memoSec, zone: qu.zone };
   if (qu.type === 'WAGER') return { wager: qu.wager, betTimeSec: qu.betTimeSec };

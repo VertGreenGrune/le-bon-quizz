@@ -4,6 +4,9 @@ import {
   type ColorBoard,
   type ColorShape,
   type ColorsReveal,
+  type ColorSpot,
+  type OfferedColor,
+  hexToHsl,
 } from '@lbq/shared';
 
 /**
@@ -11,13 +14,39 @@ import {
  * report (board geometry, shapes, the phone's color picking).
  */
 
-/** Hex of a palette index (-1 / unknown = the grey of an empty zone). */
-export const colorHex = (index: number | undefined): string =>
-  (index !== undefined && COLOR_PALETTE[index]?.hex) || COLOR_NONE_HEX;
+/** A color of a board: `#rrggbb` (T65), or a built-in palette index (reports saved before T65). */
+export type BoardColor = string | number | null | undefined;
+
+/** Hex of a board color (null / -1 / unknown = the grey of an empty zone). */
+export function colorHex(color: BoardColor): string {
+  if (typeof color === 'string') return /^#[0-9a-f]{6}$/i.test(color) ? color : COLOR_NONE_HEX;
+  return (color !== undefined && color !== null && COLOR_PALETTE[color]?.hex) || COLOR_NONE_HEX;
+}
+
+/** Two board colors are the same color (hex or a legacy palette index). */
+export const sameColor = (a: BoardColor, b: BoardColor): boolean =>
+  a !== null &&
+  a !== undefined &&
+  a !== -1 &&
+  colorHex(a).toLowerCase() === colorHex(b).toLowerCase();
+
+/** Black text on light colors, white on the others. */
+export function textOn(hex: string): string {
+  const { l } = hexToHsl(hex);
+  return l > 0.62 ? '#000000' : '#ffffff';
+}
+
+/** The picture of a picture board: the colored one when colors are shown, else the blank one. */
+export function boardPicture(board: ColorBoard, colored: boolean): string | undefined {
+  return colored
+    ? (board.imageUrl ?? board.blankImageUrl)
+    : (board.blankImageUrl ?? board.imageUrl);
+}
 
 /** Generated board aspect ratio (width / height), or the picture's (4:3 until it is loaded). */
 export function boardAspect(board: ColorBoard, pictureAspect?: number): number {
-  if (board.imageUrl) return pictureAspect && pictureAspect > 0 ? pictureAspect : 4 / 3;
+  if (board.imageUrl || board.blankImageUrl)
+    return pictureAspect && pictureAspect > 0 ? pictureAspect : 4 / 3;
   return (board.cols ?? 1) / (board.rows ?? 1);
 }
 
@@ -61,15 +90,50 @@ function polygon(points: number, radius: (i: number) => number, start = -Math.PI
   );
 }
 
-/** Phone: the colors to start from — the 50/50 hints already in place, the rest empty. */
+/**
+ * Phone: the colors to start from (indexes in the offered palette) — the 50/50 hints (hex)
+ * already in place, the rest empty.
+ */
 export function initialColors(
   zones: number,
-  hints: readonly { zone: number; color: number }[] = [],
+  hints: readonly { zone: number; color: string }[] = [],
+  palette: readonly OfferedColor[] = [],
   previous?: readonly number[],
 ): number[] {
   const colors = Array.from({ length: zones }, (_, i) => previous?.[i] ?? -1);
-  for (const h of hints) if (h.zone >= 0 && h.zone < zones) colors[h.zone] = h.color;
+  for (const h of hints) {
+    const index = palette.findIndex((c) => c.hex === h.color);
+    if (h.zone >= 0 && h.zone < zones && index >= 0) colors[h.zone] = index;
+  }
   return colors;
+}
+
+/** Phone: the hex of each zone from its palette index (-1 = none → null). */
+export const paletteColors = (
+  colors: readonly number[],
+  palette: readonly OfferedColor[],
+): (string | null)[] => colors.map((c) => palette[c]?.hex ?? null);
+
+/**
+ * The spot nearest to a tap (board fractions; `aspect` = width / height, so distances are measured
+ * the same way across and down).
+ */
+export function nearestSpot(
+  spots: readonly ColorSpot[],
+  x: number,
+  y: number,
+  aspect: number,
+): number {
+  let best = -1;
+  let bestDistance = Infinity;
+  spots.forEach((s, i) => {
+    const d = Math.hypot((s.x - x) * aspect, s.y - y);
+    if (d < bestDistance) {
+      best = i;
+      bestDistance = d;
+    }
+  });
+  return best;
 }
 
 /**

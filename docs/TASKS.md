@@ -3422,7 +3422,7 @@ pnpm format:check` before finishing.
 
 ### T65 — « Couleurs perdues »: paint bucket on the picture, only the colors used
 
-- **Status:** in-progress (agent T65)
+- **Status:** done
 - **Depends on:** T58 (done). Ports 3065 / 5265, test DB `lbq_test_t65`, e2e DB `lbq_e2e_t65`.
 - **User requirement (2026-11-12):** with their own picture, the quiz creator taps **sections** of
   the picture; during the game those sections are **white**, and the color each one had is the
@@ -3466,6 +3466,57 @@ pnpm format:check` before finishing.
   color, whitening, palette sort), e2e (editor: upload a generated PNG with 3 colored areas, tap
   them, `blankImageUrl` uploaded; game: phones offered exactly the 3 colors, right / wrong answers,
   frames carry no zone color before the reveal). Screenshots (editor on a phone too, TV, Pixel 7).
+- **Summary:** shared (`colors.ts`): `HexColor`, `COLORS_*_TOLERANCE` (0–100, default 30),
+  `ColorZoneSchema` = paint-bucket zone `{ x, y, tolerance, color: '#rrggbb' }` | T58 round zone
+  `{ x, y, radius, color }` with a preprocess reading a T58 palette index as its hex, `isBucketZone`,
+  `ColorSpot.radius?` (absent = marker), `ColorBoard.blankImageUrl?`, `OfferedColor`,
+  `offeredPalette` (distinct, by hue, greys last), `hexToRgb` / `rgbToHex` / `hexToHsl`, `colorLabel`
+  / `colorDescription` (French names); `colorsRight` on hex; `quiz.ts` `COLORS.blankImageUrl?` +
+  refinement (required with paint-bucket zones), `answerText` boardColors as hex. Contract: see the
+  « Contract changes » line. Server: `questionTypes/colors.ts` keeps hex colors + the offered palette
+  (generated board: the palette colors drawn), memo board without the blank picture, answer board
+  without the colored one (and no top-level `imageUrl` in `question:show`), answers = palette indexes
+  turned into hex (unknown index → `INVALID_PAYLOAD`), judged by color, hints / reveal / results in
+  hex, results carry the whole board; `quizzes.service.ts` reads T58 zones through the schema +
+  `blankImageUrl` in the config (no migration); `media.ts` `Access-Control-Allow-Origin: *` +
+  `Cross-Origin-Resource-Policy: cross-origin` on `/uploads/*`; `quiz:import` copies `blankImageUrl`.
+  Web: `lib/paintBucket.ts` (pure: `floodFill` 4-connected from the tapped color, per-channel
+  tolerance, never into earlier regions; `averageColor`, `snapColor` (≤ 12 per channel → the earlier
+  zone's color: one swatch), `computeRegions` (round zones = discs), `regionAt`, `whiten` (+ 1-px
+  rim), `workingSize` ≤ 1600 px, `blankKey`); editor `editor/PaintBucketZones.tsx` (« 🎨 Zones sur une
+  image »: pixels read with `fetch` + `createImageBitmap`, tap = new region or selects the region
+  tapped, striped overlay + numbered markers in the zone color, per-zone swatch, French color name,
+  hex, « Tolérance » slider, ✕, « Zone minuscule » warning, the blank picture whitened, uploaded
+  600 ms after the last change (PNG, JPEG beyond 4.5 MB), « ⏳ Préparation… » / « ✅ Image aux zones
+  blanches prête » + preview, « Réessayer »; old round zones listed « zone ronde (ancienne) »); draft
+  `colorBlankImageUrl` / `colorBlankKey` (the blank picture is only sent when made for the current
+  zones, else the French « se prépare… » error). `ColorBoardView` shows the blank picture (no
+  grayscale) with markers, colors as hex (or legacy indexes), a tap anywhere picks the nearest
+  marker (`nearestSpot`); phone palette = the offered colors (names for the built-in ones, black /
+  white text by lightness, 6 columns beyond 8); TV « Couleurs possibles : » swatches
+  (`components/PaletteSwatches.tsx`); result board = the whole board from the result. Tests:
+  `Game.colors.test.ts` (21: + bucket schema / legacy preprocess, offered palette sorted, palette in
+  prompt and show, index out of the palette, bucket memo / answer boards with no colored picture,
+  judged by color with a duplicate color, generated board restricted to its colors), persistence
+  (legacy row read as hex, bucket round trip, hex report; Postgres), media CORS header, import of the
+  blank picture; web `lib/paintBucket.test.ts`, `lib/colors.test.ts`, `draft.colors.test.ts`; e2e
+  `e2e/colors.spec.ts` updated (round zones still play, only the 4 picture colors / the drawn colors
+  offered) + new `e2e/colors-bucket.spec.ts` (generated PNG with 3 colors + a second pink area: 4 taps
+  in the editor, 3 colors measured, tap inside selects, blank picture uploaded and checked pixel by
+  pixel, editor at 375 px without horizontal scroll, game: TV / phones show the blank picture, exactly
+  3 swatches by hue, nearest-marker tap, frames without zone color nor the colored picture before the
+  reveal, 4/4 and 2/4 results, colored picture back on the result). Screenshots checked (editor 1600
+  and 375 px, TV answer / reveal, Pixel 7 answer).
+- **Deviations / notes:** (1) `/uploads/*` sends `Access-Control-Allow-Origin: *` (not the configured
+  web origin): public files, read without credentials, and it avoids a cached response without the
+  header breaking the canvas read. (2) The editor reads the pixels with `fetch` + `createImageBitmap`
+  (not an `<img crossOrigin>`), on a copy ≤ 1600 px; the blank picture has that size. (3) Look-alike
+  region colors (≤ 12 per channel) are snapped to the earlier zone's color, so two areas of the same
+  paint give one swatch (the server only merges exact duplicates). (4) Round and paint-bucket zones
+  can be mixed (the blank picture whitens the discs too); a question with only round zones has no
+  blank picture and plays as in T58 (grey picture). (5) The phone only knows the markers (not the
+  regions): a tap picks the nearest marker. (6) No migration (config JSON). Not tried on real phones /
+  a real TV.
 
 ---
 
@@ -3916,6 +3967,16 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   with bids sends **no `question:show` during the bid stage** (QUESTION_INTRO starts without the
   question; it comes when the bids close), and no `introMs` then. Migration
   `20261112064000_auction`.
+- 2026-11-12, T65 agent (PLAN.md §3–§5) — **changed fields, not only additive**: « Couleurs
+  perdues » colors are now `#rrggbb` strings: `question:show.colors.colors`, `RevealDetails.colors`
+  (`colors`, `answers[].colors` = `(string | null)[]`), `player:result.colors` (`colors`, `yours`),
+  `JokerEffects.colorHints[].color`, `answerText`'s `boardColors`; `player:answer.colors` stays
+  `number[]` but means indexes in the new `colors.palette` (`OfferedColor[]`, in the answer stage of
+  `question:show` / `question:prompt`; max index 11). `ColorZone` = paint-bucket | round zone
+  (`isBucketZone`), `ColorSpot.radius` optional, `ColorBoard.blankImageUrl?`,
+  `ColorsQuestion.blankImageUrl?`, `player:result.colors.board?`. Server `Answer.colors` is
+  `(string | null)[]`. Reports saved before keep palette indexes (the web reads both). `/uploads/*`
+  answers `Access-Control-Allow-Origin: *`. No migration.
 - 2026-11-12, main agent (demo quiz): `DEMO_QUIZ` (quiz `demo`, home page « Animer une partie
   (démo) ») is now a tour of the game: 22 questions, one of every type (the 18 types) + « select
   all », picture effect, « Buzzer », « Enchères » and explanations; its pictures are small SVG

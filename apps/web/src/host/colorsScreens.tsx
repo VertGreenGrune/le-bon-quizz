@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import type { ColorsReveal, QuestionShowPayload } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import { ColorBoardView } from '../components/ColorBoard';
-import { zoneShare } from '../lib/colors';
+import { sameColor, zoneShare } from '../lib/colors';
+import { PaletteSwatches } from '../components/PaletteSwatches';
 
 /**
  * « Couleurs perdues » (T58) on the TV: the colored board while memorizing, the grey numbered
@@ -50,6 +51,12 @@ export function ColorsStage({
           className="size-full"
         />
       </motion.div>
+      {!memo && colors.palette && (
+        <div className="flex items-center gap-3" data-testid="colors-offered">
+          <span className="text-xl font-bold opacity-85">Couleurs possibles :</span>
+          <PaletteSwatches palette={colors.palette} size="tv" />
+        </div>
+      )}
     </div>
   );
 }
@@ -96,7 +103,7 @@ function ColorsRevealView({ reveal, instant }: { reveal: ColorsReveal; instant: 
                 board={reveal.board}
                 colors={a.colors}
                 numbers={false}
-                marks={a.colors.map((c, z) => c === reveal.colors[z])}
+                marks={a.colors.map((c, z) => sameColor(c, reveal.colors[z]))}
               />
             ) : (
               <p className="py-2 text-center text-sm font-semibold opacity-70">pas de réponse</p>

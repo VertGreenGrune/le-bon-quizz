@@ -1,7 +1,7 @@
 import type { GameQuestionReport } from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import { ColorBoardView } from '../components/ColorBoard';
-import { zoneShare } from '../lib/colors';
+import { sameColor, zoneShare } from '../lib/colors';
 
 /** « Couleurs perdues » (T58) in the report: the board, per zone who found it, every board. */
 export function ColorsDetails({ q }: { q: GameQuestionReport }) {
@@ -33,7 +33,7 @@ export function ColorsDetails({ q }: { q: GameQuestionReport }) {
                     board={colors.board}
                     colors={a.colors}
                     numbers={false}
-                    marks={a.colors.map((c, z) => c === colors.colors[z])}
+                    marks={a.colors.map((c, z) => sameColor(c, colors.colors[z]))}
                   />
                 </span>
                 <span className="font-black tabular-nums">

@@ -37,6 +37,11 @@ const customMessages: Record<string, string> = {
   'Items must be different': 'Les éléments doivent être tous différents',
   'A pin question needs an image': 'Ajoute une image : les joueurs vont la toucher',
   'A pin question has no image effect': 'Pas d’effet sur l’image pour cette question',
+  'At least 2 zones': 'Place au moins 2 zones',
+  'Zones need an image': 'Ajoute une image pour placer les zones',
+  'Place the zones on the image': 'Touche l’image pour placer les zones',
+  'Paint-bucket zones need a blank picture':
+    'L’image aux zones blanches se prépare… réessaie dans un instant',
 };
 
 export function issueMessage(issue: Issue): string {

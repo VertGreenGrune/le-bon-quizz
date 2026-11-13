@@ -95,6 +95,13 @@ export async function prepareQuiz(
       q.missingImageUrl = await media(ref, 'image');
       if (!q.missingImageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
     }
+    // « Couleurs perdues » (T65): the picture with the zones in white (optional, but the
+    // question needs it with paint-bucket zones: the schema says so).
+    if (q.blankImageUrl !== undefined) {
+      const ref = q.blankImageUrl;
+      q.blankImageUrl = await media(ref, 'image');
+      if (!q.blankImageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
+    }
     const audio = q.audio as Json | undefined;
     if (audio) {
       const url = await media(audio.url, 'audio');

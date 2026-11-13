@@ -715,10 +715,24 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
         memoSec: 15,
         cells: 6,
         zones: [
-          { x: 0.2, y: 0.3, radius: 0.1, color: 0 },
-          { x: 0.7, y: 0.6, radius: 0.1, color: 4 },
+          { x: 0.2, y: 0.3, radius: 0.1, color: '#e11d48' },
+          { x: 0.7, y: 0.6, radius: 0.1, color: '#2563eb' },
         ],
         timeLimitSec: 30,
+        basePoints: 1000,
+      },
+      {
+        text: 'Les couleurs de ma photo (pot de peinture)',
+        type: 'COLORS',
+        imageUrl: 'https://example.com/uploads/photo.png',
+        blankImageUrl: 'https://example.com/uploads/photo-blanche.png',
+        memoSec: 10,
+        cells: 6,
+        zones: [
+          { x: 0.1, y: 0.2, tolerance: 30, color: '#f4a6c0' },
+          { x: 0.6, y: 0.5, tolerance: 45, color: '#7b4fa1' },
+        ],
+        timeLimitSec: 20,
         basePoints: 1000,
       },
       {
@@ -735,14 +749,31 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     const { quiz, dbQuizId } = await persistence.loadQuiz(q.id, host.id);
     expect(quiz.questions).toEqual(questions);
 
+    // A T58 row stored palette indexes: read back as hex colors (T65).
+    const row = await prisma.question.findFirstOrThrow({ where: { quizId: q.id, order: 0 } });
+    await prisma.question.update({
+      where: { id: row.id },
+      data: {
+        config: {
+          memoSec: 15,
+          cells: 6,
+          zones: [
+            { x: 0.2, y: 0.3, radius: 0.1, color: 0 },
+            { x: 0.7, y: 0.6, radius: 0.1, color: 4 },
+          ],
+        },
+      },
+    });
+    expect((await persistence.loadQuiz(q.id, host.id)).quiz.questions).toEqual(questions);
+
     const game = new Game('123456', quiz, noop, {}, { mode: 'solo', allAnsweredGraceMs: 0 });
     const alice = game.join('Alice', 's1', 'batman');
     const bob = game.join('Bob', 's2', 'robin');
     game.start();
     game.next(); // intro → memorizing
-    game.next(); // → answers
-    game.answer(alice.id, 0, { colors: [0, 4] });
-    game.answer(bob.id, 0, { colors: [0, 1] });
+    game.next(); // → answers (offered: bleu, rouge)
+    game.answer(alice.id, 0, { colors: [1, 0] });
+    game.answer(bob.id, 0, { colors: [1, 1] });
     game.end();
     game.dispose();
     await persistence.saveGame(gameRecord(game, host.id, dbQuizId)!);
@@ -753,11 +784,11 @@ describe.skipIf(!TEST_DATABASE_URL)('Prisma persistence (Postgres)', () => {
     ).json<GameReport>();
     expect(report.questions[0]).toMatchObject({ type: 'COLORS', correctCount: 1, answerCount: 2 });
     expect(report.questions[0]!.details.colors).toMatchObject({
-      colors: [0, 4],
+      colors: ['#e11d48', '#2563eb'],
       zones: [2, 1],
       answers: [
-        { nickname: 'Alice', colors: [0, 4], right: 2 },
-        { nickname: 'Bob', colors: [0, 1], right: 1 },
+        { nickname: 'Alice', colors: ['#e11d48', '#2563eb'], right: 2 },
+        { nickname: 'Bob', colors: ['#e11d48', '#e11d48'], right: 1 },
       ],
     });
   });

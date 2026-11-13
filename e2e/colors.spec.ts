@@ -75,11 +75,12 @@ function crc32(buf: Buffer): number {
   return ~c >>> 0;
 }
 
-const name = (i: number) => COLOR_PALETTE[i]!.name;
+const hex = (i: number) => COLOR_PALETTE[i]!.hex;
+const nameOf = (h: string) => COLOR_PALETTE.find((c) => c.hex === h)!.name;
 
 /** Paints the zones in order (each color moves the selection to the next empty zone). */
-async function paint(page: Page, colors: number[]) {
-  for (const c of colors) await page.getByRole('button', { name: name(c), exact: true }).click();
+async function paint(page: Page, colors: string[]) {
+  for (const c of colors) await page.getByRole('button', { name: nameOf(c), exact: true }).click();
 }
 
 test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal and report', async ({
@@ -95,8 +96,8 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
   });
   expect(uploaded.status()).toBe(201);
   const { url: imageUrl } = (await uploaded.json()) as { url: string };
-  // Rouge, Bleu / Jaune, Vert.
-  const RIGHT = [0, 4, 2, 3];
+  // Rouge, Bleu / Jaune, Vert (round zones of T58: still played, T65).
+  const RIGHT = [0, 4, 2, 3].map(hex);
   const input: QuizInput = {
     title: `Couleurs perdues ${stamp}`,
     questions: [
@@ -107,10 +108,10 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
         memoSec: 8,
         cells: 6,
         zones: [
-          { x: 0.25, y: 0.25, radius: 0.1, color: 0 },
-          { x: 0.75, y: 0.25, radius: 0.1, color: 4 },
-          { x: 0.25, y: 0.75, radius: 0.1, color: 2 },
-          { x: 0.75, y: 0.75, radius: 0.1, color: 3 },
+          { x: 0.25, y: 0.25, radius: 0.1, color: hex(0) },
+          { x: 0.75, y: 0.25, radius: 0.1, color: hex(4) },
+          { x: 0.25, y: 0.75, radius: 0.1, color: hex(2) },
+          { x: 0.75, y: 0.75, radius: 0.1, color: hex(3) },
         ],
         timeLimitSec: 30,
         basePoints: 1000,
@@ -138,14 +139,11 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
     'aria-checked',
     'true',
   );
-  await expect(host.getByRole('button', { name: '🖼️ Zones sur une image' })).toHaveAttribute(
+  await expect(host.getByRole('button', { name: '🎨 Zones sur une image' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await expect(host.getByRole('radio', { name: 'Bleu' }).nth(1)).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  await expect(host.getByTestId('bucket-zone').nth(1)).toHaveAttribute('data-color', hex(4));
   await shot(host, 'colors-editor', true);
 
   // ---- Lobby: two phones, recording what the server sends them ----
@@ -198,20 +196,27 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
     { timeout: 15_000 },
   );
   await expect(alice.getByTestId('colors-palette')).toBeVisible();
+  // Only the 4 colors of the picture, by hue: jaune, vert, bleu, rouge (T65).
+  await expect(alice.getByTestId('colors-palette').getByRole('button')).toHaveText([
+    'Jaune',
+    'Vert',
+    'Bleu',
+    'Rouge',
+  ]);
   await expect(alice.getByTestId('color-spot')).toHaveCount(4);
   await shot(host, 'colors-tv-answer-picture');
   await paint(alice, RIGHT);
   await expect(alice.getByTestId('colors-zone')).toHaveText('Zone 4');
   await shot(alice, 'colors-phone-answer-picture');
   // Bob swaps the bottom two.
-  await paint(bob, [0, 4, 3, 2]);
+  await paint(bob, [0, 4, 3, 2].map(hex));
   await shot(bob, 'colors-phone-se-picture');
   await expect(bob.getByRole('button', { name: 'Valider (4/4)' })).toBeVisible();
   // Nothing of the colors reached a phone before the reveal.
   for (const f of [frames.Alice!, frames.Bob!]) {
     const all = f.join('\n');
     expect(all).not.toContain('"color":');
-    expect(all).not.toContain(`"colors":[${RIGHT.join(',')}]`);
+    expect(all).not.toContain(`"colors":${JSON.stringify(RIGHT)}`);
   }
   await alice.getByRole('button', { name: 'Valider (4/4)' }).click();
   await expect(alice.getByText('Réponse envoyée !')).toBeVisible();
@@ -235,10 +240,8 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
   await expect(host.getByTestId('colors-stage')).toHaveText('👀 Mémorisez les couleurs !');
   const shapes = host.getByTestId('color-shape');
   await expect(shapes).toHaveCount(12);
-  const right = (
-    await shapes.evaluateAll((els) => els.map((e) => e.getAttribute('data-color')))
-  ).map(Number);
-  expect(right.every((c) => c >= 0 && c < COLOR_PALETTE.length)).toBe(true);
+  const right = await shapes.evaluateAll((els) => els.map((e) => e.getAttribute('data-color')!));
+  expect(right.every((c) => COLOR_PALETTE.some((p) => p.hex === c))).toBe(true);
   await shot(host, 'colors-tv-memo-generated');
   await expect(host.getByTestId('colors-stage')).toHaveText(
     '🎨 À vous ! Remettez les couleurs sur vos téléphones',
@@ -246,12 +249,16 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
   );
   await expect(bob.getByTestId('color-spot')).toHaveCount(12);
   await shot(host, 'colors-tv-answer-generated');
+  // Only the colors drawn on the board are offered (T65).
+  await expect(bob.getByTestId('colors-palette').getByRole('button')).toHaveCount(
+    new Set(right).size,
+  );
   // Bob (iPhone SE) gets everything right; the palette and « Valider » stay on screen.
   await paint(bob, right);
   const validate = bob.getByRole('button', { name: 'Valider (12/12)' });
   await expect(validate).toBeInViewport({ ratio: 1 });
   await shot(bob, 'colors-phone-se-generated');
-  expect(frames.Bob!.join('\n')).not.toContain(`"colors":[${right.join(',')}]`);
+  expect(frames.Bob!.join('\n')).not.toContain(`"colors":${JSON.stringify(right)}`);
   await validate.click();
   // Alice puts a single color, then the host ends the question.
   await paint(alice, [right[0]!]);
