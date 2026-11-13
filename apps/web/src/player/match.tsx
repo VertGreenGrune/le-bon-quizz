@@ -85,3 +85,37 @@ export function MatchResultLine({ match }: { match: NonNullable<PlayerResultPayl
     </p>
   );
 }
+
+const RIGHT_CABLE = '#2f9e44';
+const WRONG_CABLE = '#e03131';
+
+/**
+ * Result: « 3 / 4 paires justes » and, when the phone still has the board, the player's own
+ * cables — green when right, red when wrong — with the right link of each missed pair dashed.
+ */
+export function MatchResult({
+  match,
+  columns,
+}: {
+  match: NonNullable<PlayerResultPayload['match']>;
+  columns?: MatchColumns;
+}) {
+  const board = match.board;
+  return (
+    <>
+      <MatchResultLine match={match} />
+      {board && columns && board.yours.length === columns.left.length && (
+        <div className="w-full max-w-md" data-testid="match-result-board">
+          <WireBoard
+            columns={columns}
+            links={board.yours}
+            colorOf={(l) => (board.yours[l] === board.right[l] ? RIGHT_CABLE : WRONG_CABLE)}
+            ghosts={board.right.flatMap((r, l) =>
+              board.yours[l] === r ? [] : [[l, r] as [number, number]],
+            )}
+          />
+        </div>
+      )}
+    </>
+  );
+}

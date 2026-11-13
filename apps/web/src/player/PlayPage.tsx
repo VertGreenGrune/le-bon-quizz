@@ -32,7 +32,7 @@ import {
 } from './playerState';
 import { EveningLine } from './evening';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
-import { MatchAnswer, MatchAnswered, MatchResultLine } from './match';
+import { MatchAnswer, MatchAnswered, MatchResult } from './match';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { BuzzerPad, buzzerResultTitle } from './buzzer';
 import {
@@ -832,7 +832,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.multiple && !r.correct && (
         <MultipleResultLine correctIndexes={r.multiple.correctIndexes} />
       )}
-      {r.match && <MatchResultLine match={r.match} />}
+      {r.match && <MatchResult match={r.match} columns={s.prompt?.match} />}
       {r.placed && (
         <p className="font-bold">
           {r.placed.correct} / {r.placed.total} bien placé{r.placed.correct > 1 ? 's' : ''}

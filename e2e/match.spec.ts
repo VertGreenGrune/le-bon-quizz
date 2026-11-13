@@ -134,6 +134,10 @@ test('« Associer » with a background picture', async ({ browser }) => {
   await expect(reveal).toContainText('2 / 4');
   await expect(alice.getByText('4 / 4 paires justes')).toBeVisible();
   await expect(bob.getByText('2 / 4 paires justes')).toBeVisible();
+  // Everyone's answer on the TV, and on Bob's phone his cables with the 2 right ones dashed.
+  await expect(host.getByTestId('match-answer')).toHaveCount(2);
+  await expect(bob.getByTestId('match-result-board')).toBeVisible();
+  await expect(bob.getByTestId('ghost-cable')).toHaveCount(2);
   // The phones never got which goes with which before the reveal.
   const beforeReveal = frames.filter((f) => f.includes('question:prompt'));
   expect(beforeReveal.length).toBeGreaterThan(0);

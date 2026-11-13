@@ -383,7 +383,10 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     which). Wire board (`components/WireBoard.tsx`): left items 1, 2, 3… with a colored plug, right
     items A, B, C… with a plug; on the phone a cable is dragged from a plug to its partner (or tap one
     then the other), a plugged cable dropped in the middle unplugs; « Valider (n/m) » once all are
-    plugged; the TV draws the right cables one by one at the reveal.
+    plugged; the TV draws the right cables one by one at the reveal, with every player's answer in
+    the board's labels (« 1 C · 2 A… », green right / red wrong); the phone's result shows its own
+    cables (green / red) and the missed right links dashed (`player:result.match.board`, shown
+    indexes).
     `player:answer { matches }` = per shown left item the shown right one (-1 = none, a right item
     once) → `Answer.matchLinks[pair]`. Points = time points × share of the pairs right
     (`matchPoints`, like ORDER); right = every pair. Cancellable (T43). Reveal `match: { pairs,

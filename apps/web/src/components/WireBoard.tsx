@@ -37,6 +37,8 @@ export function WireBoard({
   onUnplug,
   draw = false,
   badges,
+  colorOf,
+  ghosts = [],
 }: {
   columns: MatchColumns;
   /** `links[left]` = the right item plugged to it (-1 = none), in shown indexes. */
@@ -52,6 +54,10 @@ export function WireBoard({
   draw?: boolean;
   /** Small text after each left item (TV reveal: « ✓ 2 »). */
   badges?: (string | null)[];
+  /** The color of a left item's cable and plug (default: one color per item). */
+  colorOf?: (left: number) => string;
+  /** Thin dashed cables (the result: the right link of a missed pair), `[left, right]`. */
+  ghosts?: [number, number][];
 }) {
   const interactive = !!onConnect;
   const n = columns.left.length;
@@ -146,7 +152,7 @@ export function WireBoard({
     (drag.side === 'left'
       ? { left: drag.index, from: points.left[drag.index] }
       : { left: links.indexOf(drag.index), from: points.right[drag.index] });
-  const color = (left: number) => WIRE_COLORS[left % WIRE_COLORS.length]!;
+  const color = (left: number) => colorOf?.(left) ?? WIRE_COLORS[left % WIRE_COLORS.length]!;
   const tv = size === 'tv';
   const plugSize = tv ? 'size-7' : 'size-5';
   const cardSize = tv ? 'lg' : 'sm';
@@ -227,6 +233,23 @@ export function WireBoard({
         className="pointer-events-none absolute inset-0 size-full overflow-visible"
         aria-hidden="true"
       >
+        {ghosts.map(([l, r]) => {
+          const a = points.left[l];
+          const b = points.right[r];
+          return a && b ? (
+            <path
+              key={`ghost-${l}-${r}`}
+              d={wirePath(a, b)}
+              fill="none"
+              stroke="white"
+              strokeOpacity={0.85}
+              strokeWidth={3}
+              strokeDasharray="6 6"
+              strokeLinecap="round"
+              data-testid="ghost-cable"
+            />
+          ) : null;
+        })}
         <AnimatePresence>
           {links.map((r, l) => {
             const a = points.left[l];

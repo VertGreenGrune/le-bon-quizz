@@ -1380,8 +1380,17 @@ export interface PlayerResultPayload {
    * `loser` = who held it (absent: nobody, a game alone); the passes and what they earned;
    * `survivorPoints` = the share for not holding it at the end (0 for the loser).
    */
-  /** « Associer » (T67): pairs linked right, and the player's links in shown indexes. */
-  match?: { right: number; total: number; yours?: number[] };
+  /**
+   * « Associer » (T67): pairs linked right; `yours` = the player's links in pair indexes (like the
+   * reveal); `board` (in the shown order, for the phone's board): `yours[left]` = the shown right
+   * item the player plugged (-1), `right[left]` = the shown right item that was its partner.
+   */
+  match?: {
+    right: number;
+    total: number;
+    yours?: number[];
+    board?: { yours: number[]; right: number[] };
+  };
   potato?: {
     exploded: boolean;
     loser?: LobbyMember;

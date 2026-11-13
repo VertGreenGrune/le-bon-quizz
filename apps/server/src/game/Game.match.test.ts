@@ -152,7 +152,14 @@ describe('« Associer » (MATCH, T67)', () => {
 
     const result = (sock: string) => rec.last('player:result', sock) as PlayerResultPayload;
     expect(result('sock-a')).toMatchObject({ correct: true, pointsEarned: 1000 });
-    expect(result('sock-a').match).toEqual({ right: 4, total: 4, yours: [0, 1, 2, 3] });
+    expect(result('sock-a').match).toMatchObject({ right: 4, total: 4, yours: [0, 1, 2, 3] });
+    // The board in the shown order: Alice plugged every right cable.
+    const board = result('sock-a').match!.board!;
+    expect(board.yours).toEqual(board.right);
+    expect(board.right).toEqual(rightMatches(p));
+    // Bob: the two swapped cables differ from the right ones.
+    const bobBoard = result('sock-b').match!.board!;
+    expect(bobBoard.yours.filter((r, l) => r !== bobBoard.right[l])).toHaveLength(2);
     expect(result('sock-b')).toMatchObject({ correct: false, pointsEarned: 500 });
     expect(result('sock-b').match).toMatchObject({ right: 2, total: 4 });
     expect(result('sock-c')).toMatchObject({ correct: false, pointsEarned: 250 });
@@ -176,9 +183,10 @@ describe('« Associer » (MATCH, T67)', () => {
     game.next();
     const reveal = rec.last('question:reveal', 'host') as QuestionRevealPayload;
     expect(reveal.match!.answers.at(-1)).toMatchObject({ nickname: 'Bob', links: [], right: 0 });
-    expect((rec.last('player:result', 'sock-b') as PlayerResultPayload).match).toEqual({
+    expect((rec.last('player:result', 'sock-b') as PlayerResultPayload).match).toMatchObject({
       right: 0,
       total: 4,
+      board: { yours: [-1, -1, -1, -1] },
     });
   });
 

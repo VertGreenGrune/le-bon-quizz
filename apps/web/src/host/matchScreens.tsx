@@ -1,5 +1,12 @@
 import { motion } from 'framer-motion';
-import type { MatchColumns, MatchReveal, MatchSide, QuestionShowPayload } from '@lbq/shared';
+import {
+  matchLeftLabel,
+  matchRightLabel,
+  type MatchColumns,
+  type MatchReveal,
+  type MatchSide,
+  type QuestionShowPayload,
+} from '@lbq/shared';
 import { Avatar } from '../components/Avatar';
 import { WireBoard } from '../components/WireBoard';
 
@@ -46,6 +53,27 @@ export function rightLinks(
   return { links, pairOf };
 }
 
+/**
+ * One player's answer in the board's labels, left items in the shown order: « 1 B », « 2 — »…
+ * `links` = their links in pair indexes (from the reveal).
+ */
+export function answerChips(
+  columns: MatchColumns,
+  pairs: MatchReveal['pairs'],
+  links: readonly number[],
+): { left: string; right: string; ok: boolean }[] {
+  const { pairOf } = rightLinks(columns, pairs);
+  const rightShown = pairs.map((p) => columns.right.findIndex((r) => same(r, p.right)));
+  return pairOf.map((p, i) => {
+    const q = p >= 0 ? (links[p] ?? -1) : -1;
+    return {
+      left: matchLeftLabel(i),
+      right: q >= 0 && rightShown[q]! >= 0 ? matchRightLabel(rightShown[q]!) : '—',
+      ok: q >= 0 && q === p,
+    };
+  });
+}
+
 function MatchRevealView({
   columns,
   reveal,
@@ -57,6 +85,7 @@ function MatchRevealView({
 }) {
   const total = reveal.pairs.length;
   const { links, pairOf } = rightLinks(columns, reveal.pairs);
+  const compact = reveal.answers.length > 6;
   return (
     <div className="flex min-h-0 w-full items-start gap-6" data-testid="match-reveal">
       <div className="min-w-0 flex-[3]">
@@ -75,19 +104,37 @@ function MatchRevealView({
             initial={instant ? false : { x: 40, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: instant ? 0 : 0.6 + total * 0.45 + i * 0.1 }}
-            className="flex items-center gap-3 rounded-xl bg-panel px-3 py-1.5 text-xl font-bold"
+            className={`flex flex-col gap-1 rounded-xl bg-panel px-3 font-bold ${compact ? 'py-1 text-lg' : 'py-1.5 text-xl'}`}
+            data-testid="match-answer"
           >
-            <Avatar id={a.avatar} size="sm" />
-            <span className="min-w-0 flex-1 truncate">{a.nickname}</span>
-            {a.links.length ? (
-              <>
-                <span className="tabular-nums">
-                  {a.right} / {total}
-                </span>
-                <span className="w-20 text-right tabular-nums opacity-80">+{a.points}</span>
-              </>
-            ) : (
-              <span className="text-base opacity-70">pas de réponse</span>
+            <span className="flex items-center gap-3">
+              <Avatar id={a.avatar} size="sm" />
+              <span className="min-w-0 flex-1 truncate">{a.nickname}</span>
+              {a.links.length ? (
+                <>
+                  <span className="tabular-nums">
+                    {a.right} / {total}
+                  </span>
+                  <span className="w-20 text-right tabular-nums opacity-80">+{a.points}</span>
+                </>
+              ) : (
+                <span className="text-base opacity-70">pas de réponse</span>
+              )}
+            </span>
+            {a.links.length > 0 && (
+              // What they plugged, in the board's labels: green = right, red = wrong.
+              <span className="flex flex-wrap gap-1 pl-10">
+                {answerChips(columns, reveal.pairs, a.links).map((c) => (
+                  <span
+                    key={c.left}
+                    className={`rounded-md px-1.5 tabular-nums ${compact ? 'text-sm' : 'text-base'} ${
+                      c.ok ? 'bg-answer-green' : 'bg-answer-red'
+                    }`}
+                  >
+                    {c.left} {c.right}
+                  </span>
+                ))}
+              </span>
             )}
           </motion.li>
         ))}

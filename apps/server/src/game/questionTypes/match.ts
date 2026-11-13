@@ -106,13 +106,19 @@ export function matchReveal(
   return { pairs: q.pairs, found, answers: rows };
 }
 
-export function matchResult(q: MatchQuestion, player: Player) {
+export function matchResult(q: MatchQuestion, player: Player, state?: MatchState) {
   const links = player.answer?.matchLinks;
+  // The board in the shown order: the phone draws the player's cables and the right ones.
+  const board = state && {
+    yours: state.left.map((p) => (links && links[p]! >= 0 ? state.right.indexOf(links[p]!) : -1)),
+    right: state.left.map((p) => state.right.indexOf(p)),
+  };
   return {
     match: {
       right: links ? rightLinks(links) : 0,
       total: q.pairs.length,
       ...(links && { yours: [...links] }),
+      ...(board && { board }),
     },
   };
 }

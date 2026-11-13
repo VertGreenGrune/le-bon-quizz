@@ -480,7 +480,7 @@ export function extraResultFields(
     return wavelengthResult(setup.wavelength, player, byId(players));
   if (q.type === 'HOT_POTATO' && setup.potato)
     return potatoResult(q, setup.potato, player, byId(players));
-  if (q.type === 'MATCH') return matchResult(q, player);
+  if (q.type === 'MATCH') return matchResult(q, player, setup.match);
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {
