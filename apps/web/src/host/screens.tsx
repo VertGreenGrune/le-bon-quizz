@@ -36,6 +36,7 @@ import { PotatoRevealView, PotatoStage } from './potatoScreens';
 import { ColorsStage } from './colorsScreens';
 import { MissingStage } from './missingScreens';
 import { PointlessRevealView } from './pointlessScreens';
+import { MatchStage } from './matchScreens';
 import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -436,6 +437,8 @@ export function QuestionScreen({
                 ) : undefined
               }
             />
+          ) : question.type === 'MATCH' ? (
+            <MatchStage question={question} reveal={reveal?.match} instant={instant} />
           ) : question.type === 'MISSING' ? (
             <MissingStage question={question} reveal={reveal?.missing} instant={instant} />
           ) : reveal ? (

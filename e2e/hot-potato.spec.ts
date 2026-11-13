@@ -187,7 +187,7 @@ test('« Patate chaude »: passes, wrong answer, TV reload, explosion and report
     if (n !== loser)
       await expect(pages[n]!.getByRole('heading', { name: 'Sauvé !' })).toBeVisible();
   await expect(host.getByTestId('explanation')).toBeVisible();
-  await expect(host.getByRole('button', { name: 'Suivant' })).toBeInViewport();
+  await expect(host.getByRole('button', { name: 'Voir le podium' })).toBeInViewport();
   if (SHOTS) await host.waitForTimeout(2500);
   await shot(host, 'potato-tv-reveal');
   await shot(pages[loser]!, 'potato-phone-boom');

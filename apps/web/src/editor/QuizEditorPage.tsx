@@ -339,11 +339,19 @@ export function QuizEditorPage() {
                 onChange={(theme) => setDraft((d) => ({ ...d, theme }))}
               />
             </div>
-            <ImageField
-              label="Image de couverture"
-              value={draft.coverImageUrl}
-              onChange={(coverImageUrl) => setDraft((d) => ({ ...d, coverImageUrl }))}
-            />
+            <div className="flex flex-col gap-3">
+              <ImageField
+                label="Image de couverture"
+                value={draft.coverImageUrl}
+                onChange={(coverImageUrl) => setDraft((d) => ({ ...d, coverImageUrl }))}
+              />
+              {/* T68: shown behind the whole game, on the TV and the phones' waiting screens. */}
+              <ImageField
+                label="Image de fond (pendant tout le quiz)"
+                value={draft.backgroundImageUrl}
+                onChange={(backgroundImageUrl) => setDraft((d) => ({ ...d, backgroundImageUrl }))}
+              />
+            </div>
           </section>
 
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">

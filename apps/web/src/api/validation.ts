@@ -27,6 +27,9 @@ export type Validation<T> = { ok: true; data: T } | { ok: false; errors: FieldEr
 // Messages of `.refine()` checks in packages/shared.
 const customMessages: Record<string, string> = {
   'At least one choice must be correct': 'Coche au moins une bonne réponse',
+  // « Associer » (T67).
+  'A text or a picture is needed': 'Il faut un texte ou une image de chaque côté',
+  'Each item must be different': 'Chaque élément doit être différent',
   'This question cannot take bids': 'Pas d’enchères sur ce type de question',
   'True/false questions have exactly 2 choices': 'Une question vrai/faux a exactement 2 réponses',
   'Min must be below max': 'Le maximum doit être supérieur au minimum',

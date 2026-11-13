@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import {
+  MATCH_DEFAULT_SEC,
+  MATCH_MAX_PAIRS,
+  MATCH_MIN_PAIRS,
+  MatchPairSchema,
+  matchSideKey,
+  matchSideLabel,
+} from './match.js';
+import {
   COLORS_DEFAULT_CELLS,
   COLORS_DEFAULT_MEMO_SEC,
   COLORS_DEFAULT_SEC,
@@ -64,6 +72,8 @@ import { AUCTION_TOPIC_MAX_LENGTH, auctionAllowed } from './auction.js';
  *   position on a scale (« Froid ↔ Chaud ») and gives a clue; the others place a needle.
  * - `HOT_POTATO` (« Patate chaude », T63): a bomb passes from player to player; the holder answers
  *   quick sub-questions to pass it on; whoever holds it when the secret fuse runs out loses.
+ * - `MATCH` (« Associer », T67): 3–6 pairs (texts or pictures) to link, a left column and a right
+ *   column, both shuffled; partial points per pair linked right.
  */
 export const QuestionType = z.enum([
   'MCQ',
@@ -84,6 +94,7 @@ export const QuestionType = z.enum([
   'WAGER',
   'WAVELENGTH',
   'HOT_POTATO',
+  'MATCH',
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -678,6 +689,21 @@ const HotPotatoQuestion = z.object({
     }),
 });
 
+/** « Associer » (T67): the pairs, in no particular order (the TV and the phones get both columns shuffled). */
+const MatchQuestion = z
+  .object({
+    ...questionBase,
+    type: z.literal('MATCH'),
+    timeLimitSec: questionBase.timeLimitSec.default(MATCH_DEFAULT_SEC),
+    pairs: z.array(MatchPairSchema).min(MATCH_MIN_PAIRS).max(MATCH_MAX_PAIRS),
+  })
+  .refine(
+    (q) =>
+      new Set(q.pairs.map((p) => matchSideKey(p.left))).size === q.pairs.length &&
+      new Set(q.pairs.map((p) => matchSideKey(p.right))).size === q.pairs.length,
+    { message: 'Each item must be different', path: ['pairs'] },
+  );
+
 export const QuestionSchema = z.preprocess(
   // `type` used to be optional (default MCQ): keep accepting questions without it.
   (q) => (q && typeof q === 'object' && !('type' in q) ? { ...q, type: 'MCQ' } : q),
@@ -701,6 +727,7 @@ export const QuestionSchema = z.preprocess(
       WagerQuestion,
       WavelengthQuestion,
       HotPotatoQuestion,
+      MatchQuestion,
     ])
     .refine((q) => !q.imageEffect || q.imageEffect === 'none' || !!q.imageUrl, {
       message: 'An image effect needs an image',
@@ -731,6 +758,7 @@ export type PointlessQuestion = Extract<Question, { type: 'POINTLESS' }>;
 export type WagerQuestion = Extract<Question, { type: 'WAGER' }>;
 export type WavelengthQuestion = Extract<Question, { type: 'WAVELENGTH' }>;
 export type HotPotatoQuestion = Extract<Question, { type: 'HOT_POTATO' }>;
+export type MatchQuestion = Extract<Question, { type: 'MATCH' }>;
 
 export function isChoiceQuestion(q: Question): q is ChoiceQuestion {
   return (CHOICE_QUESTION_TYPES as readonly string[]).includes(q.type);
@@ -833,6 +861,11 @@ export function answerText(
     case 'HOT_POTATO':
       // Every sub-question with its right choice (the remote shows the current one first).
       return q.potato.questions.map((s) => `${s.text} → ${s.choices[s.correct] ?? ''}`);
+    case 'MATCH':
+      return q.pairs.map(
+        (p, i) =>
+          `${matchSideLabel(p.left, `image ${i + 1} (gauche)`)} ↔ ${matchSideLabel(p.right, `image ${i + 1} (droite)`)}`,
+      );
     default:
       return [];
   }
@@ -877,6 +910,8 @@ export const QuizSchema = z.object({
   title: z.string().trim().min(1).max(95),
   description: z.string().max(500).optional(),
   coverImageUrl: z.string().url().optional(),
+  /** T68: a picture shown behind the whole game (TV, phones' waiting screens). */
+  backgroundImageUrl: z.string().url().optional(),
   /** Absent = `classic` (or unchanged on a quiz update). */
   theme: QuizTheme.optional(),
   questions: z.array(QuestionSchema).min(1).max(100),

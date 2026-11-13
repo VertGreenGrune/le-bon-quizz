@@ -19,6 +19,7 @@ import { BluffFields } from './BluffFields';
 import { WagerFields } from './WagerFields';
 import { WavelengthFields } from './WavelengthFields';
 import { PotatoFields } from './PotatoFields';
+import { MatchFields } from './MatchFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
 import { PointlessFields } from './PointlessFields';
@@ -409,6 +410,8 @@ export function QuestionEditor({
         <WavelengthFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'HOT_POTATO' ? (
         <PotatoFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'MATCH' ? (
+        <MatchFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}

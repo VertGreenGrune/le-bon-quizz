@@ -32,6 +32,7 @@ import {
 } from './playerState';
 import { EveningLine } from './evening';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
+import { MatchAnswer, MatchAnswered, MatchResultLine } from './match';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { BuzzerPad, buzzerResultTitle } from './buzzer';
 import {
@@ -86,6 +87,7 @@ export function PlayPage() {
         theme={getTheme(s.theme)}
         brand={false}
         decorated={followsTheme(screen)}
+        background={s.background}
         light
         className="flex h-dvh select-none flex-col overflow-hidden"
       >
@@ -424,6 +426,13 @@ function AnswerScreen({
       />
     );
   }
+  if (prompt.type === 'MATCH' && prompt.match)
+    return (
+      <MatchAnswer
+        columns={prompt.match}
+        initial={previous && 'matches' in previous ? previous.matches : undefined}
+      />
+    );
   if (prompt.type === 'ORDER' && prompt.items)
     return (
       <OrderAnswer
@@ -669,6 +678,8 @@ function AnsweredValue({ s }: { s: PlayerState }) {
     return <ShapeList indexes={s.myAnswer.choiceIndexes} />;
   const a = s.myAnswer;
   if (a && ('order' in a || 'point' in a || 'playerId' in a)) return <MoreAnswered s={s} />;
+  if (a && 'matches' in a && s.prompt?.match)
+    return <MatchAnswered columns={s.prompt.match} links={a.matches} />;
   if (a && 'colors' in a && s.prompt?.colors?.stage === 'answer')
     return (
       <ColorsAnswered
@@ -821,6 +832,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.multiple && !r.correct && (
         <MultipleResultLine correctIndexes={r.multiple.correctIndexes} />
       )}
+      {r.match && <MatchResultLine match={r.match} />}
       {r.placed && (
         <p className="font-bold">
           {r.placed.correct} / {r.placed.total} bien placé{r.placed.correct > 1 ? 's' : ''}

@@ -305,6 +305,7 @@ export function HostPage() {
     <MotionConfig reducedMotion="user">
       <ThemedMain
         theme={getTheme(state.theme)}
+        background={state.background}
         className="flex h-dvh flex-col overflow-hidden select-none"
       >
         <header className="flex items-center gap-4 px-6 py-3 text-lg font-semibold">

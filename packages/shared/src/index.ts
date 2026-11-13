@@ -8,6 +8,7 @@ export * from './colors.js';
 export * from './wavelength.js';
 export * from './potato.js';
 export * from './auction.js';
+export * from './match.js';
 export * from './events.js';
 export * from './accept.js';
 export * from './demo-quiz.js';

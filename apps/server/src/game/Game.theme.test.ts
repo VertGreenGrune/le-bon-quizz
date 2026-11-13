@@ -83,4 +83,18 @@ describe('Game TV theme', () => {
     game.resync(back);
     expect(rec.states('phone-socket').at(-1)?.theme).toBe('space');
   });
+
+  it('sends the quiz background picture in every game:state (T68)', () => {
+    const rec = recorder();
+    const background = 'http://localhost:3001/uploads/fond.png';
+    game = new Game(
+      '123456',
+      { ...CLASSIC_DEMO_QUIZ, backgroundImageUrl: background },
+      rec.transport,
+    );
+    game.join('Alice', 's1');
+    game.start();
+    expect(rec.states().every((s) => s.background === background)).toBe(true);
+    expect(game.statePayload().background).toBe(background);
+  });
 });

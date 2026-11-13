@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { mediaUrl } from '../lib/mediaUrl';
 import { ThemeBackground } from './backgrounds';
 import { ThemeContext, themeVars } from './index';
 import type { ThemeDefinition } from './types';
@@ -19,6 +20,7 @@ export function ThemedMain({
   decorated = true,
   brand = true,
   light = false,
+  background,
   children,
 }: {
   theme: ThemeDefinition;
@@ -27,6 +29,8 @@ export function ThemedMain({
   brand?: boolean;
   /** Fewer particles (phones). */
   light?: boolean;
+  /** T68: the quiz's picture behind everything (darkened so the text stays readable). */
+  background?: string | null;
   children: ReactNode;
 }) {
   const vars = themeVars(theme);
@@ -38,10 +42,24 @@ export function ThemedMain({
         style={vars}
         className={`relative isolate ${decorated ? 'theme-surface' : 'bg-brand text-white'} ${className}`}
       >
+        {decorated && background && <QuizBackground url={background} />}
         {decorated && <ThemeBackground theme={theme.id} light={light} />}
         {children}
       </main>
     </ThemeContext.Provider>
+  );
+}
+
+/**
+ * T68: the quiz's background picture, covering the screen under the theme's animated layer,
+ * darkened so the white text on it stays readable.
+ */
+function QuizBackground({ url }: { url: string }) {
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10" data-testid="quiz-background">
+      <img src={mediaUrl(url)} alt="" className="size-full object-cover" />
+      <div className="absolute inset-0 bg-black/55" />
+    </div>
   );
 }
 

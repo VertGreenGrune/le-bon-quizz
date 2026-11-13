@@ -3544,6 +3544,38 @@ pnpm format:check` before finishing.
 - **Notes:** the evening is in memory only (not in the reports); one test phone window per
   browser (the phone session is kept per browser), other phones scan the QR code. No migration.
 
+### T67 — « Associer » question type (MATCH)
+
+- **Status:** done
+- **User requirement (2026-11-13):** a question where elements are linked together: a column of
+  texts or pictures on the left, another on the right; the players associate each one with its
+  partner.
+- **Summary:** shared `match.ts` (`MatchSideSchema` text and / or picture, 3–6 pairs, labels 1… /
+  A…, `matchPoints`), `MATCH` in the union (all sides different, 45 s by default), `answerText`
+  « France ↔ Paris », joker line like ORDER; contract `player:answer { matches }`,
+  `question:show.match` / `question:prompt.match` (`MatchColumns`), `RevealDetails.match`
+  (`MatchReveal`), `player:result.match`. Server `questionTypes/match.ts` (`newMatch` shuffles both
+  columns, never a partner straight across; `matchLinks`, `judgeMatch`, `matchReveal`,
+  `matchResult`), `Answer.matchLinks`, migration `20261113110000_match`, config `{ pairs }`,
+  `quiz:import` copies the pairs' pictures. Web: editor `MatchFields.tsx` (pairs, a text + a picture
+  per side), `components/MatchSideCard.tsx`, TV `host/matchScreens.tsx` (both columns; reveal: the
+  pairs with ✓ n, every player's n / m and points), phone `player/match.tsx` (tap left then right,
+  colored links with the left number, unlink by tapping, « Valider (n/m) »; answered list;
+  « n / m paires justes »), report `reports/matchCard.tsx`, joker chip, demo question (animals ↔
+  their cries). Tests: `Game.match.test.ts` (8), `draft.match.test.ts`, `match.test.ts`, e2e
+  `match.spec.ts`.
+
+### T68 — Quiz background picture
+
+- **Status:** done
+- **User requirement (2026-11-13):** the creator of a quiz can upload a picture used as the
+  background during the whole quiz.
+- **Summary:** `Quiz.backgroundImageUrl` (migration `20261113100000_quiz_background`, `QuizSchema`,
+  service, copies keep it, `quiz:import`), `game:state.background`; `ThemedMain` `background` →
+  `QuizBackground` (full screen, darkened 55 %, under the theme's animated layer) on the TV and the
+  phones' waiting screens (the answer screens stay plain); editor « Image de fond (pendant tout le
+  quiz) » under the cover. Tests: API round trip + copy, `Game.theme.test.ts`, e2e `match.spec.ts`.
+
 ---
 
 ## Contract changes / cross-task notes
@@ -4016,3 +4048,9 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   last question's REVEAL goes to PODIUM (no LEADERBOARD), and `podium.top` lists every player
   (not only 3) — tests walking REVEAL → LEADERBOARD → PODIUM on the last question must skip the
   ranking. `GameSettings.test`, `GameCarry.players[].evening`.
+- 2026-11-13, main agent (T67 + T68, additive): new `packages/shared/src/match.ts`; `QuestionType`
+  gains `MATCH`; `AnswerInput` / `PlayerAnswerPayload` gain `{ matches }`;
+  `QuestionShowPayload.match?` / `QuestionPromptPayload.match?` (`MatchColumns`),
+  `RevealDetails.match?` (`MatchReveal`), `PlayerResultPayload.match?`;
+  `QuizSchema.backgroundImageUrl?`, `GameStatePayload.background?`. Server `Answer.matchLinks`,
+  `QuestionSetup.match`. Migrations `20261113100000_quiz_background`, `20261113110000_match`.

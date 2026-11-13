@@ -94,6 +94,14 @@ import {
 } from './hotPotato.js';
 import { pinPoints } from './pin.js';
 import { mostVoted, tallyVotes, voteCounts } from './whoOfUs.js';
+import {
+  judgeMatch,
+  matchColumns,
+  matchResult,
+  matchReveal,
+  newMatch,
+  type MatchState,
+} from './match.js';
 import { wordCloud } from './wordCloud.js';
 
 /**
@@ -117,7 +125,8 @@ export type ExtraQuestion = Extract<
       | 'POINTLESS'
       | 'WAGER'
       | 'WAVELENGTH'
-      | 'HOT_POTATO';
+      | 'HOT_POTATO'
+      | 'MATCH';
   }
 >;
 export type ClassicQuestion = Exclude<Question, ExtraQuestion>;
@@ -136,7 +145,8 @@ export function isExtraQuestion(q: Question): q is ExtraQuestion {
     q.type === 'POINTLESS' ||
     q.type === 'WAGER' ||
     q.type === 'WAVELENGTH' ||
-    q.type === 'HOT_POTATO'
+    q.type === 'HOT_POTATO' ||
+    q.type === 'MATCH'
   );
 }
 
@@ -160,6 +170,8 @@ export interface QuestionSetup {
   wavelength?: WavelengthState;
   /** HOT_POTATO: the holder, the fuse, the sub-questions, the passes (set by `Game` at ANSWERING). */
   potato?: PotatoState;
+  /** MATCH (T67): both columns' shuffle. */
+  match?: MatchState;
 }
 
 export const NO_SETUP: QuestionSetup = { display: [] };
@@ -170,6 +182,7 @@ export function prepareQuestion(q: Question, random: () => number = Math.random)
   if (q.type === 'LIST') return { display: [], list: newList() };
   if (q.type === 'MISSING') return { display: [], missing: newMissing() };
   if (q.type === 'WAGER') return { display: [], wager: newWager() };
+  if (q.type === 'MATCH') return { display: [], match: newMatch(q.pairs.length, random) };
   return NO_SETUP;
 }
 
@@ -204,6 +217,7 @@ export function extraShowFields(
       ? { wavelength, timeLimitSec: q.clueTimeSec }
       : { wavelength };
   }
+  if (q.type === 'MATCH' && setup.match) return { match: matchColumns(q, setup.match) };
   if (q.type === 'HOT_POTATO' && setup.potato)
     return { potato: potatoShow(q, setup.potato, byId(players), Date.now()) };
   return {};
@@ -253,6 +267,8 @@ export function extraPromptFields(
         ? { wavelength, timeLimitSec: q.clueTimeSec }
         : { wavelength };
     }
+    case 'MATCH':
+      return setup.match ? { match: matchColumns(q, setup.match) } : {};
     case 'HOT_POTATO':
       return setup.potato
         ? { potato: potatoPrompt(q, setup.potato, byId(players), playerId, Date.now()) }
@@ -331,6 +347,8 @@ export function judgeExtra(
       // The clue is stored by `Game.answer` (stage 1); this is a needle (stage 2).
       if (!('value' in given)) throw invalid('Place l’aiguille sur l’échelle');
       return { ...none, ...judgeNeedle(q, setup.wavelength!, given.value) };
+    case 'MATCH':
+      return { ...none, ...judgeMatch(q, setup.match!, given, timePoints) };
     case 'HOT_POTATO':
       // The holder's answers are handled by `Game.answer` (`questionTypes/hotPotato.ts`).
       throw invalid('Tu n’as pas la patate !');
@@ -439,6 +457,8 @@ export function extraRevealDetails(
       return setup.wavelength ? wavelengthReveal(setup.wavelength, byId(players)) : {};
     case 'HOT_POTATO':
       return setup.potato ? potatoReveal(q, setup.potato, byId(players)) : {};
+    case 'MATCH':
+      return { match: matchReveal(q, answers, players) };
   }
 }
 
@@ -460,6 +480,7 @@ export function extraResultFields(
     return wavelengthResult(setup.wavelength, player, byId(players));
   if (q.type === 'HOT_POTATO' && setup.potato)
     return potatoResult(q, setup.potato, player, byId(players));
+  if (q.type === 'MATCH') return matchResult(q, player);
   if (q.type === 'ORDER' && answer?.order)
     return { placed: { correct: placedCount(answer.order, setup.display), total: q.items.length } };
   if (q.type === 'WHO_OF_US') {

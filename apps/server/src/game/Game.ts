@@ -174,6 +174,8 @@ export interface Answer {
   colors?: (string | null)[];
   /** POINTLESS: the item a right answer names (index in `items`; absent for an accepted text). */
   item?: number;
+  /** MATCH (T67): `matchLinks[pair]` = the pair of the right item linked to its left one (-1). */
+  matchLinks?: number[];
   responseMs: number;
   correct: boolean;
   points: number;
@@ -1387,6 +1389,7 @@ export class Game {
       ...(this.theme !== 'classic' && { theme: this.theme }),
       ...(this.round > 1 && { round: this.round }),
       ...(this.test && { test: true as const }),
+      ...(this.quiz.backgroundImageUrl && { background: this.quiz.backgroundImageUrl }),
     };
     const evening = this.eveningStandings();
     if (evening) state.evening = evening;

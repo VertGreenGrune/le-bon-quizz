@@ -32,6 +32,8 @@ import {
   type QuestionAudio,
   type QuestionType,
   type QuizDetail,
+  MATCH_DEFAULT_SEC,
+  MATCH_MIN_PAIRS,
 } from '@lbq/shared';
 import { blankKey } from '../lib/paintBucket';
 import { validate, type FieldErrors, type Validation } from '../api/validation';
@@ -107,6 +109,8 @@ export interface DraftQuestion {
   potatoQuestions: PotatoDraftSub[];
   fuseMinSec: number;
   fuseMaxSec: number;
+  /** MATCH (« Associer », T67): the pairs, each side a text and / or a picture. */
+  matchPairs: MatchDraftPair[];
   /** Sound clip (any type), played on the host screen. */
   audio?: QuestionAudio;
   audioOnReveal: boolean;
@@ -149,6 +153,17 @@ export const POINTS_OPTIONS = [
   { value: 2000, label: 'Double (2000)' },
   { value: 0, label: 'Aucun point' },
 ] as const;
+
+/** « Associer » (T67): one side of a pair in the editor (empty text = none). */
+export interface MatchDraftSide {
+  text: string;
+  imageUrl?: string;
+}
+export interface MatchDraftPair {
+  left: MatchDraftSide;
+  right: MatchDraftSide;
+}
+export const newMatchPair = (): MatchDraftPair => ({ left: { text: '' }, right: { text: '' } });
 
 /** The types of the editor's selector; `description` is shown on hover. */
 export const QUESTION_TYPES: { type: QuestionType; label: string; description: string }[] = [
@@ -259,6 +274,12 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     description:
       'Une bombe passe de joueur en joueur : celui qui l’a répond à de petites questions sur son téléphone, une bonne réponse la passe à un autre. Quand la mèche (secrète) arrive au bout, celui qui la tient perd la manche.',
   },
+  {
+    type: 'MATCH',
+    label: 'Associer',
+    description:
+      'Deux colonnes, mélangées : les joueurs relient chaque élément de gauche à son partenaire de droite (des textes ou des images). Chaque paire juste rapporte une partie des points.',
+  },
 ];
 
 export const VOTE_TIMES = [10, 15, 20, 30, 45, 60] as const;
@@ -296,6 +317,7 @@ export function newQuestion(): DraftQuestion {
     potatoQuestions: Array.from({ length: POTATO_MIN_QUESTIONS }, newPotatoSub),
     fuseMinSec: POTATO_DEFAULT_FUSE_MIN_SEC,
     fuseMaxSec: POTATO_DEFAULT_FUSE_MAX_SEC,
+    matchPairs: Array.from({ length: MATCH_MIN_PAIRS }, newMatchPair),
     audioOnReveal: false,
     imageEffect: 'none',
     buzzer: false,
@@ -377,6 +399,17 @@ export function toDraftQuestion(q: Question): DraftQuestion {
         potatoQuestions: q.potato.questions.map((s) => ({ ...s, choices: [...s.choices] })),
         fuseMinSec: q.potato.fuseMinSec,
         fuseMaxSec: q.potato.fuseMaxSec,
+      };
+    case 'MATCH':
+      return {
+        ...draft,
+        matchPairs: q.pairs.map((p) => ({
+          left: { text: p.left.text ?? '', ...(p.left.imageUrl && { imageUrl: p.left.imageUrl }) },
+          right: {
+            text: p.right.text ?? '',
+            ...(p.right.imageUrl && { imageUrl: p.right.imageUrl }),
+          },
+        })),
       };
     default:
       return { ...draft, choices: q.choices.map((c) => ({ ...c })) };
@@ -549,6 +582,16 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
           fuseMaxSec: q.fuseMaxSec,
         },
       };
+    case 'MATCH': {
+      const side = (s: MatchDraftSide) => ({
+        ...(s.text.trim() && { text: s.text.trim() }),
+        ...(s.imageUrl && { imageUrl: s.imageUrl }),
+      });
+      return {
+        ...base,
+        pairs: q.matchPairs.map((p) => ({ left: side(p.left), right: side(p.right) })),
+      };
+    }
     default:
       return { ...base, choices: choices.map((i) => q.choices[i]) };
   }
@@ -598,9 +641,13 @@ export function validateDraft(draft: QuizDraft): Validation<QuizInput> {
 export function hasMedia(draft: QuizDraft): boolean {
   return (
     !!draft.coverImageUrl ||
+    !!draft.backgroundImageUrl ||
     draft.questions.some(
       (q) =>
-        (q.imageUrl && q.type !== 'DRAW') || (q.missingImageUrl && q.type === 'MISSING') || q.audio,
+        (q.imageUrl && q.type !== 'DRAW') ||
+        (q.missingImageUrl && q.type === 'MISSING') ||
+        q.audio ||
+        (q.type === 'MATCH' && q.matchPairs.some((p) => p.left.imageUrl || p.right.imageUrl)),
     )
   );
 }
@@ -646,6 +693,7 @@ export function duplicateQuestion(draft: QuizDraft, index: number): QuizDraft {
     listItems: [...q.listItems],
     spectraLines: [...q.spectraLines],
     potatoQuestions: q.potatoQuestions.map((s) => ({ ...s, choices: [...s.choices] })),
+    matchPairs: q.matchPairs.map((p) => ({ left: { ...p.left }, right: { ...p.right } })),
     colorZones: q.colorZones.map((z) => ({ ...z })),
   });
   return { ...draft, questions };
@@ -696,6 +744,8 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
     q = { ...q, timeLimitSec: POINTLESS_DEFAULT_SEC };
   // « Couleurs perdues »: time to put every color back.
   if (type === 'COLORS' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: COLORS_DEFAULT_SEC };
+  // « Associer »: time to link every pair.
+  if (type === 'MATCH' && q.timeLimitSec === 20) q = { ...q, timeLimitSec: MATCH_DEFAULT_SEC };
   // « Paris sur les réponses »: time to think of a number.
   if (type === 'WAGER' && q.timeLimitSec === 20)
     q = { ...q, timeLimitSec: WAGER_DEFAULT_GUESS_SEC };

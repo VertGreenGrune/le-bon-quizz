@@ -44,6 +44,8 @@ export interface PlayerState {
   evening: EveningStanding[] | null;
   /** « 🧪 Tester » (T66): a test game from the editor, not saved. */
   test: boolean;
+  /** T68: the quiz's background picture, or null (the theme's background). */
+  background: string | null;
   questionIndex: number;
   totalQuestions: number;
   prompt: QuestionPromptPayload | null;
@@ -148,6 +150,7 @@ export const initialPlayerState: PlayerState = {
   quizTitle: '',
   evening: null,
   test: false,
+  background: null,
   questionIndex: -1,
   totalQuestions: 0,
   prompt: null,
@@ -239,6 +242,7 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         jokerGame: !!action.payload.jokers,
         evening: action.payload.evening ?? null,
         test: !!action.payload.test,
+        background: action.payload.background ?? null,
         questionIndex,
         totalQuestions,
         answeringEndsAt,

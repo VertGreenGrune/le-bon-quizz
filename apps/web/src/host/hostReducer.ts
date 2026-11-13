@@ -40,6 +40,8 @@ export interface HostGameState {
   evening: EveningStanding[] | null;
   /** « 🧪 Tester » (T66): a test game from the editor, not saved. */
   test: boolean;
+  /** T68: the quiz's background picture, or null (the theme's background). */
+  background: string | null;
   /** The game is played with jokers. */
   jokers: boolean;
   questionIndex: number;
@@ -119,6 +121,7 @@ export const initialHostState: HostGameState = {
   quizTitle: '',
   evening: null,
   test: false,
+  background: null,
   jokers: false,
   questionIndex: -1,
   totalQuestions: 0,
@@ -174,6 +177,7 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         jokers: !!action.payload.jokers,
         evening: action.payload.evening ?? null,
         test: !!action.payload.test,
+        background: action.payload.background ?? null,
         questionIndex,
         totalQuestions,
         deadline: remainingMs != null && !frozen ? action.now + remainingMs : null,

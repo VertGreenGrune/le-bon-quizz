@@ -374,6 +374,20 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     its answer, every player's passes and points (loser first). TV sounds `potato-tick` (faster and
     faster) and `potato-boom` (instead of the reveal sting). No joker, no buzzer, not cancellable,
     no accept.
+  - `MATCH` (« Associer », T67, `apps/server/src/game/questionTypes/match.ts`, constants and helpers
+    `packages/shared/src/match.ts`): `pairs` 3–6 `{ left, right }`, each side `{ text? (≤ 60),
+    imageUrl? }` (at least one; all sides different), `timeLimitSec` default 45. At QUESTION_INTRO the
+    server shuffles both columns (`MatchState { left, right }`: shown index → pair, never a partner
+    straight across); `question:show.match` and `question:prompt.match` = the same `MatchColumns`
+    (`{ left, right }` in the shown order — the phones get the pictures too, never which goes with
+    which). TV: left items 1, 2, 3…, right A, B, C…; phone: tap a left item then its partner (or the
+    other way), linked items share a color + the left number, « Valider (n/m) » once all are linked.
+    `player:answer { matches }` = per shown left item the shown right one (-1 = none, a right item
+    once) → `Answer.matchLinks[pair]`. Points = time points × share of the pairs right
+    (`matchPoints`, like ORDER); right = every pair. Cancellable (T43). Reveal `match: { pairs,
+    found (per pair), answers (links, right, points; best first, no answer last) }`; result
+    `match: { right, total, yours? }`. Jokers like ORDER (no 50/50, no Brouilleur); no buzzer, no
+    accept; « Enchères » allowed. `quiz:import` copies the pairs' pictures.
   `POLL`, `WHO_OF_US` and `WORD_CLOUD` are the types without a right answer
   (`NO_RIGHT_ANSWER_TYPES` / `hasRightAnswer`); the logic of the T27 / T26 / T30 types lives in
   `apps/server/src/game/questionTypes/` (hooks in `Game.ts`).
@@ -619,15 +633,17 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
 - `Session` — id (= SHA-256 of the host's session token), userId, expiresAt (30 days)
 - `PasswordResetToken` — id (= SHA-256 of the token in the e-mailed link), userId, expiresAt
   (1 hour), usedAt? (single use), createdAt; a new request deletes the user's unused ones
-- `Quiz` — id, ownerId → User, title, description, coverImageUrl, visibility (`PRIVATE` |
+- `Quiz` — id, ownerId → User, title, description, coverImageUrl, backgroundImageUrl? (T68:
+  a picture behind the whole game — `game:state.background`, shown on the TV and the phones'
+  waiting screens under the theme's animated layer, darkened), visibility (`PRIVATE` |
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), theme (`QuizTheme` enum, default
   `classic`, T40), createdAt, updatedAt
 - `QuizShare` (T45) — quizId → Quiz, userId → User (primary key = both, cascades on delete), role
   (`ShareRole`: `viewer` « Peut lancer » | `editor` « Peut modifier »), createdAt
 - `Question` — id, quizId, order, text, imageUrl?, type (`MCQ` | `TRUE_FALSE` | `TYPE_ANSWER` |
-  `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD` | `BLUFF` | `DRAW` | `LIST` | `COLORS` | `MISSING` | `POINTLESS` | `WAGER` | `WAVELENGTH` | `HOT_POTATO`), timeLimitSec (default 20),
+  `POLL` | `SLIDER` | `ORDER` | `PIN` | `WHO_OF_US` | `WORD_CLOUD` | `BLUFF` | `DRAW` | `LIST` | `COLORS` | `MISSING` | `POINTLESS` | `WAGER` | `WAVELENGTH` | `HOT_POTATO` | `MATCH`), timeLimitSec (default 20),
   basePoints (default 1000), config? (JSON: TYPE_ANSWER `{ acceptedAnswers, typoTolerance }`,
-  SLIDER `{ slider }`, ORDER `{ items }`, PIN `{ zone }`, WHO_OF_US `{ majorityBonus }`, BLUFF `{ truth, voteTimeSec }`, DRAW `{ words }`, LIST `{ items, typoTolerance }`, COLORS `{ memoSec, cells, zones, blankImageUrl? }`, MISSING `{ missingImageUrl, memoSec, zone }`, POINTLESS `{ items, typoTolerance }`, WAGER `{ wager, betTimeSec }`, WAVELENGTH `{ spectra, clueTimeSec }`, HOT_POTATO `{ potato }`), audioUrl?, audioStartSec?,
+  SLIDER `{ slider }`, ORDER `{ items }`, PIN `{ zone }`, WHO_OF_US `{ majorityBonus }`, BLUFF `{ truth, voteTimeSec }`, DRAW `{ words }`, LIST `{ items, typoTolerance }`, COLORS `{ memoSec, cells, zones, blankImageUrl? }`, MISSING `{ missingImageUrl, memoSec, zone }`, POINTLESS `{ items, typoTolerance }`, WAGER `{ wager, betTimeSec }`, WAVELENGTH `{ spectra, clueTimeSec }`, HOT_POTATO `{ potato }`, MATCH `{ pairs }`), audioUrl?, audioStartSec?,
   audioDurationSec?, audioOnReveal? (null = false), imageEffect? (`none` | `blur` | `zoom` |
   `pixelate`, null = none), buzzer (bool, default false: « Buzzer » option, T28), auction (bool, default false) +
   auctionTopic? (« Enchères », T64), explanation?

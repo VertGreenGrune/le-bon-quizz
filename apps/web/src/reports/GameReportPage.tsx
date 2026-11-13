@@ -36,6 +36,7 @@ import { PointlessDetails } from './pointlessCard';
 import { WagerDetails } from './wagerCard';
 import { WavelengthDetails } from './wavelengthCard';
 import { PotatoDetails } from './potatoCard';
+import { MatchDetails } from './matchCard';
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 const medals = ['🥇', '🥈', '🥉'];
@@ -326,6 +327,8 @@ function QuestionCard({ q }: { q: GameQuestionReport }) {
         <WavelengthDetails q={q} />
       ) : q.type === 'HOT_POTATO' ? (
         <PotatoDetails q={q} />
+      ) : q.type === 'MATCH' ? (
+        <MatchDetails q={q} />
       ) : q.type === 'COLORS' ? (
         <ColorsDetails q={q} />
       ) : q.type === 'MISSING' ? (
