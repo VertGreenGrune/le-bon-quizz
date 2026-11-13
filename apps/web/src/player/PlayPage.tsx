@@ -195,6 +195,7 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           <ColorsPad
             key={s.prompt.index}
             board={s.prompt.colors.board}
+            palette={s.prompt.colors.palette ?? []}
             hints={jokerEffects(s).colorHints}
           />
         );
@@ -660,7 +661,13 @@ function AnsweredValue({ s }: { s: PlayerState }) {
   const a = s.myAnswer;
   if (a && ('order' in a || 'point' in a || 'playerId' in a)) return <MoreAnswered s={s} />;
   if (a && 'colors' in a && s.prompt?.colors?.stage === 'answer')
-    return <ColorsAnswered board={s.prompt.colors.board} colors={a.colors} />;
+    return (
+      <ColorsAnswered
+        board={s.prompt.colors.board}
+        palette={s.prompt.colors.palette ?? []}
+        colors={a.colors}
+      />
+    );
   if (a && 'value' in a && s.prompt?.wavelength)
     return <WavelengthAnswered prompt={s.prompt.wavelength} value={a.value} />;
   const label = answerLabel(s);

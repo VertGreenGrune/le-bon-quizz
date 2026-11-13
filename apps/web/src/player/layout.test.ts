@@ -65,7 +65,10 @@ describe('joker bar placement', () => {
     );
     const board = { cols: 2, rows: 2, spots: [] };
     expect(
-      jokerBarMode(phone({ type: 'COLORS', colors: { stage: 'answer', board } }), 'answer'),
+      jokerBarMode(
+        phone({ type: 'COLORS', colors: { stage: 'answer', board, palette: [] } }),
+        'answer',
+      ),
     ).toBe('chip');
     // « Qu’est-ce qui a disparu ? »: the bar while memorizing, the chip on the picture (T59).
     expect(jokerBarMode(phone({ type: 'MISSING', missing: { stage: 'memo' } }), 'answer')).toBe(

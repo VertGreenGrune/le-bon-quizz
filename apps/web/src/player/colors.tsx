@@ -1,13 +1,22 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { COLOR_PALETTE, type ColorBoard, type PlayerResultPayload } from '@lbq/shared';
+import {
+  colorLabel,
+  type ColorBoard,
+  type OfferedColor,
+  type PlayerResultPayload,
+} from '@lbq/shared';
 import { ColorBoardView } from '../components/ColorBoard';
-import { firstZone, initialColors, nextZone, paintZone } from '../lib/colors';
-import type { PlayerState } from './playerState';
+import {
+  firstZone,
+  initialColors,
+  nextZone,
+  paintZone,
+  paletteColors,
+  sameColor,
+  textOn,
+} from '../lib/colors';
 import { sendAnswer } from './playerStore';
-
-/** Palette colors light enough for black text. */
-const LIGHT = new Set([2, 6]);
 
 /** « Couleurs perdues » (T58), stage 1: the phone has nothing of the board — look at the TV. */
 export function ColorsMemo() {
@@ -32,21 +41,24 @@ export function ColorsMemo() {
 }
 
 /**
- * Stage 2: tap a zone of the grey board, then a color of the palette (the next empty zone is
- * selected). 50/50: some zones come already colored and locked. « Valider » sends the colors.
+ * Stage 2: tap a zone of the board (a paint-bucket picture: anywhere, the nearest marker), then a
+ * color of the offered palette (T65: only the board's colors; the next empty zone is selected).
+ * 50/50: some zones come already colored and locked. « Valider » sends the palette indexes.
  */
 export function ColorsPad({
   board,
+  palette,
   hints = [],
   initial,
 }: {
   board: ColorBoard;
-  hints?: readonly { zone: number; color: number }[];
+  palette: readonly OfferedColor[];
+  hints?: readonly { zone: number; color: string }[];
   initial?: readonly number[];
 }) {
   const zones = board.spots.length;
   const locked = useMemo(() => new Set(hints.map((h) => h.zone)), [hints]);
-  const [colors, setColors] = useState(() => initialColors(zones, hints, initial));
+  const [colors, setColors] = useState(() => initialColors(zones, hints, palette, initial));
   const [selected, setSelected] = useState(() => firstZone(colors, locked));
   const done = colors.filter((c) => c >= 0).length;
   const current = colors[selected];
@@ -64,7 +76,7 @@ export function ColorsPad({
       </p>
       <ColorBoardView
         board={board}
-        colors={colors}
+        colors={paletteColors(colors, palette)}
         selected={selected}
         locked={locked}
         onSpot={setSelected}
@@ -75,22 +87,26 @@ export function ColorsPad({
         Zone {selected + 1}
         {locked.has(selected) ? ' 🎯 déjà trouvée' : ''}
       </p>
-      <div className="grid grid-cols-4 gap-2" data-testid="colors-palette">
-        {COLOR_PALETTE.map((c, i) => (
+      <div
+        className={`grid gap-2 ${palette.length > 8 ? 'grid-cols-6' : 'grid-cols-4'}`}
+        data-testid="colors-palette"
+      >
+        {palette.map((c, i) => (
           <motion.button
-            key={c.name}
+            key={c.hex}
             type="button"
             whileTap={{ scale: 0.92 }}
             onClick={() => pick(i)}
-            aria-label={c.name}
+            aria-label={c.name ?? `${colorLabel(c.hex)} (${i + 1})`}
             aria-pressed={current === i}
             disabled={locked.has(selected)}
-            className={`h-12 touch-manipulation rounded-xl text-sm font-black shadow-[inset_0_-4px_0_rgba(0,0,0,0.25)] disabled:opacity-40 ${
+            className={`h-12 touch-manipulation rounded-xl border-2 border-white/60 text-sm font-black shadow-[inset_0_-4px_0_rgba(0,0,0,0.25)] disabled:opacity-40 ${
               current === i ? 'ring-4 ring-white ring-offset-2 ring-offset-black' : ''
-            } ${LIGHT.has(i) ? 'text-black' : 'text-white'}`}
-            style={{ backgroundColor: c.hex }}
+            }`}
+            style={{ backgroundColor: c.hex, color: textOn(c.hex) }}
+            data-hex={c.hex}
           >
-            {c.name}
+            {c.name ?? ''}
           </motion.button>
         ))}
       </div>
@@ -107,11 +123,19 @@ export function ColorsPad({
   );
 }
 
-/** « Réponse envoyée ! »: the board as colored by the player. */
-export function ColorsAnswered({ board, colors }: { board: ColorBoard; colors: number[] }) {
+/** « Réponse envoyée ! »: the board as colored by the player (palette indexes). */
+export function ColorsAnswered({
+  board,
+  palette,
+  colors,
+}: {
+  board: ColorBoard;
+  palette: readonly OfferedColor[];
+  colors: number[];
+}) {
   return (
     <div className="w-full max-w-xs">
-      <ColorBoardView board={board} colors={colors} />
+      <ColorBoardView board={board} colors={paletteColors(colors, palette)} />
     </div>
   );
 }
@@ -124,20 +148,24 @@ export function ColorsResultLines({
   colors: NonNullable<PlayerResultPayload['colors']>;
   board?: ColorBoard;
 }) {
+  // T65: the whole board comes with the result (the colored picture, now that it can be seen).
+  const shown = colors.board ?? board;
   return (
     <>
       <p className="text-xl font-black" data-testid="colors-result">
         {colors.right} / {colors.total} bonne{colors.right > 1 ? 's' : ''} couleur
         {colors.right > 1 ? 's' : ''}
       </p>
-      {board && (
+      {shown && (
         <div className="w-full max-w-xs">
           <ColorBoardView
-            board={board}
+            board={shown}
             colors={colors.colors}
             colored
             numbers={false}
-            marks={colors.yours ? colors.colors.map((c, i) => colors.yours![i] === c) : undefined}
+            marks={
+              colors.yours ? colors.colors.map((c, i) => sameColor(colors.yours![i], c)) : undefined
+            }
           />
         </div>
       )}

@@ -2,6 +2,8 @@ import {
   BLUFF_DEFAULT_VOTE_SEC,
   BLUFF_DEFAULT_WRITE_SEC,
   COLORS_DEFAULT_CELLS,
+  COLORS_DEFAULT_TOLERANCE,
+  isBucketZone,
   COLORS_DEFAULT_MEMO_SEC,
   COLORS_DEFAULT_SEC,
   DRAW_DEFAULT_SEC,
@@ -31,6 +33,7 @@ import {
   type QuestionType,
   type QuizDetail,
 } from '@lbq/shared';
+import { blankKey } from '../lib/paintBucket';
 import { validate, type FieldErrors, type Validation } from '../api/validation';
 import { parseSpectrumLine, spectrumLine } from '../lib/wavelength';
 
@@ -69,11 +72,15 @@ export interface DraftQuestion {
   listItems: string[];
   /**
    * COLORS (« Couleurs perdues »): a generated board of `colorCells` shapes, or zones on the
-   * picture (`colorZones`, each with its color); `memoSec` to memorize.
+   * picture (`colorZones`, each with its color); `memoSec` to memorize. T65: paint-bucket zones
+   * need the picture with the zones in white (`colorBlankImageUrl`), made and uploaded by the
+   * editor for the zones of `colorBlankKey` (`blankKey`: stale when the zones changed since).
    */
   colorSource: 'generated' | 'picture';
   colorCells: number;
   colorZones: ColorZone[];
+  colorBlankImageUrl: string;
+  colorBlankKey: string;
   memoSec: number;
   /**
    * MISSING (« Qu'est-ce qui a disparu ? »): the picture « après » (`imageUrl` = « avant »);
@@ -220,7 +227,7 @@ export const QUESTION_TYPES: { type: QuestionType; label: string; description: s
     type: 'COLORS',
     label: 'Couleurs perdues',
     description:
-      'Une image colorée s’affiche à l’écran, puis devient grise : les joueurs remettent les couleurs de mémoire avec une palette. Chaque zone juste rapporte une partie des points.',
+      'Une image colorée s’affiche à l’écran, puis perd ses couleurs : les joueurs les remettent de mémoire, avec seulement les couleurs de l’image. Chaque zone juste rapporte une partie des points.',
   },
   {
     type: 'MISSING',
@@ -278,6 +285,8 @@ export function newQuestion(): DraftQuestion {
     colorSource: 'generated',
     colorCells: COLORS_DEFAULT_CELLS,
     colorZones: [],
+    colorBlankImageUrl: '',
+    colorBlankKey: '',
     memoSec: COLORS_DEFAULT_MEMO_SEC,
     wagerCorrect: Number.NaN,
     wagerUnit: '',
@@ -347,6 +356,8 @@ export function toDraftQuestion(q: Question): DraftQuestion {
         colorSource: q.zones.length ? 'picture' : 'generated',
         colorCells: q.cells,
         colorZones: q.zones.map((z) => ({ ...z })),
+        colorBlankImageUrl: q.blankImageUrl ?? '',
+        colorBlankKey: q.blankImageUrl ? blankKey(q.imageUrl, q.zones) : '',
         memoSec: q.memoSec,
       };
     case 'MISSING':
@@ -501,6 +512,14 @@ function questionBody(q: DraftQuestion, kept: Kept): unknown {
         memoSec: q.memoSec,
         cells: q.colorCells,
         zones: q.colorSource === 'picture' ? q.colorZones : [],
+        // T65: the blank picture only when it was made for these zones.
+        blankImageUrl:
+          q.colorSource === 'picture' &&
+          q.colorZones.some(isBucketZone) &&
+          q.colorBlankImageUrl &&
+          q.colorBlankKey === blankKey(q.imageUrl, q.colorZones)
+            ? q.colorBlankImageUrl
+            : undefined,
       };
     case 'MISSING':
       return {
@@ -690,21 +709,35 @@ export function setQuestionType(q: DraftQuestion, type: QuestionType): DraftQues
 
 // ---------- « Couleurs perdues » ----------
 
-/** Editor: a new zone where the picture was clicked (the color picked last, or red). */
-export function addColorZone(q: DraftQuestion, x: number, y: number): DraftQuestion {
-  const color = q.colorZones.at(-1)?.color ?? 0;
-  const radius = q.colorZones.at(-1)?.radius ?? 0.06;
-  return { ...q, colorZones: [...q.colorZones, { x, y, radius, color }] };
+/** Editor (T65): a paint-bucket zone where the picture was tapped (its color set by the editor). */
+export function addColorZone(
+  q: DraftQuestion,
+  x: number,
+  y: number,
+  color = '#ffffff',
+): DraftQuestion {
+  const last = [...q.colorZones].reverse().find(isBucketZone);
+  const tolerance = last?.tolerance ?? COLORS_DEFAULT_TOLERANCE;
+  return { ...q, colorZones: [...q.colorZones, { x, y, tolerance, color }] };
 }
 
 export function updateColorZone(
   q: DraftQuestion,
   index: number,
-  patch: Partial<ColorZone>,
+  patch: { tolerance?: number; color?: string },
 ): DraftQuestion {
   const z = q.colorZones[index];
   if (!z) return q;
-  return { ...q, colorZones: replaceAt(q.colorZones, index, { ...z, ...patch }) };
+  const next: ColorZone = isBucketZone(z)
+    ? { ...z, ...patch }
+    : { ...z, ...(patch.color !== undefined && { color: patch.color }) };
+  return { ...q, colorZones: replaceAt(q.colorZones, index, next) };
+}
+
+/** Editor (T65): the zones' colors as measured on the picture. */
+export function setColorZoneColors(q: DraftQuestion, colors: readonly string[]): DraftQuestion {
+  if (q.colorZones.every((z, i) => z.color === (colors[i] ?? z.color))) return q;
+  return { ...q, colorZones: q.colorZones.map((z, i) => ({ ...z, color: colors[i] ?? z.color })) };
 }
 
 export function removeColorZone(q: DraftQuestion, index: number): DraftQuestion {

@@ -154,6 +154,33 @@ describe('prepareQuiz', () => {
     await expect(prepareQuiz(folder, store(), () => {})).rejects.toThrow('avant-absente.png');
   });
 
+  it('copies the blank picture of a paint-bucket « Couleurs perdues » (T65)', async () => {
+    writeFileSync(path.join(folder, 'images', 'blanc.png'), Buffer.concat([PNG, Buffer.from('b')]));
+    const colors = (blankImageUrl?: string) => ({
+      type: 'COLORS',
+      text: 'Les couleurs ?',
+      imageUrl: 'images/photo.png',
+      ...(blankImageUrl && { blankImageUrl }),
+      zones: [
+        { x: 0.2, y: 0.2, tolerance: 30, color: '#FF0000' },
+        { x: 0.8, y: 0.8, tolerance: 30, color: 3 },
+      ],
+    });
+    writeQuiz({ title: 'Quiz', questions: [colors('images/blanc.png')] });
+    const q = (await prepareQuiz(folder, store())).questions[0]!;
+    if (q.type !== 'COLORS') throw new Error('expected COLORS');
+    expect(q.blankImageUrl).toMatch(/\/uploads\/[0-9a-f]{32}\.png$/);
+    expect(q.blankImageUrl).not.toBe(q.imageUrl);
+    // Hex in lower case; a T58 palette index read as its color.
+    expect(q.zones.map((z) => z.color)).toEqual(['#ff0000', '#16a34a']);
+
+    writeQuiz({ title: 'Quiz', questions: [colors('images/absente.png')] });
+    await expect(prepareQuiz(folder, store(), () => {})).rejects.toThrow('images/absente.png');
+    // Paint-bucket zones without a blank picture: invalid.
+    writeQuiz({ title: 'Quiz', questions: [colors()] });
+    await expect(prepareQuiz(folder, store(), () => {})).rejects.toThrow('blankImageUrl');
+  });
+
   it('keeps the TV theme of quiz.json (T40)', async () => {
     writeQuiz({ title: 'Quiz', theme: 'halloween', questions: [question()] });
     expect((await prepareQuiz(folder, store())).theme).toBe('halloween');

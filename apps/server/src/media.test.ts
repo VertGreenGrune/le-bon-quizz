@@ -76,6 +76,8 @@ describe.skipIf(!TEST_DATABASE_URL)('/uploads/ from the database (Postgres)', ()
     expect(res.headers['content-type']).toBe('audio/mpeg');
     expect(res.headers['cache-control']).toContain('immutable');
     expect(res.headers['accept-ranges']).toBe('bytes');
+    // T65: readable from a canvas of the editor (another origin in dev).
+    expect(res.headers['access-control-allow-origin']).toBe('*');
     expect(res.rawPayload.equals(data)).toBe(true);
     expect(await prisma.media.findUnique({ where: { name: 'clip.mp3' } })).toMatchObject({
       contentType: 'audio/mpeg',

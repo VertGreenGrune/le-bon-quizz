@@ -170,8 +170,8 @@ export interface Answer {
   order?: number[];
   point?: PinPoint;
   votedFor?: string;
-  /** COLORS: a palette index per zone (-1 = none). */
-  colors?: number[];
+  /** COLORS: the color put on each zone (`#rrggbb`, null = none). */
+  colors?: (string | null)[];
   /** POINTLESS: the item a right answer names (index in `items`; absent for an accepted text). */
   item?: number;
   responseMs: number;

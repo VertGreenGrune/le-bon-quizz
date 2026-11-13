@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  COLOR_PALETTE,
   COLOR_SHAPES,
   PAUSE_GRACE_MS,
   QuestionSchema,
@@ -9,6 +10,7 @@ import {
   colorsPoints,
   colorsRight,
   generatedBoard,
+  offeredPalette,
   type ColorsQuestion,
   type GameStatePayload,
   type PlayerJokersPayload,
@@ -52,8 +54,22 @@ function expectGameError(fn: () => unknown, code: string) {
 }
 
 const IMAGE = 'https://example.com/uploads/tableau.png';
+const BLANK = 'https://example.com/uploads/tableau-blanc.png';
+const VIOLET = '#9333ea';
+const BLEU = '#2563eb';
+const ROUGE = '#e11d48';
+const VERT = '#16a34a';
 /** Colors of the picture zones: violet, bleu, rouge, vert. */
-const RIGHT = [5, 4, 0, 3];
+const RIGHT_HEX = [VIOLET, BLEU, ROUGE, VERT];
+/** Offered to the players: by hue — vert, bleu, violet, rouge (never in zone order). */
+const OFFERED = [
+  { hex: VERT, name: 'Vert' },
+  { hex: BLEU, name: 'Bleu' },
+  { hex: VIOLET, name: 'Violet' },
+  { hex: ROUGE, name: 'Rouge' },
+];
+/** The right answer as indexes in the offered palette. */
+const RIGHT = [2, 1, 3, 0];
 
 const picture = (basePoints: 0 | 1000 | 2000 = 1000): ColorsQuestion => ({
   text: 'Retrouve les couleurs du tableau',
@@ -64,10 +80,31 @@ const picture = (basePoints: 0 | 1000 | 2000 = 1000): ColorsQuestion => ({
   basePoints,
   cells: 6,
   zones: [
-    { x: 0.2, y: 0.3, radius: 0.08, color: 5 },
-    { x: 0.5, y: 0.5, radius: 0.08, color: 4 },
-    { x: 0.8, y: 0.3, radius: 0.08, color: 0 },
-    { x: 0.5, y: 0.8, radius: 0.08, color: 3 },
+    { x: 0.2, y: 0.3, radius: 0.08, color: VIOLET },
+    { x: 0.5, y: 0.5, radius: 0.08, color: BLEU },
+    { x: 0.8, y: 0.3, radius: 0.08, color: ROUGE },
+    { x: 0.5, y: 0.8, radius: 0.08, color: VERT },
+  ],
+});
+
+/** T65: paint-bucket zones (any colors) and the blank picture. */
+const PINK = '#f4a6c0';
+const MAUVE = '#7b4fa1';
+const GREEN = '#3c8f4a';
+const bucket = (): ColorsQuestion => ({
+  text: 'Les couleurs de ma photo',
+  type: 'COLORS',
+  imageUrl: IMAGE,
+  blankImageUrl: BLANK,
+  timeLimitSec: 30,
+  memoSec: 20,
+  basePoints: 1000,
+  cells: 6,
+  zones: [
+    { x: 0.1, y: 0.1, tolerance: 30, color: GREEN },
+    { x: 0.4, y: 0.6, tolerance: 20, color: PINK },
+    { x: 0.7, y: 0.2, tolerance: 30, color: MAUVE },
+    { x: 0.9, y: 0.9, tolerance: 40, color: PINK },
   ],
 });
 
@@ -149,7 +186,38 @@ describe('« Couleurs perdues » (COLORS)', () => {
     ).toBe(false);
     expect(QuestionSchema.safeParse({ ...picture(), imageEffect: 'blur' }).success).toBe(false);
     expect(answerText(picture())).toEqual(['1. Violet', '2. Bleu', '3. Rouge', '4. Vert']);
-    expect(answerText(generated(), undefined, [0, 7])).toEqual(['1. Rouge', '2. Noir']);
+    expect(answerText(generated(), undefined, [ROUGE, '#111111'])).toEqual(['1. Rouge', '2. Noir']);
+    expect(answerText(bucket())[1]).toBe('2. Rose (#f4a6c0)');
+  });
+
+  it('schema (T65): paint-bucket zones need the blank picture; T58 zones still read', () => {
+    expect(QuestionSchema.safeParse(bucket()).success).toBe(true);
+    expect(QuestionSchema.safeParse({ ...bucket(), blankImageUrl: undefined }).success).toBe(false);
+    const zone0 = bucket().zones[0];
+    expect(
+      QuestionSchema.safeParse({
+        ...bucket(),
+        zones: [{ x: 0.5, y: 0.5, tolerance: 101, color: PINK }, zone0],
+      }).success,
+    ).toBe(false);
+    expect(
+      QuestionSchema.safeParse({
+        ...bucket(),
+        zones: [{ x: 0.5, y: 0.5, tolerance: 30, color: 'rose' }, zone0],
+      }).success,
+    ).toBe(false);
+    // A T58 zone stored a palette index: read as its hex color (upper-case hex → lower case).
+    const legacy = QuestionSchema.parse({
+      ...picture(),
+      zones: [
+        { x: 0.2, y: 0.3, radius: 0.08, color: 5 },
+        { x: 0.5, y: 0.5, radius: 0.08, color: '#2563EB' },
+      ],
+    }) as ColorsQuestion;
+    expect(legacy.zones).toEqual([
+      { x: 0.2, y: 0.3, radius: 0.08, color: VIOLET },
+      { x: 0.5, y: 0.5, radius: 0.08, color: BLEU },
+    ]);
   });
 
   it('helpers: grid, board, points', () => {
@@ -162,8 +230,17 @@ describe('« Couleurs perdues » (COLORS)', () => {
     // Last row (2 of 3) centred.
     expect(board.spots[3]!.x).toBeCloseTo(1 / 3);
     expect(board.spots[4]!.x).toBeCloseTo(2 / 3);
-    expect(colorsRight([5, 4, -1, 2], RIGHT)).toBe(2);
+    expect(colorsRight([VIOLET, BLEU, null, ROUGE], RIGHT_HEX)).toBe(2);
     expect(colorsPoints(800, 2, 4)).toBe(400);
+    // Offered palette: distinct, by hue, greys last (dark to light), built-in names kept.
+    expect(offeredPalette(RIGHT_HEX)).toEqual(OFFERED);
+    expect(offeredPalette(['#ffffff', PINK, '#111111', GREEN, PINK, '#808080'])).toEqual([
+      { hex: GREEN },
+      { hex: PINK },
+      { hex: '#111111', name: 'Noir' },
+      { hex: '#808080' },
+      { hex: '#ffffff' },
+    ]);
   });
 
   it('stage 1: the TV gets the colors, the phones nothing of the board', () => {
@@ -179,7 +256,7 @@ describe('« Couleurs perdues » (COLORS)', () => {
       colors: {
         stage: 'memo',
         board: { imageUrl: IMAGE, spots: [{ x: 0.2, y: 0.3, radius: 0.08 }, {}, {}, {}] },
-        colors: RIGHT,
+        colors: RIGHT_HEX,
       },
     });
     expect(state().remainingMs).toBe(20_000);
@@ -200,13 +277,17 @@ describe('« Couleurs perdues » (COLORS)', () => {
       stage: 'answer',
       board: {
         imageUrl: IMAGE,
-        spots: picture().zones.map(({ x, y, radius }) => ({ x, y, radius })),
+        spots: picture().zones.map((z) => ({ x: z.x, y: z.y, radius: 0.08 })),
       },
+      palette: OFFERED,
     });
-    expect(show()).toMatchObject({ timeLimitSec: 30, colors: { stage: 'answer' } });
+    expect(show()).toMatchObject({
+      timeLimitSec: 30,
+      colors: { stage: 'answer', palette: OFFERED },
+    });
     expect(show().colors!.colors).toBeUndefined();
     expect(phoneFrames()).not.toContain('"color"');
-    expect(phoneFrames()).not.toContain('"colors":[5');
+    expect(phoneFrames()).not.toContain(`"colors":["${VIOLET}"`);
     vi.advanceTimersByTime(30_000);
     expect(game.phase).toBe('REVEAL');
   });
@@ -216,16 +297,19 @@ describe('« Couleurs perdues » (COLORS)', () => {
     memorize();
     answer(alice!, RIGHT); // at once: full points
     vi.advanceTimersByTime(15_000);
-    answer(bob!, [5, 4, 1, -1]); // half the time, half the zones: 750 × 2 / 4
-    answer(chloe!, [0, 0, 0, 0]); // 1 / 4
+    answer(bob!, [2, 1, 0, -1]); // half the time, half the zones: 750 × 2 / 4
+    answer(chloe!, [3, 3, 3, 3]); // 1 / 4
     vi.advanceTimersByTime(15_000);
     expect(game.phase).toBe('REVEAL');
     expect(result(alice!)).toMatchObject({
       correct: true,
       pointsEarned: 1000,
       streak: 1,
-      colors: { right: 4, total: 4, colors: RIGHT, yours: RIGHT },
+      colors: { right: 4, total: 4, colors: RIGHT_HEX, yours: RIGHT_HEX },
     });
+    expect(result(bob!).colors!.yours).toEqual([VIOLET, BLEU, VERT, null]);
+    // Now that the answer is out: the whole board.
+    expect(result(bob!).colors!.board).toMatchObject({ imageUrl: IMAGE });
     expect(result(bob!)).toMatchObject({ correct: false, pointsEarned: 375, streak: 0 });
     expect(result(chloe!)).toMatchObject({ correct: false, pointsEarned: 188 });
     expect(result(dan!)).toMatchObject({
@@ -235,7 +319,7 @@ describe('« Couleurs perdues » (COLORS)', () => {
     });
     expect(result(dan!).colors!.yours).toBeUndefined();
     const r = reveal().colors!;
-    expect(r.colors).toEqual(RIGHT);
+    expect(r.colors).toEqual(RIGHT_HEX);
     expect(r.zones).toEqual([2, 2, 2, 1]);
     expect(r.answers.map((a) => [a.nickname, a.right, a.points])).toEqual([
       ['Alice', 4, 1000],
@@ -249,7 +333,9 @@ describe('« Couleurs perdues » (COLORS)', () => {
   it('wrong answer kinds are refused', () => {
     const [alice] = start('Alice');
     memorize();
-    expectGameError(() => answer(alice!, [5, 4, 0]), 'INVALID_PAYLOAD');
+    expectGameError(() => answer(alice!, [2, 1, 3]), 'INVALID_PAYLOAD');
+    // Only the 4 offered colors.
+    expectGameError(() => answer(alice!, [2, 1, 3, 4]), 'INVALID_PAYLOAD');
     expectGameError(() => game.answer(alice!.id, 0, { choiceIndex: 0 }), 'INVALID_PAYLOAD');
   });
 
@@ -267,10 +353,17 @@ describe('« Couleurs perdues » (COLORS)', () => {
     expect(new Set(board.spots.slice(0, 8).map((s) => s.shape)).size).toBe(8);
     expect(colors).toHaveLength(12);
     expect(new Set(colors).size).toBeGreaterThan(1);
+    expect(colors.every((c) => COLOR_PALETTE.some((p) => p.hex === c))).toBe(true);
     expect(prompt(alice!).colors).toEqual({ stage: 'memo' });
     memorize();
-    expect(prompt(alice!).colors).toEqual({ stage: 'answer', board });
-    answer(alice!, colors);
+    // T65: only the colors drawn on the board are offered.
+    const palette = offeredPalette(colors);
+    expect(palette).toHaveLength(new Set(colors).size);
+    expect(prompt(alice!).colors).toEqual({ stage: 'answer', board, palette });
+    answer(
+      alice!,
+      colors.map((c) => palette.findIndex((p) => p.hex === c)),
+    );
     expect(game.phase).toBe('REVEAL');
     expect(result(alice!)).toMatchObject({ correct: true, pointsEarned: 1000 });
     expect(reveal().colors!.board).toEqual(board);
@@ -280,7 +373,7 @@ describe('« Couleurs perdues » (COLORS)', () => {
     create(quizOf(picture()), { allAnsweredGraceMs: 2000 });
     const [alice] = start('Alice');
     memorize();
-    answer(alice!, [0, 0, 0, 0]);
+    answer(alice!, [3, 3, 3, 3]);
     game.unanswer(alice!.id, 0);
     vi.advanceTimersByTime(15_000);
     answer(alice!, RIGHT);
@@ -340,7 +433,7 @@ describe('« Couleurs perdues » (COLORS)', () => {
     vi.advanceTimersByTime(introOf(game));
     memorize();
     answer(alice!, RIGHT);
-    answer(bob!, [5, 4, -1, -1]);
+    answer(bob!, [2, 1, -1, -1]);
     answer(chloe!, [-1, -1, -1, -1]);
     expect(result(alice!).team).toMatchObject({ id: 0, score: 750 });
     expect(result(chloe!).team).toMatchObject({ id: 1, score: 0 });
@@ -351,11 +444,53 @@ describe('« Couleurs perdues » (COLORS)', () => {
     const [alice, bob] = start('Alice', 'Bob');
     memorize();
     answer(alice!, RIGHT);
-    answer(bob!, [5, 4, 0, 2]);
+    answer(bob!, [2, 1, 3, 1]);
     expect(result(alice!).survival).toMatchObject({ hearts: 2, lostHeart: false });
     expect(result(bob!).survival).toMatchObject({ hearts: 1, lostHeart: true });
     const survival = rec.last('survival:state', 'all') as SurvivalStatePayload;
     expect(survival.players.map((p) => p.hearts)).toEqual([2, 1]);
+  });
+
+  describe('paint-bucket zones (T65)', () => {
+    beforeEach(() => create(quizOf(bucket())));
+
+    it('memo: the colored picture on the TV only; answers: the blank picture everywhere', () => {
+      const [alice] = start('Alice', 'Bob');
+      expect(show().colors).toEqual({
+        stage: 'memo',
+        board: { imageUrl: IMAGE, spots: bucket().zones.map(({ x, y }) => ({ x, y })) },
+        colors: [GREEN, PINK, MAUVE, PINK],
+      });
+      memorize();
+      // Duplicate colors merged, sorted by hue: green, mauve, pink.
+      const palette = [{ hex: GREEN }, { hex: MAUVE }, { hex: PINK }];
+      const board = { blankImageUrl: BLANK, spots: bucket().zones.map(({ x, y }) => ({ x, y })) };
+      expect(prompt(alice!).colors).toEqual({ stage: 'answer', board, palette });
+      expect(show().colors).toEqual({ stage: 'answer', board, palette });
+      // The colored picture never reaches a phone (nor the TV's answer view) before the reveal.
+      expect(phoneFrames()).not.toContain('tableau.png');
+      expect(phoneFrames()).not.toContain('"color"');
+      expect(JSON.stringify(show())).not.toContain('tableau.png');
+    });
+
+    it('answers are judged by color (two zones of the same color: the same swatch)', () => {
+      const [alice, bob] = start('Alice', 'Bob');
+      memorize();
+      answer(alice!, [0, 2, 1, 2]);
+      answer(bob!, [0, 1, 2, 2]);
+      expect(result(alice!)).toMatchObject({
+        correct: true,
+        colors: { right: 4, total: 4, colors: [GREEN, PINK, MAUVE, PINK] },
+      });
+      expect(result(bob!)).toMatchObject({ correct: false, colors: { right: 2 } });
+      expect(result(bob!).colors!.board).toEqual({
+        imageUrl: IMAGE,
+        blankImageUrl: BLANK,
+        spots: bucket().zones.map(({ x, y }) => ({ x, y })),
+      });
+      expect(reveal().colors!.board).toMatchObject({ imageUrl: IMAGE, blankImageUrl: BLANK });
+      expect(reveal().colors!.answers[1]!.colors).toEqual([GREEN, MAUVE, PINK, PINK]);
+    });
   });
 
   describe('jokers', () => {
@@ -369,7 +504,7 @@ describe('« Couleurs perdues » (COLORS)', () => {
       game.useJoker(alice!.id, 0, 'fifty');
       const hints = jokerState(alice!)!.effects.colorHints!;
       expect(hints).toHaveLength(2);
-      for (const h of hints) expect(h.color).toBe(RIGHT[h.zone]);
+      for (const h of hints) expect(h.color).toBe(RIGHT_HEX[h.zone]);
       expect(jokerState(bob!)!.effects.colorHints).toBeUndefined();
       // No Copieur, no Brouilleur here.
       expectGameError(() => game.useJoker(bob!.id, 0, 'copy', alice!.id), 'JOKER_REFUSED');

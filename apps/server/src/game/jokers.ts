@@ -55,7 +55,7 @@ export interface JokerContext {
   /** « Couleurs perdues »: still memorizing (stage 1) — answers come in stage 2. */
   memorizing?(): boolean;
   /** « Couleurs perdues » 50/50: half of the zones with their right color. */
-  colorHints?(): { zone: number; color: number }[] | null;
+  colorHints?(): { zone: number; color: string }[] | null;
   transport: GameTransport;
 }
 

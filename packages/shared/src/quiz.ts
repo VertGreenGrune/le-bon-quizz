@@ -10,7 +10,8 @@ import {
   COLORS_MIN_MEMO_SEC,
   COLORS_MIN_ZONES,
   ColorZoneSchema,
-  colorName,
+  colorDescription,
+  isBucketZone,
 } from './colors.js';
 import {
   WAVELENGTH_DEFAULT_CLUE_SEC,
@@ -464,10 +465,19 @@ const ColorsQuestion = z
       .max(COLORS_MAX_CELLS)
       .default(COLORS_DEFAULT_CELLS),
     zones: z.array(ColorZoneSchema).max(COLORS_MAX_ZONES).default([]),
+    /**
+     * T65: the picture with every zone painted white (made by the editor from the paint-bucket
+     * zones), shown during the answers. Required with paint-bucket zones.
+     */
+    blankImageUrl: z.string().url().optional(),
   })
   .refine((q) => q.zones.length === 0 || q.zones.length >= COLORS_MIN_ZONES, {
     message: 'At least 2 zones',
     path: ['zones'],
+  })
+  .refine((q) => !q.zones.some(isBucketZone) || !!q.blankImageUrl, {
+    message: 'Paint-bucket zones need a blank picture',
+    path: ['blankImageUrl'],
   })
   .refine((q) => q.zones.length === 0 || !!q.imageUrl, {
     message: 'Zones need an image',
@@ -778,7 +788,7 @@ export function questionExplanation(q: Question): string | undefined {
 export function answerText(
   q: Question,
   drawWord?: string,
-  boardColors?: number[],
+  boardColors?: string[],
   wavelength?: { spectrum: WavelengthSpectrum; target: number },
 ): string[] {
   switch (q.type) {
@@ -809,7 +819,7 @@ export function answerText(
     case 'COLORS':
       // `boardColors`: the colors of a generated board (drawn when the question starts).
       return (q.zones.length ? q.zones.map((z) => z.color) : (boardColors ?? [])).map(
-        (c, i) => `${i + 1}. ${colorName(c)}`,
+        (c, i) => `${i + 1}. ${colorDescription(c)}`,
       );
     case 'WAGER':
       return [`${frenchNumber(q.wager.correct)}${q.wager.unit ? ` ${q.wager.unit}` : ''}`];
