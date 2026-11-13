@@ -3518,6 +3518,32 @@ pnpm format:check` before finishing.
   regions): a tap picks the nearest marker. (6) No migration (config JSON). Not tried on real phones /
   a real TV.
 
+### T66 — Evening ranking, « 🧪 Tester », podium reveals the final order, faster Brouilleur
+
+- **Status:** done
+- **User requirement (2026-11-13):** after the improvement review, the user picked: (1) a score
+  for the whole evening across chained quizzes, (2) try a question before the evening, (3) at the
+  end of the quiz, no ranking: the podium reveals the final order, (4) faster Brouilleur buttons.
+- **Summary:** (3) `Game.next()` from the last question's REVEAL → PODIUM (« Voir le podium » on
+  the TV and the remote, `podiumIsNext`); « Survie » over earlier keeps its ranking first. The
+  `podium` payload lists everyone (`standingsPayload('podium')`, up to `LEADERBOARD_SIZE`): TV
+  `PodiumRest` (4th and after, under a lower podium, after the winner), phone top 3 + own place.
+  (4) `MOVING_SPEED` 0.42 → 0.65. (1) `Player.evening { score, quizzes }` carried by
+  `handOver` / `takeOver`; `Game.eveningStandings()` → `game:state.evening` (2nd quiz on, LOBBY /
+  PODIUM / ENDED); TV `host/eveningScreens.tsx` (`EveningPanel` in the lobby, `EveningScreen`
+  toggled at the podium by « 🌙 Classement de la soirée » or the remote's « 🌙 Soirée »,
+  `TvAction` `evening`), phone `player/evening.tsx` line in the lobby / podium / end, remote list.
+  (2) `host:create { test, questions }` → `pickQuestions`, no `onEnded` save, `game:state.test`;
+  `/host/new?…&test=1&question=<n>` (`lib/gameOptions.ts`); editor « 🧪 Tester » (action bar) and
+  « 🧪 Tester cette question » (question header) save then open a new tab; TV « 🧪 Test » badge
+  and « 📱 Ouvrir un téléphone » (phone-sized window on `/join`), phone « 🧪 Partie de test ».
+  Tests: server end-of-quiz updates in 9 test files, `Game.chain.test.ts` evening test,
+  `socket/testGame.test.ts`; web `evening.test.ts`, remote main button, game options; e2e: every
+  spec ending a quiz now goes REVEAL → « Voir le podium », `chain.spec.ts` (evening panel + phone
+  line), new `test-mode.spec.ts` (editor → test tab → phone window → 1 question → nothing saved).
+- **Notes:** the evening is in memory only (not in the reports); one test phone window per
+  browser (the phone session is kept per browser), other phones scan the QR code. No migration.
+
 ---
 
 ## Contract changes / cross-task notes
@@ -3985,3 +4011,8 @@ _(Append here: date, agent, what changed in `packages/shared` or outside your sc
   through `E2E_CLASSIC_DEMO` (set in `playwright.config.ts`, read in `game/persistence.ts`, never
   set in production). New `packages/shared/src/demo-quiz.test.ts` fails if a question type is
   missing from the demo. A seeded `demo` row (`db:seed`) is only refreshed by re-running the seed.
+- 2026-11-13, main agent (T66, additive): `GameStatePayload.evening?` (`EveningStanding[]`) and
+  `test?`, `HostCreatePayload.test?` / `questions?`, `TvAction` `evening`. Behaviour change: the
+  last question's REVEAL goes to PODIUM (no LEADERBOARD), and `podium.top` lists every player
+  (not only 3) — tests walking REVEAL → LEADERBOARD → PODIUM on the last question must skip the
+  ranking. `GameSettings.test`, `GameCarry.players[].evening`.

@@ -194,7 +194,6 @@ test('« Patate chaude »: passes, wrong answer, TV reload, explosion and report
   await shot(pages[names.find((n) => n !== loser)!]!, 'potato-phone-saved');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

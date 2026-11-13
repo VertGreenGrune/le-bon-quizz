@@ -26,8 +26,8 @@ export interface Arena {
   h: number;
 }
 
-/** Speed as a share of the arena's smaller side per second (~150 px/s on a phone). */
-export const MOVING_SPEED = 0.42;
+/** Speed as a share of the arena's smaller side per second (~235 px/s on a phone; T66: faster). */
+export const MOVING_SPEED = 0.65;
 /** Longest step simulated at once (a background tab, a slow frame): no teleporting. */
 const MAX_STEP_S = 0.05;
 

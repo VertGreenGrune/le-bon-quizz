@@ -10,7 +10,7 @@ import { ShareDialog } from './ShareDialog';
 import type { QuizAccess } from '@lbq/shared';
 import { ThemeField } from '../themes/ThemePicker';
 import { StartGameDialog } from '../components/StartGameDialog';
-import { hostUrl, type GameOptions } from '../lib/gameOptions';
+import { SOLO, hostUrl, type GameOptions } from '../lib/gameOptions';
 import {
   addQuestion,
   emptyQuiz,
@@ -142,6 +142,20 @@ export function QuizEditorPage() {
     if (id) navigate(hostUrl(id, options));
   }
 
+  /**
+   * « 🧪 Tester » (T66): saves, then opens a test game (the whole quiz, or one question) in a new
+   * tab — never saved in the history. The tab is opened before saving so popup blockers allow it.
+   */
+  async function test(question?: number) {
+    const tab = window.open('', '_blank');
+    const id = canEdit && (dirty || !quizId) ? await save() : quizId;
+    const url =
+      id && hostUrl(id, { ...SOLO, test: true, ...(question !== undefined && { question }) });
+    if (!url) tab?.close();
+    else if (tab) tab.location.href = url;
+    else navigate(url);
+  }
+
   /** Conflict: drop the local changes and load the version saved by the other host. */
   async function reload() {
     if (!quizId) return;
@@ -222,6 +236,15 @@ export function QuizEditorPage() {
               {copying ? 'Copie…' : 'Copier dans mes quiz'}
             </button>
           )}
+          <button
+            type="button"
+            className={btn.secondary}
+            onClick={() => test()}
+            disabled={saving}
+            title="Jouer le quiz en test sur ce PC et ton téléphone (rien n’est enregistré)"
+          >
+            🧪 Tester
+          </button>
           <button
             type="button"
             className={btn.start}
@@ -378,6 +401,7 @@ export function QuizEditorPage() {
               question={question}
               errors={errors}
               onChange={setQuestion}
+              onTest={() => test(index)}
               onDraftChange={(fn, nextIndex) => {
                 setDraft(fn);
                 setCurrent(nextIndex);

@@ -124,6 +124,13 @@ export const HostCreatePayload = z.object({
   hearts: SurvivalHearts.optional(),
   /** TV theme for this game (T40); absent = the quiz's own theme. */
   theme: QuizTheme.optional(),
+  /**
+   * « 🧪 Tester » from the editor (T66): a test game — never saved in the history nor counted as
+   * played; the TV and the phones say so.
+   */
+  test: z.literal(true).optional(),
+  /** Only these questions (indexes in the quiz, played in this order), e.g. the one being tested. */
+  questions: z.array(z.number().int().min(0)).min(1).max(200).optional(),
 });
 /** Actions only the TV can do (`host:rejoin`, `host:remote`): its `hostToken`. */
 export const HostTokenPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
@@ -162,7 +169,15 @@ export const HostAcceptPayload = hostAction({
 export const HostRemotePayload = HostTokenPayload.extend({ revoke: z.literal(true).optional() });
 /** A phone opened the remote link `/remote/<PIN>#<remoteToken>`. */
 export const RemoteJoinPayload = z.object({ pin: Pin, remoteToken: z.string().min(1) });
-export const TvAction = z.enum(['mute', 'unmute', 'replay', 'music-down', 'music-up']);
+export const TvAction = z.enum([
+  'mute',
+  'unmute',
+  'replay',
+  'music-down',
+  'music-up',
+  // T66: the TV switches between the podium and « 🌙 Classement de la soirée ».
+  'evening',
+]);
 export type TvAction = z.infer<typeof TvAction>;
 /**
  * Remote → TV: 🔇 / 🔊 the TV's sound (« Tout couper »), ↻ replay the question's sound clip,
@@ -518,6 +533,15 @@ export interface ClientToServerEvents {
 
 // ---------- Server → client payloads ----------
 
+/** One line of « 🌙 Classement de la soirée » (T66): the sum of the chained quizzes' scores. */
+export interface EveningStanding {
+  nickname: string;
+  avatar: AvatarId;
+  score: number;
+  /** Quizzes of the evening this player took part in (0 = joined this quiz's lobby). */
+  quizzes: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   mode: GameMode;
@@ -544,6 +568,13 @@ export interface GameStatePayload {
    * host chains a new quiz: clients start over from an empty state.
    */
   round?: number;
+  /**
+   * « 🌙 Classement de la soirée » (T66): from the 2nd chained quiz on, in LOBBY (the quizzes before
+   * this one) and at PODIUM / ENDED (this one included). Every player of the room, best first.
+   */
+  evening?: EveningStanding[];
+  /** « 🧪 Tester » (T66): a test game, not saved. */
+  test?: true;
   /**
    * « Buzzer » question, ANSWERING: who has the hand (the timer is then frozen, `remainingMs` =
    * frozen value) and who answered wrong and can't buzz right now (emptied when everyone has).

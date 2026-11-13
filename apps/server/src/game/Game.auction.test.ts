@@ -308,7 +308,7 @@ describe('« Enchères » (T64)', () => {
   });
 
   it('team mode: the bid is part of the player points, so of the team average', () => {
-    const q: Quiz = { ...quiz, questions: [mcq('Q1', { auction: true })] };
+    const q: Quiz = { ...quiz, questions: [mcq('Q1', { auction: true }), mcq('Q2')] };
     create({ mode: 'teams', teamCount: 2 }, q);
     const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
     game.setTeam(alice!.id, 0);

@@ -144,7 +144,6 @@ test('« Paris sur les réponses »: guess, bet, reveal and report', async ({ br
   await shot(chloe, 'wager-phone-lost');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

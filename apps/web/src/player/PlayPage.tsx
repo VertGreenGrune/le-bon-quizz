@@ -30,6 +30,7 @@ import {
   type PlayerState,
   followsTheme,
 } from './playerState';
+import { EveningLine } from './evening';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { BuzzerPad, buzzerResultTitle } from './buzzer';
@@ -135,6 +136,12 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
               Quiz : {s.quizTitle}
             </p>
           )}
+          <EveningLine evening={s.evening} nickname={s.nickname} />
+          {s.test && (
+            <p className="rounded-2xl bg-white px-4 py-2 font-black text-brand">
+              🧪 Partie de test : rien n’est enregistré
+            </p>
+          )}
           {s.survival && (
             <p className="rounded-2xl bg-black/25 px-4 py-2 font-bold">
               💀 Survie : {heartsText(s.survival.hearts, s.survival.hearts)} — une erreur coûte un
@@ -222,7 +229,9 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           title="Partie terminée"
           subtitle={`Score final : ${s.totalScore} pts`}
           hint="Reste ici : si l’animateur enchaîne un autre quiz, tu y seras automatiquement."
-        />
+        >
+          <EveningLine evening={s.evening} nickname={s.nickname} />
+        </End>
       );
     case 'kicked':
       return <End title="Tu as été exclu de la partie" />;
@@ -1026,21 +1035,25 @@ const medals = ['🥇', '🥈', '🥉'];
 
 function Podium({ s }: { s: PlayerState }) {
   if (s.podiumTeams.length > 0) return <TeamPodium s={s} />;
-  const myPlace = s.podium?.findIndex((p) => p.nickname === s.nickname) ?? -1;
+  // The podium lists everyone (T66): the top 3 on the phone, the player's own place otherwise.
+  const podium = s.podium?.slice(0, 3) ?? null;
+  const index = s.podium?.findIndex((p) => p.nickname === s.nickname) ?? -1;
+  const myPlace = index < 3 ? index : -1;
   const survivor = myPlace === 0 && (s.podium?.[0]?.survival?.hearts ?? 0) > 0;
   const title = survivor
     ? '🏆 Tu es le dernier survivant !'
     : myPlace >= 0
       ? `${medals[myPlace]} Bravo, tu es ${formatRank(myPlace + 1)} !`
-      : s.result
-        ? `Tu termines ${formatRank(s.result.rank)}`
+      : s.result || index >= 0
+        ? `Tu termines ${formatRank(s.result?.rank ?? index + 1)}`
         : 'Podium';
   return (
     <Message title={title} subtitle={`${s.totalScore} pts`}>
       {myPlace === 0 && <Confetti count={60} />}
-      {s.podium && (
+      <EveningLine evening={s.evening} nickname={s.nickname} />
+      {podium && (
         <ol className="flex w-full max-w-xs flex-col gap-2">
-          {s.podium.map((p, i, all) => (
+          {podium.map((p, i, all) => (
             <motion.li
               key={p.nickname}
               initial={{ x: -40, opacity: 0 }}
@@ -1112,10 +1125,21 @@ function TeamPodium({ s }: { s: PlayerState }) {
   );
 }
 
-function End({ title, subtitle, hint }: { title: string; subtitle?: string; hint?: string }) {
+function End({
+  title,
+  subtitle,
+  hint,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  hint?: string;
+  children?: ReactNode;
+}) {
   const navigate = useNavigate();
   return (
     <Message title={title} subtitle={subtitle}>
+      {children}
       {hint && <p className="max-w-xs text-center text-sm font-semibold opacity-80">{hint}</p>}
       <button
         type="button"

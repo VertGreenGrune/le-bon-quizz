@@ -514,10 +514,12 @@ describe('« Survie » mode', () => {
       expect(game.standings()[3]).toMatchObject({ hearts: 0, eliminatedAt: 1 });
       game.next();
       expect(game.phase).toBe('PODIUM');
+      // Everyone, in the final order (T66: the podium shows the rest under the top 3).
       expect((rec.last('podium', 'all') as StandingsPayload).top.map((p) => p.nickname)).toEqual([
         'Alice',
         'Bob',
         'Chloé',
+        'Dan',
       ]);
     });
 
@@ -529,8 +531,7 @@ describe('« Survie » mode', () => {
         [bob!, RIGHT],
       ]);
       expect(game.standings().map((s) => s.nickname)).toEqual(['Bob', 'Alice']);
-      game.next();
-      game.next();
+      game.next(); // the last question: → PODIUM (T66)
       expect(game.phase).toBe('PODIUM');
     });
 

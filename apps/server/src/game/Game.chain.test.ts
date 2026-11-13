@@ -49,8 +49,7 @@ function playToPodium(game: Game, aliceId: string) {
   game.next(); // intro → answering
   game.answer(aliceId, 0, rightAnswer(game.currentQuestion!));
   game.next(); // → reveal
-  game.next(); // → leaderboard
-  game.next(); // → podium
+  game.next(); // the only question: → podium (T66)
   expect(game.phase).toBe('PODIUM');
 }
 
@@ -126,6 +125,51 @@ describe('« 🔁 Enchaîner un quiz » (T48)', () => {
     expect(second.phase).toBe('QUESTION_INTRO');
   });
 
+  it('« 🌙 Classement de la soirée » (T66): adds up the chained quizzes', () => {
+    const first = create();
+    const alice = first.join('Alice', 'a', 'joker');
+    const bob = first.join('Bob', 'b', 'robin');
+    playToPodium(first, alice.id);
+    const aliceFirst = first.players.get(alice.id)!.totalScore;
+    expect(aliceFirst).toBeGreaterThan(0);
+    // Only from the 2nd quiz on.
+    expect(first.statePayload().evening).toBeUndefined();
+
+    const second = games.chain(first.pin, SECOND, () => rec.transport, { onEnded });
+    // Lobby: the quizzes before this one.
+    expect(second.statePayload().evening).toEqual([
+      { nickname: 'Alice', avatar: 'joker', score: aliceFirst, quizzes: 1 },
+      { nickname: 'Bob', avatar: 'robin', score: 0, quizzes: 1 },
+    ]);
+    const chloe = second.join('Chloé', 'c', 'batman'); // joins between two quizzes
+    second.start();
+    expect(second.statePayload().evening).toBeUndefined(); // not during the questions
+    second.next();
+    second.answer(bob.id, 0, rightAnswer(second.currentQuestion!));
+    second.answer(chloe.id, 0, rightAnswer(second.currentQuestion!));
+    second.next();
+    second.next(); // the only question: → podium
+    const bobSecond = second.players.get(bob.id)!.totalScore;
+    const chloeSecond = second.players.get(chloe.id)!.totalScore;
+    // Podium: this quiz included.
+    const evening = second.statePayload().evening!;
+    expect(evening.map((e) => [e.nickname, e.score, e.quizzes])).toEqual(
+      [
+        ['Alice', aliceFirst, 2],
+        ['Bob', bobSecond, 2],
+        ['Chloé', chloeSecond, 1],
+      ].sort((x, y) => (y[1] as number) - (x[1] as number)),
+    );
+
+    // A third quiz keeps adding; a kicked player leaves the evening.
+    const third = games.chain(first.pin, FIRST, () => rec.transport, { onEnded });
+    third.kick(chloe.id);
+    expect(third.statePayload().evening).toEqual([
+      expect.objectContaining({ nickname: 'Alice', score: aliceFirst, quizzes: 2 }),
+      expect.objectContaining({ nickname: 'Bob', score: bobSecond, quizzes: 2 }),
+    ]);
+  });
+
   it('is refused while a quiz is being played', () => {
     const first = create();
     first.join('Alice', 'a');
@@ -161,8 +205,7 @@ describe('« 🔁 Enchaîner un quiz » (T48)', () => {
     first.kick(chloe.id);
     first.next();
     first.next();
-    first.next();
-    first.next();
+    first.next(); // the only question: → podium (T66)
     expect(first.phase).toBe('PODIUM');
 
     const second = games.chain(first.pin, SECOND, () => rec.transport, undefined, {

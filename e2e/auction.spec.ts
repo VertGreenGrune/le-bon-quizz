@@ -159,7 +159,6 @@ test('« Enchères »: bids before the question, + / − at the reveal, report',
   await shot(bob, 'auction-phone-lost');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

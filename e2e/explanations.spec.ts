@@ -110,7 +110,6 @@ test('« select all » question and « Le saviez-vous ? » explanation, up to th
   await host.reload();
   await expect(host.getByTestId('explanation')).toContainText(EXPLANATION);
 
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
 

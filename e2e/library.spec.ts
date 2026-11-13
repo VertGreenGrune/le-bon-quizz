@@ -105,7 +105,6 @@ test('host B launches host A’s public quiz from the library', async ({ browser
   ).toBeVisible();
   await phone.getByRole('button', { name: 'Réponse ◆' }).click();
   await expect(phone.getByRole('heading', { name: 'Correct !' })).toBeVisible();
-  await b.page.getByRole('button', { name: 'Suivant' }).click();
   await b.page.getByRole('button', { name: 'Voir le podium' }).click();
   await expect(b.page.getByRole('heading', { name: 'Podium' })).toBeVisible();
   await b.page.getByRole('button', { name: 'Terminer la partie' }).click();

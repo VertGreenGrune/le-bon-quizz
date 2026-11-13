@@ -32,8 +32,14 @@ Parts:
 LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
           ▲                                                 │ more questions
           └─────────────────────────────────────────────────┘
-                                         last question → PODIUM → ENDED
+                          last question: REVEAL → PODIUM → ENDED
 ```
+
+- **End of the quiz** (T66): the last question's REVEAL goes **straight to the PODIUM** (« Voir le
+  podium »), with no ranking before it, so the podium reveals the final order. The `podium`
+  payload lists everyone (up to `LEADERBOARD_SIZE`): the TV shows the top 3, then the 4th and
+  after under it once the winner is revealed; the phones the top 3 + their own place. « Survie »
+  over before the last question: the ranking (« dernier survivant ») still comes first.
 
 - `QUESTION_INTRO`: question shown alone on the host screen, phones show "get ready". Length
   (`introDurationMs`, T42, sent as `game:state.introMs`): 3 s, **8 s** (`JOKER_INTRO_MS`) when the
@@ -81,6 +87,19 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
   session tokens, nicknames, avatars, connection, team if it still exists; kicked ones left out),
   scores / streaks at 0, LOBBY. `game:state.round` (2, 3…) tells the clients to start from a fresh
   state; a phone that saw ENDED restores its session. New players can still join the new lobby.
+- **« 🌙 Classement de la soirée »** (T66): each player carries `evening { score, quizzes }` from
+  one chained quiz to the next (`handOver` adds the finished quiz's score; kicked players drop
+  out; a newcomer starts at 0). From the 2nd quiz on, `game:state.evening` (everyone, best first)
+  is sent in LOBBY (the quizzes before) and at PODIUM / ENDED (this one included). TV: a panel in
+  the lobby, and « 🌙 Classement de la soirée » / « 🏆 Podium du quiz » at the podium (also from the
+  remote: `remote:tv` `evening`); phones: « 🌙 Soirée : 2e sur 6 · 5400 pts »; remote: the list.
+  In memory only (not in the reports).
+- **« 🧪 Tester »** (T66, editor): « 🧪 Tester » (whole quiz) and « 🧪 Tester cette question »
+  save, then open `/host/new?quizId=…&test=1[&question=<n>]` in a new tab → `host:create { test:
+  true, questions?: [index] }`: only those questions (`pickQuestions` in `socket/index.ts`),
+  **never saved** (no `GameSession`, so no history nor « joué » count), `game:state.test` → « 🧪 Test »
+  on the TV header and the phone lobby; the TV lobby has « 📱 Ouvrir un téléphone » (a phone-sized
+  window on `/join?pin=`, one per browser since the phone session is kept per browser).
 
 ## 3. Scoring
 
@@ -395,7 +414,8 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     when it ends; pauses excluded). « Mytho ! »: it blocks the vote (not the writing).
   - 🌀 **Brouilleur** (`scramble`, attack, T42: **this** question, MCQ only — single answer or
     « select all », T52): right away (`joker:state` pushed), the target's colored shape buttons
-    **move all over the phone screen** at a medium speed (bouncing off the edges and each other,
+    **move all over the phone screen** fast (`MOVING_SPEED` 0.65 of the smaller side per second,
+    T66; bouncing off the edges and each other,
     `player/MovingButtons.tsx` + `movingPhysics.ts`), so the right one is hard to hit; « Valider »
     of a « select all » stays still. `effects.scrambled.choices` is still sent (unused).
   - Gel / Brouilleur on a target who already answered → `JOKER_REFUSED` « X a déjà répondu »
@@ -519,7 +539,7 @@ Every client → server event takes an ack callback receiving
 ### Host → server
 | Event | Payload | Notes |
 |---|---|---|
-| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme }` | default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + quizzes shared with the host (T45) + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
+| `host:create` | `{ quizId, mode?: 'solo' \| 'teams' \| 'survival', teamCount?: 2 \| 3 \| 4, jokers?: boolean, hearts?: 1–5, theme?: QuizTheme, test?: true, questions?: number[] }` | `test` / `questions`: « 🧪 Tester » (T66: not saved, only those question indexes, `INVALID_PAYLOAD` for an unknown one); default solo / 2 teams / no jokers / 3 hearts (« Survie » only) / the quiz's theme (T40); ack `{ pin, hostToken }`, then `game:state` + `lobby:players` (+ `lobby:teams`). Host = `lbq_session` cookie of the socket handshake (or handshake `auth.token`); own quizzes + quizzes shared with the host (T45) + other hosts' `PUBLIC` quizzes (`UNAUTHORIZED` / `QUIZ_NOT_FOUND`, also for another host's private quiz); `quizId: 'demo'` works without login |
 | `host:start` | `{ pin, hostToken }` | LOBBY → QUESTION_INTRO. Team mode: `TEAMS_NOT_READY` unless every player has a team and ≥ 2 teams have players |
 | `host:next` | `{ pin, hostToken }` | advance phase |
 | `host:kick` | `{ pin, hostToken, playerId }` | |
@@ -545,7 +565,7 @@ Every client → server event takes an ack callback receiving
 | Event | Payload | Notes |
 |---|---|---|
 | `remote:join` | `{ pin, remoteToken }` | pairs the socket (`UNAUTHORIZED` for a wrong / revoked token, `GAME_NOT_FOUND`), then the `host:rejoin` resync + `remote:answer`; sent again on every reconnection |
-| `remote:tv` | `{ pin, remoteToken, action: 'mute' \| 'unmute' \| 'replay' \| 'music-down' \| 'music-up' }` | relayed to the TV sockets as `tv:control` (🔇 / 🔊 « Tout couper », ↻ the sound clip, « Musique − / + » = the « Musique et effets » level by 20 %, T41) |
+| `remote:tv` | `{ pin, remoteToken, action: 'mute' \| 'unmute' \| 'replay' \| 'music-down' \| 'music-up' \| 'evening' }` | relayed to the TV sockets as `tv:control` (🔇 / 🔊 « Tout couper », ↻ the sound clip, « Musique − / + » = the « Musique et effets » level by 20 %, T41; `evening` = podium ↔ « 🌙 Classement de la soirée », T66) |
 
 ### Player → server
 | Event | Payload | Notes |
@@ -565,7 +585,7 @@ Every client → server event takes an ack callback receiving
 ### Server → clients
 | Event | To | Payload |
 |---|---|---|
-| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `quizTitle` = the quiz title (T47: TV lobby + header, phone lobby, remote); `introMs` during QUESTION_INTRO = its whole length, T42; `round` = quiz number in the room after a « 🔁 Enchaîner un quiz », absent = 1, T54) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` + « Liste chrono » during ANSWERING: `list: { items: number[] (players who found each item, never its text), players: (LobbyMember & { found })[] }` + « Paris sur les réponses » during ANSWERING: `wager: { stage: 'guess' \| 'bet', guessed: LobbyMember[] }` (who guessed, never the numbers) + « Patate chaude » during ANSWERING: `potato: { holder?, from?, elapsedMs, passes }` and **no** `remainingMs` (the fuse is secret) + « Enchères » (T64) during QUESTION_INTRO / ANSWERING: `auction: { stage: 'bid' \| 'play', topic?, questionType, bidders: LobbyMember[] }` (who has bid, never the amounts) |
+| `game:state` | all | `{ phase, mode, questionIndex, totalQuestions, remainingMs?, paused? }` (`questionIndex` = -1 in LOBBY; `remainingMs` avoids clock skew, frozen value while paused; `paused` = `{ waitingFor: { id, nickname, avatar }[], hostMissing, sinceMs, byHost?: true }` (`byHost`: « ⏸ Pause » pressed by the host, T39), `waitingFor` empty during the resume countdown; `jokers: true` in games with jokers; `theme` = the TV theme, absent = `classic`; `quizTitle` = the quiz title (T47: TV lobby + header, phone lobby, remote); `introMs` during QUESTION_INTRO = its whole length, T42; `round` = quiz number in the room after a « 🔁 Enchaîner un quiz », absent = 1, T54; `evening` = « 🌙 Classement de la soirée » `{ nickname, avatar, score, quizzes }[]` from the 2nd quiz on, LOBBY / PODIUM / ENDED only, T66; `test: true` = « 🧪 Tester » game, T66) + « Buzzer » question during ANSWERING: `buzzer: { holder?: LobbyMember, wrong: LobbyMember[] }` (who has the hand — `remainingMs` is then the frozen value — and who answered wrong, in order) + « Dessine-moi » question during QUESTION_INTRO / ANSWERING: `draw: { drawer?: LobbyMember, found: LobbyMember[] }` + « Liste chrono » during ANSWERING: `list: { items: number[] (players who found each item, never its text), players: (LobbyMember & { found })[] }` + « Paris sur les réponses » during ANSWERING: `wager: { stage: 'guess' \| 'bet', guessed: LobbyMember[] }` (who guessed, never the numbers) + « Patate chaude » during ANSWERING: `potato: { holder?, from?, elapsedMs, passes }` and **no** `remainingMs` (the fuse is secret) + « Enchères » (T64) during QUESTION_INTRO / ANSWERING: `auction: { stage: 'bid' \| 'play', topic?, questionType, bidders: LobbyMember[] }` (who has bid, never the amounts) |
 | `game:resuming` | all | `{ inMs }` — 3-2-1 countdown before a paused game resumes (also re-sent on rejoin) |
 | `lobby:players` | host | `{ players: { id, nickname, avatar, teamId?, offline? }[] }` (re-sent when a player drops / comes back) |
 | `lobby:teams` | all | team mode only: `{ teams: { id, name, members: { id, nickname, avatar }[] }[] }` — every team in LOBBY, the teams in play from the start on; re-sent on any change (join, team choice, kick) |
@@ -575,7 +595,7 @@ Every client → server event takes an ack callback receiving
 | `question:reveal` | host | `{ type, correctIndexes: number[], distribution: number[], wheels? }` (`wheels` = Voleur wheels, T51: `{ thief, candidates, drawn, points, blocked? }[]`) (both empty for TYPE_ANSWER / SLIDER; `correctIndexes` empty for POLL) + TYPE_ANSWER `acceptedAnswers`, `topAnswers: { text, count, correct }[]` (top 6, grouped after normalization); SLIDER `slider` (full settings), `correct`, `margin`, `guesses: number[]`, `closest?: { nickname, value, avatar? }` (`avatar` absent in reports saved before avatars); ORDER `order: { items (right order), placed: number[] (players with the right item at each position), answers?: { nickname, avatar, order (right-order item indexes as placed), placed, points }[] (T50: every player, best first, no answer last — the TV lists them beside the right order) }`; PIN `pin: { imageUrl, zone, pins: { x, y, nickname, avatar, correct }[] }`; WHO_OF_US `votes: { nickname, avatar, count }[]` (most voted first) + `majorityBonus?: true`; WORD_CLOUD `words: { text, count }[]` (top 40); BLUFF `bluff: { truth, options: { text, truth, authors, voters }[] }` (lies that fooled the fewest first, truth last — the TV reveals them one by one) (`RevealDetails`) « Buzzer »: `buzzer: { answer, winner?, wrong }` (`distribution` empty, no type details) DRAW: `draw: { word, drawer?, strokes, found: (LobbyMember & { ms })[] }`; « select all »: `distribution` counts every ticked choice + `multiple: { allFound }`; LIST `list: { items: { text, finders }[], players: (LobbyMember & { found })[] }`; COLORS `colors: { board, colors (hex), zones: number[] (players right per zone), answers: { nickname, avatar, colors: (hex \| null)[] \| null, right, points }[] }` (best first, no answer last); MISSING `missing: { imageUrl, missingImageUrl, zone, pins: { x, y, nickname, avatar, correct }[] }`; POINTLESS `pointless: { answers: { text, players: LobbyMember[], points, accepted? }[] (rarest first), wrong: { text, players }[], missed: string[] (≤ 10), missedCount }` + `typedAnswers` (for « ✅ Accepter »); WAGER `wager: { correct, unit?, slots: { value, authors, bettors }[], winning, betPoints, authorPoints }`; WAVELENGTH `wavelength: { spectrum, target, clue (null = none given), psychic?, needles: (LobbyMember & { value, points })[] (closest first), psychicPoints }`; HOT_POTATO `potato: { loser?, players: (LobbyMember & { passes, points })[] (loser first, then most passes), asked, last?: { text, answer } }`; « Enchères » `auction: { bids: (LobbyMember & { amount, correct, delta })[] }` (bids above 0, biggest first); `explanation?` (T37); T44: `accepted?: { choiceIndexes?, texts?, margin? }` (also in the report details; `correctIndexes` includes the accepted choices, `slider.margin` / `margin` = the accepted margin), TYPE_ANSWER groups `accepted?: true` and `typedAnswers` (every group, for the remote) |
 | `player:result` | each player | `{ correct, pointsEarned, streak, streakBonus, totalScore, rank }` + `team?: { id, score, rank }` in team mode (`pointsEarned` includes `streakBonus`; `streak` = 0 if wrong / no answer) + `poll?: true` (POLL, WHO_OF_US, WORD_CLOUD: `correct` false; 0 points except the WHO_OF_US majority bonus) + SLIDER `yourValue?` (absent without an answer), `correctValue` + ORDER `placed?: { correct, total }` (partial points: `pointsEarned` > 0 with `correct` false, also for PIN near the zone) + WHO_OF_US `votesReceived`, `withMajority?` (absent without a vote) + BLUFF `bluff: { truth, found, lie?, fooled, fooledPoints, fellFor? }` + `jokers?: JokerResult[]` (what jokers did: `double`, `doubleLost`, `shieldSaved`, `stole`, `stolen`, `selfRobbed`, `stealBlocked`, `wheelShielded` (Voleur wheel, T51), `copied`, `copyMissed`, `hourglass`, `earned`; `pointsEarned` may then be negative) + « Survie » `survival: { hearts, lostHeart, eliminated?, ghost?, hauntEarned? }` (`rank` = survivor ranking) + « Buzzer » `buzzer: { answer, won, wrong, winner? }` (no type-specific fields) + DRAW `draw: { word, drawer?, drew, found, finders }` + « select all » `multiple: { correctIndexes, yours? }` + LIST `list: { found, total, missed: string[] }` + COLORS `colors: { right, total, colors, yours?, board? }` (hex; `board` = the whole board, T65) + POINTLESS `pointless: { yours?, sharedBy }` (`sharedBy` = players who gave the same right answer, self included; 1 = « 💎 Pas évident ! », 0 = wrong / none) + WAGER `wager: { correct, unit?, guess?, bet? (slot value, null = « Plus petit que tout »), winning, won, author, authorPoints }` + WAVELENGTH `wavelength: { spectrum, target, clue, psychic (this player gave the clue), psychicName?, yours? }` + HOT_POTATO `potato: { exploded, loser?, passes, passPoints, survivorPoints }` + « Enchères » `auction: { bid, delta }` (T64) + `explanation?` (T37) + `accepted?: true` (refused, then accepted by the host: « ✅ Réponse acceptée par l’animateur ! », T44) |
 | `leaderboard` | host | `{ top: { nickname, avatar, score, gained, jokers?, survival? }[], teams? }` (everyone, up to 15; `gained` (T41) = what the player earned on the question just played, after jokers — may be negative, 0 without an answer; `jokers` = `{ hand, used? }` in games with jokers; `survival` = `{ hearts, eliminatedAt? }` in « Survie », ordered by the survivor ranking; `teams` in team mode = `{ id, name, score, playerCount, gained }[]`, best first, `gained` = what the team's score moved by). `podium` never has `gained` |
-| `podium` | all | `{ top: { nickname, avatar, score, survival? }[], teams? }` (top 3 players; all teams in team mode) |
+| `podium` | all | `{ top: { nickname, avatar, score, survival? }[], teams? }` (every player up to `LEADERBOARD_SIZE`, best first — T66: the TV shows the top 3 then the rest; all teams in team mode) |
 | `survival:state` | all | « Survie » only, from the lobby on, re-sent after each REVEAL, haunt, join, kick and in both rejoin resyncs: `{ hearts (at start), players: { id, nickname, avatar, hearts, eliminatedAt?, lastLoss?, haunts? }[], finished? }` |
 | `draw:strokes` | host (+ the drawer on rejoin) | « Dessine-moi »: `{ index, clear?, strokes: DrawStroke[] }` — new chunks of the drawing (`mergeStrokes`); `clear` = start from empty (« Tout effacer », or the whole drawing re-sent on `host:rejoin` / `player:rejoin`) |
 | `player:kicked` | that player | `{}` |
@@ -724,7 +744,7 @@ answer 404. Code: routes in `apps/server/src/api`, auth helpers in `apps/server/
 - `/host/:pin` → shared screen; `/host/new?quizId=<id>&mode=teams&teams=<n>&jokers=1&theme=<theme>`
   (or `mode=survival&hearts=<n>`; no `theme` = the quiz's) creates a game (opened by the Solo / Équipes / Survie + Jokers dialog
   of the editor and of the home page; no `quizId` = demo, no `mode` = solo, no `jokers` = classic
-  game)
+  game; `test=1[&question=<n>]` = « 🧪 Tester » from the editor, T66)
 - `/login`, `/register` → host account (`?next=` = page to return to); with Firebase (T46) also
   « Continuer avec Google », the e-mail forms go through Firebase (`apps/web/src/lib/firebase.ts`,
   SDK loaded lazily, never on the phones), « Mot de passe oublié » = Firebase's reset e-mail,

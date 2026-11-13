@@ -147,7 +147,6 @@ test('« Sur la même longueur d’onde »: clue, needles, reveal and report', a
   await shot(alice, 'wavelength-phone-psychic-result');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

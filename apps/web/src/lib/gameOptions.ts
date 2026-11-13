@@ -18,6 +18,10 @@ export interface GameOptions {
   jokers?: true;
   /** TV theme for this game (T40); absent = the quiz's own theme. */
   theme?: QuizTheme;
+  /** « 🧪 Tester » from the editor (T66): a test game, never saved. */
+  test?: true;
+  /** Test of one question: its index in the quiz (0-based; `question=<n>` 1-based in the URL). */
+  question?: number;
 }
 
 export const SOLO: GameOptions = { mode: 'solo' };
@@ -40,6 +44,8 @@ export function hostUrl(quizId: string | undefined, options: GameOptions = SOLO)
   }
   if (options.jokers) params.set('jokers', '1');
   if (options.theme) params.set('theme', options.theme);
+  if (options.test) params.set('test', '1');
+  if (options.question !== undefined) params.set('question', String(options.question + 1));
   const query = params.toString();
   return query ? `/host/new?${query}` : '/host/new';
 }
@@ -50,9 +56,12 @@ export function hostUrl(quizId: string | undefined, options: GameOptions = SOLO)
  */
 export function parseGameOptions(params: URLSearchParams): GameOptions {
   const theme = QuizTheme.safeParse(params.get('theme'));
+  const question = Number(params.get('question'));
   const extra = {
     ...(params.get('jokers') === '1' && { jokers: true as const }),
     ...(theme.success && { theme: theme.data }),
+    ...(params.get('test') === '1' && { test: true as const }),
+    ...(Number.isInteger(question) && question >= 1 && { question: question - 1 }),
   };
   const mode = params.get('mode');
   if (mode === 'survival') {

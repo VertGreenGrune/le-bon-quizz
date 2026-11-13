@@ -123,7 +123,6 @@ test('« Mytho ! »: lies, votes, reveal one by one, report', async ({ browser }
   await shot(bob!, 'phone-result');
 
   // ---- To the end, then the report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect(alice!.getByRole('heading', { name: 'Partie terminée' })).toBeVisible();

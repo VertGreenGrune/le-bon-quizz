@@ -65,4 +65,17 @@ describe('game options in the host URL', () => {
     });
     expect(parse('/host/new?theme=disco')).toEqual({ mode: 'solo' });
   });
+
+  it('« 🧪 Tester » (T66): a test game, maybe one question (1-based in the URL)', () => {
+    expect(hostUrl('abc', { mode: 'solo', test: true, question: 4 })).toBe(
+      '/host/new?quizId=abc&test=1&question=5',
+    );
+    expect(parse('/host/new?quizId=abc&test=1&question=5')).toEqual({
+      mode: 'solo',
+      test: true,
+      question: 4,
+    });
+    expect(parse('/host/new?quizId=abc&test=1')).toEqual({ mode: 'solo', test: true });
+    expect(parse('/host/new?question=0')).toEqual({ mode: 'solo' });
+  });
 });

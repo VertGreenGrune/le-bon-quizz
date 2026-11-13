@@ -103,9 +103,12 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
       await expect(phone.getByRole('heading', { name: heading })).toBeVisible();
     }
     await expectHostReveal(host, question);
-    // Host reveal: "Suivant" button and the 3 answers counted.
-    await expect(host.getByRole('button', { name: 'Suivant' })).toBeVisible();
+    // Host reveal: the 3 answers counted; the last question goes straight to the podium (T66).
     await expect(host.getByText('/ 3')).toBeVisible();
+    if (q === total - 1) {
+      await host.getByRole('button', { name: 'Voir le podium' }).click();
+      break;
+    }
 
     // Leaderboard.
     await host.getByRole('button', { name: 'Suivant' }).click();
@@ -113,10 +116,7 @@ test('host + 3 players play the demo quiz to the podium', async ({ browser }) =>
     await expect(host.locator('ol > li').first()).toContainText('Alice');
     await expect(phones[0]!.getByText("Regarde le classement sur l'écran")).toBeVisible();
 
-    const isLast = q === total - 1;
-    await host
-      .getByRole('button', { name: isLast ? 'Voir le podium' : 'Question suivante' })
-      .click();
+    await host.getByRole('button', { name: 'Question suivante' }).click();
   }
 
   // ---- Podium ----

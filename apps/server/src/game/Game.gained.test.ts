@@ -116,9 +116,10 @@ describe('leaderboard gains (T41)', () => {
       game.next();
       toAnswering();
       answer(alice!, RIGHT);
-      toLeaderboard();
+      if (q < quiz.questions.length - 1) toLeaderboard();
     }
-    game.next();
+    if (game.phase === 'ANSWERING') game.next();
+    game.next(); // the last question: no ranking, → PODIUM (T66)
     expect(game.phase).toBe('PODIUM');
     const podium = rec.last('podium', 'all') as StandingsPayload;
     expect(podium.top[0]).not.toHaveProperty('gained');

@@ -46,6 +46,7 @@ export function introDurationMs(text: string, jokers: boolean): number {
 }
 /** Games are small (~6 players, 15 at most): the leaderboard shows everyone up to this. */
 export const LEADERBOARD_SIZE = 15;
+/** The podium shows the top 3, then the rest of the ranking under it (T66). */
 export const PODIUM_SIZE = 3;
 /**
  * A player who still has to answer (or the host screen) offline this long during a timed phase

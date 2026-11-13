@@ -268,7 +268,6 @@ test('« Couleurs perdues »: memorize on the TV, answer on the phones, reveal a
   await shot(host, 'colors-tv-reveal-generated');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

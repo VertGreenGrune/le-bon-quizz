@@ -7,7 +7,6 @@ import {
   ALL_ANSWERED_GRACE_MS,
   PAUSE_GRACE_MS,
   answerCancellable,
-  PODIUM_SIZE,
   introDurationMs,
   jokerAvailability,
   RESUME_COUNTDOWN_MS,
@@ -36,6 +35,7 @@ import {
   type GameMode,
   type GamePause,
   type GamePhase,
+  type EveningStanding,
   type GameStatePayload,
   type HauntType,
   type JokerType,
@@ -201,6 +201,11 @@ export interface Player {
   lastResult: { correct: boolean; pointsEarned: number; streakBonus: number } | null;
   /** Team mode: chosen in the lobby (null until then). Always null in solo mode. */
   teamId: TeamId | null;
+  /**
+   * « 🌙 Classement de la soirée » (T66): points and quizzes of the chained quizzes before this
+   * one (absent: none, e.g. joined this quiz's lobby).
+   */
+  evening?: { score: number; quizzes: number };
 }
 
 /** Final standing of one player (kicked ones included), as saved in `PlayerResult`. */
@@ -280,6 +285,8 @@ export interface GameSettings {
   ownerId?: string | null;
   /** « Enchaîner un quiz » (T48): what this game takes over from the finished one. */
   carry?: GameCarry;
+  /** « 🧪 Tester » (T66): a test game from the editor (not saved; told to the clients). */
+  test?: boolean;
 }
 
 /**
@@ -295,7 +302,14 @@ export interface GameCarry {
   hostGoneSince: number | null;
   players: Pick<
     Player,
-    'id' | 'sessionToken' | 'nickname' | 'avatar' | 'socketId' | 'offlineSince' | 'teamId'
+    | 'id'
+    | 'sessionToken'
+    | 'nickname'
+    | 'avatar'
+    | 'socketId'
+    | 'offlineSince'
+    | 'teamId'
+    | 'evening'
   >[];
 }
 
@@ -308,6 +322,7 @@ export interface GameHooks {
  * One live game, fully server-authoritative (PLAN.md §2–§3).
  *
  * LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD → (next question | PODIUM) → ENDED
+ * (the last question's REVEAL goes straight to the PODIUM, T66)
  *
  * QUESTION_INTRO ends by itself after `introDurationMs` (3–12 s, T42) and ANSWERING when the timer expires or
  * every player has answered (2 s later when answers can be cancelled, T43); the host may also skip
@@ -326,6 +341,8 @@ export class Game {
   readonly ownerId: string | null;
   /** Number of the game in this room: 1, then + 1 each time the host chains a quiz (T48). */
   readonly round: number;
+  /** « 🧪 Tester » (T66). */
+  readonly test: boolean;
   readonly players = new Map<string, Player>();
   phase: GamePhase = 'LOBBY';
   questionIndex = -1;
@@ -420,6 +437,7 @@ export class Game {
     this.hostToken = carry?.hostToken ?? randomUUID();
     this.ownerId = settings.ownerId ?? null;
     this.round = carry ? carry.round + 1 : 1;
+    this.test = !!settings.test;
     this.theme = settings.theme ?? quiz.theme ?? 'classic';
     this.random = settings.random ?? Math.random;
     this.sliderRandom = settings.sliderRandom ?? Math.random;
@@ -511,6 +529,7 @@ export class Game {
       this.hooks.onEnded?.(this);
     }
     this.dispose();
+    const started = this.startedAt !== null;
     return {
       round: this.round,
       hostToken: this.hostToken,
@@ -519,7 +538,7 @@ export class Game {
       remoteSockets: [...this.remoteSockets],
       hostGoneSince: this.hostGoneSince,
       players: [...this.players.values()].map(
-        ({ id, sessionToken, nickname, avatar, socketId, offlineSince, teamId }) => ({
+        ({ id, sessionToken, nickname, avatar, socketId, offlineSince, teamId, ...p }) => ({
           id,
           sessionToken,
           nickname,
@@ -527,6 +546,11 @@ export class Game {
           socketId,
           offlineSince,
           teamId,
+          // « Classement de la soirée » (T66): this quiz's score joins the evening's.
+          evening: {
+            score: (p.evening?.score ?? 0) + p.totalScore,
+            quizzes: (p.evening?.quizzes ?? 0) + (started ? 1 : 0),
+          },
         }),
       ),
     };
@@ -639,7 +663,10 @@ export class Game {
       case 'ANSWERING':
         return this.finishAnswering();
       case 'REVEAL':
-        return this.enterLeaderboard();
+        // Last question: no ranking, the podium reveals it (T66).
+        return this.questionIndex + 1 < this.totalQuestions
+          ? this.enterLeaderboard()
+          : this.enterPodium();
       case 'LEADERBOARD':
         // « Survie »: one survivor left (or nobody) → straight to the podium.
         return this.questionIndex + 1 < this.totalQuestions && !this.survival?.finished()
@@ -775,8 +802,8 @@ export class Game {
     if (phase === 'ANSWERING' && this.setup.draw) send('draw:strokes', this.drawingPayload());
     if (phase === 'ANSWERING' || phase === 'REVEAL') this.sendAnswerCount(send);
     if (phase === 'REVEAL' && this.reveal) send('question:reveal', this.reveal);
-    if (phase === 'LEADERBOARD') send('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
-    if (phase === 'PODIUM' || phase === 'ENDED') send('podium', this.standingsPayload(PODIUM_SIZE));
+    if (phase === 'LEADERBOARD') send('leaderboard', this.standingsPayload('leaderboard'));
+    if (phase === 'PODIUM' || phase === 'ENDED') send('podium', this.standingsPayload('podium'));
     this.sendRemoteStatus(send);
   }
 
@@ -915,7 +942,7 @@ export class Game {
     } else if (this.phase === 'REVEAL' && player.lastResult) {
       this.transport.toSocket(sid, 'player:result', this.resultPayload(player));
     } else if (this.phase === 'PODIUM') {
-      this.transport.toSocket(sid, 'podium', this.standingsPayload(PODIUM_SIZE));
+      this.transport.toSocket(sid, 'podium', this.standingsPayload('podium'));
     }
   }
 
@@ -1325,6 +1352,25 @@ export class Game {
     }));
   }
 
+  /**
+   * « 🌙 Classement de la soirée » (T66), from the 2nd quiz of the room on: in the lobby the quizzes
+   * before this one, at the podium this one too. Null otherwise.
+   */
+  eveningStandings(): EveningStanding[] | null {
+    if (this.round < 2) return null;
+    const done = this.phase === 'PODIUM' || this.phase === 'ENDED';
+    if (!done && this.phase !== 'LOBBY') return null;
+    const started = this.startedAt !== null;
+    return [...this.players.values()]
+      .map((p) => ({
+        nickname: p.nickname,
+        avatar: p.avatar,
+        score: (p.evening?.score ?? 0) + (done ? p.totalScore : 0),
+        quizzes: (p.evening?.quizzes ?? 0) + (done && started ? 1 : 0),
+      }))
+      .sort((a, b) => b.score - a.score);
+  }
+
   /** Avatars of the players in the game (several players may share one). */
   takenAvatars(): AvatarId[] {
     return [...new Set([...this.players.values()].map((p) => p.avatar))];
@@ -1340,7 +1386,10 @@ export class Game {
       ...(this.withJokers && { jokers: true as const }),
       ...(this.theme !== 'classic' && { theme: this.theme }),
       ...(this.round > 1 && { round: this.round }),
+      ...(this.test && { test: true as const }),
     };
+    const evening = this.eveningStandings();
+    if (evening) state.evening = evening;
     if (this.pause) {
       state.remainingMs = this.pause.remainingMs;
       state.paused = this.pausePayload(this.pause);
@@ -1756,13 +1805,13 @@ export class Game {
   private enterLeaderboard(): void {
     this.setPhase('LEADERBOARD', null);
     this.broadcastState();
-    this.transport.toHost('leaderboard', this.standingsPayload(LEADERBOARD_SIZE));
+    this.transport.toHost('leaderboard', this.standingsPayload('leaderboard'));
   }
 
   private enterPodium(): void {
     this.setPhase('PODIUM', null);
     this.broadcastState();
-    this.transport.toAll('podium', this.standingsPayload(PODIUM_SIZE));
+    this.transport.toAll('podium', this.standingsPayload('podium'));
   }
 
   // ---------- Teams ----------
@@ -1828,15 +1877,16 @@ export class Game {
   }
 
   /**
-   * `leaderboard` (size = LEADERBOARD_SIZE, after a question) also tells what each player / team
-   * earned on that question (`gained`, T41); `podium` doesn't.
+   * `leaderboard` (after a question) also tells what each player / team earned on that question
+   * (`gained`, T41); `podium` doesn't. Both list everyone (up to LEADERBOARD_SIZE): the podium
+   * shows the top 3, then the rest of the final ranking (T66).
    */
-  private standingsPayload(size: number): StandingsPayload {
-    const leaderboard = size === LEADERBOARD_SIZE && this.questionIndex >= 0;
-    const jokers = this.withJokers && size === LEADERBOARD_SIZE ? this.jokers : null;
+  private standingsPayload(kind: 'leaderboard' | 'podium'): StandingsPayload {
+    const leaderboard = kind === 'leaderboard' && this.questionIndex >= 0;
+    const jokers = this.withJokers && kind === 'leaderboard' ? this.jokers : null;
     const survival = this.survival;
     const top = this.ranked(this.players.values())
-      .slice(0, size)
+      .slice(0, LEADERBOARD_SIZE)
       .map(({ player }): RankedPlayer => {
         const info = jokers?.leaderboardInfo(player.id);
         return {

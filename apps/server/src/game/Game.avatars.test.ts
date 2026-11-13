@@ -102,8 +102,8 @@ describe('Game avatars', () => {
       game.next(); // → ANSWERING
       game.answer(alice.id, i, rightAnswer(q));
       game.next(); // → REVEAL
-      game.next(); // → LEADERBOARD
-      game.next(); // → next question / PODIUM
+      game.next(); // → LEADERBOARD (the last one: → PODIUM, T66)
+      if (game.phase === 'LEADERBOARD') game.next(); // → next question
     });
     expect(game.phase).toBe('PODIUM');
     expect(rec.last<StandingsPayload>('podium').top).toEqual([

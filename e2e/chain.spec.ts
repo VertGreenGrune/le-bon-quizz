@@ -48,6 +48,9 @@ test('the host chains a second quiz with the same PIN and players', async ({ bro
   for (const nickname of ['Alice', 'Bob'])
     await expect(host.getByRole('button', { name: nickname })).toBeVisible();
   for (const phone of phones) await expect(phone.getByText('Tu es dans la partie !')).toBeVisible();
+  // « 🌙 Classement de la soirée » (T66): the quizzes before this one, on the TV and the phones.
+  await expect(host.getByTestId('evening-panel')).toContainText('après 1 quiz');
+  await expect(phones[0]!.getByTestId('evening-line')).toContainText('🌙 Soirée');
 
   // The phone's session goes on: a reload comes back to the new lobby.
   await phones[0]!.reload();

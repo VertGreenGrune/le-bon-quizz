@@ -50,11 +50,13 @@ export function useRemotePairing(pin: string | undefined, hostToken: string | nu
 
 /**
  * Controls pressed on the remote, played on the TV: 🔇 / 🔊, ↻ the sound clip, « Musique − / + »
- * (`MUSIC_STEP` of the « Musique et effets » level).
+ * (`MUSIC_STEP` of the « Musique et effets » level), « 🌙 Soirée » (T66: podium ↔ evening ranking).
  */
-export function useTvControls(onReplay: () => void): void {
+export function useTvControls(onReplay: () => void, onEvening?: () => void): void {
   const replay = useRef(onReplay);
   replay.current = onReplay;
+  const evening = useRef(onEvening);
+  evening.current = onEvening;
   useEffect(() => {
     const socket = getSocket();
     const onControl: ServerToClientEvents['tv:control'] = ({ action }: { action: TvAction }) => {
@@ -62,7 +64,8 @@ export function useTvControls(onReplay: () => void): void {
       else if (action === 'unmute') setMuted(false);
       else if (action === 'music-down' || action === 'music-up') {
         setLevels({ music: stepLevel(getSoundLevels().music, action === 'music-up') });
-      } else replay.current();
+      } else if (action === 'evening') evening.current?.();
+      else replay.current();
     };
     socket.on('tv:control', onControl);
     return () => {

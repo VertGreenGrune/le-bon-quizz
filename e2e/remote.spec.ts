@@ -156,7 +156,7 @@ test('the host drives the game from a phone remote', async ({ browser, baseURL }
     .toBe('80');
 
   // ---- To the podium ----
-  await remote.getByTestId('remote-main').click(); // Suivant
+  // The last question: straight to the podium, no ranking before it (T66).
   await expect(remote.getByTestId('remote-main')).toHaveText('Voir le podium');
   await remote.getByTestId('remote-main').click();
   await expect(remote.getByTestId('remote-phase')).toHaveText('Podium');

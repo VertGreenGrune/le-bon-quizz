@@ -201,7 +201,6 @@ test('ordre, point sur l’image, « Qui de nous ? » and word cloud, up to the 
   await bob.getByRole('button', { name: 'Valider' }).click();
   await expect(host.getByTestId('word-cloud')).toHaveText('Génial');
   await expect(alice.getByText('Merci pour ta réponse !')).toBeVisible();
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
 

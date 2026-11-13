@@ -205,6 +205,8 @@ describe('Game state machine', () => {
       game.answer(bob!.id, q, (correct + 1) % 2);
       expect(game.phase).toBe('REVEAL');
       game.next();
+      // The last question goes straight to the podium (T66).
+      if (q === CLASSIC_DEMO_QUIZ.questions.length - 1) break;
       expect(game.phase).toBe('LEADERBOARD');
       game.next();
     }
@@ -216,10 +218,10 @@ describe('Game state machine', () => {
         { nickname: 'Bob', avatar: expect.any(String), score: 0 },
       ],
     });
-    // The leaderboard also tells what each one earned on the last question (T41).
+    // The leaderboard also tells what each one earned on the question before (T41).
     expect(rec.last('leaderboard', 'host')).toEqual({
       top: [
-        { nickname: 'Alice', avatar: expect.any(String), score: 5600, gained: 1300 },
+        { nickname: 'Alice', avatar: expect.any(String), score: 4300, gained: 2200 },
         { nickname: 'Bob', avatar: expect.any(String), score: 0, gained: 0 },
       ],
     });
@@ -324,8 +326,8 @@ describe('Game state machine', () => {
           streak: bStreak,
           streakBonus: bBonus,
         });
-        game.next(); // → LEADERBOARD
-        game.next(); // → next QUESTION_INTRO / PODIUM
+        game.next(); // → LEADERBOARD (the last question: → PODIUM, T66)
+        if (game.phase === 'LEADERBOARD') game.next(); // → next QUESTION_INTRO
       }
       expect(game.phase).toBe('PODIUM');
       // 7 × 1000 + 0 + 100 + 200 + 300 + 400 + 500 + 0 + 500

@@ -185,7 +185,6 @@ test('« Dessine-moi »: live drawing, guesses, reveal, rejoin, report', async (
   await expect(alice.getByText('Le mot était « Fusée »')).toBeVisible();
 
   // ---- To the end, then the report with the drawings ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect(alice.getByRole('heading', { name: 'Partie terminée' })).toBeVisible();

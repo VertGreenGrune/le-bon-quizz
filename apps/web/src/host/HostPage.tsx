@@ -18,7 +18,7 @@ import {
   currentDrawing,
   currentQuestion,
   isBidding,
-  isLastQuestion,
+  podiumIsNext,
   offlinePlayers,
   remainingMsAt,
   teamLobbyStatus,
@@ -30,6 +30,7 @@ import { useQuestionClip } from './clipPlayer';
 import { CastButton, isTvScreen } from './castToTv';
 import { useWakeLock } from '../player/useWakeLock';
 import { useTvScale } from './tvScale';
+import { EveningPanel, EveningScreen } from './eveningScreens';
 import { RemoteButton, RemoteToast, useRemotePairing, useTvControls } from './remoteLink';
 import { createGame, loadHostToken, useHostGame, useNow } from './useHostGame';
 import {
@@ -58,6 +59,8 @@ export function HostPage() {
   const hearts = searchParams.get('hearts');
   const jokers = searchParams.get('jokers');
   const themeParam = searchParams.get('theme');
+  const testParam = searchParams.get('test');
+  const questionParam = searchParams.get('question');
   const isNew = pinParam === 'new';
   const pin = isNew ? undefined : pinParam;
   const [hostToken, setHostToken] = useState(() => (pin ? loadHostToken(pin) : null));
@@ -76,6 +79,8 @@ export function HostPage() {
         hearts: hearts ?? '',
         jokers: jokers ?? '',
         theme: themeParam ?? '',
+        test: testParam ?? '',
+        question: questionParam ?? '',
       }),
     );
     createGame(quizId, options).then(
@@ -89,7 +94,7 @@ export function HostPage() {
     return () => {
       cancelled = true;
     };
-  }, [isNew, quizId, mode, teams, hearts, jokers, themeParam, navigate]);
+  }, [isNew, quizId, mode, teams, hearts, jokers, themeParam, testParam, questionParam, navigate]);
 
   const timed = state.deadline != null;
   const now = useNow(timed || state.paused !== null || state.comebacks.length > 0);
@@ -125,9 +130,14 @@ export function HostPage() {
   const pairing = useRemotePairing(pin, hostToken);
   const [onTv] = useState(isTvScreen);
   const [chaining, setChaining] = useState(false);
+  // « 🌙 Classement de la soirée » (T66) instead of the podium, toggled by the TV or the remote.
+  const [showEvening, setShowEvening] = useState(false);
+  const eveningShown =
+    showEvening && !!state.evening && (state.phase === 'PODIUM' || state.phase === 'ENDED');
   useWakeLock(onTv);
   useTvScale();
-  useTvControls(clip.replay);
+  useTvControls(clip.replay, () => setShowEvening((v) => !v));
+  useEffect(() => setShowEvening(false), [state.round]); // a new quiz: its podium first
 
   // The first screen shown after a (re)load is a resync (host:rejoin): it appears without its
   // entrance animations (podium reveal, re-ordering…) instead of replaying them.
@@ -184,6 +194,8 @@ export function HostPage() {
           players={state.players}
           onKick={game.kick}
           hearts={survival?.hearts}
+          evening={state.evening && <EveningPanel evening={state.evening} />}
+          test={state.test}
           teamLobby={
             teamMode ? (
               <TeamLobby
@@ -258,7 +270,7 @@ export function HostPage() {
       primary =
         phase === 'ANSWERING'
           ? { label: 'Passer', onClick: game.next }
-          : { label: 'Suivant', onClick: game.next };
+          : { label: podiumIsNext(state) ? 'Voir le podium' : 'Suivant', onClick: game.next };
       break;
     case 'LEADERBOARD':
       screen = (
@@ -272,18 +284,19 @@ export function HostPage() {
         />
       );
       primary = {
-        label: isLastQuestion(state) ? 'Voir le podium' : 'Question suivante',
+        label: podiumIsNext(state) ? 'Voir le podium' : 'Question suivante',
         onClick: game.next,
       };
       break;
     case 'PODIUM':
     case 'ENDED':
-      screen =
-        state.podiumTeams.length > 0 ? (
-          <TeamPodiumScreen teams={state.podiumTeams} top={state.podium} instant={instant} />
-        ) : (
-          <PodiumScreen top={state.podium} instant={instant} maxHearts={survival?.hearts} />
-        );
+      screen = eveningShown ? (
+        <EveningScreen evening={state.evening!} instant={instant} />
+      ) : state.podiumTeams.length > 0 ? (
+        <TeamPodiumScreen teams={state.podiumTeams} top={state.podium} instant={instant} />
+      ) : (
+        <PodiumScreen top={state.podium} instant={instant} maxHearts={survival?.hearts} />
+      );
       if (phase === 'PODIUM') primary = { label: 'Terminer la partie', onClick: game.end };
       break;
   }
@@ -299,6 +312,14 @@ export function HostPage() {
             Le Bon Quizz
           </Link>
           {phase !== 'LOBBY' && <span className="opacity-80">PIN {pin}</span>}
+          {state.test && (
+            <span
+              className="rounded-full bg-white px-3 py-0.5 text-base font-black text-brand"
+              data-testid="test-badge"
+            >
+              🧪 Test
+            </span>
+          )}
           {phase !== 'LOBBY' && state.quizTitle && (
             <span className="max-w-md truncate opacity-60" title={state.quizTitle}>
               {state.quizTitle}
@@ -392,6 +413,15 @@ export function HostPage() {
             >
               Retour à l'accueil
             </Link>
+          )}
+          {(phase === 'PODIUM' || phase === 'ENDED') && state.evening && (
+            <button
+              type="button"
+              onClick={() => setShowEvening((v) => !v)}
+              className="rounded-xl border-2 border-white/70 px-6 py-4 text-2xl font-black hover:bg-white/10"
+            >
+              {eveningShown ? '🏆 Podium du quiz' : '🌙 Classement de la soirée'}
+            </button>
           )}
           {(phase === 'PODIUM' || phase === 'ENDED') && (
             <button

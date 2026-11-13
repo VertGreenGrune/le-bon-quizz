@@ -45,9 +45,13 @@ async function playQuestion(host: Page, phones: Page[], q: number, answered: Pag
       phone.getByRole('heading', { name: resultHeading(question, plan(q)) }),
     ).toBeVisible();
   }
+  // The last question's reveal leads straight to the podium (T66).
+  if (q === CLASSIC_DEMO_QUIZ.questions.length - 1) {
+    await host.getByRole('button', { name: 'Voir le podium' }).click();
+    return;
+  }
   await host.getByRole('button', { name: 'Suivant' }).click();
-  const last = q === CLASSIC_DEMO_QUIZ.questions.length - 1;
-  await host.getByRole('button', { name: last ? 'Voir le podium' : 'Question suivante' }).click();
+  await host.getByRole('button', { name: 'Question suivante' }).click();
 }
 
 async function finishGame(host: Page, phones: Page[], from: number) {

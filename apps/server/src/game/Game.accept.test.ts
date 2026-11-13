@@ -146,7 +146,7 @@ describe('host accepts a refused answer (T44)', () => {
   });
 
   it('MCQ: the accepted choice becomes right, with points from the real answer time', () => {
-    create([mcq()]);
+    create([mcq(), mcq('Q2')]);
     const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
     game.start();
     toAnswering();
@@ -356,7 +356,7 @@ describe('host accepts a refused answer (T44)', () => {
 
     it('Voleur: a thief made right steals; the victim loses the stolen points', () => {
       // Random 0.99: the wheel lands on the last player (Bob), again after the accept.
-      create([mcq('Q1'), mcq('Q2')], { jokers: true, random: () => 0.99 });
+      create([mcq('Q1'), mcq('Q2'), mcq('Q3')], { jokers: true, random: () => 0.99 });
       const [alice, bob] = joinAll('Alice', 'Bob');
       game.start();
       toAnswering();
@@ -449,7 +449,7 @@ describe('host accepts a refused answer (T44)', () => {
   });
 
   it('team mode: the team averages are computed again', () => {
-    create([mcq()], { mode: 'teams', teamCount: 2 });
+    create([mcq(), mcq('Q2')], { mode: 'teams', teamCount: 2 });
     const [alice, bob, chloe] = joinAll('Alice', 'Bob', 'Chloé');
     game.setTeam(alice!.id, 0);
     game.setTeam(bob!.id, 0);

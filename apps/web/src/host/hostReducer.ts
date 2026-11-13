@@ -22,6 +22,7 @@ import {
   type RankedTeam,
   type StandingsPayload,
   type SurvivalStatePayload,
+  type EveningStanding,
 } from '@lbq/shared';
 
 /** Everything the shared screen knows about the game, folded from server events. */
@@ -35,6 +36,10 @@ export interface HostGameState {
   theme: QuizTheme;
   /** Title of the quiz (T47, `game:state.quizTitle`), '' until known. */
   quizTitle: string;
+  /** « 🌙 Classement de la soirée » (T66): 2nd chained quiz on, lobby and podium only. */
+  evening: EveningStanding[] | null;
+  /** « 🧪 Tester » (T66): a test game from the editor, not saved. */
+  test: boolean;
   /** The game is played with jokers. */
   jokers: boolean;
   questionIndex: number;
@@ -112,6 +117,8 @@ export const initialHostState: HostGameState = {
   mode: 'solo',
   theme: 'classic',
   quizTitle: '',
+  evening: null,
+  test: false,
   jokers: false,
   questionIndex: -1,
   totalQuestions: 0,
@@ -165,6 +172,8 @@ export function hostReducer(state: HostGameState, action: HostAction): HostGameS
         theme: action.payload.theme ?? 'classic',
         quizTitle: action.payload.quizTitle ?? state.quizTitle,
         jokers: !!action.payload.jokers,
+        evening: action.payload.evening ?? null,
+        test: !!action.payload.test,
         questionIndex,
         totalQuestions,
         deadline: remainingMs != null && !frozen ? action.now + remainingMs : null,
@@ -283,4 +292,13 @@ export function teamLobbyStatus(state: Pick<HostGameState, 'players' | 'teams'>)
 /** Last question played, or « Survie » over (one survivor left): the podium is next. */
 export function isLastQuestion(state: HostGameState): boolean {
   return state.questionIndex >= state.totalQuestions - 1 || !!state.survival?.finished;
+}
+
+/**
+ * « Suivant » leads to the podium: from the last question's reveal (no ranking before the podium,
+ * T66), or from the ranking when « Survie » is over.
+ */
+export function podiumIsNext(state: HostGameState): boolean {
+  if (state.phase === 'REVEAL') return state.questionIndex >= state.totalQuestions - 1;
+  return state.phase === 'LEADERBOARD' && isLastQuestion(state);
 }

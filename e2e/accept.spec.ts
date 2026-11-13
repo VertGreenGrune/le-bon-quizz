@@ -139,7 +139,6 @@ test('the host accepts a refused answer from the remote and the TV', async ({
   await expect(alice.getByTestId('accepted-note')).toBeVisible();
   await expect(tv.getByTestId('accepted-tag')).toHaveText('✅ Réponse acceptée');
 
-  await tv.getByRole('button', { name: 'Suivant' }).click();
   await tv.getByRole('button', { name: 'Voir le podium' }).click();
   await tv.getByRole('button', { name: 'Terminer la partie' }).click();
 

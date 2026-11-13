@@ -2,7 +2,7 @@ import type { RemoteAnswerPayload } from '@lbq/shared';
 import {
   hostReducer,
   initialHostState,
-  isLastQuestion,
+  podiumIsNext,
   teamLobbyStatus,
   type HostAction,
   type HostGameState,
@@ -72,9 +72,8 @@ export function mainAction(state: HostGameState): MainAction | null {
     case 'ANSWERING':
       return { label: '⏭ Passer', event: 'host:next' };
     case 'REVEAL':
-      return { label: 'Suivant', event: 'host:next' };
     case 'LEADERBOARD':
-      return isLastQuestion(state)
+      return podiumIsNext(state)
         ? { label: 'Voir le podium', event: 'host:next' }
         : { label: 'Suivant', event: 'host:next' };
     case 'PODIUM':

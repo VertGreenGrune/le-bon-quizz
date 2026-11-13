@@ -135,7 +135,6 @@ test('« Liste chrono »: live counts on the TV, partial points, reveal and repo
   await shot(bob, 'list-phone-result');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect
