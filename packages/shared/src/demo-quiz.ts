@@ -138,6 +138,17 @@ export const DEMO_QUIZ: Quiz = QuizSchema.parse({
       items: ['Souris', 'Chat', 'Cheval', 'Éléphant'],
     },
     {
+      text: 'Associe chaque animal à son cri.',
+      type: 'MATCH',
+      timeLimitSec: 40,
+      pairs: [
+        { left: { text: '🐶 Chien' }, right: { text: 'Il aboie' } },
+        { left: { text: '🐱 Chat' }, right: { text: 'Il miaule' } },
+        { left: { text: '🦁 Lion' }, right: { text: 'Il rugit' } },
+        { left: { text: '🐴 Cheval' }, right: { text: 'Il hennit' } },
+      ],
+    },
+    {
       text: 'Touche le ballon rouge !',
       type: 'PIN',
       timeLimitSec: 20,

@@ -36,6 +36,7 @@ import { PotatoRevealView, PotatoStage } from './potatoScreens';
 import { ColorsStage } from './colorsScreens';
 import { MissingStage } from './missingScreens';
 import { PointlessRevealView } from './pointlessScreens';
+import { MatchStage } from './matchScreens';
 import { TICK_FROM_SEC, useMuted, useSoundLevels } from './sounds';
 import { TeamRanking } from './teamScreens';
 import { JokerIcons } from './jokerScreens';
@@ -55,6 +56,8 @@ export function LobbyScreen({
   onKick,
   teamLobby,
   hearts,
+  evening,
+  test = false,
 }: {
   pin: string;
   /** Quiz being played (T47), shown above the PIN. */
@@ -65,6 +68,10 @@ export function LobbyScreen({
   teamLobby?: ReactNode;
   /** « Survie »: hearts each player starts with. */
   hearts?: number;
+  /** A chained quiz (T66): « 🌙 Classement de la soirée » so far. */
+  evening?: ReactNode;
+  /** « 🧪 Tester » (T66): a test game, with a button to open a phone in a small window. */
+  test?: boolean;
 }) {
   const origins = useMemo(() => joinOrigins(), []);
   const [originIndex, setOriginIndex] = useState(0);
@@ -130,6 +137,22 @@ export function LobbyScreen({
         {players.length > 1 ? 'joueurs' : 'joueur'}
       </div>
 
+      {test && (
+        <div
+          className="flex items-center gap-4 rounded-2xl bg-panel px-6 py-3 text-xl font-bold"
+          data-testid="test-lobby"
+        >
+          <span>🧪 Partie de test : rien n’est enregistré.</span>
+          <button
+            type="button"
+            onClick={() => openTestPhone(pin)}
+            className="rounded-xl bg-white px-5 py-2 font-black text-brand shadow"
+          >
+            📱 Ouvrir un téléphone
+          </button>
+        </div>
+      )}
+      {evening}
       {hearts !== undefined && (
         <p
           className="rounded-2xl bg-panel px-8 py-3 text-center text-2xl font-bold"
@@ -182,6 +205,15 @@ export function LobbyScreen({
         ))}
     </div>
   );
+}
+
+/**
+ * « 🧪 Tester » (T66): a phone-sized window on the join page (the phone session is kept per
+ * browser, so one such window per browser; other phones scan the QR code).
+ */
+function openTestPhone(pin: string) {
+  // Same PC: the page's own address (the QR code's LAN address may not be reachable from here).
+  window.open(`/join?pin=${pin}`, `lbq-phone-${pin}`, 'popup,width=400,height=820');
 }
 
 // ---------- Question intro ----------
@@ -405,6 +437,8 @@ export function QuestionScreen({
                 ) : undefined
               }
             />
+          ) : question.type === 'MATCH' ? (
+            <MatchStage question={question} reveal={reveal?.match} instant={instant} />
           ) : question.type === 'MISSING' ? (
             <MissingStage question={question} reveal={reveal?.missing} instant={instant} />
           ) : reveal ? (
@@ -1069,9 +1103,9 @@ export function LeaderboardScreen({
 
 /** 3rd, then 2nd, then 1st (in seconds); `podium.wav` is timed on these. */
 const PODIUM_SLOTS = [
-  { rank: 1, height: 'h-[45vh]', bg: 'bg-yellow-400', delay: 2 },
-  { rank: 0, height: 'h-[60vh]', bg: 'bg-amber-300', delay: 3.2 },
-  { rank: 2, height: 'h-[32vh]', bg: 'bg-orange-400', delay: 0.8 },
+  { rank: 1, height: 'h-[34vh]', bg: 'bg-yellow-400', delay: 2 },
+  { rank: 0, height: 'h-[46vh]', bg: 'bg-amber-300', delay: 3.2 },
+  { rank: 2, height: 'h-[24vh]', bg: 'bg-orange-400', delay: 0.8 },
 ] as const;
 const WINNER_DELAY = 3.2;
 
@@ -1086,7 +1120,7 @@ export function PodiumScreen({
   maxHearts?: number;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 p-8">
+    <div className="flex min-h-0 flex-1 flex-col items-center gap-5 p-6">
       <h2 className="theme-lobby-title font-display text-6xl font-black">
         {maxHearts !== undefined ? 'Podium des survivants' : 'Podium'}
       </h2>
@@ -1132,7 +1166,33 @@ export function PodiumScreen({
           );
         })}
       </div>
+      {top.length > 3 && <PodiumRest rest={top.slice(3)} instant={instant} />}
       {!instant && top.length > 0 && <Confetti delay={WINNER_DELAY + 0.2} />}
     </div>
+  );
+}
+
+/**
+ * T66: the last question goes straight to the podium, so the rest of the final ranking (4th and
+ * after) comes in under it once the winner is revealed.
+ */
+export function PodiumRest({ rest, instant }: { rest: RankedPlayer[]; instant: boolean }) {
+  return (
+    <ol className="flex max-w-full flex-wrap justify-center gap-3" data-testid="podium-rest">
+      {rest.map((p, i) => (
+        <motion.li
+          key={p.nickname}
+          className="flex items-center gap-2 rounded-full bg-panel py-1 pr-4 pl-1 text-xl font-bold"
+          initial={instant ? false : { y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: instant ? 0 : WINNER_DELAY + 1.5 + i * 0.15 }}
+        >
+          <Avatar id={p.avatar} size="sm" />
+          <span className="opacity-70">{i + 4}.</span>
+          <span className="max-w-48 truncate">{p.nickname}</span>
+          <span className="tabular-nums opacity-80">{p.score} pts</span>
+        </motion.li>
+      ))}
+    </ol>
   );
 }

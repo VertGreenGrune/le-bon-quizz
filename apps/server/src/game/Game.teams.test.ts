@@ -362,8 +362,8 @@ describe('Game in team mode', () => {
       answer(r1!, RIGHT);
       answer(b1!, RIGHT);
       answer(b2!, WRONG);
-      game.next(); // → LEADERBOARD
-      game.next(); // → next question / PODIUM
+      game.next(); // → LEADERBOARD (the last one: → PODIUM, T66)
+      if (game.phase === 'LEADERBOARD') game.next(); // → next question
     }
     expect(game.phase).toBe('PODIUM');
     // Red: 1000 + 1100 + 1200 = 3300. Blue: half of B1's 3300 each question = 500 + 550 + 600.

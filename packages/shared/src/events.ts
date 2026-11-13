@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import type { AcceptedAnswers } from './accept.js';
 import { AvatarId } from './avatars.js';
+import { MATCH_MAX_PAIRS, MATCH_MIN_PAIRS, type MatchPair, type MatchSide } from './match.js';
 import { DRAW_MAX_CHUNKS, DrawStrokeSchema, type DrawStroke } from './draw.js';
 import { COLORS_MAX_ZONES, type ColorBoard, type OfferedColor } from './colors.js';
 import { GameMode, GamePhase, Nickname, Pin, TeamCount, TeamId } from './game.js';
@@ -124,6 +125,13 @@ export const HostCreatePayload = z.object({
   hearts: SurvivalHearts.optional(),
   /** TV theme for this game (T40); absent = the quiz's own theme. */
   theme: QuizTheme.optional(),
+  /**
+   * « 🧪 Tester » from the editor (T66): a test game — never saved in the history nor counted as
+   * played; the TV and the phones say so.
+   */
+  test: z.literal(true).optional(),
+  /** Only these questions (indexes in the quiz, played in this order), e.g. the one being tested. */
+  questions: z.array(z.number().int().min(0)).min(1).max(200).optional(),
 });
 /** Actions only the TV can do (`host:rejoin`, `host:remote`): its `hostToken`. */
 export const HostTokenPayload = z.object({ pin: Pin, hostToken: z.string().min(1) });
@@ -162,7 +170,15 @@ export const HostAcceptPayload = hostAction({
 export const HostRemotePayload = HostTokenPayload.extend({ revoke: z.literal(true).optional() });
 /** A phone opened the remote link `/remote/<PIN>#<remoteToken>`. */
 export const RemoteJoinPayload = z.object({ pin: Pin, remoteToken: z.string().min(1) });
-export const TvAction = z.enum(['mute', 'unmute', 'replay', 'music-down', 'music-up']);
+export const TvAction = z.enum([
+  'mute',
+  'unmute',
+  'replay',
+  'music-down',
+  'music-up',
+  // T66: the TV switches between the podium and « 🌙 Classement de la soirée ».
+  'evening',
+]);
 export type TvAction = z.infer<typeof TvAction>;
 /**
  * Remote → TV: 🔇 / 🔊 the TV's sound (« Tout couper »), ↻ replay the question's sound clip,
@@ -243,6 +259,20 @@ export const PlayerAnswerPayload = z.union([
       )
       .min(1)
       .max(COLORS_MAX_ZONES),
+  }),
+  // « Associer » (T67): per shown left item, the shown right item linked to it (-1 = none).
+  z.strictObject({
+    ...answerTarget,
+    matches: z
+      .array(
+        z
+          .number()
+          .int()
+          .min(-1)
+          .max(MATCH_MAX_PAIRS - 1),
+      )
+      .min(MATCH_MIN_PAIRS)
+      .max(MATCH_MAX_PAIRS),
   }),
 ]);
 
@@ -326,6 +356,25 @@ export const PlayerBidPayload = z.object({
   amount: z.number().int().min(0).max(AUCTION_MAX_BID).multipleOf(AUCTION_STEP),
 });
 export type PlayerBidPayload = z.infer<typeof PlayerBidPayload>;
+/** « Associer » (T67): the left and the right column, in the shown order. */
+export interface MatchColumns {
+  left: MatchSide[];
+  right: MatchSide[];
+}
+
+/** « Associer » (T67) reveal: the right pairs and every player's links. */
+export interface MatchReveal {
+  /** In the quiz's order: each left item with its partner. */
+  pairs: MatchPair[];
+  /** Per pair: how many players linked it right. */
+  found: number[];
+  /**
+   * Every player, best first (no answer last): `links[pair]` = the pair index of the right item
+   * they linked to that pair's left item (-1 = none).
+   */
+  answers: { nickname: string; avatar: AvatarId; links: number[]; right: number; points: number }[];
+}
+
 /** The answer itself, without `pin` / `questionIndex`. */
 export type AnswerInput =
   | { choiceIndex: number }
@@ -335,7 +384,8 @@ export type AnswerInput =
   | { order: number[] }
   | { point: PinPoint }
   | { playerId: string }
-  | { colors: number[] };
+  | { colors: number[] }
+  | { matches: number[] };
 
 /**
  * « Dessine-moi », `player:answer` ack: `found` (the guess is right — recorded, scored), `close`
@@ -518,6 +568,15 @@ export interface ClientToServerEvents {
 
 // ---------- Server → client payloads ----------
 
+/** One line of « 🌙 Classement de la soirée » (T66): the sum of the chained quizzes' scores. */
+export interface EveningStanding {
+  nickname: string;
+  avatar: AvatarId;
+  score: number;
+  /** Quizzes of the evening this player took part in (0 = joined this quiz's lobby). */
+  quizzes: number;
+}
+
 export interface GameStatePayload {
   phase: GamePhase;
   mode: GameMode;
@@ -544,6 +603,15 @@ export interface GameStatePayload {
    * host chains a new quiz: clients start over from an empty state.
    */
   round?: number;
+  /**
+   * « 🌙 Classement de la soirée » (T66): from the 2nd chained quiz on, in LOBBY (the quizzes before
+   * this one) and at PODIUM / ENDED (this one included). Every player of the room, best first.
+   */
+  evening?: EveningStanding[];
+  /** « 🧪 Tester » (T66): a test game, not saved. */
+  test?: true;
+  /** T68: the quiz's background picture (TV, phones' waiting screens); absent = the theme's. */
+  background?: string;
   /**
    * « Buzzer » question, ANSWERING: who has the hand (the timer is then frozen, `remainingMs` =
    * frozen value) and who answered wrong and can't buzz right now (emptied when everyone has).
@@ -935,6 +1003,8 @@ export interface QuestionShowPayload {
   wavelength?: WavelengthShow;
   /** « Patate chaude » (T63): the holder and their sub-question (never the right choice). */
   potato?: PotatoShow;
+  /** « Associer » (T67): both columns, shuffled (the same on the TV and every phone). */
+  match?: MatchColumns;
   /** « Enchères » (T64): the question had bids (sent once the bid stage is over). */
   auction?: { topic?: string };
 }
@@ -1013,6 +1083,8 @@ export interface QuestionPromptPayload {
   wavelength?: WavelengthPrompt;
   /** « Patate chaude » (T63): the holder; the sub-question for the holder's phone only. */
   potato?: PotatoPrompt;
+  /** « Associer » (T67): both columns as on the TV — never which goes with which. */
+  match?: MatchColumns;
 }
 
 export interface AnswerCountPayload {
@@ -1083,6 +1155,8 @@ export interface RevealDetails {
   wavelength?: WavelengthReveal;
   /** « Patate chaude » (T63): the loser, everyone's passes and points. */
   potato?: PotatoReveal;
+  /** « Associer » (T67). */
+  match?: MatchReveal;
   /** « Enchères » (T64): every bid above 0, biggest first. */
   auction?: { bids: AuctionBid[] };
   /** « Select all » MCQ: how many players ticked exactly the right choices. */
@@ -1306,6 +1380,17 @@ export interface PlayerResultPayload {
    * `loser` = who held it (absent: nobody, a game alone); the passes and what they earned;
    * `survivorPoints` = the share for not holding it at the end (0 for the loser).
    */
+  /**
+   * « Associer » (T67): pairs linked right; `yours` = the player's links in pair indexes (like the
+   * reveal); `board` (in the shown order, for the phone's board): `yours[left]` = the shown right
+   * item the player plugged (-1), `right[left]` = the shown right item that was its partner.
+   */
+  match?: {
+    right: number;
+    total: number;
+    yours?: number[];
+    board?: { yours: number[]; right: number[] };
+  };
   potato?: {
     exploded: boolean;
     loser?: LobbyMember;

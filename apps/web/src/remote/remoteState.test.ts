@@ -62,6 +62,15 @@ describe('main button of the remote', () => {
       label: 'Voir le podium',
       event: 'host:next',
     });
+    // T66: the last question's reveal goes straight to the podium (no ranking before it).
+    expect(at('REVEAL', { questionIndex: 2 })).toEqual({
+      label: 'Voir le podium',
+      event: 'host:next',
+    });
+    // « Survie » over before the last question: the ranking first (« dernier survivant »).
+    expect(at('REVEAL', { survival: { hearts: 1, players: [], finished: true } })).toMatchObject({
+      label: 'Suivant',
+    });
     expect(at('PODIUM')).toEqual({ label: 'Terminer', event: 'host:end' });
     expect(at('ENDED')).toBeNull();
   });

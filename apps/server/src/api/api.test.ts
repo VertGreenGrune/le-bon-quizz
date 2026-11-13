@@ -356,6 +356,33 @@ describe.skipIf(!TEST_DATABASE_URL)('REST API (Postgres)', () => {
       expect(copy.json<QuizDetail>().theme).toBe('halloween');
     });
 
+    it('keeps the background picture (T68), in copies too', async () => {
+      const alice = await register('alice@test.fr');
+      const quiz = await createQuiz(alice.headers);
+      expect(quiz.backgroundImageUrl).toBeUndefined();
+      const backgroundImageUrl = 'http://localhost:3001/uploads/fond.png';
+      const put = await app.inject({
+        method: 'PUT',
+        url: `/api/quizzes/${quiz.id}`,
+        headers: alice.headers,
+        payload: { ...quizInput, backgroundImageUrl },
+      });
+      expect(put.json<QuizDetail>().backgroundImageUrl).toBe(backgroundImageUrl);
+      const duplicate = await app.inject({
+        method: 'POST',
+        url: `/api/quizzes/${quiz.id}/duplicate`,
+        headers: alice.headers,
+      });
+      expect(duplicate.json<QuizDetail>().backgroundImageUrl).toBe(backgroundImageUrl);
+      const cleared = await app.inject({
+        method: 'PUT',
+        url: `/api/quizzes/${quiz.id}`,
+        headers: alice.headers,
+        payload: quizInput,
+      });
+      expect(cleared.json<QuizDetail>().backgroundImageUrl).toBeUndefined();
+    });
+
     it("lists other hosts' public quizzes only, without questions", async () => {
       const alice = await register('alice@test.fr');
       const bob = await register('bob@test.fr');

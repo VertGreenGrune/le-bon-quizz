@@ -146,6 +146,9 @@ export function RemotePage() {
             top={host.podium}
           />
         )}
+        {host.evening && (phase === 'LOBBY' || phase === 'PODIUM' || phase === 'ENDED') && (
+          <Standings title="🌙 Classement de la soirée" top={host.evening} />
+        )}
       </div>
 
       <footer className="sticky bottom-0 flex flex-col gap-3 bg-brand/95 px-4 pt-3 pb-5 backdrop-blur">
@@ -209,6 +212,13 @@ export function RemotePage() {
             title="Monter la musique de la TV"
             onClick={() => remote.tv('music-up')}
           />
+          {host.evening && (phase === 'PODIUM' || phase === 'ENDED') && (
+            <TvButton
+              label="🌙 Soirée"
+              title="Podium ou classement de la soirée sur la TV"
+              onClick={() => remote.tv('evening')}
+            />
+          )}
           {question?.audio && (
             <TvButton
               label="↻ Extrait"

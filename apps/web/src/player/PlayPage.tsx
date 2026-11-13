@@ -30,7 +30,9 @@ import {
   type PlayerState,
   followsTheme,
 } from './playerState';
+import { EveningLine } from './evening';
 import { MoreAnswered, OrderAnswer, PinAnswer, WhoOfUsAnswer } from './moreAnswers';
+import { MatchAnswer, MatchAnswered, MatchResult } from './match';
 import { BluffAnswered, BluffResultLines, BluffVote, BluffWrite } from './bluff';
 import { BuzzerPad, buzzerResultTitle } from './buzzer';
 import {
@@ -85,6 +87,7 @@ export function PlayPage() {
         theme={getTheme(s.theme)}
         brand={false}
         decorated={followsTheme(screen)}
+        background={s.background}
         light
         className="flex h-dvh select-none flex-col overflow-hidden"
       >
@@ -133,6 +136,12 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
               data-testid="phone-quiz-title"
             >
               Quiz : {s.quizTitle}
+            </p>
+          )}
+          <EveningLine evening={s.evening} nickname={s.nickname} />
+          {s.test && (
+            <p className="rounded-2xl bg-white px-4 py-2 font-black text-brand">
+              🧪 Partie de test : rien n’est enregistré
             </p>
           )}
           {s.survival && (
@@ -222,7 +231,9 @@ function renderScreen(screen: ReturnType<typeof playerScreen>, s: PlayerState) {
           title="Partie terminée"
           subtitle={`Score final : ${s.totalScore} pts`}
           hint="Reste ici : si l’animateur enchaîne un autre quiz, tu y seras automatiquement."
-        />
+        >
+          <EveningLine evening={s.evening} nickname={s.nickname} />
+        </End>
       );
     case 'kicked':
       return <End title="Tu as été exclu de la partie" />;
@@ -415,6 +426,13 @@ function AnswerScreen({
       />
     );
   }
+  if (prompt.type === 'MATCH' && prompt.match)
+    return (
+      <MatchAnswer
+        columns={prompt.match}
+        initial={previous && 'matches' in previous ? previous.matches : undefined}
+      />
+    );
   if (prompt.type === 'ORDER' && prompt.items)
     return (
       <OrderAnswer
@@ -660,6 +678,8 @@ function AnsweredValue({ s }: { s: PlayerState }) {
     return <ShapeList indexes={s.myAnswer.choiceIndexes} />;
   const a = s.myAnswer;
   if (a && ('order' in a || 'point' in a || 'playerId' in a)) return <MoreAnswered s={s} />;
+  if (a && 'matches' in a && s.prompt?.match)
+    return <MatchAnswered columns={s.prompt.match} links={a.matches} />;
   if (a && 'colors' in a && s.prompt?.colors?.stage === 'answer')
     return (
       <ColorsAnswered
@@ -812,6 +832,7 @@ function Result({ s }: { s: PlayerState }) {
       {r.multiple && !r.correct && (
         <MultipleResultLine correctIndexes={r.multiple.correctIndexes} />
       )}
+      {r.match && <MatchResult match={r.match} columns={s.prompt?.match} />}
       {r.placed && (
         <p className="font-bold">
           {r.placed.correct} / {r.placed.total} bien placé{r.placed.correct > 1 ? 's' : ''}
@@ -1026,21 +1047,25 @@ const medals = ['🥇', '🥈', '🥉'];
 
 function Podium({ s }: { s: PlayerState }) {
   if (s.podiumTeams.length > 0) return <TeamPodium s={s} />;
-  const myPlace = s.podium?.findIndex((p) => p.nickname === s.nickname) ?? -1;
+  // The podium lists everyone (T66): the top 3 on the phone, the player's own place otherwise.
+  const podium = s.podium?.slice(0, 3) ?? null;
+  const index = s.podium?.findIndex((p) => p.nickname === s.nickname) ?? -1;
+  const myPlace = index < 3 ? index : -1;
   const survivor = myPlace === 0 && (s.podium?.[0]?.survival?.hearts ?? 0) > 0;
   const title = survivor
     ? '🏆 Tu es le dernier survivant !'
     : myPlace >= 0
       ? `${medals[myPlace]} Bravo, tu es ${formatRank(myPlace + 1)} !`
-      : s.result
-        ? `Tu termines ${formatRank(s.result.rank)}`
+      : s.result || index >= 0
+        ? `Tu termines ${formatRank(s.result?.rank ?? index + 1)}`
         : 'Podium';
   return (
     <Message title={title} subtitle={`${s.totalScore} pts`}>
       {myPlace === 0 && <Confetti count={60} />}
-      {s.podium && (
+      <EveningLine evening={s.evening} nickname={s.nickname} />
+      {podium && (
         <ol className="flex w-full max-w-xs flex-col gap-2">
-          {s.podium.map((p, i, all) => (
+          {podium.map((p, i, all) => (
             <motion.li
               key={p.nickname}
               initial={{ x: -40, opacity: 0 }}
@@ -1112,10 +1137,21 @@ function TeamPodium({ s }: { s: PlayerState }) {
   );
 }
 
-function End({ title, subtitle, hint }: { title: string; subtitle?: string; hint?: string }) {
+function End({
+  title,
+  subtitle,
+  hint,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  hint?: string;
+  children?: ReactNode;
+}) {
   const navigate = useNavigate();
   return (
     <Message title={title} subtitle={subtitle}>
+      {children}
       {hint && <p className="max-w-xs text-center text-sm font-semibold opacity-80">{hint}</p>}
       <button
         type="button"

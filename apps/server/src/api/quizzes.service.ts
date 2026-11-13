@@ -56,7 +56,8 @@ type QuestionConfig = Pick<
   Pick<Extract<Question, { type: 'MISSING' }>, 'missingImageUrl'> &
   Pick<Extract<Question, { type: 'WAGER' }>, 'wager' | 'betTimeSec'> &
   Pick<Extract<Question, { type: 'WAVELENGTH' }>, 'spectra' | 'clueTimeSec'> &
-  Pick<Extract<Question, { type: 'HOT_POTATO' }>, 'potato'>;
+  Pick<Extract<Question, { type: 'HOT_POTATO' }>, 'potato'> &
+  Pick<Extract<Question, { type: 'MATCH' }>, 'pairs'>;
 
 function readColorZones(zones: unknown): ColorZone[] {
   const parsed = ColorZoneSchema.array().safeParse(zones ?? []);
@@ -153,6 +154,8 @@ function toQuestion(qu: QuestionRow): Question {
       };
     case 'HOT_POTATO':
       return { ...base, type: qu.type, potato: config.potato! };
+    case 'MATCH':
+      return { ...base, type: qu.type, pairs: config.pairs ?? [] };
     case 'POLL':
       return { ...base, type: qu.type, choices: qu.choices.map((c) => ({ text: c.text })) };
     default:
@@ -187,6 +190,7 @@ function questionConfig(qu: Question): Prisma.InputJsonValue | undefined {
   if (qu.type === 'WAGER') return { wager: qu.wager, betTimeSec: qu.betTimeSec };
   if (qu.type === 'WAVELENGTH') return { spectra: qu.spectra, clueTimeSec: qu.clueTimeSec };
   if (qu.type === 'HOT_POTATO') return { potato: qu.potato };
+  if (qu.type === 'MATCH') return { pairs: qu.pairs };
   return undefined;
 }
 
@@ -216,6 +220,7 @@ export function toQuizDetail(q: QuizRow, userId: string): QuizDetail {
     title: q.title,
     description: q.description ?? undefined,
     coverImageUrl: q.coverImageUrl ?? undefined,
+    backgroundImageUrl: q.backgroundImageUrl ?? undefined,
     visibility: q.visibility,
     theme: q.theme,
     createdAt: q.createdAt.toISOString(),
@@ -257,6 +262,7 @@ const quizFields = (input: QuizInput, owner = true) => ({
   title: input.title,
   description: input.description ?? null,
   coverImageUrl: input.coverImageUrl ?? null,
+  backgroundImageUrl: input.backgroundImageUrl ?? null,
   // Only the owner changes the visibility (a co-editor's `visibility` is ignored, T45).
   ...(owner && input.visibility && { visibility: input.visibility }),
   ...(input.theme && { theme: input.theme }),

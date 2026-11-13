@@ -252,7 +252,6 @@ test('« Qu’est-ce qui a disparu ? »: « avant » on the TV, « après » on 
   await shot(host, 'missing-tv-reveal-apres');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

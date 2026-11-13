@@ -131,7 +131,6 @@ test('buzzer round: first buzz, host reload, wrong then right answer, no winner'
   await expect(chloe.getByRole('heading', { name: 'Personne n’a trouvé' })).toBeVisible();
   await expect(chloe.getByText('+ 0 pt')).toBeVisible();
 
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
 

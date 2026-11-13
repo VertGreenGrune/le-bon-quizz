@@ -161,9 +161,10 @@ test('« Valider » stays reachable with jokers on 2 phone sizes; gains on the T
       await expect(phone.getByTestId('joker-chip')).toBeVisible();
       await validate(phone);
     }
-    await expect(host.getByRole('button', { name: 'Suivant' })).toBeVisible();
+    // The last question's reveal leads straight to the podium (T66).
+    if (!heading) break;
     await host.getByRole('button', { name: 'Suivant' }).click();
-    if (heading) await host.getByRole('button', { name: 'Question suivante' }).click();
+    await host.getByRole('button', { name: 'Question suivante' }).click();
   }
   await expect(host.getByRole('button', { name: 'Voir le podium' })).toBeVisible();
 });

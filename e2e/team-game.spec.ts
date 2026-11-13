@@ -85,16 +85,18 @@ test('team game: players pick teams, fair team scores, team podium', async ({ br
     await expect(phones[2]!.getByRole('heading', { name: heading(2) })).toBeVisible();
     await expect(phones[2]!.getByText(/Équipe Bleue : 2e · \d+ pts/)).toBeVisible();
 
+    if (q === total - 1) {
+      // The last question goes straight to the podium (T66).
+      await host.getByRole('button', { name: 'Voir le podium' }).click();
+      break;
+    }
     await host.getByRole('button', { name: 'Suivant' }).click();
     await expect(host.getByRole('heading', { name: 'Classement' })).toBeVisible();
     await expect(host.getByText("Score d'équipe = moyenne des points par joueur")).toBeVisible();
     await expect(host.locator('ol').first().locator('li').first()).toContainText('Équipe Rouge');
     await expect(host.locator('ol').first().locator('li').first()).toContainText('1 joueur');
 
-    const isLast = q === total - 1;
-    await host
-      .getByRole('button', { name: isLast ? 'Voir le podium' : 'Question suivante' })
-      .click();
+    await host.getByRole('button', { name: 'Question suivante' }).click();
   }
 
   // ---- Team podium ----

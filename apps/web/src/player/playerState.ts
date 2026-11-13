@@ -25,6 +25,7 @@ import {
   type RankedTeam,
   type SurvivalPlayer,
   type SurvivalStatePayload,
+  type EveningStanding,
 } from '@lbq/shared';
 
 /** Everything the phone knows about the game. Pure data, driven by server events. */
@@ -39,6 +40,12 @@ export interface PlayerState {
   theme: QuizTheme;
   /** Title of the quiz (T47, `game:state.quizTitle`), '' until known. */
   quizTitle: string;
+  /** « 🌙 Classement de la soirée » (T66): 2nd chained quiz on, lobby and podium only. */
+  evening: EveningStanding[] | null;
+  /** « 🧪 Tester » (T66): a test game from the editor, not saved. */
+  test: boolean;
+  /** T68: the quiz's background picture, or null (the theme's background). */
+  background: string | null;
   questionIndex: number;
   totalQuestions: number;
   prompt: QuestionPromptPayload | null;
@@ -141,6 +148,9 @@ export const initialPlayerState: PlayerState = {
   mode: 'solo',
   theme: 'classic',
   quizTitle: '',
+  evening: null,
+  test: false,
+  background: null,
   questionIndex: -1,
   totalQuestions: 0,
   prompt: null,
@@ -230,6 +240,9 @@ export function playerReducer(state: PlayerState, action: PlayerAction): PlayerS
         theme: action.payload.theme ?? 'classic',
         quizTitle: action.payload.quizTitle ?? state.quizTitle,
         jokerGame: !!action.payload.jokers,
+        evening: action.payload.evening ?? null,
+        test: !!action.payload.test,
+        background: action.payload.background ?? null,
         questionIndex,
         totalQuestions,
         answeringEndsAt,

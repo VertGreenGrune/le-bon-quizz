@@ -152,14 +152,13 @@ test('« Enchères »: bids before the question, + / − at the reveal, report',
   // A phone never gets the other one's bid.
   expect(frames.Alice!.join('\n')).not.toContain('"amount":150');
   expect(frames.Bob!.join('\n')).not.toContain('"amount":200');
-  await expect(host.getByRole('button', { name: 'Suivant' })).toBeInViewport();
+  await expect(host.getByRole('button', { name: 'Voir le podium' })).toBeInViewport();
   if (SHOTS) await host.waitForTimeout(3000); // the bids appear one by one
   await shot(host, 'auction-tv-reveal');
   await shot(alice, 'auction-phone-won');
   await shot(bob, 'auction-phone-lost');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

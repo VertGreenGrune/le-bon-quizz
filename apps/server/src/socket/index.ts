@@ -31,6 +31,7 @@ import {
   type ErrorPayload,
   type JokerType,
   type PlayerJoinAck,
+  type Quiz,
   type ServerToClientEvents,
 } from '@lbq/shared';
 import { GameError } from '../game/errors.js';
@@ -221,15 +222,17 @@ export function registerSocketHandlers(
       handler(
         socket,
         HostCreatePayload,
-        async ({ quizId, mode = 'solo', teamCount, jokers, hearts, theme }) => {
+        async ({ quizId, mode = 'solo', teamCount, jokers, hearts, theme, test, questions }) => {
           const token = handshakeToken(socket);
           const hostId = token ? await persistence.authenticate(token) : null;
-          const { quiz, dbQuizId } = await persistence.loadQuiz(quizId, hostId);
+          const loaded = await persistence.loadQuiz(quizId, hostId);
+          const quiz = pickQuestions(loaded.quiz, questions);
           const game = games.create(
             quiz,
             (pin) => makeTransport(io, pin),
-            { onEnded: saveOnEnd(hostId, dbQuizId) },
-            { mode, teamCount, jokers, jokerHand, hearts, theme, ownerId: hostId },
+            // « 🧪 Tester » (T66): a test game is never saved (so never counted as played).
+            { onEnded: test ? undefined : saveOnEnd(hostId, loaded.dbQuizId) },
+            { mode, teamCount, jokers, jokerHand, hearts, theme, ownerId: hostId, test },
           );
           attachHost(game);
           return { pin: game.pin, hostToken: game.hostToken };
@@ -552,4 +555,13 @@ export function registerSocketHandlers(
   });
 
   return games;
+}
+
+/** « 🧪 Tester » (T66): only the chosen questions, in that order (unknown indexes refused). */
+export function pickQuestions(quiz: Quiz, indexes: number[] | undefined): Quiz {
+  if (!indexes) return quiz;
+  const questions = indexes.map((i) => quiz.questions[i]);
+  if (questions.some((q) => !q))
+    throw new GameError('INVALID_PAYLOAD', 'Cette question n’existe pas (enregistre le quiz)');
+  return { ...quiz, questions: questions as Quiz['questions'] };
 }

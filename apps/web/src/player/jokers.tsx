@@ -41,6 +41,7 @@ const FULL_HEIGHT_TYPES = new Set<QuestionType>([
   'WAGER',
   'SLIDER',
   'ORDER',
+  'MATCH',
   'PIN',
   'WHO_OF_US',
   'WORD_CLOUD',

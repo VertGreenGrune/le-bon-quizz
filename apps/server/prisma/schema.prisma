@@ -57,6 +57,8 @@ model Quiz {
   title         String
   description   String?
   coverImageUrl String?
+  /// Picture shown behind the whole game on the TV (and the phones' waiting screens), T68.
+  backgroundImageUrl String?
   /// PUBLIC quizzes are listed in the library and can be launched / copied by any host.
   visibility    QuizVisibility @default(PRIVATE)
   /// TV theme (T40): colors, background, music and confetti of the game.
@@ -122,6 +124,7 @@ enum QuestionType {
   WAGER
   WAVELENGTH
   HOT_POTATO
+  MATCH
 }
 
 model Question {

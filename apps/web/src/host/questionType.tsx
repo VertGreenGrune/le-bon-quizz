@@ -20,6 +20,7 @@ const ICONS: Record<QuestionType, string> = {
   WAGER: '💰',
   WAVELENGTH: '🔮',
   HOT_POTATO: '💣',
+  MATCH: '🔗',
 };
 
 /** « 🎚️ Curseur », « 🔔 Buzzer · Réponse libre »… — the type shown on the TV. */

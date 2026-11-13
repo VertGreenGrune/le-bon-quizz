@@ -59,8 +59,8 @@ test('« Paris sur les réponses »: guess, bet, reveal and report', async ({ br
     'aria-checked',
     'true',
   );
-  await expect(host.getByLabel('La bonne réponse')).toHaveValue('8849');
-  await host.getByLabel('La bonne réponse').scrollIntoViewIfNeeded();
+  await expect(host.getByRole('spinbutton', { name: 'La bonne réponse' })).toHaveValue('8849');
+  await host.getByRole('spinbutton', { name: 'La bonne réponse' }).scrollIntoViewIfNeeded();
   await shot(host, 'wager-editor');
 
   // ---- Lobby: three phones, recording what the server sends them; the TV too ----
@@ -144,7 +144,6 @@ test('« Paris sur les réponses »: guess, bet, reveal and report', async ({ br
   await shot(chloe, 'wager-phone-lost');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

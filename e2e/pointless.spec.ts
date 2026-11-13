@@ -149,7 +149,6 @@ test('« Pas évident ! »: rare answers score more, accept, reveal and report',
   await shot(chloe, 'pointless-phone-unique');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

@@ -48,6 +48,8 @@ export function createGame(
     ...(options.mode === 'survival' && { mode: options.mode, hearts: options.hearts }),
     ...(options.jokers && { jokers: true }),
     ...(options.theme && { theme: options.theme }),
+    ...(options.test && { test: true as const }),
+    ...(options.question !== undefined && { questions: [options.question] }),
   };
   pendingCreate ??= new Promise((resolve, reject) => {
     getSocket()

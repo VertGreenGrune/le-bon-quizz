@@ -184,6 +184,8 @@ const AVAILABILITY: Record<QuestionType, Omit<JokerAvailability, 'afterAnswer'>>
   WAVELENGTH: { jokers: false, unavailable: [], scramble: false },
   // « Patate chaude » (T63): no joker (a fast round, one player answers at a time).
   HOT_POTATO: { jokers: false, unavailable: [], scramble: false },
+  // « Associer » (T67): like « Remettre dans l'ordre ».
+  MATCH: { jokers: true, unavailable: ['fifty'], scramble: false },
 };
 
 const NO_JOKERS: JokerAvailability = {

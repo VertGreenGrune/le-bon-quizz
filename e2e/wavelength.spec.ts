@@ -140,14 +140,13 @@ test('« Sur la même longueur d’onde »: clue, needles, reveal and report', a
   await expect(alice.getByRole('heading', { name: 'Bien joué, médium !' })).toBeVisible();
   await expect(alice.getByText('+ 500 pts')).toBeVisible();
   await expect(host.getByTestId('explanation')).toBeVisible();
-  await expect(host.getByRole('button', { name: 'Suivant' })).toBeInViewport();
+  await expect(host.getByRole('button', { name: 'Voir le podium' })).toBeInViewport();
   if (SHOTS) await host.waitForTimeout(2500);
   await shot(host, 'wavelength-tv-reveal');
   await shot(bob, 'wavelength-phone-result');
   await shot(alice, 'wavelength-phone-psychic-result');
 
   // ---- Report ----
-  await host.getByRole('button', { name: 'Suivant' }).click();
   await host.getByRole('button', { name: 'Voir le podium' }).click();
   await host.getByRole('button', { name: 'Terminer la partie' }).click();
   await expect

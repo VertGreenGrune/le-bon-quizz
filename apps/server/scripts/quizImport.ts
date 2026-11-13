@@ -66,6 +66,11 @@ export async function prepareQuiz(
     return store(file, kind);
   };
 
+  if (raw.backgroundImageUrl !== undefined) {
+    const ref = raw.backgroundImageUrl;
+    raw.backgroundImageUrl = await media(ref, 'image');
+    if (!raw.backgroundImageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
+  }
   if (raw.coverImageUrl !== undefined) {
     const ref = raw.coverImageUrl;
     raw.coverImageUrl = await media(ref, 'image');
@@ -101,6 +106,17 @@ export async function prepareQuiz(
       const ref = q.blankImageUrl;
       q.blankImageUrl = await media(ref, 'image');
       if (!q.blankImageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
+    }
+    // « Associer » (T67): the pictures of the pairs.
+    if (Array.isArray(q.pairs)) {
+      for (const pair of q.pairs as Json[]) {
+        for (const side of [pair.left, pair.right] as (Json | undefined)[]) {
+          if (side?.imageUrl === undefined) continue;
+          const ref = side.imageUrl;
+          side.imageUrl = await media(ref, 'image');
+          if (!side.imageUrl) throw new Error(`Image introuvable : ${String(ref)}`);
+        }
+      }
     }
     const audio = q.audio as Json | undefined;
     if (audio) {

@@ -19,6 +19,7 @@ import { BluffFields } from './BluffFields';
 import { WagerFields } from './WagerFields';
 import { WavelengthFields } from './WavelengthFields';
 import { PotatoFields } from './PotatoFields';
+import { MatchFields } from './MatchFields';
 import { DrawFields } from './DrawFields';
 import { ListFields } from './ListFields';
 import { PointlessFields } from './PointlessFields';
@@ -65,6 +66,7 @@ export function QuestionEditor({
   question: q,
   errors,
   onChange,
+  onTest,
   onDraftChange,
 }: {
   index: number;
@@ -72,6 +74,8 @@ export function QuestionEditor({
   question: DraftQuestion;
   errors: FieldErrors;
   onChange: (q: DraftQuestion) => void;
+  /** « 🧪 Tester cette question » (T66): saves, then plays it alone in a test game. */
+  onTest?: () => void;
   /** Structural changes (move / duplicate / delete), then select question `nextIndex`. */
   onDraftChange: (fn: (d: QuizDraft) => QuizDraft, nextIndex: number) => void;
 }) {
@@ -84,6 +88,16 @@ export function QuestionEditor({
         <h2 className="mr-auto text-lg font-black">
           Question {index + 1} <span className="font-semibold text-gray-400">/ {total}</span>
         </h2>
+        {onTest && (
+          <button
+            type="button"
+            className={btn.ghost}
+            onClick={onTest}
+            title="Jouer seulement cette question en test (rien n’est enregistré)"
+          >
+            🧪 Tester<span className="max-sm:hidden"> cette question</span>
+          </button>
+        )}
         <button
           type="button"
           className={btn.ghost}
@@ -396,6 +410,8 @@ export function QuestionEditor({
         <WavelengthFields q={q} err={err} onChange={onChange} />
       ) : q.type === 'HOT_POTATO' ? (
         <PotatoFields q={q} err={err} onChange={onChange} />
+      ) : q.type === 'MATCH' ? (
+        <MatchFields q={q} err={err} onChange={onChange} />
       ) : (
         <ChoicesField q={q} err={err} onChange={onChange} />
       )}
