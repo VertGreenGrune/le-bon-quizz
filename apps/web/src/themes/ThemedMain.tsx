@@ -51,13 +51,26 @@ export function ThemedMain({
 }
 
 /**
- * T68: the quiz's background picture, covering the screen under the theme's animated layer,
- * darkened so the white text on it stays readable.
+ * T68: the quiz's background picture behind everything, adapted to any screen: the whole picture
+ * is shown, fitted to the screen (`contain`, never cropped nor blown up beyond it), over a blurred
+ * copy of itself that fills the edges left by a different shape (a landscape photo on a phone…).
+ * Darkened so the white text on it stays readable.
  */
 function QuizBackground({ url }: { url: string }) {
+  const image = `url("${mediaUrl(url)}")`;
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10" data-testid="quiz-background">
-      <img src={mediaUrl(url)} alt="" className="size-full object-cover" />
+    <div
+      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      data-testid="quiz-background"
+    >
+      <div
+        className="absolute -inset-8 scale-110 bg-cover bg-center blur-2xl"
+        style={{ backgroundImage: image }}
+      />
+      <div
+        className="absolute inset-0 bg-contain bg-center bg-no-repeat"
+        style={{ backgroundImage: image }}
+      />
       <div className="absolute inset-0 bg-black/55" />
     </div>
   );

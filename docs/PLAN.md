@@ -380,8 +380,10 @@ LOBBY → QUESTION_INTRO → ANSWERING → REVEAL → LEADERBOARD ─┐
     server shuffles both columns (`MatchState { left, right }`: shown index → pair, never a partner
     straight across); `question:show.match` and `question:prompt.match` = the same `MatchColumns`
     (`{ left, right }` in the shown order — the phones get the pictures too, never which goes with
-    which). TV: left items 1, 2, 3…, right A, B, C…; phone: tap a left item then its partner (or the
-    other way), linked items share a color + the left number, « Valider (n/m) » once all are linked.
+    which). Wire board (`components/WireBoard.tsx`): left items 1, 2, 3… with a colored plug, right
+    items A, B, C… with a plug; on the phone a cable is dragged from a plug to its partner (or tap one
+    then the other), a plugged cable dropped in the middle unplugs; « Valider (n/m) » once all are
+    plugged; the TV draws the right cables one by one at the reveal.
     `player:answer { matches }` = per shown left item the shown right one (-1 = none, a right item
     once) → `Answer.matchLinks[pair]`. Points = time points × share of the pairs right
     (`matchPoints`, like ORDER); right = every pair. Cancellable (T43). Reveal `match: { pairs,
@@ -635,7 +637,8 @@ Team id = the same index (`TeamId` 0–3, names in `TEAM_NAMES`).
   (1 hour), usedAt? (single use), createdAt; a new request deletes the user's unused ones
 - `Quiz` — id, ownerId → User, title, description, coverImageUrl, backgroundImageUrl? (T68:
   a picture behind the whole game — `game:state.background`, shown on the TV and the phones'
-  waiting screens under the theme's animated layer, darkened), visibility (`PRIVATE` |
+  waiting screens under the theme's animated layer, darkened; the whole picture fitted to the screen
+  over a blurred copy of itself, never cropped), visibility (`PRIVATE` |
   `PUBLIC`, default `PRIVATE`: public quizzes are in the library), theme (`QuizTheme` enum, default
   `classic`, T40), createdAt, updatedAt
 - `QuizShare` (T45) — quizId → Quiz, userId → User (primary key = both, cascades on delete), role

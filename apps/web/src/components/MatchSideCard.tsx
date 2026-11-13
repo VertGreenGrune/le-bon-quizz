@@ -16,7 +16,13 @@ export function MatchSideCard({
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }) {
-  const img = { sm: 'h-10 max-w-16', md: 'h-14 max-w-24', lg: 'h-[9vh] max-w-[14vw]' }[size];
+  // The picture may shrink (never below a readable size) before the text breaks a word.
+  const img = {
+    sm: 'h-10 min-w-9 max-w-[40%]',
+    md: 'h-14 min-w-12 max-w-[40%]',
+    lg: 'h-[9vh] min-w-[5vw] max-w-[40%]',
+  }[size];
+  const textMin = { sm: 'min-w-[4rem]', md: 'min-w-[5rem]', lg: 'min-w-[6rem]' }[size];
   const text = { sm: 'text-sm', md: 'text-base', lg: 'text-2xl' }[size];
   return (
     <span className={`flex min-w-0 items-center gap-2 ${className}`}>
@@ -32,11 +38,14 @@ export function MatchSideCard({
         <img
           src={mediaUrl(side.imageUrl)}
           alt={side.text ?? ''}
-          className={`${img} shrink-0 rounded object-contain`}
+          className={`${img} min-w-0 shrink rounded object-contain`}
           draggable={false}
         />
       )}
-      {side.text && <span className={`min-w-0 font-bold break-words ${text}`}>{side.text}</span>}
+      {/* Never squeezed to a letter per line beside a picture: whole words, wrapped. */}
+      {side.text && (
+        <span className={`${textMin} flex-1 font-bold break-words ${text}`}>{side.text}</span>
+      )}
     </span>
   );
 }

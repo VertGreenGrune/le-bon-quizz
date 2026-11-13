@@ -37,8 +37,21 @@ async function join(page: Page, pin: string, nickname: string) {
   await expect(page.getByText('Tu es dans la partie !')).toBeVisible();
 }
 
-/** Links every left item to its partner; `swap` exchanges the partners of France and Italie. */
-async function linkAll(phone: Page, swap = false) {
+/** Drags a cable from one item to another, like a finger would. */
+async function drag(phone: Page, from: string, to: string) {
+  const a = (await phone.getByTestId(from).boundingBox())!;
+  const b = (await phone.getByTestId(to).boundingBox())!;
+  await phone.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await phone.mouse.down();
+  await phone.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 8 });
+  await phone.mouse.up();
+}
+
+/**
+ * Links every left item to its partner — by dragging cables (`useDrag`) or by tapping one item
+ * then the other; `swap` exchanges the partners of France and Italie.
+ */
+async function linkAll(phone: Page, { swap = false, useDrag = false } = {}) {
   const pad = phone.getByTestId('match-pad');
   await expect(pad).toBeVisible();
   const partner: Record<string, string> = swap
@@ -47,14 +60,16 @@ async function linkAll(phone: Page, swap = false) {
   for (let l = 0; l < 4; l++) {
     const left = phone.getByTestId(`match-left-${l}`);
     const text = (await left.innerText()).replace(/^\d+\s*/, '').trim();
-    await left.click();
     const target = partner[text]!;
     for (let r = 0; r < 4; r++) {
       const right = phone.getByTestId(`match-right-${r}`);
-      if ((await right.innerText()).includes(target)) {
+      if (!(await right.innerText()).includes(target)) continue;
+      if (useDrag) await drag(phone, `match-left-${l}`, `match-right-${r}`);
+      else {
+        await left.click();
         await right.click();
-        break;
       }
+      break;
     }
   }
   await phone.getByRole('button', { name: 'Valider (4/4)' }).click();
@@ -100,9 +115,17 @@ test('« Associer » with a background picture', async ({ browser }) => {
   await expect(host.getByTestId('match-columns')).toBeVisible({ timeout: 15_000 });
   await expect(host.getByTestId('match-columns')).toContainText('Madrid');
 
-  await linkAll(alice);
+  // A cable dropped in the middle snaps back: nothing is plugged.
+  await expect(alice.getByTestId('wire-board')).toBeVisible();
+  const l0 = (await alice.getByTestId('match-left-0').boundingBox())!;
+  await alice.mouse.move(l0.x + l0.width / 2, l0.y + l0.height / 2);
+  await alice.mouse.down();
+  await alice.mouse.move(l0.x + l0.width + 20, l0.y + l0.height / 2, { steps: 5 });
+  await alice.mouse.up();
+  await expect(alice.getByRole('button', { name: 'Valider (0/4)' })).toBeDisabled();
+  await linkAll(alice, { useDrag: true });
   await expect(alice.getByText('Réponse envoyée !')).toBeVisible();
-  await linkAll(bob, true);
+  await linkAll(bob, { swap: true });
 
   // Reveal: the pairs and every player's score.
   const reveal = host.getByTestId('match-reveal');
