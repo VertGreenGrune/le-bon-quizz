@@ -1,0 +1,364 @@
+{
+  "title": "Les années 80 : walkman, Minitel et coupe mulet",
+  "description": "20 questions de nostalgie : tubes, dessins animés, jeux vidéo, séries et grands moments des années 80. Avec un « Associer » de tubes, deux « Mytho ! » et un « Dessine-moi ».",
+  "theme": "retro",
+  "questions": [
+    {
+      "type": "POLL",
+      "text": "Sondage 📼 Tes années 80, c'était plutôt…",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Walkman et cassettes"
+        },
+        {
+          "text": "Minitel et 3615"
+        },
+        {
+          "text": "Rubik's Cube"
+        },
+        {
+          "text": "Je n'étais pas né(e)"
+        }
+      ],
+      "explanation": "Le Walkman de Sony, sorti en 1979, a été vendu à plus de 200 millions d'exemplaires toutes versions confondues."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel dessin animé japonais des années 80 met en scène des chevaliers en armure protégeant la déesse Athéna ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Goldorak",
+          "isCorrect": false
+        },
+        {
+          "text": "Dragon Ball",
+          "isCorrect": false
+        },
+        {
+          "text": "Les Chevaliers du Zodiaque",
+          "isCorrect": true
+        },
+        {
+          "text": "Albator",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Les Chevaliers du Zodiaque (Saint Seiya), diffusés en France à partir de 1988. Pégase, Dragon, Cygne, Andromède et Phénix !"
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel casse-tête hongrois à six faces colorées a fait fureur au début des années 80 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": [
+        "Rubik's Cube",
+        "Rubik's cube",
+        "Rubiks cube",
+        "Rubik",
+        "Le Rubik's Cube"
+      ],
+      "typoTolerance": true,
+      "explanation": "Le Rubik's Cube, inventé en 1974 par le Hongrois Ernő Rubik. Il a plus de 43 milliards de milliards de combinaisons possibles."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année le mur de Berlin est-il tombé ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1980,
+        "max": 2020,
+        "step": 1,
+        "correct": 1989,
+        "margin": 0
+      },
+      "explanation": "Le 9 novembre 1989. Mstislav Rostropovitch est venu jouer du violoncelle au pied du mur deux jours plus tard."
+    },
+    {
+      "type": "MATCH",
+      "text": "Associer 🎤 Reliez chaque artiste à son tube des années 80.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "pairs": [
+        {
+          "left": {
+            "text": "Desireless"
+          },
+          "right": {
+            "text": "Voyage, voyage"
+          }
+        },
+        {
+          "left": {
+            "text": "Images"
+          },
+          "right": {
+            "text": "Les Démons de minuit"
+          }
+        },
+        {
+          "left": {
+            "text": "Indochine"
+          },
+          "right": {
+            "text": "L'Aventurier"
+          }
+        },
+        {
+          "left": {
+            "text": "Étienne Daho"
+          },
+          "right": {
+            "text": "Week-end à Rome"
+          }
+        },
+        {
+          "left": {
+            "text": "Jean-Jacques Goldman"
+          },
+          "right": {
+            "text": "Quand la musique est bonne"
+          }
+        }
+      ],
+      "explanation": "1986, 1986, 1982, 1984 et 1982. Voyage, voyage s'est classé dans les hit-parades de toute l'Europe."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le Minitel a été lancé en France dans les années 80.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai : testé dès 1980, il se répand dans tout le pays à partir de 1983. Il n'a été arrêté qu'en 2012 !"
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Qui présentait le Top 50 à sa création sur Canal+, en 1984 ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Marc Toesca",
+      "voteTimeSec": 20,
+      "explanation": "Marc Toesca, avec son célèbre « Salut les petits clous ! ». Le Top 50 a été le premier classement officiel des ventes de disques en France."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel jeu vidéo de 1980 met en scène un rond jaune qui avale des pac-gommes en fuyant des fantômes ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Pac-Man",
+          "isCorrect": true
+        },
+        {
+          "text": "Space Invaders",
+          "isCorrect": false
+        },
+        {
+          "text": "Tetris",
+          "isCorrect": false
+        },
+        {
+          "text": "Donkey Kong",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Pac-Man, de Namco. Son créateur, Tōru Iwatani, se serait inspiré d'une pizza à laquelle il manquait une part."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Au buzzer 🔔 Quel président de la République est élu en mai 1981 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["François Mitterrand", "Mitterrand"],
+      "typoTolerance": true,
+      "buzzer": true,
+      "explanation": "François Mitterrand, premier président de gauche de la Ve République, réélu en 1988."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces événements des années 80 dans l'ordre.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "Élection de François Mitterrand",
+        "Lancement de Canal+",
+        "Catastrophe de Tchernobyl",
+        "Chute du mur de Berlin"
+      ],
+      "explanation": "1981, 1984, 1986, 1989."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel film de 1982 raconte l'histoire d'un extraterrestre qui veut « téléphoner maison » ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Gremlins",
+          "isCorrect": false
+        },
+        {
+          "text": "Alien",
+          "isCorrect": false
+        },
+        {
+          "text": "Les Goonies",
+          "isCorrect": false
+        },
+        {
+          "text": "E.T. l'extra-terrestre",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "E.T. de Steven Spielberg, et sa scène culte du vélo devant la Lune."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? 💇 Qui aurait eu la plus belle coupe mulet ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Court devant, long derrière : la coupe mulet a régné sur les années 80, des stades de foot aux plateaux télé."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : les Restos du Cœur ont été créés par Coluche.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai, en 1985. L'hymne, La Chanson des Restos, a été écrit par Jean-Jacques Goldman."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année Michael Jackson sort-il l'album Thriller ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1951,
+        "max": 1991,
+        "step": 1,
+        "correct": 1982,
+        "margin": 1
+      },
+      "explanation": "En 1982. C'est l'album le plus vendu de tous les temps, et le clip de Thriller, près de 14 minutes, a révolutionné MTV."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle émission jeunesse de TF1, animée par Dorothée, a été diffusée de 1987 à 1997 ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Récré A2",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Club Dorothée",
+          "isCorrect": true
+        },
+        {
+          "text": "Les Minikeums",
+          "isCorrect": false
+        },
+        {
+          "text": "Ça Cartoon",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le Club Dorothée, avec Jacky, Corbier, Ariane et Patrick. Avant, Dorothée animait Récré A2 sur Antenne 2."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel duo chante « Marcia Baila » (1984) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Les Rita Mitsouko", "Rita Mitsouko"],
+      "typoTolerance": true,
+      "explanation": "Les Rita Mitsouko, Catherine Ringer et Fred Chichin. La chanson rend hommage à la chorégraphe Marcia Moretto."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un objet des années 80 (à faire deviner !)",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "walkman",
+        "cassette audio",
+        "Rubik's Cube",
+        "Minitel",
+        "Pac-Man",
+        "patins à roulettes",
+        "téléphone à cadran",
+        "console de jeu",
+        "coupe mulet",
+        "disque vinyle"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle série met en scène Michael Knight et KITT, une voiture qui parle ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "L'Agence tous risques",
+          "isCorrect": false
+        },
+        {
+          "text": "K 2000",
+          "isCorrect": true
+        },
+        {
+          "text": "MacGyver",
+          "isCorrect": false
+        },
+        {
+          "text": "Supercopter",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "K 2000 (Knight Rider), avec David Hasselhoff. KITT, une Pontiac Firebird, a un scanner rouge qui va et vient."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel est le prénom de MacGyver, révélé seulement dans la dernière saison ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Angus",
+      "voteTimeSec": 20,
+      "explanation": "Angus ! Il préférait qu'on l'appelle MacGyver… ou Mac. Son arme : un couteau suisse et du ruban adhésif."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Finale 🏆 Quel groupe chante « Take On Me » (1985) ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "acceptedAnswers": ["a-ha", "aha", "a ha"],
+      "typoTolerance": true,
+      "explanation": "a-ha, un groupe norvégien, et non britannique. Le clip mélangeant dessin et images réelles a mis plusieurs mois à être réalisé."
+    }
+  ]
+}

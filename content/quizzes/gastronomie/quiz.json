@@ -1,0 +1,357 @@
+{
+  "title": "Tour de France gourmand",
+  "description": "20 questions pour les gourmands : fromages, spécialités régionales, pâtisseries, vins et grands chefs. Avec un « Associer » des spécialités et de leur ville, deux « Mytho ! » et un « Dessine-moi ».",
+  "questions": [
+    {
+      "type": "POLL",
+      "text": "Sondage 🥐 Le débat qui divise la France : on dit…",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Pain au chocolat"
+        },
+        {
+          "text": "Chocolatine"
+        },
+        {
+          "text": "Peu importe, tant que j'en mange"
+        }
+      ],
+      "explanation": "« Chocolatine » se dit surtout dans le Sud-Ouest et au Québec, « pain au chocolat » presque partout ailleurs. Des députés ont même déposé un amendement en 2018 pour faire reconnaître le mot « chocolatine » !"
+    },
+    {
+      "type": "MCQ",
+      "text": "Le kouign-amann, ce gâteau très beurré, est une spécialité de quelle région ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "La Normandie",
+          "isCorrect": false
+        },
+        {
+          "text": "L'Alsace",
+          "isCorrect": false
+        },
+        {
+          "text": "La Bretagne",
+          "isCorrect": true
+        },
+        {
+          "text": "Le Pays basque",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "La Bretagne, et plus précisément Douarnenez, vers 1860. Son nom veut dire « gâteau au beurre » en breton : il y a presque autant de beurre que de pâte."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel fromage est surnommé « le roi des fromages et le fromage des rois » ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Brie de Meaux", "Brie", "Le brie"],
+      "typoTolerance": true,
+      "explanation": "Le brie de Meaux. Selon la légende, il fut sacré « roi des fromages » au congrès de Vienne en 1815, lors d'un concours proposé par Talleyrand."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année le savoir-faire de la baguette a-t-il été inscrit au patrimoine immatériel de l'UNESCO ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 2013,
+        "max": 2053,
+        "step": 1,
+        "correct": 2022,
+        "margin": 1
+      },
+      "explanation": "En novembre 2022 : les « savoir-faire artisanaux et la culture de la baguette de pain ». La baguette ne contient que farine, eau, sel et levure."
+    },
+    {
+      "type": "MATCH",
+      "text": "Associer 🗺️ Reliez chaque douceur à sa ville.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "pairs": [
+        {
+          "left": {
+            "text": "Calissons"
+          },
+          "right": {
+            "text": "Aix-en-Provence"
+          }
+        },
+        {
+          "left": {
+            "text": "Bêtises"
+          },
+          "right": {
+            "text": "Cambrai"
+          }
+        },
+        {
+          "left": {
+            "text": "Nougat"
+          },
+          "right": {
+            "text": "Montélimar"
+          }
+        },
+        {
+          "left": {
+            "text": "Canelés"
+          },
+          "right": {
+            "text": "Bordeaux"
+          }
+        },
+        {
+          "left": {
+            "text": "Moutarde"
+          },
+          "right": {
+            "text": "Dijon"
+          }
+        },
+        {
+          "left": {
+            "text": "Tarte aux pralines roses"
+          },
+          "right": {
+            "text": "Lyon"
+          }
+        }
+      ],
+      "explanation": "Les bêtises de Cambrai seraient nées d'une erreur d'un apprenti confiseur. Et les canelés de Bordeaux utiliseraient les jaunes d'œufs laissés par le collage du vin, qui n'emploie que les blancs."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le croissant a été inventé en France.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Faux : il descend du kipferl autrichien. On l'attribue à August Zang, un Viennois qui ouvre une boulangerie à Paris vers 1838 ; d'où le nom de « viennoiseries »."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel poisson est indispensable dans une vraie bouillabaisse marseillaise ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "La rascasse",
+      "voteTimeSec": 20,
+      "explanation": "La rascasse ! La charte de la bouillabaisse marseillaise (1980) liste les poissons de roche autorisés ; on la sert avec une rouille et des croûtons frottés à l'ail."
+    },
+    {
+      "type": "MCQ",
+      "text": "Lequel de ces fromages n'est PAS fabriqué avec du lait de vache ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Le roquefort",
+          "isCorrect": true
+        },
+        {
+          "text": "Le comté",
+          "isCorrect": false
+        },
+        {
+          "text": "Le reblochon",
+          "isCorrect": false
+        },
+        {
+          "text": "Le munster",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le roquefort, au lait cru de brebis, affiné dans les caves naturelles de Roquefort-sur-Soulzon. C'est la première AOC fromagère, en 1925."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Au buzzer 🔔 Quel apéritif mélange de la crème de cassis et du vin blanc ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Kir", "Le kir", "Un kir"],
+      "typoTolerance": true,
+      "buzzer": true,
+      "explanation": "Le kir, du nom du chanoine Félix Kir, maire de Dijon, qui le servait à ses invités. Avec du champagne, c'est un kir royal."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ce repas à la française dans l'ordre, du début à la fin.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": ["Apéritif", "Entrée", "Plat", "Fromage", "Dessert"],
+      "explanation": "En France, le fromage arrive avant le dessert ! Le « repas gastronomique des Français » est inscrit au patrimoine immatériel de l'UNESCO depuis 2010."
+    },
+    {
+      "type": "MCQ",
+      "text": "La tarte Tatin, c'est…",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "une tarte aux poires flambée",
+          "isCorrect": false
+        },
+        {
+          "text": "une tarte aux fraises sans pâte",
+          "isCorrect": false
+        },
+        {
+          "text": "une tarte au citron meringuée",
+          "isCorrect": false
+        },
+        {
+          "text": "une tarte aux pommes caramélisées, renversée",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Une tarte aux pommes cuite à l'envers, pâte par-dessus, puis retournée. On l'attribue aux sœurs Tatin, qui tenaient un hôtel à Lamotte-Beuvron (Loir-et-Cher)."
+    },
+    {
+      "type": "SLIDER",
+      "text": "De Gaulle : « Comment voulez-vous gouverner un pays qui a … variétés de fromage ? » Combien ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 200,
+        "max": 500,
+        "step": 1,
+        "correct": 246,
+        "margin": 20
+      },
+      "explanation": "246 dans la version la plus connue de la citation. En réalité, la France compte bien plus de fromages : plus de 1 000 selon certains comptages."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? 🧀 Qui finirait le plateau de fromages tout seul ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Les Français mangent en moyenne plus de 25 kg de fromage par an et par personne, parmi les plus gros consommateurs au monde."
+    },
+    {
+      "type": "MCQ",
+      "text": "Le comté est produit dans quel massif ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Les Alpes",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Jura",
+          "isCorrect": true
+        },
+        {
+          "text": "Le Massif central",
+          "isCorrect": false
+        },
+        {
+          "text": "Les Vosges",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le massif du Jura. Il faut environ 400 litres de lait pour une meule de comté d'une quarantaine de kilos, affinée au moins 4 mois."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : seul un vin effervescent produit en Champagne a le droit de s'appeler « champagne ».",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai : c'est une appellation d'origine protégée. Ailleurs, on parle de crémant, de mousseux ou, en Espagne, de cava."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel grand chef lyonnais a donné son nom au plus prestigieux concours de cuisine du monde ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Paul Bocuse", "Bocuse"],
+      "typoTolerance": true,
+      "explanation": "Paul Bocuse, avec le Bocuse d'Or, créé en 1987 à Lyon. Son restaurant de Collonges-au-Mont-d'Or a gardé trois étoiles Michelin de 1965 à 2019."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Une spécialité française (à faire deviner !)",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "croissant",
+        "baguette",
+        "escargot",
+        "crêpe",
+        "macaron",
+        "camembert",
+        "éclair",
+        "huître",
+        "bouteille de vin",
+        "cuisse de grenouille"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Qu'est-ce que la « fleur de sel » ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Du sel parfumé aux pétales de rose",
+          "isCorrect": false
+        },
+        {
+          "text": "Une fine couche de sel récoltée à la surface des marais salants",
+          "isCorrect": true
+        },
+        {
+          "text": "Du sel extrait d'une mine",
+          "isCorrect": false
+        },
+        {
+          "text": "Une fleur de lavande séchée et salée",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Des cristaux qui se forment à la surface de l'eau des marais salants (Guérande, île de Ré, Camargue…) et qui sont ramassés à la main avec une lousse."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Le Paris-Brest, gâteau en forme de roue, a été créé en hommage à…",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Une course cycliste",
+      "voteTimeSec": 20,
+      "explanation": "À la course cycliste Paris-Brest-Paris : le pâtissier Louis Durand l'a imaginé en 1910, à la demande de Pierre Giffard, le fondateur de la course."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Finale 🏆 Quel fromage normand porte le nom d'un village de l'Orne, et aurait été mis au point par Marie Harel ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Camembert", "Le camembert"],
+      "typoTolerance": true,
+      "explanation": "Le camembert. Sa célèbre boîte ronde en bois de peuplier, inventée en 1890, lui a permis de voyager jusqu'à l'autre bout du monde."
+    }
+  ]
+}

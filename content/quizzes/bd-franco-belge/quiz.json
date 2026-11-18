@@ -1,0 +1,376 @@
+{
+  "title": "Bulles et cases : la BD franco-belge",
+  "description": "20 questions sur la BD qu'on lisait chez le dentiste ou chez ses grands-parents : Tintin, Astérix, Lucky Luke, Gaston, les Schtroumpfs, Titeuf… Avec un « Associer », deux « Mytho ! » et un « Dessine-moi ».",
+  "questions": [
+    {
+      "type": "POLL",
+      "text": "Sondage 💬 Ta BD préférée ?",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Astérix"
+        },
+        {
+          "text": "Tintin"
+        },
+        {
+          "text": "Gaston Lagaffe"
+        },
+        {
+          "text": "Les mangas, évidemment"
+        }
+      ],
+      "explanation": "Astérix est la BD la plus vendue au monde en langue française : près de 400 millions d'albums vendus, traduits dans plus de 100 langues et dialectes."
+    },
+    {
+      "type": "MCQ",
+      "text": "Comment s'appelle le chien de Tintin ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Idéfix",
+          "isCorrect": false
+        },
+        {
+          "text": "Rantanplan",
+          "isCorrect": false
+        },
+        {
+          "text": "Milou",
+          "isCorrect": true
+        },
+        {
+          "text": "Pif",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Milou (Snowy en anglais). Hergé lui aurait donné le surnom d'une ancienne petite amie, Marie-Louise, dite « Milou »."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Et le petit chien d'Obélix, comment s'appelle-t-il ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Idéfix", "Idefix"],
+      "typoTolerance": true,
+      "explanation": "Idéfix, apparu dans Le Tour de Gaule d'Astérix (1965). Écologiste avant l'heure, il hurle quand on abat un arbre. Il a même sa propre série depuis 2021."
+    },
+    {
+      "type": "MATCH",
+      "text": "Associer ✍️ Reliez chaque héros à son créateur.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "pairs": [
+        {
+          "left": {
+            "text": "Tintin"
+          },
+          "right": {
+            "text": "Hergé"
+          }
+        },
+        {
+          "left": {
+            "text": "Gaston Lagaffe"
+          },
+          "right": {
+            "text": "Franquin"
+          }
+        },
+        {
+          "left": {
+            "text": "Lucky Luke"
+          },
+          "right": {
+            "text": "Morris"
+          }
+        },
+        {
+          "left": {
+            "text": "Les Schtroumpfs"
+          },
+          "right": {
+            "text": "Peyo"
+          }
+        },
+        {
+          "left": {
+            "text": "Le Petit Spirou"
+          },
+          "right": {
+            "text": "Tome et Janry"
+          }
+        },
+        {
+          "left": {
+            "text": "Titeuf"
+          },
+          "right": {
+            "text": "Zep"
+          }
+        }
+      ],
+      "explanation": "Que des Belges sauf Zep, qui est suisse ! Morris a dessiné Lucky Luke dès 1946, avec René Goscinny au scénario à partir de 1955."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Lucky Luke est « l'homme qui tire plus vite que son ombre ».",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai ! Et depuis 1983, il mâchouille un brin d'herbe : Morris lui a fait arrêter la cigarette."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année Astérix apparaît-il pour la première fois, dans le journal Pilote ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1950,
+        "max": 1990,
+        "step": 1,
+        "correct": 1959,
+        "margin": 2
+      },
+      "explanation": "En 1959, dans le premier numéro de Pilote. Le premier album, Astérix le Gaulois, sort en 1961."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Quel est le prénom du capitaine Haddock ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Archibald",
+      "voteTimeSec": 20,
+      "explanation": "Archibald, révélé seulement dans Tintin et les Picaros (1976), l'avant-dernier album. « Mille millions de mille sabords ! »"
+    },
+    {
+      "type": "MCQ",
+      "text": "Lucky Luke 🐴 Comment s'appelle son cheval ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Jolly Jumper",
+          "isCorrect": true
+        },
+        {
+          "text": "Rantanplan",
+          "isCorrect": false
+        },
+        {
+          "text": "Tornado",
+          "isCorrect": false
+        },
+        {
+          "text": "Silver",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Jolly Jumper, qui joue aux échecs et pêche à la ligne. Rantanplan est le chien le plus bête de l'Ouest, Tornado le cheval de Zorro."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Au buzzer 🔔 Quel sorcier est l'ennemi juré des Schtroumpfs ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Gargamel"],
+      "typoTolerance": true,
+      "buzzer": true,
+      "explanation": "Gargamel, toujours accompagné de son chat Azraël. Il veut capturer les Schtroumpfs pour, entre autres, fabriquer de l'or."
+    },
+    {
+      "type": "ORDER",
+      "text": "Les Dalton 🤠 Remettez-les dans l'ordre, du plus petit au plus grand.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": ["Joe", "William", "Jack", "Averell"],
+      "explanation": "Joe le plus petit (et le plus teigneux), Averell le plus grand (et le plus affamé). Ils sont les cousins des vrais Dalton, des bandits qui ont existé."
+    },
+    {
+      "type": "MCQ",
+      "text": "Combien d'albums compte la série Tintin, en comptant Tintin et l'Alph-Art, resté inachevé ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "20",
+          "isCorrect": false
+        },
+        {
+          "text": "22",
+          "isCorrect": false
+        },
+        {
+          "text": "24",
+          "isCorrect": true
+        },
+        {
+          "text": "28",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "24, de Tintin au pays des Soviets (1930) à Tintin et l'Alph-Art, publié après la mort d'Hergé en 1983. Hergé ne voulait pas que quelqu'un d'autre continue Tintin."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? ☕ Qui est le plus Gaston Lagaffe (sieste au bureau et inventions douteuses) ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Gaston, garçon de bureau aux éditions Dupuis, invente le gaffophone et fait tout pour éviter M. De Mesmaeker et ses contrats."
+    },
+    {
+      "type": "MCQ",
+      "text": "Dans quelle ville se tient le plus grand festival de BD de France, qui remet le Fauve d'or ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Cannes",
+          "isCorrect": false
+        },
+        {
+          "text": "Angoulême",
+          "isCorrect": true
+        },
+        {
+          "text": "Annecy",
+          "isCorrect": false
+        },
+        {
+          "text": "Lyon",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Angoulême, chaque fin janvier depuis 1974. Annecy est la capitale du film d'animation."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Obélix est tombé dans la marmite de potion magique quand il était petit.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai, et c'est pour ça que Panoramix refuse de lui en redonner : l'effet est permanent chez lui."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Qui est le fidèle ami journaliste de Spirou ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Fantasio"],
+      "typoTolerance": true,
+      "explanation": "Fantasio, toujours accompagné de Spirou et de l'écureuil Spip. C'est dans leurs aventures qu'est apparu le Marsupilami, en 1952."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année paraît la toute première aventure de Tintin, Tintin au pays des Soviets ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1890,
+        "max": 1940,
+        "step": 1,
+        "correct": 1929,
+        "margin": 1
+      },
+      "explanation": "En 1929, en feuilleton dans Le Petit Vingtième, le supplément jeunesse d'un journal belge. L'album sort en 1930."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un objet ou un personnage de BD (à faire deviner !)",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Schtroumpf",
+        "menhir",
+        "sanglier",
+        "casque gaulois",
+        "fusée",
+        "cactus",
+        "cheval",
+        "marmite",
+        "bulle de BD",
+        "chapeau de cowboy"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel petit écolier a été créé par René Goscinny et Jean-Jacques Sempé ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Titeuf",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Petit Nicolas",
+          "isCorrect": true
+        },
+        {
+          "text": "Cédric",
+          "isCorrect": false
+        },
+        {
+          "text": "Boule",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le Petit Nicolas, en 1959. Titeuf est de Zep, Cédric de Laudec et Cauvin, Boule (et Bill) de Roba."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Titeuf est amoureux d'une fille de sa classe. Comment s'appelle-t-elle ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Nadia",
+      "voteTimeSec": 20,
+      "explanation": "Nadia, qui le trouve « trop nul ». Titeuf, avec sa mèche jaune et son « Tchô ! », est apparu en 1992."
+    },
+    {
+      "type": "MCQ",
+      "text": "Finale 🏆 Dans quel album Tintin marche-t-il vraiment sur la Lune ?",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Objectif Lune",
+          "isCorrect": false
+        },
+        {
+          "text": "Vol 714 pour Sydney",
+          "isCorrect": false
+        },
+        {
+          "text": "L'Étoile mystérieuse",
+          "isCorrect": false
+        },
+        {
+          "text": "On a marché sur la Lune",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "On a marché sur la Lune (1954) : Objectif Lune raconte la préparation et le décollage de la fusée. Tintin y marche donc sur la Lune quinze ans avant Neil Armstrong."
+    }
+  ]
+}

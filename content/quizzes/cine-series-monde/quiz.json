@@ -1,0 +1,391 @@
+{
+  "title": "Ciné & séries : blockbusters et séries cultes",
+  "description": "20 questions sur les films et les séries que tout le monde a vus : Friends, Breaking Bad, Stranger Things, Star Wars, Retour vers le futur, Titanic… Avec un « Associer », un « Mytho ! » et un « Dessine-moi ».",
+  "questions": [
+    {
+      "type": "POLL",
+      "text": "Sondage 📺 Ta série doudou, celle que tu revois en boucle ?",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Friends"
+        },
+        {
+          "text": "Game of Thrones"
+        },
+        {
+          "text": "Stranger Things"
+        },
+        {
+          "text": "The Office"
+        }
+      ],
+      "explanation": "Friends (1994-2004) reste l'une des séries les plus regardées en streaming, vingt ans après son dernier épisode."
+    },
+    {
+      "type": "MCQ",
+      "text": "Friends ☕ Comment s'appelle le café où se retrouve la bande ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Monk's Café",
+          "isCorrect": false
+        },
+        {
+          "text": "Luke's Diner",
+          "isCorrect": false
+        },
+        {
+          "text": "Central Perk",
+          "isCorrect": true
+        },
+        {
+          "text": "MacLaren's",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Central Perk, où Gunther est secrètement amoureux de Rachel. Monk's est le café de Seinfeld, Luke's celui de Gilmore Girls, MacLaren's le bar de How I Met Your Mother."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Breaking Bad 🧪 Quel pseudonyme Walter White se donne-t-il dans le monde de la drogue ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Heisenberg"],
+      "typoTolerance": true,
+      "explanation": "Heisenberg, en clin d'œil au physicien Werner Heisenberg et à son principe d'incertitude. « Say my name. »"
+    },
+    {
+      "type": "SLIDER",
+      "text": "Combien de saisons compte Friends ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 6,
+        "max": 26,
+        "step": 1,
+        "correct": 10,
+        "margin": 0,
+        "unit": "saisons"
+      },
+      "explanation": "10 saisons et 236 épisodes, de 1994 à 2004. Le dernier épisode a été suivi par plus de 52 millions de téléspectateurs aux États-Unis."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel film a remporté l'Oscar du meilleur film en février 2020 ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Parasite",
+          "isCorrect": true
+        },
+        {
+          "text": "1917",
+          "isCorrect": false
+        },
+        {
+          "text": "Joker",
+          "isCorrect": false
+        },
+        {
+          "text": "Once Upon a Time… in Hollywood",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Parasite, de Bong Joon-ho : le premier film non anglophone à remporter l'Oscar du meilleur film. Il avait aussi eu la Palme d'or en 2019."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : dans L'Empire contre-attaque, Dark Vador dit « Luke, je suis ton père ».",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Faux ! Il dit « Non, je suis ton père » (« No, I am your father »), en réponse à Luke qui l'accuse d'avoir tué son père. La version « Luke, je suis… » est une erreur collective célèbre."
+    },
+    {
+      "type": "MATCH",
+      "text": "Associer 📺 Reliez chaque personnage à sa série.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "pairs": [
+        {
+          "left": {
+            "text": "Eleven"
+          },
+          "right": {
+            "text": "Stranger Things"
+          }
+        },
+        {
+          "left": {
+            "text": "Daenerys Targaryen"
+          },
+          "right": {
+            "text": "Game of Thrones"
+          }
+        },
+        {
+          "left": {
+            "text": "Sheldon Cooper"
+          },
+          "right": {
+            "text": "The Big Bang Theory"
+          }
+        },
+        {
+          "left": {
+            "text": "Michael Scott"
+          },
+          "right": {
+            "text": "The Office"
+          }
+        },
+        {
+          "left": {
+            "text": "Thomas Shelby"
+          },
+          "right": {
+            "text": "Peaky Blinders"
+          }
+        }
+      ],
+      "explanation": "Eleven et ses pouvoirs à Hawkins, la Mère des dragons, le physicien maniaque, le pire patron du monde chez Dunder Mifflin, et le chef de gang de Birmingham."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Game of Thrones : comment s'appelle le loup géant blanc de Jon Snow (en VF) ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Fantôme",
+      "voteTimeSec": 20,
+      "explanation": "Fantôme (Ghost en VO), un loup géant albinos aux yeux rouges, le plus petit de la portée trouvée par les enfants Stark au premier épisode."
+    },
+    {
+      "type": "MCQ",
+      "text": "Au buzzer 🔔 Quel réalisateur a signé Les Dents de la mer, E.T. et Jurassic Park ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "George Lucas",
+          "isCorrect": false
+        },
+        {
+          "text": "James Cameron",
+          "isCorrect": false
+        },
+        {
+          "text": "Robert Zemeckis",
+          "isCorrect": false
+        },
+        {
+          "text": "Steven Spielberg",
+          "isCorrect": true
+        }
+      ],
+      "buzzer": true,
+      "explanation": "Steven Spielberg. Les Dents de la mer (1975) est souvent considéré comme le tout premier « blockbuster » de l'été."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces films dans l'ordre de sortie, du plus ancien au plus récent.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "Les Dents de la mer",
+        "La Guerre des étoiles",
+        "Retour vers le futur",
+        "Titanic",
+        "Avatar"
+      ],
+      "explanation": "1975, 1977, 1985, 1997, 2009. Titanic puis Avatar, tous deux de James Cameron, ont chacun battu le record du plus gros succès de l'histoire."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Retour vers le futur (1985) ⚡ En quelle année Marty McFly se retrouve-t-il projeté ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1908,
+        "max": 1968,
+        "step": 1,
+        "correct": 1955,
+        "margin": 0
+      },
+      "explanation": "En 1955, à 88 miles à l'heure dans la DeLorean du Doc. Il y croise ses parents adolescents… et sa mère tombe amoureuse de lui."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Stranger Things 🚲 Comment s'appelle la petite ville de l'Indiana où se passe la série ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Hawkins"],
+      "typoTolerance": true,
+      "explanation": "Hawkins, avec son laboratoire secret et le Monde à l'envers. La ville est inventée : les scènes ont été tournées en Géorgie."
+    },
+    {
+      "type": "MCQ",
+      "text": "Le Seigneur des anneaux 💍 Qui porte l'Anneau unique jusqu'à la montagne du Destin ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Bilbon",
+          "isCorrect": false
+        },
+        {
+          "text": "Frodon",
+          "isCorrect": true
+        },
+        {
+          "text": "Gandalf",
+          "isCorrect": false
+        },
+        {
+          "text": "Legolas",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Frodon Sacquet, avec son fidèle Sam. Bilbon, son oncle, avait trouvé l'Anneau chez Gollum dans Le Hobbit."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? 🔪 Qui mourrait en premier dans un film d'horreur ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Dans Scream (1996), les personnages listent eux-mêmes les règles pour survivre dans un film d'horreur… avant de les enfreindre une par une."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Squid Game est une série sud-coréenne.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai. Diffusée en 2021, elle est devenue la série la plus regardée de l'histoire de Netflix. Son créateur Hwang Dong-hyuk avait écrit le scénario plus de dix ans plus tôt."
+    },
+    {
+      "type": "MCQ",
+      "text": "Combien d'Oscars Titanic (1997) a-t-il remportés ?",
+      "timeLimitSec": 30,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "7",
+          "isCorrect": false
+        },
+        {
+          "text": "9",
+          "isCorrect": false
+        },
+        {
+          "text": "11",
+          "isCorrect": true
+        },
+        {
+          "text": "14",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "11 Oscars, le record, à égalité avec Ben-Hur et Le Retour du roi. 14, c'est son nombre de nominations."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un objet ou une créature de film (à faire deviner !)",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "sabre laser",
+        "baguette magique",
+        "requin",
+        "dinosaure",
+        "fantôme",
+        "dragon",
+        "zombie",
+        "cape de super-héros",
+        "vaisseau spatial",
+        "pop-corn"
+      ]
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Pirates des Caraïbes 🏴‍☠️ Quel acteur joue le capitaine Jack Sparrow ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Johnny Depp", "Depp"],
+      "typoTolerance": true,
+      "explanation": "Johnny Depp, qui s'est inspiré de Keith Richards, le guitariste des Rolling Stones. Ce dernier joue d'ailleurs le père de Jack Sparrow dans les suites."
+    },
+    {
+      "type": "MCQ",
+      "text": "La Casa de Papel 🎭 Comment se fait appeler le cerveau du braquage ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Berlin",
+          "isCorrect": false
+        },
+        {
+          "text": "Tokyo",
+          "isCorrect": false
+        },
+        {
+          "text": "Rio",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Professeur",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Le Professeur (Sergio Marquina). Les braqueurs portent des noms de villes, des masques de Dalí et chantent Bella Ciao."
+    },
+    {
+      "type": "MCQ",
+      "text": "Finale 🏆 Quel film détient le record du box-office mondial (sans tenir compte de l'inflation) ?",
+      "timeLimitSec": 20,
+      "basePoints": 2000,
+      "choices": [
+        {
+          "text": "Avatar (2009)",
+          "isCorrect": true
+        },
+        {
+          "text": "Avengers : Endgame",
+          "isCorrect": false
+        },
+        {
+          "text": "Titanic",
+          "isCorrect": false
+        },
+        {
+          "text": "Star Wars : Le Réveil de la Force",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Avatar, de James Cameron, avec plus de 2,9 milliards de dollars grâce à ses ressorties. Avengers : Endgame l'avait dépassé de 2019 à 2021."
+    }
+  ]
+}

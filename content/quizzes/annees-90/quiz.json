@@ -1,0 +1,359 @@
+{
+  "title": "Les années 90 : Tamagotchi, Game Boy et Mondial 98",
+  "description": "20 questions de nostalgie : la Coupe du monde 98, les boys bands, les séries cultes, les consoles et les jouets des années 90. Avec un « Associer », deux « Mytho ! » et un « Dessine-moi ».",
+  "theme": "retro",
+  "questions": [
+    {
+      "type": "POLL",
+      "text": "Sondage 🎮 Tes années 90, c'était plutôt…",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Tamagotchi"
+        },
+        {
+          "text": "Game Boy"
+        },
+        {
+          "text": "Pogs"
+        },
+        {
+          "text": "Je n'étais pas né(e)"
+        }
+      ],
+      "explanation": "La Game Boy (1989) s'est vendue à plus de 118 millions d'exemplaires avec la Game Boy Color, beaucoup grâce à Tetris et Pokémon."
+    },
+    {
+      "type": "MCQ",
+      "text": "Mondial 98 ⚽ Contre quelle équipe la France gagne-t-elle la finale (3-0) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "La Croatie",
+          "isCorrect": false
+        },
+        {
+          "text": "L'Italie",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Brésil",
+          "isCorrect": true
+        },
+        {
+          "text": "L'Allemagne",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Le Brésil de Ronaldo, le 12 juillet 1998 au Stade de France. La Croatie avait été battue en demi-finale grâce aux deux seuls buts de Lilian Thuram en équipe de France."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel petit animal virtuel japonais, en forme d'œuf, fallait-il nourrir et soigner en 1996-1997 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Tamagotchi", "Tamagoshi", "Tamagochi"],
+      "typoTolerance": true,
+      "explanation": "Le Tamagotchi de Bandai, sorti en 1996 au Japon. Son nom mélange « tamago » (œuf) et « watch » (montre). Interdit dans beaucoup d'écoles !"
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année est sorti le film Titanic ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1986,
+        "max": 2036,
+        "step": 1,
+        "correct": 1997,
+        "margin": 0
+      },
+      "explanation": "En décembre 1997 aux États-Unis, en janvier 1998 en France. Il a fait près de 22 millions d'entrées en France, le record absolu."
+    },
+    {
+      "type": "MATCH",
+      "text": "Associer 📺 Reliez chaque série des années 90 à l'un de ses personnages.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "pairs": [
+        {
+          "left": {
+            "text": "Friends"
+          },
+          "right": {
+            "text": "Rachel Green"
+          }
+        },
+        {
+          "left": {
+            "text": "X-Files"
+          },
+          "right": {
+            "text": "Fox Mulder"
+          }
+        },
+        {
+          "left": {
+            "text": "Le Prince de Bel-Air"
+          },
+          "right": {
+            "text": "Carlton Banks"
+          }
+        },
+        {
+          "left": {
+            "text": "Sauvés par le gong"
+          },
+          "right": {
+            "text": "Zack Morris"
+          }
+        },
+        {
+          "left": {
+            "text": "Hélène et les Garçons"
+          },
+          "right": {
+            "text": "Nicolas"
+          }
+        }
+      ],
+      "explanation": "La coupe de Rachel, « La vérité est ailleurs », la danse de Carlton sur Tom Jones, et Hélène, Nicolas, Cri-Cri et José à la cafétéria de la fac."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le premier tome de Harry Potter est paru dans les années 90.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai : en 1997 au Royaume-Uni et en 1998 en France, sous le titre Harry Potter à l'école des sorciers. Il avait été refusé par une douzaine d'éditeurs."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Comment s'appelait la mascotte (un coq) de la Coupe du monde 1998 ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Footix",
+      "voteTimeSec": 20,
+      "explanation": "Footix, le coq bleu à crête rouge. Son nom est devenu un surnom moqueur pour les supporters qui ne suivent le foot que pendant les grandes compétitions."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel groupe chante « Wannabe » (1996) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Les Spice Girls",
+          "isCorrect": true
+        },
+        {
+          "text": "All Saints",
+          "isCorrect": false
+        },
+        {
+          "text": "Destiny's Child",
+          "isCorrect": false
+        },
+        {
+          "text": "Hanson",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Les Spice Girls : Scary, Sporty, Baby, Ginger et Posh. « Wannabe » a été n°1 dans plus de 30 pays."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Au buzzer 🔔 Quelle console de Sony sort au Japon fin 1994, puis en Europe en 1995 ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["PlayStation", "Playstation", "PS1", "PlayStation 1", "PS One"],
+      "typoTolerance": true,
+      "buzzer": true,
+      "explanation": "La PlayStation. Le projet est né d'un partenariat raté entre Sony et Nintendo pour un lecteur de CD sur Super Nintendo."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces événements des années 90 dans l'ordre.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "Ouverture d'Euro Disney",
+        "Ouverture du tunnel sous la Manche",
+        "Sortie du Tamagotchi au Japon",
+        "Victoire des Bleus au Mondial"
+      ],
+      "explanation": "Avril 1992 (aujourd'hui Disneyland Paris), mai 1994, novembre 1996, juillet 1998."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quel film Disney de 1994 raconte l'histoire du lionceau Simba ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Le Livre de la jungle",
+          "isCorrect": false
+        },
+        {
+          "text": "Tarzan",
+          "isCorrect": false
+        },
+        {
+          "text": "Bambi",
+          "isCorrect": false
+        },
+        {
+          "text": "Le Roi lion",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Le Roi lion, avec « Hakuna Matata » et « L'Histoire de la vie ». En VF, c'est Jean Reno qui double Mufasa."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? 🥏 Qui a encore une collection de Pogs cachée quelque part ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Les Pogs, ces petits disques en carton qu'on retournait avec un « kini », ont envahi les cours de récré vers 1995… avant d'être interdits dans beaucoup d'écoles."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : les pièces et les billets en euros sont arrivés dans nos poches en 1999.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Faux : l'euro existe depuis 1999 pour les banques et les marchés, mais les pièces et les billets n'arrivent que le 1er janvier 2002."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Pokémon Rouge et Bleu 🎒 Combien de Pokémon compte la toute première génération ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 100,
+        "max": 350,
+        "step": 1,
+        "correct": 151,
+        "margin": 0,
+        "unit": "Pokémon"
+      },
+      "explanation": "151, de Bulbizarre à Mew, que l'on ne pouvait pas attraper normalement dans le jeu."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle chanteuse québécoise interprète « My Heart Will Go On », la chanson de Titanic ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Lara Fabian",
+          "isCorrect": false
+        },
+        {
+          "text": "Céline Dion",
+          "isCorrect": true
+        },
+        {
+          "text": "Mylène Farmer",
+          "isCorrect": false
+        },
+        {
+          "text": "Isabelle Boulay",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Céline Dion. La chanson a reçu l'Oscar de la meilleure chanson originale en 1998."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Quel boys band français chante « Partir un jour » (1996) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["2Be3", "2 Be 3", "Two Be Three"],
+      "typoTolerance": true,
+      "explanation": "2Be3 (Filip, Adel et Frank), le boys band français le plus populaire des années 90. Leurs fans les attendaient par milliers à chaque concert."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un objet des années 90 (à faire deviner !)",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "Tamagotchi",
+        "Game Boy",
+        "pog",
+        "disquette",
+        "rollers",
+        "téléphone portable",
+        "Footix",
+        "dinosaure",
+        "CD",
+        "bob"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Sur quelle marque de téléphones portables jouait-on au fameux jeu du serpent, Snake ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Motorola",
+          "isCorrect": false
+        },
+        {
+          "text": "Nokia",
+          "isCorrect": true
+        },
+        {
+          "text": "Ericsson",
+          "isCorrect": false
+        },
+        {
+          "text": "Alcatel",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Nokia, à partir de 1997. Le Nokia 3310 (2000) l'a rendu encore plus célèbre, avec sa batterie qui tenait une semaine."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Le Prince de Bel-Air : comment s'appelle le majordome britannique de la famille Banks ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Geoffrey",
+      "voteTimeSec": 20,
+      "explanation": "Geoffrey, le majordome pince-sans-rire qui ne supporte pas Will. La série a lancé la carrière d'acteur de Will Smith en 1990."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Finale 🏆 Quel joueur marque deux buts de la tête en finale de la Coupe du monde 1998 ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Zinédine Zidane", "Zidane", "Zizou"],
+      "typoTolerance": true,
+      "explanation": "Zinédine Zidane, sur deux corners. Le soir même, son visage était projeté sur l'Arc de triomphe : « Zidane président ! »."
+    }
+  ]
+}

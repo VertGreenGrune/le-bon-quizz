@@ -1,0 +1,359 @@
+{
+  "title": "Ciné & séries : répliques cultes à la française",
+  "description": "20 questions pour les fans de comédies françaises, de séries et de répliques cultes : Les Visiteurs, Le Dîner de cons, OSS 117, Lupin… Avec un « Associer » de répliques, deux « Mytho ! » et un « Dessine-moi ».",
+  "questions": [
+    {
+      "type": "POLL",
+      "text": "Sondage 🍿 Pour bien commencer : ce soir, tu es plutôt…",
+      "timeLimitSec": 15,
+      "basePoints": 0,
+      "choices": [
+        {
+          "text": "Comédie française culte"
+        },
+        {
+          "text": "Blockbuster américain"
+        },
+        {
+          "text": "Série en binge-watching"
+        },
+        {
+          "text": "Dessin animé avec un plaid"
+        }
+      ],
+      "explanation": "Pas de mauvaise réponse ! Les plus gros succès français au box-office sont pourtant presque tous des comédies : Bienvenue chez les Ch'tis, Intouchables, La Grande Vadrouille…"
+    },
+    {
+      "type": "MCQ",
+      "text": "Les Visiteurs (1993) 🏰 Quel personnage lance son célèbre « Okayyy ! » ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Godefroy de Montmirail",
+          "isCorrect": false
+        },
+        {
+          "text": "Béatrice",
+          "isCorrect": false
+        },
+        {
+          "text": "Jacquouille la Fripouille",
+          "isCorrect": true
+        },
+        {
+          "text": "Ginette",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Jacquouille la Fripouille, l'écuyer joué par Christian Clavier, qui joue aussi son descendant Jacques-Henri Jacquart. Jean Reno est Godefroy de Montmirail."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Le Dîner de cons (1998) 🍽️ Quel est le nom complet du personnage joué par Jacques Villeret ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["François Pignon", "Pignon"],
+      "typoTolerance": true,
+      "explanation": "François Pignon, passionné de maquettes en allumettes. Francis Veber a donné ce nom à de nombreux héros de ses films : Pierre Richard, Jacques Villeret ou Daniel Auteuil ont tous été « François Pignon »."
+    },
+    {
+      "type": "SLIDER",
+      "text": "Bienvenue chez les Ch'tis (2008) 🍟 Combien de millions d'entrées a fait le film au cinéma en France ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 13,
+        "max": 43,
+        "step": 1,
+        "correct": 20,
+        "margin": 2,
+        "unit": "millions"
+      },
+      "explanation": "Environ 20,5 millions d'entrées : le plus gros succès d'un film français en France, juste derrière Titanic, tous films confondus."
+    },
+    {
+      "type": "MCQ",
+      "text": "Qui a réalisé Astérix & Obélix : Mission Cléopâtre (2002) ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Alain Chabat",
+          "isCorrect": true
+        },
+        {
+          "text": "Claude Zidi",
+          "isCorrect": false
+        },
+        {
+          "text": "Laurent Tirard",
+          "isCorrect": false
+        },
+        {
+          "text": "Guillaume Canet",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Alain Chabat, qui joue aussi Jules César. Claude Zidi avait réalisé le premier film, Astérix et Obélix contre César (1999)."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : Intouchables (2011) est inspiré d'une histoire vraie.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": true
+        },
+        {
+          "text": "Faux",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Vrai : celle de Philippe Pozzo di Borgo, devenu tétraplégique après un accident de parapente, et de son auxiliaire de vie Abdel Sellou."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 La Cité de la peur (1994) : de quel film d'horreur Odile Deray est-elle l'attachée de presse ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Red is Dead",
+      "voteTimeSec": 20,
+      "explanation": "« Red is Dead », l'histoire d'un tueur au marteau et à la faucille. La Cité de la peur est le seul long métrage de la troupe des Nuls, tourné à Cannes pendant le festival."
+    },
+    {
+      "type": "MATCH",
+      "text": "Associer 🎬 Reliez chaque réplique culte à son film.",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "pairs": [
+        {
+          "left": {
+            "text": "« Les cons, ça ose tout. C'est même à ça qu'on… »"
+          },
+          "right": {
+            "text": "Les Tontons flingueurs"
+          }
+        },
+        {
+          "left": {
+            "text": "« Merci la gueuse. Tu es un laideron mais… »"
+          },
+          "right": {
+            "text": "Les Visiteurs"
+          }
+        },
+        {
+          "left": {
+            "text": "« Comment est votre blanquette ? »"
+          },
+          "right": {
+            "text": "OSS 117 : Le Caire, nid d'espions"
+          }
+        },
+        {
+          "left": {
+            "text": "« Je ne crois pas qu'il y ait de bonne ou de mauvaise… »"
+          },
+          "right": {
+            "text": "Astérix & Obélix : Mission Cléopâtre"
+          }
+        },
+        {
+          "left": {
+            "text": "« Tu me fends le cœur ! »"
+          },
+          "right": {
+            "text": "Marius"
+          }
+        }
+      ],
+      "explanation": "Audiard pour les Tontons (1963), Godefroy de Montmirail dans Les Visiteurs, OSS 117 (2006), le monologue d'Otis (Édouard Baer) chez Chabat, et la partie de cartes de Marius (Pagnol)."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Le Gendarme de Saint-Tropez 👮 Quel est le prénom du maréchal des logis-chef Cruchot, joué par Louis de Funès ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Ludovic"],
+      "typoTolerance": true,
+      "explanation": "Ludovic Cruchot ! La saga compte six films, de 1964 à 1982. Sa fille s'appelle Nicole et son chef, l'adjudant Gerber, est joué par Michel Galabru."
+    },
+    {
+      "type": "SLIDER",
+      "text": "En quelle année est sorti Le Fabuleux Destin d'Amélie Poulain ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "slider": {
+        "min": 1978,
+        "max": 2008,
+        "step": 1,
+        "correct": 2001,
+        "margin": 1
+      },
+      "explanation": "En 2001. Le film de Jean-Pierre Jeunet a fait plus de 8 millions d'entrées en France et reçu 5 nominations aux Oscars."
+    },
+    {
+      "type": "MCQ",
+      "text": "La série Dix pour cent se déroule…",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "dans un cabinet d'avocats",
+          "isCorrect": false
+        },
+        {
+          "text": "dans la rédaction d'un magazine",
+          "isCorrect": false
+        },
+        {
+          "text": "dans un restaurant étoilé",
+          "isCorrect": false
+        },
+        {
+          "text": "dans une agence d'agents d'acteurs",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Chez ASK, une agence parisienne d'agents d'acteurs. Chaque épisode invite une star dans son propre rôle : Isabelle Adjani, Jean Dujardin, Monica Bellucci…"
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Au buzzer 🔔 Quel acteur joue Assane Diop dans la série Lupin (Netflix) ?",
+      "timeLimitSec": 25,
+      "basePoints": 1000,
+      "acceptedAnswers": ["Omar Sy", "Omar"],
+      "typoTolerance": true,
+      "buzzer": true,
+      "explanation": "Omar Sy. Lupin a été en 2021 la première série française à se hisser dans le top 10 de Netflix aux États-Unis."
+    },
+    {
+      "type": "ORDER",
+      "text": "Remettez ces comédies dans l'ordre de sortie, de la plus ancienne à la plus récente.",
+      "timeLimitSec": 40,
+      "basePoints": 1000,
+      "items": [
+        "Les Bronzés",
+        "Le père Noël est une ordure",
+        "Les Visiteurs",
+        "Le Dîner de cons",
+        "Bienvenue chez les Ch'tis"
+      ],
+      "explanation": "1978, 1982, 1993, 1998, 2008. Les deux premiers sont signés par la troupe du Splendid (Clavier, Jugnot, Lhermitte, Balasko…)."
+    },
+    {
+      "type": "WHO_OF_US",
+      "text": "Qui de nous ? 🍽️ Qui se ferait inviter au dîner de cons… sans s'en rendre compte ?",
+      "timeLimitSec": 20,
+      "basePoints": 0,
+      "majorityBonus": true,
+      "explanation": "Dans le film, le « con » de la semaine est choisi par un petit groupe d'amis parisiens. Le piège se retourne contre Pierre Brochant… et son tour de reins."
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle actrice joue Amélie Poulain ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Mélanie Laurent",
+          "isCorrect": false
+        },
+        {
+          "text": "Audrey Tautou",
+          "isCorrect": true
+        },
+        {
+          "text": "Marion Cotillard",
+          "isCorrect": false
+        },
+        {
+          "text": "Ludivine Sagnier",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Audrey Tautou. Le rôle avait d'abord été écrit pour l'actrice britannique Emily Watson."
+    },
+    {
+      "type": "TRUE_FALSE",
+      "text": "Vrai ou faux : le Festival de Cannes a lieu chaque année en septembre.",
+      "timeLimitSec": 15,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Vrai",
+          "isCorrect": false
+        },
+        {
+          "text": "Faux",
+          "isCorrect": true
+        }
+      ],
+      "explanation": "Faux : il a lieu en mai. Septembre, c'est la Mostra de Venise (fin août-début septembre)."
+    },
+    {
+      "type": "BLUFF",
+      "text": "Mytho ! 🤥 Le père Noël est une ordure : quelle spécialité bulgare M. Preskovic apporte-t-il ?",
+      "timeLimitSec": 45,
+      "basePoints": 1000,
+      "truth": "Des doubitchous",
+      "voteTimeSec": 20,
+      "explanation": "Des doubitchous de Sofia, « roulés à la main sous les aisselles » ! Personne ne veut y goûter… Les dialogues viennent de la pièce de la troupe du Splendid."
+    },
+    {
+      "type": "DRAW",
+      "text": "Dessine-moi ✏️ Un objet ou un personnage du cinéma (à faire deviner !)",
+      "timeLimitSec": 90,
+      "basePoints": 1000,
+      "words": [
+        "baguette",
+        "béret",
+        "gendarme",
+        "moustache",
+        "tour Eiffel",
+        "croissant",
+        "palme d'or",
+        "clap de cinéma",
+        "pop-corn",
+        "caméra"
+      ]
+    },
+    {
+      "type": "MCQ",
+      "text": "Quelle récompense est remise au meilleur film du Festival de Cannes ?",
+      "timeLimitSec": 20,
+      "basePoints": 1000,
+      "choices": [
+        {
+          "text": "Le Lion d'or",
+          "isCorrect": false
+        },
+        {
+          "text": "La Palme d'or",
+          "isCorrect": true
+        },
+        {
+          "text": "L'Ours d'or",
+          "isCorrect": false
+        },
+        {
+          "text": "Le César d'honneur",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "La Palme d'or. Le Lion d'or récompense le meilleur film à Venise et l'Ours d'or à Berlin ; les César sont les récompenses françaises."
+    },
+    {
+      "type": "TYPE_ANSWER",
+      "text": "Finale 🏆 Les Tontons flingueurs (1963) : qui a écrit les dialogues cultes du film ?",
+      "timeLimitSec": 25,
+      "basePoints": 2000,
+      "acceptedAnswers": ["Michel Audiard", "Audiard"],
+      "typoTolerance": true,
+      "explanation": "Michel Audiard. Le film a été boudé par la critique à sa sortie avant de devenir l'un des plus cités du cinéma français (« Touche pas au grisbi, salope ! »)."
+    }
+  ]
+}
